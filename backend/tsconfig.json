@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "target": "es2015",
+    "module": "commonjs",
+    "moduleResolution": "Node"
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "**/**_broken.ts",
+    "node_modules",
+    "dist"
+  ]
+}
