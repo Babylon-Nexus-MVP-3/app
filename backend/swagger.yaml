@@ -1,0 +1,1187 @@
+openapi: 3.0.0
+
+info:
+  title: Babylon Nexus API
+  version: 1.0.0
+  description: |
+    ## Overview
+    The Babylon Nexus API manages construction project workflows including authentication,
+    project management, invoice lifecycle, and participant coordination.
+
+    ## Invoice Lifecycle
+    Invoices follow this sequential workflow:
+    ```
+    Submitted → Approved (PM) → Paid (Builder) → Received (Subcontractor)
+    ```
+
+    ## Authentication
+    All protected routes require a Bearer JWT token in the `Authorization` header:
+    ```
+    Authorization: Bearer <access_token>
+    ```
+    Access tokens expire in **10 minutes**. Use `/auth/refresh` to obtain a new one.
+
+
+
+tags:
+  - name: Authentication
+    description: User registration, login, token management, and password operations
+  - name: Project Manager
+    description: Routes accessible to users with the Project Manager role
+  - name: Sub Contractor
+    description: Routes accessible to users with the Sub Contractor role
+  - name: Builder
+    description: Routes accessible to users with the Builder role
+  - name: Multiple Roles
+    description: Routes accessible to two or more roles
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from `/auth/login` or `/auth/refresh`
+
+  # ─────────────────────────────────────────────
+  # Reusable Schemas
+  # ─────────────────────────────────────────────
+  schemas:
+
+    # ── Core Entities ──────────────────────────
+
+    User:
+      type: object
+      description: Represents a registered user (maps to USER table)
+      properties:
+        id:
+          type: string
+          example: "user_123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        phoneNumber:
+          type: string
+          example: "+61412345678"
+        role:
+          type: string
+          enum: [PM, Subbie, Owner, Builder, Consultant]
+          example: "PM"
+        verticalGroup:
+          type: string
+          example: "Residential"
+        horizontalAttribute:
+          type: string
+          example: "Senior"
+        licenceNumber:
+          type: string
+          nullable: true
+          description: Professional licence number (if applicable)
+          example: "123456"
+        status:
+          type: string
+          description: "`Active` for verified users, `Pending` for unverified accounts"
+          example: "Active"
+
+    Project:
+      type: object
+      description: Represents a construction project (maps to PROJECT table)
+      properties:
+        id:
+          type: string
+          example: "proj_123e4567-e89b-12d3-a456-426614174000"
+        location:
+          type: string
+          example: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)"
+        council:
+          type: string
+          example: "Strathfield"
+        ownerId:
+          type: string
+          description: USER.id of the project owner
+          example: "user_owner123"
+        builderId:
+          type: string
+          description: USER.id of the builder
+          example: "user_builder123"
+        pmId:
+          type: string
+          description: USER.id of the project manager
+          example: "user_pm123"
+        status:
+          type: string
+          example: "90% Complete"
+
+    ProjectParticipant:
+      type: object
+      description: Maps a user to a project with a specific role (maps to PROJECT_PARTICIPANTS table)
+      properties:
+        projectId:
+          type: string
+          description: PROJECT.id reference
+          example: "proj_123e4567"
+        userId:
+          type: string
+          description: USER.id reference (null if user has not yet registered)
+          nullable: true
+          example: "user_123e4567"
+        role:
+          type: string
+          example: "Subcontractor"
+        trade:
+          type: string
+          example: "Electrical Contractor"
+        dateAdded:
+          type: string
+          format: date-time
+          example: "2025-08-15T10:00:00Z"
+        status:
+          type: string
+          description: "`Invited` until the user registers, then `Active`"
+          example: "Active"
+
+    Invoice:
+      type: object
+      description: |
+        Represents an invoice in the system (maps to INVOICE table).
+
+        **Status progression:** `Pending` → `Approved` → `Paid` → `Received`
+      properties:
+        id:
+          type: string
+          example: "inv_123e4567-e89b-12d3-a456-426614174000"
+        projectId:
+          type: string
+          description: PROJECT.id reference
+          example: "proj_123e4567"
+        submittingParty:
+          type: string
+          example: "ABC Electrical"
+        submittingCategory:
+          type: string
+          example: "Electrical Contractor"
+        dateSubmitted:
+          type: string
+          format: date-time
+          example: "2026-01-05T09:00:00Z"
+        dateApproved:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when PM approves the invoice
+          example: "2026-01-07T14:30:00Z"
+        dateDue:
+          type: string
+          format: date-time
+          description: Payment due date
+          example: "2026-01-20T00:00:00Z"
+        datePaid:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when builder confirms payment
+          example: "2026-01-18T11:00:00Z"
+        dateReceived:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when subcontractor confirms receipt
+          example: "2026-01-19T09:30:00Z"
+        status:
+          type: string
+          enum: [Pending, Approved, Paid, Received]
+          example: "Pending"
+        statusColour:
+          type: string
+          description: UI colour indicator for the current status
+          enum: [yellow, green, blue]
+          example: "yellow"
+
+    # ── Reusable Responses ─────────────────────
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Descriptive error message"
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token — expires in 10 minutes
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: JWT refresh token — expires in 1 day (mobile clients)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+  # ─────────────────────────────────────────────
+  # Reusable Parameters
+  # ─────────────────────────────────────────────
+  parameters:
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      description: PROJECT.id reference
+      schema:
+        type: string
+      example: "proj_123e4567"
+
+    InvoiceId:
+      name: invoice_id
+      in: path
+      required: true
+      description: INVOICE.id reference
+      schema:
+        type: string
+      example: "inv_123e4567"
+
+  # ─────────────────────────────────────────────
+  # Reusable Responses
+  # ─────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Invalid or missing access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Authentication Required"
+
+    BadRequest:
+      description: Invalid or missing fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Forbidden"
+
+
+# ═══════════════════════════════════════════════
+# PATHS
+# ═══════════════════════════════════════════════
+paths:
+
+  # ─────────────────────────────────────────────
+  # Authentication
+  # ─────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Creates a new user account. After registration, a verification code is sent to the
+        provided email address. The user **must verify their email** before they can log in.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john.doe@example.com"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "SecurePass123!"
+                phoneNumber:
+                  type: string
+                  example: "+61412345678"
+                role:
+                  type: string
+                  enum: [PM, Subbie, Owner, Builder, Consultant]
+                  example: "Subbie"
+                verticalGroup:
+                  type: string
+                  example: "Residential"
+                horizontalAttribute:
+                  type: string
+                  example: "Junior"
+                licenceNumber:
+                  type: string
+                  description: Required for licensed trades
+                  example: "123456"
+      responses:
+        '201':
+          description: User created — verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    example: "user_123e4567-e89b-12d3-a456-426614174000"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login
+      description: |
+        Authenticates a user and returns a JWT access token and refresh token.
+        - **Access token** expires in 10 minutes
+        - **Refresh token** expires in 1 day (use `/auth/refresh` to get a new access token)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john.doe@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TokenPair'
+                  - type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid credentials or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid credentials"
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout
+      description: |
+        Invalidates the user's refresh token. The client should also delete any
+        locally stored access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logout successful"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: |
+        Exchanges a valid refresh token for a new access token and refresh token.
+        The old refresh token is **immediately invalidated**.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  description: Required for mobile clients. Web clients may use an HttpOnly cookie instead.
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid or expired refresh token"
+        '401':
+          description: No refresh token provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Authentication Required"
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email address
+      description: Verifies a user's email using the code sent after registration. Must be completed before the first login.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verificationCode]
+              properties:
+                verificationCode:
+                  type: string
+                  example: "ABC123XYZ"
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired verification code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_code:
+                  summary: Code does not exist
+                  value:
+                    error: "Invalid Verification Code"
+                expired_code:
+                  summary: Code has expired
+                  value:
+                    error: "Verification code has expired"
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend email verification code
+      description: Sends a new verification code to the user's email. The previous code is invalidated.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Verification code resent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Email not found"
+
+  /auth/request-password-reset:
+    post:
+      tags:
+        - Authentication
+      summary: Request a password reset
+      description: Sends a password reset code to the user's email address.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Reset code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Email not found"
+
+  /auth/resend-reset-code:
+    post:
+      tags:
+        - Authentication
+      summary: Resend password reset code
+      description: Sends a new reset code to the user's email. The previous reset code is invalidated.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Reset code resent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Email not found"
+
+  /auth/verify-reset-code:
+    post:
+      tags:
+        - Authentication
+      summary: Verify password reset code
+      description: Validates a reset code without changing the password. Use this to confirm the code is valid before showing the new password form.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resetCode]
+              properties:
+                resetCode:
+                  type: string
+                  example: "ABC123XYZ"
+      responses:
+        '200':
+          description: Reset code is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid or expired reset code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid:
+                  value:
+                    error: "Invalid reset code"
+                expired:
+                  value:
+                    error: "Reset code has expired"
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password using reset code
+      description: Resets the user's password. The reset code is consumed and cannot be reused.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resetCode, newPassword]
+              properties:
+                resetCode:
+                  type: string
+                  example: "ABC123XYZ"
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid/expired code or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    error: "Reset code and password are required"
+                invalid_code:
+                  value:
+                    error: "Invalid reset code"
+                expired_code:
+                  value:
+                    error: "Reset code has expired"
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password (authenticated)
+      description: Allows an authenticated user to change their password by providing their current password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                  example: "CurrentPass123!"
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Wrong current password or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    error: "Current password and new password are required"
+                invalid_password:
+                  value:
+                    error: "Current password is incorrect"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Projects
+  # ─────────────────────────────────────────────
+
+  /projects:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get all associated projects
+      description: |
+        Returns all projects associated with the authenticated user. Results are filtered by role:
+
+        | Role | Projects returned |
+        |------|------------------|
+        | Project Manager | Projects where user is the PM (`PROJECT.pmId`) |
+        | Builder | Projects where user is the builder (`PROJECT.builderId`) |
+        | Owner | Projects where user is the owner (`PROJECT.ownerId`) |
+        | Sub Contractor / Consultant | Projects in `PROJECT_PARTICIPANTS` |
+      responses:
+        '200':
+          description: List of associated projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  projects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  total:
+                    type: integer
+                    description: Total number of projects
+                    example: 15
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /project:
+    post:
+      tags:
+        - Project Manager
+      summary: Create a new project
+      description: Creates a new project. The PM must supply references to the owner, builder, and themselves.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location, council, ownerId, builderId, pmId, status]
+              properties:
+                location:
+                  type: string
+                  example: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)"
+                council:
+                  type: string
+                  example: "Strathfield"
+                ownerId:
+                  type: string
+                  description: USER.id of the project owner
+                  example: "user_owner123"
+                builderId:
+                  type: string
+                  description: USER.id of the builder
+                  example: "user_builder123"
+                pmId:
+                  type: string
+                  description: USER.id of the project manager
+                  example: "user_pm123"
+                status:
+                  type: string
+                  example: "90% Complete"
+      responses:
+        '200':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  projectId:
+                    type: string
+                    example: "proj_123e4567-e89b-12d3-a456-426614174000"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /{project_id}:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get project details
+      description: Returns full details for a single project.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  project:
+                    $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Participants
+  # ─────────────────────────────────────────────
+
+  /{project_id}/participants:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get all project participants
+      description: Returns all participants (from `PROJECT_PARTICIPANTS`) for a given project.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: List of participants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectParticipant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - Project Manager
+      summary: Invite a participant to a project
+      description: |
+        Invites a person to a project by email. The person does **not** need an existing account.
+
+        **Invitation workflow:**
+        1. PM provides email, name, role, and trade
+        2. A `PROJECT_PARTICIPANTS` record is created with `userId = null` and `status = "Invited"`
+        3. An invitation email is sent with a registration link
+        4. When the user registers with that email, `userId` is populated and status changes to `"Active"`
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name, role, trade]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john.smith@electrical.com"
+                name:
+                  type: string
+                  example: "John Smith"
+                role:
+                  type: string
+                  example: "Subcontractor"
+                trade:
+                  type: string
+                  example: "Electrical Contractor"
+      responses:
+        '200':
+          description: Participant invited successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  participant:
+                    $ref: '#/components/schemas/ProjectParticipant'
+                  message:
+                    type: string
+                    example: "Invitation sent to john.smith@electrical.com"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Invoices
+  # ─────────────────────────────────────────────
+
+  /{project_id}/invoice:
+    post:
+      tags:
+        - Sub Contractor
+      summary: Submit a new invoice
+      description: Subcontractor submits an invoice for work completed on a project. Creates a new `INVOICE` record with status `Pending`.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [submittingParty, submittingCategory, dateDue]
+              properties:
+                submittingParty:
+                  type: string
+                  example: "ABC Electrical"
+                submittingCategory:
+                  type: string
+                  example: "Electrical Contractor"
+                dateDue:
+                  type: string
+                  format: date-time
+                  example: "2026-02-05T00:00:00Z"
+                amount:
+                  type: number
+                  format: float
+                  example: 15000.00
+                description:
+                  type: string
+                  example: "Phase 2 electrical work"
+      responses:
+        '200':
+          description: Invoice submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoiceId:
+                    type: string
+                    example: "inv_123e4567"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /{project_id}/invoices:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get all invoices for a project
+      description: Returns all invoices for a given project. Useful for calendar and list views.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /{project_id}/invoices/{invoice_id}/approve:
+    put:
+      tags:
+        - Project Manager
+      summary: Approve an invoice
+      description: |
+        PM approves a `Pending` invoice. Sets `INVOICE.dateApproved` and updates status to `Approved`.
+
+        > **Note:** This does not affect `datePaid` or `dateReceived`.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice approved — status updated to `Approved`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /{project_id}/invoices/{invoice_id}/pay:
+    put:
+      tags:
+        - Builder
+      summary: Confirm invoice payment
+      description: |
+        Builder confirms payment of an `Approved` invoice. Sets `INVOICE.datePaid` and updates status to `Paid`.
+
+        > **Note:** This does not set `dateReceived` — that is confirmed by the subcontractor separately.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice paid — status updated to `Paid`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /{project_id}/invoices/{invoice_id}/confirm:
+    put:
+      tags:
+        - Sub Contractor
+      summary: Confirm receipt of payment
+      description: |
+        Subcontractor confirms they have received payment. Sets `INVOICE.dateReceived` and updates status to `Received`.
+
+        This is the **final step** in the invoice lifecycle:
+        ```
+        Submitted → Approved → Paid → Received ✓
+        ```
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Payment receipt confirmed — status updated to `Received`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /invoices:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Download invoice history as PDF
+      description: Generates and downloads a PDF containing the authenticated user's full invoice history.
+      responses:
+        '200':
+          description: PDF file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="invoice-history.pdf"'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: No invoices found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "No invoices found matching the specified criteria"
+        '500':
+          description: Server error while generating PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "An error occurred while generating the PDF"
