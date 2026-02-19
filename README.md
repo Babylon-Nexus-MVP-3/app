@@ -1,6 +1,15 @@
 # app
 Finacial Transparency Platform
 
+## API Documentation
+
+This project uses Swagger UI for API documentation.
+
+To view the API docs, start the server and visit:
+```
+http://localhost:3229/api-docs
+```
+
 ## Setup
 
 ### Requirements
