@@ -1,4 +1,3 @@
-
 /**
  * @file User Model
  * @description Defines the Mongoose schema and model for the User entity.
@@ -9,16 +8,17 @@ import mongoose, { Schema, Document } from "mongoose";
 /**
  * Interface representing a User document in MongoDB.
  * Add a new property here whenever you add a field to `userSchema`.
- * 
+ *
  * NOTE: interface is used as Mongoose schemas are runtime definitions
- * (MongoDB doesn't know about TypeScript), and interface ensures compile-time type safety. 
+ * (MongoDB doesn't know about TypeScript), and interface ensures compile-time type safety.
  * Both must be kept in sync. Without this, all Mongoose returned documents would be typed as `any`.
  *
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface User extends Document {
-    // Add user field types here
-    // name: string;
-    // email: string;
+  // Add user field types here
+  // name: string;
+  // email: string;
 }
 
 /**
@@ -28,9 +28,9 @@ export interface User extends Document {
  * @see {@link https://mongoosejs.com/docs/guide.html} Mongoose Schema Guide
  */
 const userSchema = new Schema<User>({
-    // Add user fields here, for example:
-    // name: { type: String, required: true },
-    // email: { type: String, required: true, unique: true },
+  // Add user fields here, for example:
+  // name: { type: String, required: true },
+  // email: { type: String, required: true, unique: true },
 });
 
 /**
