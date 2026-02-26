@@ -5,6 +5,7 @@ import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import path from "path";
 import fs from "fs";
+import { authRouter } from "./routes/auth";
 
 export const app = express();
 
@@ -20,3 +21,5 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 app.get("/", (req, res) => {
   res.redirect("/api-docs");
 });
+
+app.use("/auth", authRouter);
