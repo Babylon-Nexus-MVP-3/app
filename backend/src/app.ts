@@ -1,10 +1,11 @@
-import express, { json, Request, Response } from "express";
+import express, { json, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import path from "path";
 import fs from "fs";
+import authRoutes from "./routes/authRoutes";
 
 export const app = express();
 
@@ -17,6 +18,18 @@ const swaggerFile = fs.readFileSync(path.join(__dirname, "../swagger.yaml"), "ut
 const swaggerDoc = YAML.parse(swaggerFile);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+
+app.use("/auth", authRoutes);
+
 app.get("/", (req, res) => {
   res.redirect("/api-docs");
 });
+
+app.use(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    // Fallback error handler for unexpected errors
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  },
+);
