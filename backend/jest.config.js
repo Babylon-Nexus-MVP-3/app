@@ -5,10 +5,7 @@ export const roots = ['<rootDir>/src'];
 export const testMatch = ['**/__tests__/**/*.ts', '**/*.test.ts'];
 export const transform = {
   '^.+\\.ts$': ['ts-jest', {
-    tsconfig: {
-      resolveJsonModule: true,
-      esModuleInterop: true,
-    },
+    tsconfig: './tsconfig.json',
   }]
 };
 export const moduleFileExtensions = ['ts', 'js', 'json'];
