@@ -6,6 +6,7 @@ import YAML from "yaml";
 import path from "path";
 import fs from "fs";
 import { authRouter } from "./routes/auth";
+import { clear } from "./clear";
 
 export const app = express();
 
@@ -20,6 +21,16 @@ const swaggerDoc = YAML.parse(swaggerFile);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 app.get("/", (req, res) => {
   res.redirect("/api-docs");
+});
+
+// Utility endpoint for testing
+app.delete("/clear", async (req: Request, res: Response) => {
+  try {
+    const result = await clear();
+    res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 app.use("/auth", authRouter);
