@@ -8,9 +8,10 @@ import {
   hashPassword,
 } from "../utils/authHelper";
 
-/* 
+/*
   [1] - Register User
-    Allow user to register/create a new account with the platform
+  Creates a new user account after validating and sanitizing inputs.
+  Returns the new user's ID on success.
 */
 export async function registerUser(
   firstName: string,
@@ -18,12 +19,13 @@ export async function registerUser(
   password: string,
   email: string
 ): Promise<string> {
-  // Sanitize inputs for security
+  // Trim whitespace and normalise email to lowercase for consistency
   const sanitizedFirstName = firstName.trim();
   const sanitizedLastName = lastName.trim();
   const normalisedEmail = email.toLowerCase().trim();
   const name = `${sanitizedFirstName} ${sanitizedLastName}`;
 
+  // Validate name, email uniqueness, and password strength before proceeding
   try {
     checkName(name);
     await checkEmail(normalisedEmail);
@@ -35,6 +37,7 @@ export async function registerUser(
   }
   const { code, expiry } = generateCode();
   const hashedPassword = await hashPassword(password);
+  // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
     name: name,
     email: normalisedEmail,
@@ -42,7 +45,7 @@ export async function registerUser(
     refreshTokens: [],
     loginAttempts: 0,
     accountLocked: false,
-    verificationCode: code, // Note: Hash later, for now leave as is for testing
+    verificationCode: code, // TODO: Hash verification code before storing in production
     verificationCodeExpiry: expiry,
     emailVerified: false,
   });

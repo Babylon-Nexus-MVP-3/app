@@ -3,6 +3,11 @@ import bcrypt from "bcrypt";
 import { UserModel } from "../models/userModel";
 import crypto from "crypto";
 
+/*
+  Validates a user's name against length and character rules.
+  Allows Unicode letters, spaces, hyphens, and apostrophes (e.g. for international names).
+  Rejects numbers, most special characters, and consecutive spaces/symbols.
+*/
 export function checkName(name: string): void {
   if (typeof name !== "string") {
     throw new Error("Invalid name format");
@@ -26,6 +31,10 @@ export function checkName(name: string): void {
   }
 }
 
+/*
+  Validates password strength.
+  Requires 12–50 characters and at least 3 of: uppercase, lowercase, numbers, special characters.
+*/
 export function checkPassword(password: string): void {
   if (typeof password !== "string") {
     throw new Error("Invalid password format");
@@ -39,6 +48,7 @@ export function checkPassword(password: string): void {
     throw new Error("password is too long cannot exceed 50 characters");
   }
 
+  // Check which complexity requirements are met
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -53,6 +63,10 @@ export function checkPassword(password: string): void {
   }
 }
 
+/*
+  Validates email format and checks it isn't already registered.
+  Uses a generic error message on duplicate to avoid exposing whether an email exists.
+*/
 export async function checkEmail(normalisedEmail: string): Promise<void> {
   if (typeof normalisedEmail !== "string") {
     throw new Error("invalid email format");
@@ -62,33 +76,17 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
     throw new Error("invalid email");
   }
 
+  // Intentionally vague error to prevent email enumeration attacks
   const existingEmail = await UserModel.findOne({ email: normalisedEmail });
   if (existingEmail) {
     throw new Error("Unable to complete sign up");
   }
 }
 
-export async function checkNewPasswd(
-  previousPasswds: string[],
-  newPassword: string,
-  confirmNewPasswd: string
-): Promise<void> {
-  try {
-    checkPassword(newPassword);
-    for (const passwd of previousPasswds) {
-      if (await bcrypt.compare(newPassword, passwd)) {
-        throw new Error("Password has been used before, try a new password");
-      }
-    }
-  } catch (error) {
-    throw new Error(error.message, { cause: error });
-  }
-
-  if (confirmNewPasswd !== newPassword) {
-    throw new Error("Passwords do not match");
-  }
-}
-
+/*
+  Hashes a plaintext password using bcrypt.
+  Uses 14 salt rounds for a strong security/performance balance.
+*/
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 14;
   const salt = await bcrypt.genSalt(saltRounds);
@@ -96,6 +94,10 @@ export async function hashPassword(password: string): Promise<string> {
   return hash;
 }
 
+/*
+  Generates a cryptographically secure 6-digit verification code with a 15-minute expiry.
+  Used for email verification and similar flows.
+*/
 export function generateCode() {
   const code = crypto.randomInt(100000, 1000000).toString();
   const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
