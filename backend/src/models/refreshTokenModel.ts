@@ -1,7 +1,7 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface RefreshToken extends Document {
-  user: Types.ObjectId;
+  user: string;
   token: string;
   expiresAt: Date;
   createdAt: Date;
@@ -10,6 +10,7 @@ export interface RefreshToken extends Document {
 
 const refreshTokenSchema = new Schema<RefreshToken>(
   {
+    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     token: { type: String, required: true, unique: true },
     expiresAt: { type: Date, required: true },

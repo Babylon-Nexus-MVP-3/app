@@ -1,22 +1,9 @@
-/**
- * @file User Model
- * @description Defines the Mongoose schema and model for the User entity.
- * Add all user-related fields here.
- */
 import mongoose, { Schema, Document } from "mongoose";
 
-/**
- * Interface representing a User document in MongoDB.
- * Add a new property here whenever you add a field to `userSchema`.
- *
- * NOTE: interface is used as Mongoose schemas are runtime definitions
- * (MongoDB doesn't know about TypeScript), and interface ensures compile-time type safety.
- * Both must be kept in sync. Without this, all Mongoose returned documents would be typed as `any`.
- *
- */
 export type UserRole = "PM" | "Subbie" | "Owner" | "Builder" | "Consultant";
+
 export interface User extends Document {
-  // Add user field types here
+  id: string;
   name: string;
   email: string;
   password: string;
@@ -27,27 +14,26 @@ export interface User extends Document {
   status: "Pending" | "Active";
   role: UserRole;
   loginAttempts: number;
-  lockUntil: Date;
+  lockUntil?: Date;
   accountLocked: boolean;
+  verificationCode?: string | null;
+  verificationCodeExpiry?: Date | null;
+  resetCode?: string | null;
+  resetCodeExpiry?: Date | null;
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
-  verificationCode: string;
-  verificationCodeExpiry: Date;
-  resetCode: string;
-  resetCodeExpiry: Date;
-  emailVerified: boolean;
 }
 
-/**
- * Mongoose schema for the User model.
- * Define the shape, types, and validation rules for User documents here.
- *
- * @see {@link https://mongoosejs.com/docs/guide.html} Mongoose Schema Guide
- */
 const userSchema = new Schema<User>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+    },
     password: { type: String, required: true },
     phoneNumber: { type: String },
     verticalGroup: { type: String },
@@ -66,8 +52,6 @@ const userSchema = new Schema<User>(
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     accountLocked: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
     verificationCode: { type: String, unique: true, sparse: true },
     verificationCodeExpiry: { type: Date },
     resetCode: { type: String },
@@ -79,11 +63,4 @@ const userSchema = new Schema<User>(
   }
 );
 
-/**
- * Mongoose model for the User collection.
- * Use this to query, create, update, and delete User documents.
- *
- * @example
- * const user = await UserModel.create({ name: "John", email: "john@example.com" });
- */
 export const UserModel = mongoose.model<User>("User", userSchema);

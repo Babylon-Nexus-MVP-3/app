@@ -42,7 +42,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     checkName(name);
     await checkEmail(normalisedEmail);
     checkPassword(input.password);
-  } catch (error) {
+  } catch {
     throw new AuthError("Registration failed. Please check your information and try again.");
   }
   const { code, expiry } = generateCode();

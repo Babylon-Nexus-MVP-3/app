@@ -5,9 +5,9 @@ import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import path from "path";
 import fs from "fs";
+import authRoutes from "./routes/authRoutes";
 import { authRouter } from "./routes/auth";
 import { clear } from "./clear";
-import { AuthError } from "./service/auth.service";
 
 export const app = express();
 
@@ -20,29 +20,39 @@ const swaggerFile = fs.readFileSync(path.join(__dirname, "../swagger.yaml"), "ut
 const swaggerDoc = YAML.parse(swaggerFile);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
-app.get("/", (req, res) => {
-  res.redirect("/api-docs");
-});
 
 // Utility endpoint for testing
 app.delete("/clear", async (req: Request, res: Response) => {
   try {
     const result = await clear();
     res.status(200).json(result);
-  } catch (error) {
-    return res.status(400).json({ error: error.message });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 });
 
+// Auth routes (register via authRouter, login via authRoutes)
 app.use("/auth", authRouter);
+app.use("/auth", authRoutes);
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof AuthError) {
-    res.status(err.statusCode).json({ error: err.message });
+app.get("/", (req, res) => {
+  res.redirect("/api-docs");
+});
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const maybeErr = err as { statusCode?: number; message?: string };
+
+  if (
+    typeof maybeErr.statusCode === "number" &&
+    maybeErr.statusCode >= 400 &&
+    maybeErr.statusCode < 600
+  ) {
+    res.status(maybeErr.statusCode).json({ error: maybeErr.message ?? "Request failed" });
     return;
   }
 
   // Fallback error handler for unexpected errors
+
   console.error(err);
   res.status(500).json({ error: "Internal Server Error" });
 });
