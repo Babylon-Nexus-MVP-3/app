@@ -1,4 +1,4 @@
-import express, { json, Request, Response } from "express";
+import express, { json, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { authRouter } from "./routes/auth";
 import { clear } from "./clear";
+import { AuthError } from "./service/auth.service";
 
 export const app = express();
 
@@ -34,3 +35,14 @@ app.delete("/clear", async (req: Request, res: Response) => {
 });
 
 app.use("/auth", authRouter);
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AuthError) {
+    res.status(err.statusCode).json({ error: err.message });
+    return;
+  }
+
+  // Fallback error handler for unexpected errors
+  console.error(err);
+  res.status(500).json({ error: "Internal Server Error" });
+});

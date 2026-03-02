@@ -8,6 +8,15 @@ import {
   hashPassword,
 } from "../utils/authHelper";
 
+export class AuthError extends Error {
+  statusCode: number;
+
+  constructor(message: string, statusCode = 400) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
 /*
   [1] - Register User
   Creates a new user account after validating and sanitizing inputs.
@@ -31,9 +40,7 @@ export async function registerUser(
     await checkEmail(normalisedEmail);
     checkPassword(password);
   } catch (error) {
-    throw new Error("Registration failed. Please check your information and try again.", {
-      cause: error,
-    });
+    throw new AuthError("Registration failed. Please check your information and try again.");
   }
   const { code, expiry } = generateCode();
   const hashedPassword = await hashPassword(password);
