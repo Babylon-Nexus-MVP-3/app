@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { AuthError, loginUser } from "../services/authService";
+import { loginUser } from "../services/authService";
 
 export async function login(
   req: Request,
@@ -26,11 +26,6 @@ export async function login(
       },
     });
   } catch (err) {
-    if (err instanceof AuthError) {
-      res.status(err.statusCode).json({ error: err.message });
-      return;
-    }
-
     next(err);
   }
 }

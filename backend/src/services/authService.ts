@@ -77,7 +77,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     throw new AuthError("User email is not verified", 400);
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+  const passwordMatches = await bcrypt.compare(password, user.password);
 
   if (!passwordMatches) {
     throw new AuthError("Invalid credentials", 400);

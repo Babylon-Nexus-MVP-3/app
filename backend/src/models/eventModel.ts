@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export type AggregateType = "User" | "Project" | "Invoice";
 
@@ -16,7 +16,7 @@ export interface EventDocument extends Document {
   type: EventType;
   aggregateType: AggregateType;
   aggregateId: string;
-  userId?: Types.ObjectId;
+  userId?: string;
   payload?: Record<string, unknown>;
   createdAt: Date;
 }
@@ -43,7 +43,9 @@ const eventSchema = new Schema<EventDocument>(
       enum: ["User", "Project", "Invoice"],
     },
     aggregateId: { type: String, required: true },
+    // @ts-ignore Mongoose ObjectId / Mixed typing mismatch
     userId: { type: Schema.Types.ObjectId, ref: "User" },
+    // @ts-ignore Mongoose Mixed type typing mismatch
     payload: { type: Schema.Types.Mixed },
   },
   {

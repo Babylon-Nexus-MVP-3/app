@@ -6,6 +6,7 @@ import YAML from "yaml";
 import path from "path";
 import fs from "fs";
 import authRoutes from "./routes/authRoutes";
+import { AuthError } from "./services/authService";
 
 export const app = express();
 
@@ -25,11 +26,13 @@ app.get("/", (req, res) => {
   res.redirect("/api-docs");
 });
 
-app.use(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    // Fallback error handler for unexpected errors
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
-  },
-);
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AuthError) {
+    res.status(err.statusCode).json({ error: err.message });
+    return;
+  }
+
+  // Fallback error handler for unexpected errors
+  console.error(err);
+  res.status(500).json({ error: "Internal Server Error" });
+});
