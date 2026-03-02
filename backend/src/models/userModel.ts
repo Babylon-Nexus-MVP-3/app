@@ -14,14 +14,18 @@ import mongoose, { Schema, Document } from "mongoose";
  * Both must be kept in sync. Without this, all Mongoose returned documents would be typed as `any`.
  *
  */
+export type UserRole = "PM" | "Subbie" | "Owner" | "Builder" | "Consultant";
 export interface User extends Document {
   // Add user field types here
   name: string;
   email: string;
   password: string;
-  refreshTokens: string[];
-  pushTokens: string[];
-  role: "owner" | "financier" | "builder" | "project_manager" | "subcontractor" | "consultant";
+  phoneNumber?: string;
+  verticalGroup?: string;
+  horizontalAttribute?: string;
+  licenceNumber?: string | null;
+  status: "Pending" | "Active";
+  role: UserRole;
   loginAttempts: number;
   lockUntil: Date;
   accountLocked: boolean;
@@ -40,28 +44,40 @@ export interface User extends Document {
  *
  * @see {@link https://mongoosejs.com/docs/guide.html} Mongoose Schema Guide
  */
-const userSchema = new Schema<User>({
-  // Add user fields here, for example:
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true },
-  refreshTokens: { type: [String], default: [] },
-  pushTokens: { type: [String], default: [] },
-  role: {
-    type: String,
-    enum: ["owner", "financier", "builder", "project_manager", "subcontractor", "consultant"],
+const userSchema = new Schema<User>(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
+    password: { type: String, required: true },
+    phoneNumber: { type: String },
+    verticalGroup: { type: String },
+    horizontalAttribute: { type: String },
+    licenceNumber: { type: String },
+    status: {
+      type: String,
+      required: true,
+      enum: ["Pending", "Active"],
+      default: "Pending",
+    },
+    role: {
+      type: String,
+      enum: ["PM", "Subbie", "Owner", "Builder", "Consultant"],
+    },
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    accountLocked: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+    verificationCode: { type: String, unique: true, sparse: true },
+    verificationCodeExpiry: { type: Date },
+    resetCode: { type: String },
+    resetCodeExpiry: { type: Date },
+    emailVerified: { type: Boolean, default: false },
   },
-  loginAttempts: { type: Number, default: 0 },
-  lockUntil: { type: Date },
-  accountLocked: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  verificationCode: { type: String, unique: true, sparse: true },
-  verificationCodeExpiry: { type: Date },
-  resetCode: { type: String },
-  resetCodeExpiry: { type: Date },
-  emailVerified: { type: Boolean, default: false },
-});
+  {
+    timestamps: true,
+  }
+);
 
 /**
  * Mongoose model for the User collection.

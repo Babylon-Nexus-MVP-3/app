@@ -42,7 +42,6 @@ export async function registerUser(
     name: name,
     email: normalisedEmail,
     password: hashedPassword,
-    refreshTokens: [],
     loginAttempts: 0,
     accountLocked: false,
     verificationCode: code, // TODO: Hash verification code before storing in production
