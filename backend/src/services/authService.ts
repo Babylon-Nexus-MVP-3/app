@@ -51,7 +51,7 @@ async function createRefreshToken(user: User): Promise<string> {
   );
 
   await RefreshTokenModel.create({
-    user: user._id,
+    user: user._id.toString(),
     token,
     expiresAt,
   });
@@ -90,7 +90,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     type: "UserLoggedIn",
     aggregateType: "User",
     aggregateId: user.id,
-    userId: user._id,
+    userId: user._id.toString(),
     payload: { email: user.email },
   });
 
