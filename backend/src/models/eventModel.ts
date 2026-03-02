@@ -43,15 +43,13 @@ const eventSchema = new Schema<EventDocument>(
       enum: ["User", "Project", "Invoice"],
     },
     aggregateId: { type: String, required: true },
-    // @ts-ignore Mongoose ObjectId / Mixed typing mismatch
+    // @ts-expect-error Mongoose ObjectId / Mixed typing mismatch
     userId: { type: Schema.Types.ObjectId, ref: "User" },
-    // @ts-ignore Mongoose Mixed type typing mismatch
     payload: { type: Schema.Types.Mixed },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  },
+  }
 );
 
 export const EventModel = mongoose.model<EventDocument>("Event", eventSchema);
-

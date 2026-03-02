@@ -46,9 +46,7 @@ function createAccessToken(user: User): string {
 async function createRefreshToken(user: User): Promise<string> {
   const token = crypto.randomBytes(64).toString("hex");
 
-  const expiresAt = new Date(
-    Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
-  );
+  const expiresAt = new Date(Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000);
 
   await RefreshTokenModel.create({
     user: user._id.toString(),
@@ -96,4 +94,3 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
 
   return { accessToken, refreshToken, user };
 }
-

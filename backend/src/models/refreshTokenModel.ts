@@ -10,7 +10,7 @@ export interface RefreshToken extends Document {
 
 const refreshTokenSchema = new Schema<RefreshToken>(
   {
-    // @ts-ignore Mongoose ObjectId typing mismatch between runtime and @types
+    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     token: { type: String, required: true, unique: true },
     expiresAt: { type: Date, required: true },
@@ -18,11 +18,7 @@ const refreshTokenSchema = new Schema<RefreshToken>(
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  },
+  }
 );
 
-export const RefreshTokenModel = mongoose.model<RefreshToken>(
-  "RefreshToken",
-  refreshTokenSchema,
-);
-
+export const RefreshTokenModel = mongoose.model<RefreshToken>("RefreshToken", refreshTokenSchema);

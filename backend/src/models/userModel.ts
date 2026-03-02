@@ -48,7 +48,6 @@ const userSchema = new Schema<User>(
     role: {
       type: String,
       enum: ["PM", "Subbie", "Owner", "Builder", "Consultant"],
-      required: true,
     },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
@@ -61,7 +60,7 @@ const userSchema = new Schema<User>(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 export const UserModel = mongoose.model<User>("User", userSchema);

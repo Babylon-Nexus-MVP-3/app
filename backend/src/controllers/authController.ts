@@ -1,11 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { loginUser } from "../services/authService";
 
-export async function login(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, password } = req.body;
     const result = await loginUser({ email, password });
@@ -29,4 +25,3 @@ export async function login(
     next(err);
   }
 }
-
