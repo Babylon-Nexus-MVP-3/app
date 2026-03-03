@@ -1,11 +1,12 @@
 import request from "supertest";
-import { app } from "./app";
-import { AuthError, loginUser } from "./services/authService";
+import { app } from "../../app";
+import { AuthError, loginUser } from "../../service/auth.service";
 
-jest.mock("./services/authService", () => {
+jest.mock("../../service/auth.service", () => {
   // Use the real AuthError class but mock loginUser
-  const actual =
-    jest.requireActual<typeof import("./services/authService")>("./services/authService");
+  const actual = jest.requireActual<typeof import("../../service/auth.service")>(
+    "../../service/auth.service"
+  );
 
   return {
     ...actual,
