@@ -36,8 +36,9 @@ export default function SignIn() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Login failed");
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
 
       await login(data.accessToken, data.refreshToken, data.user);
       router.replace("/(app)/projects");
