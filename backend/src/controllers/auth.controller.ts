@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { registerUser } from "../service/auth.service";
+import { loginUser, registerUser } from "../service/auth.service";
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -9,6 +9,31 @@ export async function register(req: Request, res: Response, next: NextFunction):
     }
     const result = await registerUser({ firstName, lastName, password, email });
     res.status(201).json({ userId: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, password } = req.body;
+    const result = await loginUser({ email, password });
+
+    res.status(200).json({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        phoneNumber: result.user.phoneNumber,
+        role: result.user.role,
+        verticalGroup: result.user.verticalGroup,
+        horizontalAttribute: result.user.horizontalAttribute,
+        licenceNumber: result.user.licenceNumber,
+        status: result.user.status,
+      },
+    });
   } catch (err) {
     next(err);
   }
