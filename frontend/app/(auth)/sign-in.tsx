@@ -12,8 +12,10 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignIn() {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,25 +31,16 @@ export default function SignIn() {
     setError(null);
 
     try {
-      // TODO: replace with real API call
-      // POST http://localhost:3229/auth/login
-      // Request body:  { email: string, password: string }
-      // Success (200): { accessToken: string, refreshToken: string, user: { id, name, email, phoneNumber, role, verticalGroup, horizontalAttribute, licenceNumber, status } }
-      // Error  (400):  { error: string }
-      //
-      // const response = await fetch('http://localhost:3229/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
-      // });
-      // const data = await response.json();
-      // if (!response.ok) throw new Error(data.error ?? 'Login failed');
-      // await storeTokens(data.accessToken, data.refreshToken); // TODO: token storage
-      // await storeUser(data.user);                              // TODO: user state
+      const response = await fetch("http://localhost:3229/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
+      });
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
 
-      // Mock: simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
+      await login(data.accessToken, data.refreshToken, data.user);
       router.replace("/(app)/projects");
     } catch (err: unknown) {
       setError(
@@ -93,7 +86,7 @@ export default function SignIn() {
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            placeholder="tom@babylonnexus.com"
+            placeholder="you@example.com"
             placeholderTextColor="rgba(255,255,255,0.3)"
             keyboardType="email-address"
             autoCapitalize="none"

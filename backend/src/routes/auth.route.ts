@@ -5,3 +5,4 @@ import { registrationLimiter } from "../middleware";
 export const authRouter = express.Router();
 
 authRouter.post("/register", registrationLimiter, AuthController.register);
+authRouter.post("/login", AuthController.login);
