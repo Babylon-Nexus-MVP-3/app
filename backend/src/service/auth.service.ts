@@ -48,8 +48,10 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     checkName(name);
     await checkEmail(normalisedEmail);
     checkPassword(input.password);
-  } catch {
-    throw new AuthError("Registration failed. Please check your information and try again.");
+  } catch (err) {
+    throw new AuthError(
+      err instanceof Error ? err.message : "Registration failed. Please check your information and try again.",
+    );
   }
   const { code, expiry } = generateCode();
   const hashedPassword = await hashPassword(input.password);
