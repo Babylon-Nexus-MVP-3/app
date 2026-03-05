@@ -15,8 +15,8 @@ export function checkName(name: string): void {
 
   const trimmedName = name.trim();
 
-  if (trimmedName.length < 2 || trimmedName.length > 20) {
-    throw new Error("Name must be between 2 and 20 characters.");
+  if (trimmedName.length < 2 || trimmedName.length > 50) {
+    throw new Error("Name must be between 2 and 50 characters.");
   }
 
   // Allow letters, spaces, hyphens, apostrophes, and Unicode letters
