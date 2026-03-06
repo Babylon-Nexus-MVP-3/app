@@ -71,20 +71,17 @@ const validProjectBody = {
   council: "Strathfield",
   ownerId: "user_owner123",
   builderId: "user_builder123",
-  pmId: "user_pm123",
   status: "90% Complete",
 };
 
 describe("POST /project", () => {
   it("returns 200 and projectId when PM creates project with valid body", async () => {
     const token = await getPmToken();
-    const pmUser = await UserModel.findOne({ email: PM_EMAIL });
-    const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
 
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
-      .send(body);
+      .send(validProjectBody);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
