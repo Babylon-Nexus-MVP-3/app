@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
+// Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
+jest.setTimeout(15000);
+
+const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
+
 beforeEach(async () => {
   await requestDelete();
 });
@@ -12,15 +17,19 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await mongoose.connection.close();
-});
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+}, 10000);
 
 beforeAll(async () => {
-  // Ensure DB is connected
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI.");
   }
-});
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
+  }
+}, 10000);
 
 describe("Error Cases", () => {
   describe("Test Email", () => {
