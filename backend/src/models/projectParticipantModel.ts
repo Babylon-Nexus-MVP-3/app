@@ -15,7 +15,7 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
   projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
   // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  userId: { type: Schema.Types.ObjectId, ref: "User" },
   role: { type: String },
   email: { type: String, required: true },
   inviteCode: { type: String },
