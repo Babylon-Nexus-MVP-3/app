@@ -102,7 +102,7 @@ describe("POST /project/:projectId/invite", () => {
 
   it("returns 400 when project does not exist", async () => {
     const inviteRes = await requestInviteSubbie(
-      "invalid",
+      new mongoose.Types.ObjectId().toString(),
       token,
       SUBBIE_EMAIL,
       "Electrician",
