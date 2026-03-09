@@ -26,3 +26,20 @@ export const requestAuthLogin = async (email: string, password: string) => {
 export const requestRefreshToken = async (token: string) => {
   return await request(app).post("/auth/refresh").send({ refreshToken: token });
 };
+
+export const requestInviteSubbie = async (
+  projectId: string,
+  token: string,
+  email: string,
+  trade: string,
+  role: string
+) => {
+  return await request(app)
+    .post(`/project/${projectId}/invite`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({
+      email: email,
+      trade: trade,
+      role: role,
+    });
+};

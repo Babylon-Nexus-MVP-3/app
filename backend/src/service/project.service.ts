@@ -1,5 +1,6 @@
 import { ProjectModel } from "../models/projectModel";
 import { EventModel } from "../models/eventModel";
+import { ProjectParticipantModel } from "../models/projectParticipantModel";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -53,4 +54,65 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   });
 
   return project._id.toString();
+}
+
+export interface InviteSubbieInput {
+  email: string;
+  role: string;
+  trade: string;
+}
+
+// Send Invite Code and Email directly for now
+// Move to sending via email in production
+export interface InviteSubbieResult {
+  participant: {
+    projectId: string;
+    role: string;
+    email: string;
+    inviteCode: string;
+    trade: string;
+    dateInvited: Date;
+    status: "Pending" | "Accepted";
+  };
+}
+
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function inviteSubbie(
+  input: InviteSubbieInput,
+  projectId: string,
+  userId: string
+): Promise<InviteSubbieResult> {
+  const email = input.email.trim();
+  const trade = input.trade;
+  const role = input.role;
+
+  const project = await ProjectModel.findById(projectId);
+  if (!project) {
+    throw new ProjectError("Project Does not exist");
+  }
+
+  if (project.pmId !== userId) {
+    throw new ProjectError("Project does not exist");
+  }
+
+  if (!email || !trade || !role) {
+    throw new ProjectError("Missing Required Fields to add partiicpant: email, trade, role");
+  }
+
+  const inviteCode = generateOTP();
+
+  const participant = await ProjectParticipantModel.create({
+    projectId,
+    role,
+    email,
+    inviteCode,
+    trade,
+    dateInvited: new Date(Date.now()),
+    status: "Pending",
+  });
+
+  return { participant };
 }
