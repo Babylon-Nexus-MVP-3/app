@@ -112,6 +112,35 @@ describe("POST /project/:projectId/invite", () => {
     expect(inviteRes.status).toBe(400);
   });
 
+  it("returns 400 when PM is not assigned to project", async () => {
+    // Register another PM
+    await requestAuthRegister(
+      "Project",
+      "Manager",
+      "SecurePassword1234!",
+      "pm@project2-test.com",
+      "PM"
+    );
+
+    await UserModel.updateOne(
+      { email: "pm@project2-test.com" },
+      { $set: { status: "Active", emailVerified: true } }
+    );
+
+    const login = await requestAuthLogin("pm@project2-test.com", "SecurePassword1234!");
+    const wrongPmToken = login.body.accessToken;
+
+    const inviteRes = await requestInviteSubbie(
+      projectId,
+      wrongPmToken,
+      SUBBIE_EMAIL,
+      "Electrician",
+      "Subbie"
+    );
+
+    expect(inviteRes.status).toBe(400);
+  });
+
   it("returns 403 when non-PM tries to invite", async () => {
     // Register and login as a Subbie
     const reg = await requestAuthRegister("Sub", "Contractor", PM_PASSWORD, SUBBIE_EMAIL, "Subbie");
