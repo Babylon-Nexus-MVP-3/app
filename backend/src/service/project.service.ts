@@ -116,3 +116,37 @@ export async function inviteSubbie(
 
   return { participant };
 }
+
+export async function acceptInviteSubbie(inviteCode: string, userId: string) {
+  if (!inviteCode) {
+    throw new ProjectError("Invite code is required");
+  }
+
+  const participant = await ProjectParticipantModel.findOne({ inviteCode });
+
+  if (!participant) {
+    throw new ProjectError("Invalid or expired invite code");
+  }
+
+  if (participant.status !== "Pending") {
+    throw new ProjectError("Invite is no longer valid");
+  }
+
+  const project = await ProjectModel.findById(participant.projectId);
+  if (!project) {
+    throw new ProjectError("Associated project no longer exists");
+  }
+
+  const updatedParticipant = await ProjectParticipantModel.findByIdAndUpdate(
+    participant._id,
+    {
+      userId,
+      status: "Accepted",
+      dateAccepted: new Date(Date.now()),
+      inviteCode: null, // invalidate the code after use
+    },
+    { new: true }
+  );
+
+  return { participant: updatedParticipant };
+}
