@@ -13,6 +13,8 @@ export const requestAuthRegister = async (
   password: string,
   email: string,
   role?: string
+  email: string,
+  role?: string
 ) => {
   const body: Record<string, string> = { firstName, lastName, password, email };
   if (role) body.role = role;
@@ -21,4 +23,8 @@ export const requestAuthRegister = async (
 
 export const requestAuthLogin = async (email: string, password: string) => {
   return await request(app).post("/auth/login").send({ email, password });
+};
+
+export const requestRefreshToken = async (token: string) => {
+  return await request(app).post("/auth/refresh").send({ refreshToken: token });
 };
