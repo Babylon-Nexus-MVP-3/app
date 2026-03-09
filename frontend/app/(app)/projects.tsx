@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
@@ -79,7 +80,11 @@ export default function Projects() {
                 <Text style={styles.greeting}>Hey {firstName} 👋</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.newProjectBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.newProjectBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push('/(app)/create-project')}
+            >
               <Text style={styles.newProjectText}>+ New Project</Text>
             </TouchableOpacity>
           </View>
