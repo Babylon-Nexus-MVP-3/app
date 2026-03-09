@@ -13,8 +13,6 @@ export const requestAuthRegister = async (
   password: string,
   email: string,
   role?: string
-  email: string,
-  role?: string
 ) => {
   const body: Record<string, string> = { firstName, lastName, password, email };
   if (role) body.role = role;
