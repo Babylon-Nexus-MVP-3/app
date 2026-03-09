@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { loginUser, registerUser } from "../service/auth.service";
+import { authRefresh, loginUser, registerUser } from "../service/auth.service";
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -37,5 +37,19 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     });
   } catch (err) {
     next(err);
+  }
+}
+
+export async function refresh(req: Request, res: Response) {
+  const refreshToken = req.body?.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Authentication Required" });
+  }
+
+  try {
+    const { accessToken, refreshToken: newRefreshToken } = await authRefresh(refreshToken);
+    res.status(200).json({ accessToken: accessToken, refreshToken: newRefreshToken });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 }

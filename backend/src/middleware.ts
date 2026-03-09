@@ -15,6 +15,7 @@ export interface JwtPayload {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: JwtPayload;
@@ -31,6 +32,13 @@ const registrationLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV === "test",
+});
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many refresh attempts please try again later",
+  standardHeaders: true,
+  legacyHeaders: true,
 });
 
 /**
@@ -72,4 +80,4 @@ export function requireRole(...allowedRoles: string[]) {
   };
 }
 
-export { registrationLimiter };
+export { registrationLimiter, refreshLimiter };

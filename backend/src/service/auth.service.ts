@@ -51,7 +51,9 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     checkPassword(input.password);
   } catch (err) {
     throw new AuthError(
-      err instanceof Error ? err.message : "Registration failed. Please check your information and try again.",
+      err instanceof Error
+        ? err.message
+        : "Registration failed. Please check your information and try again."
     );
   }
   const { code, expiry } = generateCode();
@@ -151,4 +153,31 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
   });
 
   return { accessToken, refreshToken, user };
+}
+
+/*
+[Auth Refresh - Generate new tokens upon accessToken expiry]
+*/
+export async function authRefresh(token: string) {
+  const refreshToken = await RefreshTokenModel.findOne({ token: token });
+
+  if (!refreshToken) {
+    throw new AuthError("Refresh Token is Invalid");
+  }
+
+  // If refresh Token is expired user must login again
+  if (refreshToken.expiresAt < new Date(Date.now())) {
+    // Remove expired token from db
+    await RefreshTokenModel.deleteOne({ token: token });
+    throw new AuthError("Refresh Token has expired");
+  }
+
+  // Also reissue a new refreshToken and delete curernt one
+  await RefreshTokenModel.deleteOne({ token: token });
+
+  const user = await UserModel.findById(refreshToken.user);
+  const accessToken = createAccessToken(user);
+  const newRefreshToken = await createRefreshToken(user);
+
+  return { accessToken, refreshToken: newRefreshToken };
 }
