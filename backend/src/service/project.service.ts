@@ -82,7 +82,8 @@ function generateOTP(): string {
 
 export async function inviteSubbie(
   input: InviteSubbieInput,
-  projectId: string
+  projectId: string,
+  userId: string
 ): Promise<InviteSubbieResult> {
   const email = input.email.trim();
   const trade = input.trade;
@@ -91,6 +92,10 @@ export async function inviteSubbie(
   const project = await ProjectModel.findById(projectId);
   if (!project) {
     throw new ProjectError("Project Does not exist");
+  }
+
+  if (project.pmId !== userId) {
+    throw new ProjectError("Project does not exist");
   }
 
   if (!email || !trade || !role) {
