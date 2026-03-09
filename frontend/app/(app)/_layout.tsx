@@ -1,6 +1,6 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/colors';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
 
 export default function AppLayout() {
   return (
@@ -16,37 +16,38 @@ export default function AppLayout() {
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: "600",
         },
       }}
     >
       <Tabs.Screen
         name="projects"
         options={{
-          title: 'Projects',
+          title: "Projects",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Notifications',
+          title: "Notifications",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'flash' : 'flash-outline'} size={24} color={color} />
+            <Ionicons name={focused ? "flash" : "flash-outline"} size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: "Settings",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={24} color={color} />
+            <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="create-project" options={{ href: null }} />
     </Tabs>
   );
 }
