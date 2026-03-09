@@ -127,7 +127,25 @@ export default function Projects() {
         <Text style={styles.sectionLabel}>YOUR PROJECTS</Text>
 
         {PROJECTS.map((project) => (
-          <TouchableOpacity key={project.id} style={styles.projectCard} activeOpacity={0.75}>
+          <TouchableOpacity
+            key={project.id}
+            style={styles.projectCard}
+            activeOpacity={0.75}
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/project/[id]",
+                params: {
+                  id: project.id,
+                  name: project.name,
+                  subtitle: project.subtitle,
+                  role: project.role,
+                  health: String(project.health),
+                  overdue: String(project.overdue),
+                  change: String(project.change),
+                },
+              })
+            }
+          >
             <CircularProgress value={project.health} size={68} />
 
             <View style={styles.projectInfo}>

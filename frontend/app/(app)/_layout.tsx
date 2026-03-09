@@ -48,6 +48,7 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen name="create-project" options={{ href: null }} />
+      <Tabs.Screen name="project/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
