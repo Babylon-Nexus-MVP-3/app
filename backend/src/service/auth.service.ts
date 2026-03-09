@@ -176,6 +176,9 @@ export async function authRefresh(token: string) {
   await RefreshTokenModel.deleteOne({ token: token });
 
   const user = await UserModel.findById(refreshToken.user);
+  if (!user) {
+    throw new AuthError("Refresh Token has expired");
+  }
   const accessToken = createAccessToken(user);
   const newRefreshToken = await createRefreshToken(user);
 
