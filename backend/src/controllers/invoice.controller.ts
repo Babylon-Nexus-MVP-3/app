@@ -5,9 +5,11 @@ export async function create(req: Request, res: Response, next: NextFunction): P
   try {
     const { submittingParty, submittingCategory, dateDue, description } = req.body;
     const projectId = req.params.projectId as string;
+    const userId = req.user.sub;
     const invoiceId = await submitInvoice(
       { submittingParty, submittingCategory, dateDue, description },
-      projectId
+      projectId,
+      userId
     );
 
     res.status(200).json({ success: true, invoiceId });

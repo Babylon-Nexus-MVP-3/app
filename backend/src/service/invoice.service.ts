@@ -19,11 +19,20 @@ export interface SubmitInvoiceInput {
   description: string;
 }
 
-export async function submitInvoice(input: SubmitInvoiceInput, projectId: string): Promise<string> {
+export async function submitInvoice(
+  input: SubmitInvoiceInput,
+  projectId: string,
+  userId: string
+): Promise<string> {
   const project = await ProjectModel.findById(projectId);
   if (!project) {
     throw new ProjectError("Project Does not Exist");
   }
+
+  // const projectParticipant = await ProjectParticipantModel.find({ userId: userId});
+  // if (projectParticipant.userId !== userId) {
+  // throw new InvoiceError("User not part of project");
+  // }
 
   const submittingParty = input.submittingParty.trim();
   const submittingCategory = input.submittingCategory.trim();
@@ -44,13 +53,13 @@ export async function submitInvoice(input: SubmitInvoiceInput, projectId: string
     description,
   });
 
-  // await EventModel.create({
-  //   type: "InvoiceSubmitted",
-  //   aggregateType: "Invoice",
-  //   aggregateId: invoice._id.toString(),
-  //   userId: , Need to add subcontracters to project before submitting invoice.
-  //   payload: { submittingParty, submittingCategory, dateDue, description }
-  // })
+  await EventModel.create({
+    type: "InvoiceSubmitted",
+    aggregateType: "Invoice",
+    aggregateId: invoice._id.toString(),
+    // userId
+    payload: { submittingParty, submittingCategory, dateDue, description }
+  });
 
   return invoice._id.toString();
 }
