@@ -31,8 +31,7 @@ export default function Index() {
 
           {/* Tagline */}
           <Text style={styles.tagline}>
-            See the health of your project.{"\n"}Payment transparency for
-            construction.
+            See the health of your project.{"\n"}Payment transparency for construction.
           </Text>
         </View>
 

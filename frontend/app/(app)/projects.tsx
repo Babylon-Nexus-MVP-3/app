@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/colors';
-import { useAuth } from '@/context/AuthContext';
-import CircularProgress from '@/components/CircularProgress';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import CircularProgress from "@/components/CircularProgress";
 
 type Project = {
   id: string;
@@ -19,37 +19,37 @@ type Project = {
 // TODO: Replace with API data
 const PROJECTS: Project[] = [
   {
-    id: '1',
-    name: 'Strathfield Apartments',
-    subtitle: '24 Units — Strathfield NSW',
-    role: 'Subcontractor',
+    id: "1",
+    name: "Strathfield Apartments",
+    subtitle: "24 Units — Strathfield NSW",
+    role: "Subcontractor",
     health: 78,
     overdue: 2,
     change: 5,
   },
   {
-    id: '2',
-    name: 'Parramatta Tower',
-    subtitle: '18 Levels — Parramatta NSW',
-    role: 'Builder',
+    id: "2",
+    name: "Parramatta Tower",
+    subtitle: "18 Levels — Parramatta NSW",
+    role: "Builder",
     health: 65,
     overdue: 3,
     change: -3,
   },
   {
-    id: '3',
-    name: 'Bankstown Mixed-Use',
-    subtitle: '45 Units — Bankstown NSW',
-    role: 'Owner',
+    id: "3",
+    name: "Bankstown Mixed-Use",
+    subtitle: "45 Units — Bankstown NSW",
+    role: "Owner",
     health: 45,
     overdue: 5,
     change: -12,
   },
   {
-    id: '4',
-    name: 'Burwood Central',
-    subtitle: '12 Units — Burwood NSW',
-    role: 'Project Manager',
+    id: "4",
+    name: "Burwood Central",
+    subtitle: "12 Units — Burwood NSW",
+    role: "Project Manager",
     health: 92,
     overdue: 0,
     change: 8,
@@ -58,18 +58,16 @@ const PROJECTS: Project[] = [
 
 export default function Projects() {
   const { user } = useAuth();
-  const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const firstName = user?.name?.split(" ")[0] ?? "there";
 
-  const avgHealth = Math.round(
-    PROJECTS.reduce((sum, p) => sum + p.health, 0) / PROJECTS.length,
-  );
+  const avgHealth = Math.round(PROJECTS.reduce((sum, p) => sum + p.health, 0) / PROJECTS.length);
   const totalOverdue = PROJECTS.reduce((sum, p) => sum + p.overdue, 0);
 
   return (
     <View style={styles.screen}>
       {/* ── Dark header ── */}
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
-        <SafeAreaView edges={['top']}>
+        <SafeAreaView edges={["top"]}>
           {/* Brand row */}
           <View style={styles.topRow}>
             <View style={styles.brandBlock}>
@@ -89,7 +87,7 @@ export default function Projects() {
           {/* Stats row */}
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>{'PORTFOLIO\nHEALTH'}</Text>
+              <Text style={styles.statLabel}>{"PORTFOLIO\nHEALTH"}</Text>
               <View style={styles.statValueRow}>
                 <Text style={[styles.statNum, { color: Colors.gold }]}>{avgHealth}%</Text>
                 <Text style={[styles.statSuffix, { color: Colors.goldLight }]}> avg</Text>
@@ -97,7 +95,7 @@ export default function Projects() {
             </View>
 
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>{'ACTIVE\nPROJECTS'}</Text>
+              <Text style={styles.statLabel}>{"ACTIVE\nPROJECTS"}</Text>
               <View style={styles.statValueRow}>
                 <Text style={styles.statNum}>{PROJECTS.length}</Text>
                 <Text style={styles.statSuffix}> projects</Text>
@@ -149,7 +147,7 @@ export default function Projects() {
                       { color: project.change > 0 ? Colors.green : Colors.red },
                     ]}
                   >
-                    {project.change > 0 ? '+' : ''}
+                    {project.change > 0 ? "+" : ""}
                     {project.change}%
                   </Text>
                 )}
@@ -175,16 +173,16 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
   },
   brandBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   logoBox: {
@@ -192,8 +190,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     backgroundColor: Colors.navyIcon,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoEmoji: {
     fontSize: 24,
@@ -201,15 +199,15 @@ const styles = StyleSheet.create({
   brandLabel: {
     fontSize: 10,
     color: Colors.goldLight,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: 2,
   },
   greeting: {
     fontSize: 20,
     color: Colors.white,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   newProjectBtn: {
     borderWidth: 1.5,
@@ -220,13 +218,13 @@ const styles = StyleSheet.create({
   },
   newProjectText: {
     color: Colors.gold,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 13,
   },
 
   // Stats
   statsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
     gap: 8,
   },
@@ -234,35 +232,35 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 14,
     padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: "rgba(255,255,255,0.07)",
     minHeight: 92,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   statCardOverdue: {
-    backgroundColor: 'rgba(231,76,60,0.18)',
+    backgroundColor: "rgba(231,76,60,0.18)",
   },
   statLabel: {
     fontSize: 10,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     lineHeight: 15,
   },
   statValueRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     marginTop: 6,
   },
   statNum: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.white,
     lineHeight: 32,
   },
   statSuffix: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: "rgba(255,255,255,0.5)",
     marginBottom: 2,
   },
 
@@ -278,9 +276,9 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: 16,
   },
 
@@ -289,10 +287,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
     shadowRadius: 8,
@@ -305,7 +303,7 @@ const styles = StyleSheet.create({
   },
   projectName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: 3,
   },
@@ -315,9 +313,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
   },
   roleBadge: {
@@ -330,7 +328,7 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontSize: 11,
     color: Colors.gold,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   overdueBadge: {
     backgroundColor: Colors.redBg,
@@ -341,10 +339,10 @@ const styles = StyleSheet.create({
   overdueBadgeText: {
     fontSize: 11,
     color: Colors.red,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   changeBadge: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
