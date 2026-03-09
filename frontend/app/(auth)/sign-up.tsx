@@ -33,6 +33,7 @@ export default function SignUp() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,8 +59,13 @@ export default function SignUp() {
   }
 
   async function handleStep1() {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
       setError("Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -210,6 +216,18 @@ export default function SignUp() {
                   · 3 of 4: uppercase, lowercase, number, special character
                 </Text>
               </View>
+
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="••••••••"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleStep1}
+              />
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 
