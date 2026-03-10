@@ -24,9 +24,19 @@ const ROLES = [
   "Certifier",
 ];
 
+// Maps frontend role labels to backend UserRole enum values
+const ROLE_MAP: Record<string, string> = {
+  Owner: "Owner",
+  Financier: "Owner",
+  Builder: "Builder",
+  "Project Manager": "PM",
+  Subcontractor: "Subbie",
+  Consultant: "Consultant",
+  Certifier: "Consultant",
+};
+
 export default function SignUp() {
   const [step, setStep] = useState(1);
-  const [registered, setRegistered] = useState(false);
 
   // Step 1
   const [firstName, setFirstName] = useState("");
@@ -58,28 +68,32 @@ export default function SignUp() {
     }
   }
 
-  async function handleStep1() {
+  function handleStep1() {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
+    setError(null);
+    setStep(2);
+  }
 
-    // Already registered — just move forward without calling the API again
-    if (registered) {
-      setError(null);
-      setStep(2);
-      return;
-    }
+  function handleStep2() {
+    // TODO: POST /projects/join { projectCode } when backend endpoint is ready
+    setStep(3);
+  }
+
+  async function handleStep3() {
+    if (selectedRoles.length === 0) return;
 
     setLoading(true);
     setError(null);
 
     try {
+      const role = ROLE_MAP[selectedRoles[0]];
       const response = await fetch("http://localhost:3229/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,6 +102,7 @@ export default function SignUp() {
           lastName: lastName.trim(),
           email: email.toLowerCase().trim(),
           password,
+          role,
         }),
       });
       const text = await response.text();
@@ -95,8 +110,7 @@ export default function SignUp() {
       if (!response.ok) {
         throw new Error(data.error ?? text ?? "Registration failed. Please try again.");
       }
-      setRegistered(true);
-      setStep(2);
+      router.replace("/(auth)/pending-approval");
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -106,17 +120,6 @@ export default function SignUp() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleStep2() {
-    // TODO: POST /projects/join { projectCode } when backend endpoint is ready
-    setStep(3);
-  }
-
-  function handleStep3() {
-    if (selectedRoles.length === 0) return;
-    // TODO: POST /projects/role { roles: selectedRoles } when backend endpoint is ready
-    router.replace("/(auth)/pending-approval");
   }
 
   const progressBar = (
@@ -317,24 +320,29 @@ export default function SignUp() {
                 })}
               </View>
 
+              {error && <Text style={styles.errorText}>{error}</Text>}
+
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
-                  selectedRoles.length === 0 && styles.primaryButtonDisabled,
+                  (selectedRoles.length === 0 || loading) && styles.primaryButtonDisabled,
                 ]}
                 onPress={handleStep3}
-                disabled={selectedRoles.length === 0}
+                disabled={selectedRoles.length === 0 || loading}
                 activeOpacity={0.85}
               >
-                <Text
-                  style={[
-                    styles.primaryButtonText,
-                    selectedRoles.length === 0 &&
-                      styles.primaryButtonTextDisabled,
-                  ]}
-                >
-                  Submit for Approval
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color={Colors.navy} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.primaryButtonText,
+                      selectedRoles.length === 0 && styles.primaryButtonTextDisabled,
+                    ]}
+                  >
+                    Submit for Approval
+                  </Text>
+                )}
               </TouchableOpacity>
             </>
           )}
