@@ -69,13 +69,11 @@ async function getSubbieToken(): Promise<string> {
 const validProjectBody = {
   location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
   council: "Strathfield",
-  ownerId: "user_owner123",
-  builderId: "user_builder123",
   status: "90% Complete",
 };
 
 describe("POST /project", () => {
-  it("returns 200 and projectId when PM creates project with valid body", async () => {
+  it("returns 200 and projectId when authenticated user creates project", async () => {
     const token = await getPmToken();
 
     const res = await request(app)
@@ -105,14 +103,17 @@ describe("POST /project", () => {
     expect(res.body.error).toBe("Authentication Required");
   });
 
-  it("returns 403 when user is not PM", async () => {
+  it("returns 200 when Subbie (any role) creates project", async () => {
     const token = await getSubbieToken();
+
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
       .send(validProjectBody);
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe("Forbidden");
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.projectId).toBeDefined();
   });
 
   it("returns 400 when required fields are missing", async () => {
