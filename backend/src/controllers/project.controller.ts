@@ -3,15 +3,15 @@ import { acceptInviteSubbie, createProject, inviteSubbie } from "../service/proj
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { location, council, ownerId, builderId, status } = req.body;
-    const pmId = req.user?.sub;
+    const { location, council, ownerId, builderId, pmId, status } = req.body;
 
-    if (!pmId) {
+    if (!req.user?.sub) {
       res.status(401).json({ error: "Authentication Required" });
       return;
     }
 
     const projectId = await createProject({
+      creatorId: req.user.sub,
       location,
       council,
       ownerId,
