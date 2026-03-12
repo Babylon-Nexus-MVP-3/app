@@ -1,9 +1,12 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -12,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import CircularProgress from "@/components/CircularProgress";
+import { useAuth } from "@/context/AuthContext";
 
 /* ─── Types & helpers ─── */
 type InvoiceStatus = "green" | "amber" | "red" | "purple" | "grey" | "issued";
@@ -167,7 +171,7 @@ export default function ProjectDetail() {
       {activeTab === "calendar" ? (
         <CalendarTab overdueList={overdueList} />
       ) : (
-        <MySpaceTab role={role} builderActions={builderActions} setBuilderActions={setBuilderActions} />
+        <MySpaceTab role={role} projectId={id} builderActions={builderActions} setBuilderActions={setBuilderActions} />
       )}
     </View>
   );
@@ -264,17 +268,19 @@ function CalendarTab({ overdueList }: { overdueList: typeof OVERDUE_BY_PROJECT["
 /* ─── My Space tab (role router) ─── */
 function MySpaceTab({
   role,
+  projectId,
   builderActions,
   setBuilderActions,
 }: {
   role: string;
+  projectId: string;
   builderActions: Record<number, "paid" | "info">;
   setBuilderActions: (fn: (p: Record<number, "paid" | "info">) => Record<number, "paid" | "info">) => void;
 }) {
   if (role === "Subcontractor") return <SubMySpace />;
   if (role === "Builder") return <BuilderMySpace builderActions={builderActions} setBuilderActions={setBuilderActions} />;
   if (role === "Owner" || role === "Financier") return <OwnerMySpace />;
-  if (role === "Project Manager") return <PMMySpace />;
+  if (role === "Project Manager") return <PMMySpace projectId={projectId} />;
   return (
     <View style={styles.placeholder}>
       <Text style={styles.placeholderText}>My Space</Text>
@@ -457,29 +463,166 @@ function OwnerMySpace() {
 }
 
 /* ─── Project Manager ─── */
-function PMMySpace() {
+const INVITE_ROLES = ["Subbie", "Builder", "Owner", "Consultant"] as const;
+type InviteRole = (typeof INVITE_ROLES)[number];
+
+function PMMySpace({ projectId }: { projectId: string }) {
+  const { fetchWithAuth } = useAuth();
   const counts = { green: 18, purple: 2, grey: 3, amber: 4, red: 1, total: 28 };
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<InviteRole>("Subbie");
+  const [inviteTrade, setInviteTrade] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function openModal() {
+    setInviteEmail("");
+    setInviteRole("Subbie");
+    setInviteTrade("");
+    setInviteCode(null);
+    setError(null);
+    setModalVisible(true);
+  }
+
+  async function handleInvite() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth(`http://localhost:3229/project/${projectId}/invite`, {
+        method: "POST",
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, trade: inviteTrade.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to send invite");
+      } else {
+        setInviteCode(data.participant.inviteCode);
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.sectionLabel}>INVOICE STATUS OVERVIEW</Text>
-      {(["green", "amber", "red", "purple", "grey"] as InvoiceStatus[]).map((s) => (
-        <View key={s} style={[styles.invoiceCard, { borderLeftColor: statusColor(s) }]}>
-          <View style={styles.invoiceRow}>
-            <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
-              <View style={[styles.statusDot, { backgroundColor: statusColor(s) }]} />
-              <Text style={styles.invoiceName}>{statusLabel(s)}</Text>
+    <>
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.sectionLabel}>INVOICE STATUS OVERVIEW</Text>
+        {(["green", "amber", "red", "purple", "grey"] as const).map((s) => (
+          <View key={s} style={[styles.invoiceCard, { borderLeftColor: statusColor(s) }]}>
+            <View style={styles.invoiceRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor(s) }]} />
+                <Text style={styles.invoiceName}>{statusLabel(s)}</Text>
+              </View>
+              <Text style={[styles.invoiceAmt, { color: statusColor(s) }]}>{counts[s]} invoices</Text>
             </View>
-            <Text style={[styles.invoiceAmt, { color: statusColor(s) }]}>{counts[s]} invoices</Text>
+          </View>
+        ))}
+        <View style={[styles.invoiceCard, { borderLeftColor: Colors.navy, marginTop: 4 }]}>
+          <View style={styles.invoiceRow}>
+            <Text style={[styles.invoiceName, { fontWeight: "800" }]}>Total</Text>
+            <Text style={styles.invoiceAmt}>{counts.total} invoices</Text>
           </View>
         </View>
-      ))}
-      <View style={[styles.invoiceCard, { borderLeftColor: Colors.navy, marginTop: 4 }]}>
-        <View style={styles.invoiceRow}>
-          <Text style={[styles.invoiceName, { fontWeight: "800" }]}>Total</Text>
-          <Text style={[styles.invoiceAmt]}>{counts.total} invoices</Text>
+
+        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>TEAM</Text>
+        <TouchableOpacity style={styles.inviteBtn} onPress={openModal}>
+          <Text style={styles.inviteBtnText}>+ Invite Team Member</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <Modal visible={modalVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={styles.inviteScreen}>
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
+            <SafeAreaView edges={["top"]}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.inviteBackBtn}>
+                <Text style={styles.inviteBackArrow}>‹</Text>
+                <Text style={styles.inviteBackLabel}>My Space</Text>
+              </TouchableOpacity>
+              <Text style={styles.inviteTitle}>
+                {inviteCode ? "Invite Sent" : "Invite Team Member"}
+              </Text>
+            </SafeAreaView>
+          </LinearGradient>
+
+          <ScrollView style={styles.inviteBody} contentContainerStyle={styles.inviteBodyContent} showsVerticalScrollIndicator={false}>
+            {inviteCode ? (
+              <View style={styles.inviteSuccess}>
+                <View style={styles.inviteSuccessIcon}>
+                  <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
+                </View>
+                <Text style={styles.inviteSuccessTitle}>Invite Sent!</Text>
+                <Text style={styles.inviteSuccessHint}>Share this code with {inviteEmail}:</Text>
+                <View style={styles.inviteCodeBox}>
+                  <Text style={styles.inviteCodeText}>{inviteCode}</Text>
+                </View>
+                <Text style={styles.inviteCodeNote}>The invitee will use this code to join the project.</Text>
+                <TouchableOpacity style={styles.invitePrimaryBtn} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.invitePrimaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.inviteFieldLabel}>Email</Text>
+                <TextInput
+                  style={styles.inviteInput}
+                  placeholder="name@company.com"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+
+                <Text style={styles.inviteFieldLabel}>Role</Text>
+                <View style={styles.inviteRoleRow}>
+                  {INVITE_ROLES.map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.inviteRoleChip, inviteRole === r && styles.inviteRoleChipActive]}
+                      onPress={() => setInviteRole(r)}
+                    >
+                      <Text style={[styles.inviteRoleChipText, inviteRole === r && styles.inviteRoleChipTextActive]}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inviteFieldLabel}>Trade</Text>
+                <TextInput
+                  style={styles.inviteInput}
+                  placeholder="e.g. Electrical, Plumbing"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={inviteTrade}
+                  onChangeText={setInviteTrade}
+                />
+
+                {error && <Text style={styles.inviteError}>{error}</Text>}
+
+                <TouchableOpacity
+                  style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
+                  onPress={handleInvite}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={Colors.navy} />
+                  ) : (
+                    <Text style={styles.invitePrimaryBtnText}>Send Invite</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
         </View>
-      </View>
-    </ScrollView>
+      </Modal>
+    </>
   );
 }
 
@@ -574,4 +717,74 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
   placeholderText: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 8 },
   placeholderSub: { fontSize: 14, color: Colors.textSecondary },
+
+  // Invite button (in PM My Space list)
+  inviteBtn: {
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  inviteBtnText: { color: Colors.gold, fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+
+  // Invite full-screen modal
+  inviteScreen: { flex: 1, backgroundColor: Colors.navy },
+  inviteHeader: { paddingBottom: 20 },
+  inviteBackBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 20, paddingTop: 12, marginBottom: 8 },
+  inviteBackArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
+  inviteBackLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
+  inviteTitle: { fontSize: 22, fontWeight: "800", color: Colors.white, paddingHorizontal: 20, marginBottom: 4 },
+
+  inviteBody: { flex: 1, backgroundColor: Colors.navy },
+  inviteBodyContent: { padding: 24, paddingBottom: 48 },
+
+  inviteFieldLabel: {
+    fontSize: 13, fontWeight: "600", color: Colors.gold,
+    letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8,
+  },
+  inviteInput: {
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: Colors.gold + "40",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: Colors.white,
+  },
+  inviteRoleRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  inviteRoleChip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1.5, borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  inviteRoleChipActive: { borderColor: Colors.gold, backgroundColor: Colors.gold + "26" },
+  inviteRoleChipText: { fontSize: 14, fontWeight: "500", color: "rgba(255,255,255,0.7)" },
+  inviteRoleChipTextActive: { color: Colors.gold, fontWeight: "700" },
+  inviteError: { color: Colors.red, fontSize: 13, fontWeight: "600", marginBottom: 8 },
+  invitePrimaryBtn: {
+    height: 54, backgroundColor: Colors.gold, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+  },
+  invitePrimaryBtnText: { fontSize: 16, fontWeight: "700", color: Colors.navy, letterSpacing: 0.5 },
+
+  // Invite success state
+  inviteSuccess: { alignItems: "center", paddingTop: 40 },
+  inviteSuccessIcon: {
+    width: 72, height: 72, borderRadius: 18,
+    backgroundColor: Colors.green + "26",
+    alignItems: "center", justifyContent: "center", marginBottom: 20,
+  },
+  inviteSuccessTitle: { fontSize: 24, fontWeight: "800", color: Colors.white, marginBottom: 8 },
+  inviteSuccessHint: { fontSize: 14, color: "rgba(255,255,255,0.5)", marginBottom: 20, textAlign: "center" },
+  inviteCodeBox: {
+    backgroundColor: Colors.gold + "1A",
+    borderWidth: 1.5, borderColor: Colors.gold + "66",
+    borderRadius: 14, paddingVertical: 20, paddingHorizontal: 40, marginBottom: 12,
+  },
+  inviteCodeText: { fontSize: 36, fontWeight: "800", color: Colors.gold, letterSpacing: 8 },
+  inviteCodeNote: { fontSize: 13, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 32 },
 });

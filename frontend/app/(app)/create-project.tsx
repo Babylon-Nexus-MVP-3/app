@@ -20,7 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 const ROLES = ['Owner', 'Financier', 'Builder', 'Project Manager', 'Subcontractor', 'Consultant', 'Certifier'];
 
 export default function CreateProject() {
-  const { user, accessToken } = useAuth();
+  const { fetchWithAuth } = useAuth();
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -40,18 +40,11 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3229/project', {
+      const response = await fetchWithAuth('http://localhost:3229/project', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify({
           location: address.trim(),
           council: 'TBD',
-          ownerId: user?.id ?? '',
-          builderId: 'TBD',
-          status: 'Pending',
         }),
       });
 
