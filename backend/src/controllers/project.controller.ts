@@ -32,8 +32,7 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
   try {
     const { email, role, trade } = req.body;
     const projectId = req.params.projectId as string;
-    const userId = req.user.sub;
-    const { participant } = await inviteSubbie({ email, role, trade }, projectId, userId);
+    const { participant } = await inviteSubbie({ email, role, trade }, projectId);
     res.status(200).json({ success: true, participant });
   } catch (err) {
     next(err);
