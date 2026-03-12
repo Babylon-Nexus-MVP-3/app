@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { authRouter } from "./routes/auth.route";
 import { projectRouter } from "./routes/project.route";
+import { projectsRouter } from "./routes/projects.route";
 import { clear } from "./clear";
 
 export const app = express();
@@ -33,6 +34,7 @@ app.delete("/clear", async (req: Request, res: Response) => {
 
 app.use("/auth", authRouter);
 app.use("/project", projectRouter);
+app.use("/projects", projectsRouter);
 
 app.get("/", (req, res) => {
   res.redirect("/api-docs");
