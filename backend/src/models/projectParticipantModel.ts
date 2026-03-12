@@ -19,7 +19,7 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   role: { type: String },
   email: { type: String, required: true },
   inviteCode: { type: String },
-  trade: { type: String, required: true },
+  trade: { type: String },
   dateInvited: { type: Date },
   status: { type: String },
 });
