@@ -10,6 +10,7 @@ function getColor(value: number) {
 interface Props {
   value: number;
   size?: number;
+  label?: string;
 }
 
 /**
@@ -22,8 +23,8 @@ interface Props {
  *   borderBottom + borderLeft covers 135°→315° (bottom-left half).
  *   leftDeg rotates it so the visible arc in the left clip = 180° → angle (when > 180°).
  */
-export default function CircularProgress({ value, size = 68 }: Props) {
-  const strokeWidth = 5;
+export default function CircularProgress({ value, size = 68, label }: Props) {
+  const strokeWidth = 8;
   const half = size / 2;
   const color = getColor(value);
   const angle = (value / 100) * 360;
@@ -115,13 +116,25 @@ export default function CircularProgress({ value, size = 68 }: Props) {
       >
         <Text
           style={{
-            fontSize: Math.round(size * 0.27),
+            fontSize: Math.round(size * 0.25),
             fontWeight: '700',
             color,
           }}
         >
-          {value}
+          {value}%
         </Text>
+        {label && (
+          <Text
+            style={{
+              fontSize: Math.round(size * 0.13),
+              fontWeight: '600',
+              color,
+              marginTop: 2,
+            }}
+          >
+            {label}
+          </Text>
+        )}
       </View>
     </View>
   );

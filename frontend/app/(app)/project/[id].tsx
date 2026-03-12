@@ -95,7 +95,8 @@ const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const EMPTY_CELLS = 6;
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DAY_CELL = Math.floor((SCREEN_WIDTH - 40 - 24) / 7); // 40px body padding, 24px = 6 gaps × 4px
+// Cap at 46px so cells stay compact on large/tablet screens
+const DAY_CELL = Math.min(Math.floor((SCREEN_WIDTH - 40 - 24) / 7), 46);
 
 /* ─── Main screen ─── */
 export default function ProjectDetail() {
@@ -129,7 +130,11 @@ export default function ProjectDetail() {
           <Text style={styles.headerProjectName}>{name}</Text>
 
           <View style={styles.healthWrap}>
-            <CircularProgress value={health} size={120} />
+            <CircularProgress
+              value={health}
+              size={120}
+              label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
+            />
             <Text style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}>
               {change >= 0 ? "+" : ""}{change}% vs last month
             </Text>
@@ -224,7 +229,7 @@ function CalendarTab({ overdueList }: { overdueList: typeof OVERDUE_BY_PROJECT["
 
       {/* Legend */}
       <View style={styles.legend}>
-        {(["green", "amber", "red", "purple", "grey"] as InvoiceStatus[]).map((s) => (
+        {(["green", "purple", "grey", "amber", "red"] as InvoiceStatus[]).map((s) => (
           <View key={s} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: statusColor(s) }]} />
             <Text style={styles.legendLabel}>{statusLabel(s)}</Text>
@@ -487,7 +492,7 @@ const styles = StyleSheet.create({
   backBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 20, paddingTop: 12, marginBottom: 8 },
   backArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
   backLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
-  headerProjectName: { fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: "600", letterSpacing: 0.5, textAlign: "center", marginBottom: 12 },
+  headerProjectName: { fontSize: 16, color: Colors.white, fontWeight: "700", letterSpacing: 0.3, textAlign: "center", marginBottom: 12 },
   healthWrap: { alignItems: "center", marginBottom: 12 },
   healthTrend: { fontSize: 13, fontWeight: "600", marginTop: 8 },
   overdueAlert: {
@@ -515,7 +520,7 @@ const styles = StyleSheet.create({
   monthArrow: { fontSize: 22, color: Colors.textSecondary, width: 28, textAlign: "center" },
   calGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 16 },
   weekDay: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
-  dayCell: { borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  dayCell: { borderRadius: 8, alignItems: "center", justifyContent: "center" },
   dayCellSelected: { borderWidth: 1.5, borderColor: Colors.gold },
   dayNum: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
   dayDot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
