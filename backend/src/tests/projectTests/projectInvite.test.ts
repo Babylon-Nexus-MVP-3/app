@@ -36,10 +36,13 @@ beforeEach(async () => {
   await requestDelete();
   token = await getPmToken();
 
+  const pmUser = await UserModel.findOne({ email: PM_EMAIL });
+  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
+
   const projectRes = await request(app)
     .post("/project")
     .set("Authorization", `Bearer ${token}`)
-    .send(validProjectBody);
+    .send(body);
 
   projectId = projectRes.body.projectId;
 });

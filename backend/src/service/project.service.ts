@@ -12,28 +12,34 @@ export class ProjectError extends Error {
 }
 
 export interface CreateProjectInput {
+  creatorId: string;
   location: string;
   council: string;
-  ownerId: string;
-  builderId: string;
-  pmId: string;
-  status: string;
+  ownerId?: string;
+  builderId?: string;
+  pmId?: string;
+  status?: string;
 }
 
 /**
- * Creates a new project. Caller must be authenticated as PM (enforced by route).
+ * Creates a new project. Any authenticated user can create a project.
  * Emits ProjectCreated event to the immutable event ledger.
  */
 export async function createProject(input: CreateProjectInput): Promise<string> {
+  const creatorId = input.creatorId?.trim();
   const location = input.location?.trim();
   const council = input.council?.trim();
   const ownerId = input.ownerId?.trim();
   const builderId = input.builderId?.trim();
   const pmId = input.pmId?.trim();
-  const status = input.status?.trim();
+  const status = input.status?.trim() ?? "Draft";
 
-  if (!location || !council || !ownerId || !builderId || !pmId || !status) {
-    throw new ProjectError("Required fields missing: location, council, ownerId, builderId, pmId, status");
+  if (!creatorId) {
+    throw new ProjectError("Authentication Required", 401);
+  }
+
+  if (!location || !council) {
+    throw new ProjectError("Required fields missing: location, council");
   }
 
   const project = await ProjectModel.create({
@@ -49,8 +55,8 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     type: "ProjectCreated",
     aggregateType: "Project",
     aggregateId: project._id.toString(),
-    userId: pmId,
-    payload: { location, council, ownerId, builderId, status },
+    userId: creatorId,
+    payload: { location, council, ownerId, builderId, pmId, status },
   });
 
   return project._id.toString();
