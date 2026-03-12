@@ -1,5 +1,6 @@
 import request from "supertest";
 import { app } from "../app";
+import { UserModel } from "../models/userModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -42,4 +43,34 @@ export const requestInviteSubbie = async (
       trade: trade,
       role: role,
     });
+};
+
+/** Register a PM user, activate them so login succeeds, then login and return access token */
+export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
+  const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
+  expect(reg.status).toBe(201);
+  await UserModel.updateOne(
+    { email: pmEmail },
+    { $set: { status: "Active", emailVerified: true } }
+  );
+  const login = await requestAuthLogin(pmEmail, pmPassword);
+  expect(login.status).toBe(200);
+  expect(login.body.accessToken).toBeDefined();
+  return login.body.accessToken;
+}
+
+/** Register a Subbie user, activate them, login and return access token */
+export async function getSubbieToken(email: string, password: string): Promise<string> {
+  const reg = await requestAuthRegister("Sub", "Contractor", password, email, "Subbie");
+  expect(reg.status).toBe(201);
+  await UserModel.updateOne({ email: email }, { $set: { status: "Active", emailVerified: true } });
+  const login = await requestAuthLogin(email, password);
+  expect(login.status).toBe(200);
+  return login.body.accessToken;
+}
+
+export const validProjectBody = {
+  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
+  council: "Strathfield",
+  status: "90% Complete",
 };
