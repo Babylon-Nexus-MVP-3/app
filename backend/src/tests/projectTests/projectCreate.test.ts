@@ -2,19 +2,17 @@ import request from "supertest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { app } from "../../app";
-import { requestDelete, requestAuthRegister, requestAuthLogin } from "../requestHelpers";
-import { UserModel } from "../../models/userModel";
+import { getPmToken, getSubbieToken, requestDelete, validProjectBody } from "../requestHelpers";
 
 dotenv.config();
-
-const PM_EMAIL = "pm@project-test.com";
-const PM_PASSWORD = "SecurePassword123!";
-const SUBBIE_EMAIL = "subbie@project-test.com";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
+const PM_EMAIL = "pm@project-test.com";
+const PASSWORD = "SecurePassword123!";
+const SUBBIE_EMAIL = "subbie@project-test.com";
 
 beforeEach(async () => {
   await requestDelete();
@@ -32,49 +30,18 @@ afterAll(async () => {
 
 beforeAll(async () => {
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI.");
+    throw new Error(
+      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+    );
   }
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
   }
 }, 10000);
 
-/** Register a PM user, activate them so login succeeds, then login and return access token */
-async function getPmToken(): Promise<string> {
-  const reg = await requestAuthRegister("Project", "Manager", PM_PASSWORD, PM_EMAIL, "PM");
-  expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: PM_EMAIL },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  const login = await requestAuthLogin(PM_EMAIL, PM_PASSWORD);
-  expect(login.status).toBe(200);
-  expect(login.body.accessToken).toBeDefined();
-  return login.body.accessToken;
-}
-
-/** Register a Subbie user, activate them, login and return access token */
-async function getSubbieToken(): Promise<string> {
-  const reg = await requestAuthRegister("Sub", "Contractor", PM_PASSWORD, SUBBIE_EMAIL, "Subbie");
-  expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: SUBBIE_EMAIL },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  const login = await requestAuthLogin(SUBBIE_EMAIL, PM_PASSWORD);
-  expect(login.status).toBe(200);
-  return login.body.accessToken;
-}
-
-const validProjectBody = {
-  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
-  council: "Strathfield",
-  status: "90% Complete",
-};
-
 describe("POST /project", () => {
   it("returns 200 and projectId when authenticated user creates project", async () => {
-    const token = await getPmToken();
+    const token = await getPmToken(PM_EMAIL, PASSWORD);
 
     const res = await request(app)
       .post("/project")
@@ -104,7 +71,7 @@ describe("POST /project", () => {
   });
 
   it("returns 200 when Subbie (any role) creates project", async () => {
-    const token = await getSubbieToken();
+    const token = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
 
     const res = await request(app)
       .post("/project")
@@ -117,7 +84,7 @@ describe("POST /project", () => {
   });
 
   it("returns 400 when required fields are missing", async () => {
-    const token = await getPmToken();
+    const token = await getPmToken(PM_EMAIL, PASSWORD);
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
