@@ -83,7 +83,7 @@ export default function Projects() {
             <TouchableOpacity
               style={styles.newProjectBtn}
               activeOpacity={0.8}
-              onPress={() => router.push('/(app)/create-project')}
+              onPress={() => router.push("/(app)/create-project")}
             >
               <Text style={styles.newProjectText}>+ New Project</Text>
             </TouchableOpacity>

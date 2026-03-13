@@ -1,5 +1,5 @@
-import { Text, View } from 'react-native';
-import { Colors } from '@/constants/colors';
+import { Text, View } from "react-native";
+import { Colors } from "@/constants/colors";
 
 function getColor(value: number) {
   if (value >= 75) return Colors.green;
@@ -37,29 +37,29 @@ export default function CircularProgress({ value, size = 68, label }: Props) {
       {/* Gray background ring */}
       <View
         style={{
-          position: 'absolute',
+          position: "absolute",
           width: size,
           height: size,
           borderRadius: half,
           borderWidth: strokeWidth,
-          borderColor: 'rgba(0,0,0,0.08)',
+          borderColor: "rgba(0,0,0,0.08)",
         }}
       />
 
       {/* Right half clip — shows 0° → min(angle, 180°) */}
       <View
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           right: 0,
           width: half,
           height: size,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         <View
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: -half,
             width: size,
@@ -68,8 +68,8 @@ export default function CircularProgress({ value, size = 68, label }: Props) {
             borderWidth: strokeWidth,
             borderTopColor: color,
             borderRightColor: color,
-            borderBottomColor: 'transparent',
-            borderLeftColor: 'transparent',
+            borderBottomColor: "transparent",
+            borderLeftColor: "transparent",
             transform: [{ rotate: `${rightDeg}deg` }],
           }}
         />
@@ -78,27 +78,27 @@ export default function CircularProgress({ value, size = 68, label }: Props) {
       {/* Left half clip — shows 180° → angle (only when angle > 180°) */}
       <View
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
           width: half,
           height: size,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         <View
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             right: -half,
             width: size,
             height: size,
             borderRadius: half,
             borderWidth: strokeWidth,
-            borderTopColor: 'transparent',
-            borderRightColor: 'transparent',
-            borderBottomColor: angle > 180 ? color : 'transparent',
-            borderLeftColor: angle > 180 ? color : 'transparent',
+            borderTopColor: "transparent",
+            borderRightColor: "transparent",
+            borderBottomColor: angle > 180 ? color : "transparent",
+            borderLeftColor: angle > 180 ? color : "transparent",
             transform: [{ rotate: `${leftDeg}deg` }],
           }}
         />
@@ -107,17 +107,17 @@ export default function CircularProgress({ value, size = 68, label }: Props) {
       {/* Score */}
       <View
         style={{
-          position: 'absolute',
+          position: "absolute",
           width: size,
           height: size,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Text
           style={{
             fontSize: Math.round(size * 0.25),
-            fontWeight: '700',
+            fontWeight: "700",
             color,
           }}
         >
@@ -127,7 +127,7 @@ export default function CircularProgress({ value, size = 68, label }: Props) {
           <Text
             style={{
               fontSize: Math.round(size * 0.13),
-              fontWeight: '600',
+              fontWeight: "600",
               color,
               marginTop: 2,
             }}

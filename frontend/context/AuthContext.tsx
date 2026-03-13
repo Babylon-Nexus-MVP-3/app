@@ -52,11 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadSession();
   }, []);
 
-  async function login(
-    newAccessToken: string,
-    refreshToken: string,
-    newUser: AuthUser,
-  ) {
+  async function login(newAccessToken: string, refreshToken: string, newUser: AuthUser) {
     await saveItem("accessToken", newAccessToken);
     await saveItem("refreshToken", refreshToken);
     await saveItem("user", JSON.stringify(newUser));

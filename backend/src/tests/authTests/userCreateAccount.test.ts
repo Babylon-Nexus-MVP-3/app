@@ -24,7 +24,9 @@ afterAll(async () => {
 
 beforeAll(async () => {
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI.");
+    throw new Error(
+      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+    );
   }
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
