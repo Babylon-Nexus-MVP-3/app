@@ -43,21 +43,14 @@ export default function SignIn() {
       await login(data.accessToken, data.refreshToken, data.user);
       router.replace("/(app)/projects");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <LinearGradient
-      colors={[Colors.navy, Colors.navyLight]}
-      style={styles.gradient}
-    >
+    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
