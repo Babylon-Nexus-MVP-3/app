@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createProject, inviteSubbie } from "../service/project.service";
+import { acceptInviteSubbie, createProject, inviteSubbie } from "../service/project.service";
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -34,6 +34,17 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
     const userId = req.user.sub;
     const projectId = req.params.projectId as string;
     const { participant } = await inviteSubbie({ email, role, trade }, projectId, userId);
+    res.status(200).json({ success: true, participant });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function acceptInvite(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { inviteCode } = req.body;
+    const userId = req.user.sub;
+    const { participant } = await acceptInviteSubbie(inviteCode, userId);
     res.status(200).json({ success: true, participant });
   } catch (err) {
     next(err);

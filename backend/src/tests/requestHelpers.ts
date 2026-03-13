@@ -45,6 +45,12 @@ export const requestInviteSubbie = async (
     });
 };
 
+export async function requestAcceptInvite(inviteCode: string, token: string) {
+  return request(app)
+    .post(`/project/invite/accept`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({ inviteCode });
+}
 /** Register a PM user, activate them so login succeeds, then login and return access token */
 export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
   const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
