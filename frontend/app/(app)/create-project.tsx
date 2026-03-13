@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,21 +10,29 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/colors';
-import { useAuth } from '@/context/AuthContext';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 
-const ROLES = ['Owner', 'Financier', 'Builder', 'Project Manager', 'Subcontractor', 'Consultant', 'Certifier'];
+const ROLES = [
+  "Owner",
+  "Financier",
+  "Builder",
+  "Project Manager",
+  "Subcontractor",
+  "Consultant",
+  "Certifier",
+];
 
 export default function CreateProject() {
-  const { fetchWithAuth } = useAuth();
+  const { user, accessToken } = useAuth();
 
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [role, setRole] = useState('');
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [role, setRole] = useState("");
   const [showRolePicker, setShowRolePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +40,7 @@ export default function CreateProject() {
 
   async function handleSubmit() {
     if (!name.trim() || !address.trim() || !role) {
-      setError('Please fill in all fields.');
+      setError("Please fill in all fields.");
       return;
     }
 
@@ -40,22 +48,29 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetchWithAuth('http://localhost:3229/project', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3229/project", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           location: address.trim(),
-          council: 'TBD',
+          council: "TBD",
+          ownerId: user?.id ?? "",
+          builderId: "TBD",
+          status: "Pending",
         }),
       });
 
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
 
-      if (!response.ok) throw new Error(data.error ?? 'Failed to create project');
+      if (!response.ok) throw new Error(data.error ?? "Failed to create project");
 
       setSubmitted(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -77,7 +92,7 @@ export default function CreateProject() {
             <Text style={styles.successSubtitle}>Awaiting Babylon Nexus admin approval.</Text>
             <TouchableOpacity
               style={styles.backToProjectsBtn}
-              onPress={() => router.replace('/(app)/projects')}
+              onPress={() => router.replace("/(app)/projects")}
               activeOpacity={0.8}
             >
               <Text style={styles.backToProjectsText}>Back to Projects</Text>
@@ -91,7 +106,7 @@ export default function CreateProject() {
   return (
     <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <ScrollView
@@ -133,7 +148,7 @@ export default function CreateProject() {
             activeOpacity={0.8}
           >
             <Text style={role ? styles.roleSelected : styles.rolePlaceholder}>
-              {role || 'Select role...'}
+              {role || "Select role..."}
             </Text>
           </TouchableOpacity>
 
@@ -198,7 +213,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginBottom: 24,
   },
   backArrow: {
@@ -207,38 +222,38 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.white,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: "rgba(255,255,255,0.5)",
     marginBottom: 36,
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.goldLight,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: 8,
   },
   input: {
     height: 52,
     borderWidth: 1.5,
-    borderColor: 'rgba(201,168,76,0.25)',
+    borderColor: "rgba(201,168,76,0.25)",
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: "rgba(255,255,255,0.08)",
     color: Colors.white,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   rolePlaceholder: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.3)',
+    color: "rgba(255,255,255,0.3)",
   },
   roleSelected: {
     fontSize: 16,
@@ -248,14 +263,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.red,
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   submitBtn: {
     height: 54,
     backgroundColor: Colors.gold,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
   },
   submitBtnDisabled: {
@@ -263,7 +278,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: Colors.navy,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 16,
   },
 
@@ -275,50 +290,50 @@ const styles = StyleSheet.create({
   },
   successContent: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingBottom: 60,
   },
   checkCircle: {
     width: 72,
     height: 72,
     borderRadius: 18,
-    backgroundColor: 'rgba(46,204,113,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(46,204,113,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
   },
   successTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.white,
     marginBottom: 8,
   },
   successSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: "rgba(255,255,255,0.5)",
     marginBottom: 36,
-    textAlign: 'center',
+    textAlign: "center",
   },
   backToProjectsBtn: {
     height: 48,
     paddingHorizontal: 32,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   backToProjectsText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.gold,
   },
 
   // Role modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalSheet: {
     backgroundColor: Colors.navyLight,
@@ -330,24 +345,24 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.white,
     marginBottom: 16,
   },
   roleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: "rgba(255,255,255,0.06)",
   },
   roleOptionText: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
   },
   roleOptionSelected: {
     color: Colors.gold,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
