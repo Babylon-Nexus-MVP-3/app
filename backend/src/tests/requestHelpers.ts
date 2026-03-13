@@ -80,9 +80,3 @@ export const validProjectBody = {
   council: "Strathfield",
   status: "90% Complete",
 };
-export async function requestAcceptInvite(inviteCode: string, token: string) {
-  return request(app)
-    .post(`/project/invite/accept`)
-    .set("Authorization", `Bearer ${token}`)
-    .send({ inviteCode });
-}

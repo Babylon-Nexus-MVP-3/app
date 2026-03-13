@@ -4,17 +4,16 @@ import dotenv from "dotenv";
 import { app } from "../../app";
 import {
   requestDelete,
-  requestAuthRegister,
-  requestAuthLogin,
   requestInviteSubbie,
   requestAcceptInvite,
+  getPmToken,
+  getSubbieToken,
 } from "../requestHelpers";
-import { UserModel } from "../../models/userModel";
 
 dotenv.config();
 
 const PM_EMAIL = "pm@project-test.com";
-const PM_PASSWORD = "SecurePassword123!";
+const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
@@ -35,7 +34,7 @@ const validProjectBody = {
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getPmToken();
+  token = await getPmToken(PM_EMAIL, PASSWORD);
 
   const projectRes = await request(app)
     .post("/project")
@@ -66,20 +65,6 @@ beforeAll(async () => {
   }
 }, 10000);
 
-/** Register a PM user, activate them so login succeeds, then login and return access token */
-async function getPmToken(): Promise<string> {
-  const reg = await requestAuthRegister("Project", "Manager", PM_PASSWORD, PM_EMAIL, "PM");
-  expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: PM_EMAIL },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  const login = await requestAuthLogin(PM_EMAIL, PM_PASSWORD);
-  expect(login.status).toBe(200);
-  expect(login.body.accessToken).toBeDefined();
-  return login.body.accessToken;
-}
-
 describe("POST /project/invite/accept", () => {
   it("returns 200 and accepted participant when subbie accepts a valid invite", async () => {
     const inviteRes = await requestInviteSubbie(
@@ -91,17 +76,8 @@ describe("POST /project/invite/accept", () => {
     );
     expect(inviteRes.status).toBe(200);
     const { inviteCode } = inviteRes.body.participant;
-    console.log(inviteCode);
 
-    // Register and login as the subbie
-    await requestAuthRegister("Sub", "Contractor", "SecurePassword123!", SUBBIE_EMAIL, "Subbie");
-    await UserModel.updateOne(
-      { email: SUBBIE_EMAIL },
-      { $set: { status: "Active", emailVerified: true } }
-    );
-    const subbieLogin = await requestAuthLogin(SUBBIE_EMAIL, "SecurePassword123!");
-    const subbieToken = subbieLogin.body.accessToken;
-
+    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
     const acceptRes = await requestAcceptInvite(inviteCode, subbieToken);
 
     expect(acceptRes.status).toBe(200);
@@ -112,14 +88,7 @@ describe("POST /project/invite/accept", () => {
   });
 
   it("returns 400 when invite code is invalid", async () => {
-    await requestAuthRegister("Sub", "Contractor", "SecurePassword123!", SUBBIE_EMAIL, "Subbie");
-    await UserModel.updateOne(
-      { email: SUBBIE_EMAIL },
-      { $set: { status: "Active", emailVerified: true } }
-    );
-    const subbieLogin = await requestAuthLogin(SUBBIE_EMAIL, "SecurePassword123!");
-    const subbieToken = subbieLogin.body.accessToken;
-
+    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
     const acceptRes = await requestAcceptInvite("INVALID_CODE", subbieToken);
 
     expect(acceptRes.status).toBe(400);
