@@ -1,6 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
+import { UserModel } from "../models/userModel";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -49,6 +50,16 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     builderId,
     pmId,
     status,
+  });
+
+  // Associate user with project
+  const user = await UserModel.findById(creatorId);
+  await ProjectParticipantModel.create({
+    projectId: project._id.toString(),
+    userId: user._id.toString(),
+    role: user.role,
+    email: user.email,
+    status: "Accepted",
   });
 
   await EventModel.create({
@@ -100,8 +111,9 @@ export async function inviteSubbie(
     throw new ProjectError("Project Does not exist");
   }
 
-  if (project.pmId !== userId) {
-    throw new ProjectError("Project does not exist");
+  const user = await ProjectParticipantModel.findOne({ projectId, userId });
+  if (!user) {
+    throw new ProjectError("User is not part of this project");
   }
 
   if (!email || !trade || !role) {
