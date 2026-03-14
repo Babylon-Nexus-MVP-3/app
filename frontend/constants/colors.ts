@@ -32,6 +32,7 @@ export const Colors = {
   redBg: "#FDECEB",
   purpleBg: "#F3E8F9",
   greyBg: "#F0F1F2",
+  issuedBg: "#E8EAF0",
 } as const;
 
 export type ColorKey = keyof typeof Colors;
