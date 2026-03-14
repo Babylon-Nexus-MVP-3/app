@@ -1,6 +1,7 @@
 import { InvoiceModel } from "../models/invoiceModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectModel } from "../models/projectModel";
+import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
 
 export class InvoiceError extends Error {
@@ -29,10 +30,10 @@ export async function submitInvoice(
     throw new ProjectError("Project Does not Exist");
   }
 
-  // const projectParticipant = await ProjectParticipantModel.find({ userId: userId});
-  // if (projectParticipant.userId !== userId) {
-  // throw new InvoiceError("User not part of project");
-  // }
+  const projectParticipant = await ProjectParticipantModel.findOne({ projectId, userId });
+  if (!projectParticipant) {
+    throw new InvoiceError("User not part of project");
+  }
 
   const submittingParty = input.submittingParty.trim();
   const submittingCategory = input.submittingCategory.trim();
@@ -46,6 +47,7 @@ export async function submitInvoice(
   }
 
   const invoice = await InvoiceModel.create({
+    projectId,
     submittingParty,
     submittingCategory,
     dateSubmitted: new Date(Date.now()),
@@ -57,8 +59,8 @@ export async function submitInvoice(
     type: "InvoiceSubmitted",
     aggregateType: "Invoice",
     aggregateId: invoice._id.toString(),
-    // userId
-    payload: { submittingParty, submittingCategory, dateDue, description }
+    userId: projectParticipant.userId,
+    payload: { submittingParty, submittingCategory, dateDue, description },
   });
 
   return invoice._id.toString();
