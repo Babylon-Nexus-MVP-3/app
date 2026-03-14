@@ -1,7 +1,6 @@
 import request from "supertest";
 import { app } from "../app";
 import { UserModel } from "../models/userModel";
-import { ProjectParticipantModel } from "../models/projectParticipantModel";
 
 // Clear
 export const requestDelete = async () => {

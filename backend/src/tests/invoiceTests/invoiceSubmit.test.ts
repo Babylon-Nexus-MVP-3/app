@@ -1,18 +1,14 @@
-import request from "supertest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { app } from "../../app";
 import {
   requestDelete,
   requestInviteSubbie,
   requestAcceptInvite,
   getPmToken,
   getSubbieToken,
-  validProjectBody,
   requestSubmitInvoice,
   getProjectId,
 } from "../requestHelpers";
-import { UserModel } from "../../models/userModel";
 
 dotenv.config();
 
@@ -31,15 +27,7 @@ let token: string;
 beforeEach(async () => {
   await requestDelete();
   token = await getPmToken(PM_EMAIL, PASSWORD);
-  const pmUser = await UserModel.findOne({ email: PM_EMAIL });
-  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
-
-  const projectRes = await request(app)
-    .post("/project")
-    .set("Authorization", `Bearer ${token}`)
-    .send(body);
-
-  projectId = projectRes.body.projectId;
+  projectId = await getProjectId(token, PM_EMAIL);
 });
 
 afterEach(async () => {
