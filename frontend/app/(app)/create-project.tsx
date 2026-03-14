@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
@@ -28,7 +28,17 @@ const ROLES = [
 ];
 
 export default function CreateProject() {
-  const { user, accessToken } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      setSubmitted(false);
+      setName("");
+      setAddress("");
+      setRole("");
+      setError(null);
+    }, [])
+  );
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -48,12 +58,8 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:3229/project", {
+      const response = await fetchWithAuth("http://localhost:3229/project", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify({
           location: address.trim(),
           council: "TBD",
