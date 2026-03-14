@@ -47,7 +47,7 @@ const PROJECTS: Project[] = [
     change: -12,
   },
   {
-    id: "4",
+    id: "69b50f3722334dcf9244c2b2",
     name: "Burwood Central",
     subtitle: "12 Units — Burwood NSW",
     role: "Project Manager",
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   statCardOverdue: {
-    backgroundColor: "rgba(231,76,60,0.18)",
+    backgroundColor: Colors.red + "2E",
   },
   statLabel: {
     fontSize: 10,
