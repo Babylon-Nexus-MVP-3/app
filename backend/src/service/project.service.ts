@@ -163,7 +163,7 @@ export async function acceptInviteSubbie(inviteCode: string, userId: string) {
       dateAccepted: new Date(Date.now()),
       inviteCode: null, // invalidate the code after use
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   return { participant: updatedParticipant };
