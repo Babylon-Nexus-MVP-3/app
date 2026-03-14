@@ -1,4 +1,14 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,11 +68,47 @@ const PROJECTS: Project[] = [
 ];
 
 export default function Projects() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
   const avgHealth = Math.round(PROJECTS.reduce((sum, p) => sum + p.health, 0) / PROJECTS.length);
   const totalOverdue = PROJECTS.reduce((sum, p) => sum + p.overdue, 0);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinedRole, setJoinedRole] = useState<string | null>(null);
+
+  function openJoinModal() {
+    setJoinCode("");
+    setJoinError(null);
+    setJoinedRole(null);
+    setJoinModalVisible(true);
+  }
+
+  async function handleJoin() {
+    if (!joinCode.trim()) return;
+    setJoinLoading(true);
+    setJoinError(null);
+    try {
+      const res = await fetchWithAuth("http://localhost:3229/project/join/accept", {
+        method: "POST",
+        body: JSON.stringify({ inviteCode: joinCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setJoinError(data.error ?? "Invalid or expired invite code.");
+      } else {
+        setJoinedRole(data.participant?.role ?? "Team Member");
+      }
+    } catch {
+      setJoinError("Network error. Please try again.");
+    } finally {
+      setJoinLoading(false);
+    }
+  }
 
   return (
     <View style={styles.screen}>
@@ -81,11 +127,17 @@ export default function Projects() {
               </View>
             </View>
             <TouchableOpacity
-              style={styles.newProjectBtn}
+              style={styles.projectMenuBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/(app)/create-project")}
+              onPress={() => setMenuOpen((o) => !o)}
             >
-              <Text style={styles.newProjectText}>+ New Project</Text>
+              <Text style={styles.projectMenuBtnText}>+ Project</Text>
+              <Ionicons
+                name={menuOpen ? "chevron-up" : "chevron-down"}
+                size={13}
+                color={Colors.gold}
+                style={{ marginLeft: 4 }}
+              />
             </TouchableOpacity>
           </View>
 
@@ -181,6 +233,127 @@ export default function Projects() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* ── Project menu dropdown ── */}
+      <Modal visible={menuOpen} transparent animationType="none" onRequestClose={() => setMenuOpen(false)}>
+        <TouchableOpacity
+          style={styles.dropdownBackdrop}
+          activeOpacity={1}
+          onPress={() => setMenuOpen(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("/(app)/create-project");
+              }}
+            >
+              <Text style={styles.dropdownItemText}>New Project</Text>
+            </TouchableOpacity>
+            <View style={styles.dropdownDivider} />
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setMenuOpen(false);
+                openJoinModal();
+              }}
+            >
+              <Text style={styles.dropdownItemText}>Join a Project</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Join a Project modal ── */}
+      <Modal visible={joinModalVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={styles.joinScreen}>
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.joinHeader}>
+            <SafeAreaView edges={["top"]}>
+              <TouchableOpacity
+                onPress={() => setJoinModalVisible(false)}
+                style={styles.joinBackBtn}
+              >
+                <Text style={styles.joinBackArrow}>‹</Text>
+                <Text style={styles.joinBackLabel}>My Projects</Text>
+              </TouchableOpacity>
+              <Text style={styles.joinTitle}>
+                {joinedRole ? "You're In!" : "Join a Project"}
+              </Text>
+            </SafeAreaView>
+          </LinearGradient>
+
+          <ScrollView
+            style={styles.joinBody}
+            contentContainerStyle={styles.joinBodyContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {joinedRole ? (
+              /* ── Success state ── */
+              <View style={styles.joinSuccess}>
+                <View style={styles.joinSuccessIcon}>
+                  <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
+                </View>
+                <Text style={styles.joinSuccessTitle}>You've joined!</Text>
+                <Text style={styles.joinSuccessHint}>You've been added as</Text>
+                <View style={styles.joinRoleBadge}>
+                  <Text style={styles.joinRoleBadgeText}>{joinedRole}</Text>
+                </View>
+                <Text style={styles.joinSuccessNote}>
+                  The project will appear in your list once real project data is connected.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.joinPrimaryBtn, { alignSelf: "stretch" }]}
+                  onPress={() => setJoinModalVisible(false)}
+                >
+                  <Text style={styles.joinPrimaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* ── Input state ── */
+              <>
+                <Text style={styles.joinFieldLabel}>Invite Code</Text>
+                <TextInput
+                  style={styles.joinCodeInput}
+                  value={joinCode}
+                  onChangeText={(t) => setJoinCode(t.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                />
+                <Text style={styles.joinHint}>Enter the 6-digit code from your invite.</Text>
+
+                {joinError && <Text style={styles.joinError}>{joinError}</Text>}
+
+                <TouchableOpacity
+                  style={[
+                    styles.joinPrimaryBtn,
+                    (joinCode.length < 6 || joinLoading) && styles.joinPrimaryBtnDisabled,
+                  ]}
+                  onPress={handleJoin}
+                  disabled={joinCode.length < 6 || joinLoading}
+                >
+                  {joinLoading ? (
+                    <ActivityIndicator color={Colors.navy} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.joinPrimaryBtnText,
+                        joinCode.length < 6 && styles.joinPrimaryBtnTextDisabled,
+                      ]}
+                    >
+                      Join Project
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -232,17 +405,49 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: "800",
   },
-  newProjectBtn: {
+  projectMenuBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1.5,
     borderColor: Colors.gold,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  newProjectText: {
+  projectMenuBtnText: {
     color: Colors.gold,
     fontWeight: "700",
     fontSize: 13,
+  },
+  dropdownBackdrop: {
+    flex: 1,
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 56,
+    right: 20,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    minWidth: 160,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  dropdownItemText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.07)",
   },
 
   // Stats
@@ -367,5 +572,125 @@ const styles = StyleSheet.create({
   changeBadge: {
     fontSize: 12,
     fontWeight: "700",
+  },
+
+  // Join a Project modal
+  joinScreen: { flex: 1, backgroundColor: Colors.navy },
+  joinHeader: { paddingBottom: 20 },
+  joinBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    marginBottom: 8,
+  },
+  joinBackArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
+  joinBackLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
+  joinTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.white,
+    paddingHorizontal: 20,
+    marginBottom: 4,
+  },
+  joinBody: { flex: 1, backgroundColor: Colors.navy },
+  joinBodyContent: { padding: 24, paddingBottom: 48 },
+  joinFieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.goldLight,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 12,
+  },
+  joinCodeInput: {
+    height: 72,
+    borderWidth: 1.5,
+    borderColor: Colors.gold + "40",
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    fontSize: 36,
+    fontWeight: "800",
+    letterSpacing: 10,
+    marginBottom: 12,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    color: Colors.gold,
+    textAlign: "center",
+  },
+  joinHint: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.35)",
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  joinError: {
+    fontSize: 13,
+    color: Colors.red,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  joinPrimaryBtn: {
+    height: 54,
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  joinPrimaryBtnDisabled: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  joinPrimaryBtnText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.navy,
+    letterSpacing: 0.5,
+  },
+  joinPrimaryBtnTextDisabled: {
+    color: "rgba(255,255,255,0.3)",
+  },
+
+  // Join success state
+  joinSuccess: { alignItems: "center", paddingTop: 40 },
+  joinSuccessIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    backgroundColor: Colors.green + "26",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  joinSuccessTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.white,
+    marginBottom: 8,
+  },
+  joinSuccessHint: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.5)",
+    marginBottom: 12,
+  },
+  joinRoleBadge: {
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    marginBottom: 24,
+  },
+  joinRoleBadgeText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.gold,
+  },
+  joinSuccessNote: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.35)",
+    textAlign: "center",
+    marginBottom: 32,
+    paddingHorizontal: 16,
   },
 });
