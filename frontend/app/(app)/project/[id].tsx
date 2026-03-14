@@ -484,8 +484,7 @@ function MySpaceTab({
         </View>
       </ScrollView>
     );
-  }
-  else
+  } else
     content = (
       <View style={styles.placeholder}>
         <Text style={styles.placeholderText}>My Space</Text>
