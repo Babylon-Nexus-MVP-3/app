@@ -37,7 +37,7 @@ export default function CreateProject() {
       setAddress("");
       setRole("");
       setError(null);
-    }, []),
+    }, [])
   );
 
   const [name, setName] = useState("");

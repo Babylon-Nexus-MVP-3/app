@@ -235,7 +235,12 @@ export default function Projects() {
       </ScrollView>
 
       {/* ── Project menu dropdown ── */}
-      <Modal visible={menuOpen} transparent animationType="none" onRequestClose={() => setMenuOpen(false)}>
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="none"
+        onRequestClose={() => setMenuOpen(false)}
+      >
         <TouchableOpacity
           style={styles.dropdownBackdrop}
           activeOpacity={1}
@@ -277,9 +282,7 @@ export default function Projects() {
                 <Text style={styles.joinBackArrow}>‹</Text>
                 <Text style={styles.joinBackLabel}>My Projects</Text>
               </TouchableOpacity>
-              <Text style={styles.joinTitle}>
-                {joinedRole ? "You're In!" : "Join a Project"}
-              </Text>
+              <Text style={styles.joinTitle}>{joinedRole ? "You're In!" : "Join a Project"}</Text>
             </SafeAreaView>
           </LinearGradient>
 
@@ -295,8 +298,8 @@ export default function Projects() {
                 <View style={styles.joinSuccessIcon}>
                   <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
                 </View>
-                <Text style={styles.joinSuccessTitle}>You've joined!</Text>
-                <Text style={styles.joinSuccessHint}>You've been added as</Text>
+                <Text style={styles.joinSuccessTitle}>{"You've joined!"}</Text>
+                <Text style={styles.joinSuccessHint}>{"You've been added as"}</Text>
                 <View style={styles.joinRoleBadge}>
                   <Text style={styles.joinRoleBadgeText}>{joinedRole}</Text>
                 </View>
