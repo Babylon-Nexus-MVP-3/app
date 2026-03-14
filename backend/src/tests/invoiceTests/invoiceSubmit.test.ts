@@ -74,9 +74,11 @@ describe("POST /project/invite/accept", () => {
       "Phase 2 elec"
     );
 
-    console.log(submitRes.body);
-    expect(submitRes.body.invoiceId).toEqual(expect.any(String));
-    expect(submitRes.statusCode).toStrictEqual(200);
+    expect(submitRes.statusCode).toBe(200);
+    expect(submitRes.body).toEqual({
+      success: true,
+      invoiceId: expect.any(String),
+    });
   });
 
   it("returns 400 If projectId doesnt exist", async () => {
