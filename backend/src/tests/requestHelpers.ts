@@ -1,6 +1,7 @@
 import request from "supertest";
 import { app } from "../app";
 import { UserModel } from "../models/userModel";
+import { ProjectParticipantModel } from "../models/projectParticipantModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -51,6 +52,21 @@ export async function requestAcceptInvite(inviteCode: string, token: string) {
     .set("Authorization", `Bearer ${token}`)
     .send({ inviteCode });
 }
+
+export async function requestSubmitInvoice(
+  token: string,
+  projectId: string,
+  submittingParty: string,
+  submittingCategory: string,
+  dateDue: Date,
+  description: string
+) {
+  return request(app)
+    .post(`/project/${projectId}/invoice`)
+    .send({ submittingParty, submittingCategory, dateDue, description })
+    .set("Authorization", `Bearer ${token}`);
+}
+
 /** Register a PM user, activate them so login succeeds, then login and return access token */
 export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
   const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
@@ -73,6 +89,19 @@ export async function getSubbieToken(email: string, password: string): Promise<s
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
   return login.body.accessToken;
+}
+
+export async function getProjectId(token: string, email: string) {
+  const pmUser = await UserModel.findOne({ email });
+  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
+
+  const projectRes = await request(app)
+    .post("/project")
+    .set("Authorization", `Bearer ${token}`)
+    .send(body);
+
+  const projectId = projectRes.body.projectId;
+  return projectId;
 }
 
 export const validProjectBody = {
