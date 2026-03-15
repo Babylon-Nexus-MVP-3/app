@@ -78,7 +78,7 @@ export function requireProjectRole(...allowedRoles: string[]) {
       const userId = req.user.sub;
 
       const project = await ProjectModel.findById(projectId);
-      if (!project) throw new ProjectError("Project Does not exist");
+      if (!project) throw new ProjectError("Project Does not Exist");
 
       const participant = await ProjectParticipantModel.findOne({
         projectId,
