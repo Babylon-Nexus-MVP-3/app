@@ -10,7 +10,7 @@ projectRouter.post("/:projectId/invite", requireAuth, ProjectController.invite);
 projectRouter.post("/:projectId/accept", requireAuth, ProjectController.acceptInvite);
 projectRouter.post(
   "/:projectId/invoice",
-  requireProjectRole("Subbie"),
   requireAuth,
+  requireProjectRole("Subbie"),
   InvoiceController.create
 );
