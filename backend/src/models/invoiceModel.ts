@@ -23,7 +23,7 @@ const invoiceSchema = new Schema<Invoice>({
   dateDue: { type: Schema.Types.Date },
   datePaid: { type: Schema.Types.Date },
   dateRecieved: { type: Schema.Types.Date },
-  status: { type: String, enum: ["Pending", "Approved", "Paid", "Recieved"] },
+  status: { type: String, enum: ["Pending", "Approved", "Paid", "Recieved"], default: "Pending" },
 });
 
 export const InvoiceModel = mongoose.model<Invoice>("Invoice", invoiceSchema);
