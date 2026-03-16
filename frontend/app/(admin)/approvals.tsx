@@ -80,6 +80,7 @@ export default function AdminApprovals() {
 
   useEffect(() => {
     fetchPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -118,7 +119,12 @@ export default function AdminApprovals() {
           </View>
         ) : projects.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Ionicons name="checkmark-circle" size={48} color={Colors.green} style={{ marginBottom: 12 }} />
+            <Ionicons
+              name="checkmark-circle"
+              size={48}
+              color={Colors.green}
+              style={{ marginBottom: 12 }}
+            />
             <Text style={styles.emptyTitle}>All clear</Text>
             <Text style={styles.emptyText}>No projects awaiting approval.</Text>
           </View>

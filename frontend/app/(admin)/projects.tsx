@@ -62,6 +62,7 @@ export default function AdminProjects() {
 
   useEffect(() => {
     fetchProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const total = projects.length;

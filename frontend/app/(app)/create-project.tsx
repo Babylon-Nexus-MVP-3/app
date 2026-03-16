@@ -207,7 +207,7 @@ export default function CreateProject() {
           <View style={styles.sectionDivider} />
           <Text style={styles.sectionTitle}>Invite Team Members</Text>
           <Text style={styles.sectionHint}>
-            Add others to this project. They'll receive an invite code once approved.
+            {"Add others to this project. They'll receive an invite code once approved."}
           </Text>
 
           {invitees.map((inv, index) => (

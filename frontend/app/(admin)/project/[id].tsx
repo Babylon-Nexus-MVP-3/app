@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 
 export default function AdminProjectDetail() {
-  const { id, name, location, createdAt } = useLocalSearchParams<{
+  const { name, location, createdAt } = useLocalSearchParams<{
     id: string;
     name: string;
     location: string;
@@ -80,15 +80,7 @@ export default function AdminProjectDetail() {
   );
 }
 
-function Row({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
+function Row({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
     <View style={[styles.row, !last && styles.rowBorder]}>
       <Text style={styles.rowLabel}>{label}</Text>
