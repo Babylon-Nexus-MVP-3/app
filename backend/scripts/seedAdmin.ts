@@ -29,31 +29,38 @@ async function seedAdmin(): Promise<void> {
     process.exit(1);
   }
 
-  await mongoose.connect(MONGODB_URI);
+  try {
+    await mongoose.connect(MONGODB_URI);
 
-  const existing = await UserModel.findOne({ email, role: "Admin" });
-  if (existing) {
-    console.log(`Admin with email ${email} already exists. Skipping.`);
-    await mongoose.connection.close();
-    process.exit(0);
+    const existing = await UserModel.findOne({ email, role: "Admin" });
+    if (existing) {
+      console.log(`Admin with email ${email} already exists. Skipping.`);
+      return;
+    }
+
+    const hashedPassword = await hashPassword(ADMIN_PASSWORD);
+    await UserModel.create({
+      name: "Platform Admin",
+      email,
+      password: hashedPassword,
+      role: "Admin",
+      status: "Active",
+      emailVerified: true,
+    });
+
+    console.log(`Admin user created: ${email}`);
+  } catch (err) {
+    console.error("Failed to seed admin user", err);
+    process.exitCode = 1;
+  } finally {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+    process.exit(process.exitCode ?? 0);
   }
-
-  const hashedPassword = await hashPassword(ADMIN_PASSWORD);
-  await UserModel.create({
-    name: "Platform Admin",
-    email,
-    password: hashedPassword,
-    role: "Admin",
-    status: "Active",
-    emailVerified: true,
-  });
-
-  console.log(`Admin user created: ${email}`);
-  await mongoose.connection.close();
-  process.exit(0);
 }
 
 seedAdmin().catch((err) => {
-  console.error(err);
+  console.error("Unexpected error while seeding admin", err);
   process.exit(1);
 });

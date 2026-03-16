@@ -37,7 +37,7 @@ export async function approveUser(userId: string): Promise<void> {
 export async function rejectUser(userId: string): Promise<void> {
   const result = await UserModel.updateOne(
     { _id: userId, status: "Pending" },
-    { $set: { status: "Pending" } }
+    { $set: { status: "Rejected" } }
   );
   if (result.matchedCount === 0) {
     throw new AdminError("User not found or already processed", 404);
