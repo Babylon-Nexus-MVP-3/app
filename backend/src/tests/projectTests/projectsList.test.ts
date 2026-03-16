@@ -56,17 +56,32 @@ describe("GET /projects", () => {
   it("returns projects where user is owner/builder/pm, plus participant projects", async () => {
     const { token, userId } = await registerActiveUser("dash@test.com", "Subbie");
 
-    // Direct association by stored IDs
-    const ownerProj = await ProjectModel.create({ location: "L1", council: "C1", ownerId: userId });
+    // Direct association by stored IDs (status Active = admin-approved, visible on dashboard)
+    const ownerProj = await ProjectModel.create({
+      location: "L1",
+      council: "C1",
+      ownerId: userId,
+      status: "Active",
+    });
     const builderProj = await ProjectModel.create({
       location: "L2",
       council: "C2",
       builderId: userId,
+      status: "Active",
     });
-    const pmProj = await ProjectModel.create({ location: "L3", council: "C3", pmId: userId });
+    const pmProj = await ProjectModel.create({
+      location: "L3",
+      council: "C3",
+      pmId: userId,
+      status: "Active",
+    });
 
     // Participant association (Accepted)
-    const participantProj = await ProjectModel.create({ location: "L4", council: "C4" });
+    const participantProj = await ProjectModel.create({
+      location: "L4",
+      council: "C4",
+      status: "Active",
+    });
     await ProjectParticipantModel.create({
       projectId: participantProj._id.toString(),
       userId,
@@ -77,8 +92,13 @@ describe("GET /projects", () => {
       dateInvited: new Date(),
     });
 
-    // A project that should NOT appear
-    await ProjectModel.create({ location: "L5", council: "C5", ownerId: "someone-else" });
+    // A project that should NOT appear (different owner; or Pending/Rejected)
+    await ProjectModel.create({
+      location: "L5",
+      council: "C5",
+      ownerId: "someone-else",
+      status: "Active",
+    });
 
     const res = await request(app).get("/projects").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
@@ -92,6 +112,34 @@ describe("GET /projects", () => {
       pmProj._id.toString(),
       participantProj._id.toString(),
     ]));
+    expect(res.body.projects).toHaveLength(4);
+  });
+
+  it("returns only Active (admin-approved) projects, not Pending or Rejected", async () => {
+    const { token, userId } = await registerActiveUser("filter@test.com", "PM");
+    const activeProj = await ProjectModel.create({
+      location: "L1",
+      council: "C1",
+      pmId: userId,
+      status: "Active",
+    });
+    await ProjectModel.create({
+      location: "L2",
+      council: "C2",
+      pmId: userId,
+      status: "Pending",
+    });
+    await ProjectModel.create({
+      location: "L3",
+      council: "C3",
+      pmId: userId,
+      status: "Rejected",
+    });
+
+    const res = await request(app).get("/projects").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.projects).toHaveLength(1);
+    expect(res.body.projects[0]._id).toBe(activeProj._id.toString());
   });
 });
 

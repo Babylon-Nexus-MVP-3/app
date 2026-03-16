@@ -18,7 +18,6 @@ export interface CreateProjectInput {
   ownerId?: string;
   builderId?: string;
   pmId?: string;
-  status?: string;
 }
 
 /**
@@ -32,7 +31,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const ownerId = input.ownerId?.trim();
   const builderId = input.builderId?.trim();
   const pmId = input.pmId?.trim();
-  const status = input.status?.trim() ?? "Draft";
+  const status = "Pending";
 
   if (!creatorId) {
     throw new ProjectError("Authentication Required", 401);
@@ -98,6 +97,10 @@ export async function inviteSubbie(
   const project = await ProjectModel.findById(projectId);
   if (!project) {
     throw new ProjectError("Project Does not exist");
+  }
+
+  if (project.status !== "Active") {
+    throw new ProjectError("Project must be approved by admin before inviting participants", 403);
   }
 
   if (project.pmId !== userId) {

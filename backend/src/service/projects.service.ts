@@ -27,7 +27,12 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
     orClauses.push({ _id: { $in: participantProjectIds } });
   }
 
-  const projects = await ProjectModel.find({ $or: orClauses }).sort({ createdAt: -1 }).lean();
+  const projects = await ProjectModel.find({
+    $or: orClauses,
+    status: "Active",
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return { projects, total: projects.length };
 }
