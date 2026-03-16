@@ -6,6 +6,7 @@ import {
   requestAcceptInvite,
   getPmToken,
   getSubbieToken,
+  requestSubmitInvoice,
   getProjectId,
 } from "../requestHelpers";
 
@@ -63,20 +64,65 @@ describe("POST /project/invite/accept", () => {
     const { inviteCode } = inviteRes.body.participant;
 
     const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
-    const acceptRes = await requestAcceptInvite(inviteCode, subbieToken);
+    await requestAcceptInvite(inviteCode, subbieToken);
+    const submitRes = await requestSubmitInvoice(
+      subbieToken,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec"
+    );
 
-    expect(acceptRes.status).toBe(200);
-    expect(acceptRes.body.success).toBe(true);
-    expect(acceptRes.body.participant).toBeDefined();
-    expect(acceptRes.body.participant.status).toBe("Accepted");
-    expect(acceptRes.body.participant.email).toBe(SUBBIE_EMAIL);
+    expect(submitRes.statusCode).toBe(200);
+    expect(submitRes.body).toEqual({
+      success: true,
+      invoiceId: expect.any(String),
+    });
   });
 
-  it("returns 400 when invite code is invalid", async () => {
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
-    const acceptRes = await requestAcceptInvite("INVALID_CODE", subbieToken);
+  it("returns 400 If projectId doesnt exist", async () => {
+    const inviteRes = await requestInviteSubbie(
+      projectId,
+      token,
+      SUBBIE_EMAIL,
+      "Electrician",
+      "Subbie"
+    );
+    expect(inviteRes.status).toBe(200);
+    const { inviteCode } = inviteRes.body.participant;
 
-    expect(acceptRes.status).toBe(400);
-    expect(acceptRes.body.success).toBe(undefined);
+    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+    await requestAcceptInvite(inviteCode, subbieToken);
+
+    const fakeProjectId = new mongoose.Types.ObjectId().toString();
+    const submitRes = await requestSubmitInvoice(
+      subbieToken,
+      fakeProjectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec"
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error).toBe("Project Does not Exist");
+  });
+
+  it("returns 400 If user is not part of the project", async () => {
+    // Get a subbie token but never accept an invite — so they're not a participant
+    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+
+    const submitRes = await requestSubmitInvoice(
+      subbieToken,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec"
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error).toBe("User not part of project");
   });
 });

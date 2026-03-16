@@ -12,10 +12,8 @@ export interface ProjectParticipant extends Document {
 }
 
 export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
-  // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
-  projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
-  // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
-  userId: { type: Schema.Types.ObjectId, ref: "User" },
+  projectId: { type: String, ref: "Project", required: true },
+  userId: { type: String, ref: "User" },
   role: { type: String },
   email: { type: String, required: true },
   inviteCode: { type: String },

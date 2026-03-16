@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { config } from "./config";
+import { ProjectModel } from "./models/projectModel";
+import { ProjectError } from "./service/project.service";
+import { ProjectParticipant, ProjectParticipantModel } from "./models/projectParticipantModel";
+import { AuthError } from "./service/auth.service";
 
 export interface JwtPayload {
   sub: string;
@@ -19,6 +23,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: JwtPayload;
+      projectParticipant?: ProjectParticipant;
     }
   }
 }
@@ -61,6 +66,37 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   } catch {
     res.status(401).json({ error: "Authentication Required" });
   }
+}
+
+/**
+ * Validate projectParticipant role for a particular project
+ */
+export function requireProjectRole(...allowedRoles: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = req.params.projectId;
+      const userId = req.user.sub;
+
+      const project = await ProjectModel.findById(projectId);
+      if (!project) throw new ProjectError("Project Does not Exist");
+
+      const participant = await ProjectParticipantModel.findOne({
+        projectId,
+        userId,
+        status: "Accepted",
+      });
+      if (!participant) throw new AuthError("User not part of project");
+
+      if (!allowedRoles.includes(participant.role as string)) {
+        throw new AuthError("Unauthorised");
+      }
+
+      req.projectParticipant = participant;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 /**
