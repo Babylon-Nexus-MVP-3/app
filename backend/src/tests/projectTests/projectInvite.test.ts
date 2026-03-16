@@ -9,6 +9,7 @@ import {
   requestInviteSubbie,
 } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
+import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
 
@@ -45,6 +46,8 @@ beforeEach(async () => {
     .send(body);
 
   projectId = projectRes.body.projectId;
+  // Simulate admin approval so invite is allowed (invite only when project is Active)
+  await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
 afterEach(async () => {
@@ -142,6 +145,19 @@ describe("POST /project/:projectId/invite", () => {
     );
 
     expect(inviteRes.status).toBe(400);
+  });
+
+  it("returns 403 when project is not approved (status not Active)", async () => {
+    await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
+    const inviteRes = await requestInviteSubbie(
+      projectId,
+      token,
+      SUBBIE_EMAIL,
+      "Electrician",
+      "Subbie"
+    );
+    expect(inviteRes.status).toBe(403);
+    expect(inviteRes.body.error).toMatch(/approved|admin/i);
   });
 
   it("returns 403 when non-PM tries to invite", async () => {
