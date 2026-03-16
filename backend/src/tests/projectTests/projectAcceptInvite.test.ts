@@ -1,13 +1,12 @@
-import request from "supertest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { app } from "../../app";
 import {
   requestDelete,
   requestInviteSubbie,
   requestAcceptInvite,
   getPmToken,
   getSubbieToken,
+  getProjectId,
 } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 
@@ -25,24 +24,12 @@ const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 let projectId: string;
 let token: string;
 
-const validProjectBody = {
-  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
-  council: "Strathfield",
-  ownerId: "user_owner123",
-  builderId: "user_builder123",
-  status: "90% Complete",
-};
-
 beforeEach(async () => {
   await requestDelete();
   token = await getPmToken(PM_EMAIL, PASSWORD);
 
-  const projectRes = await request(app)
-    .post("/project")
-    .set("Authorization", `Bearer ${token}`)
-    .send(validProjectBody);
+ projectId = await getProjectId(token, PM_EMAIL);
 
-  projectId = projectRes.body.projectId;
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });

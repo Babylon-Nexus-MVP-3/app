@@ -51,6 +51,20 @@ export async function requestAcceptInvite(inviteCode: string, token: string) {
     .set("Authorization", `Bearer ${token}`)
     .send({ inviteCode });
 }
+
+export async function requestSubmitInvoice(
+  token: string,
+  projectId: string,
+  submittingParty: string,
+  submittingCategory: string,
+  dateDue: Date,
+  description: string
+) {
+  return request(app)
+    .post(`/project/${projectId}/invoice`)
+    .send({ submittingParty, submittingCategory, dateDue, description })
+    .set("Authorization", `Bearer ${token}`);
+}
 /** Register a PM user, activate them so login succeeds, then login and return access token */
 export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
   const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
@@ -80,3 +94,15 @@ export const validProjectBody = {
   council: "Strathfield",
   status: "90% Complete",
 };
+
+export async function getProjectId(token: string, email: string): Promise<string> {
+  const pmUser = await UserModel.findOne({ email });
+  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
+
+  const projectRes = await request(app)
+    .post("/project")
+    .set("Authorization", `Bearer ${token}`)
+    .send(body);
+
+  return projectRes.body.projectId as string;
+}

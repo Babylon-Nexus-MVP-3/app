@@ -111,10 +111,7 @@ export async function inviteSubbie(
   }
 
   if (project.status !== "Active") {
-    throw new ProjectError(
-      "Project must be approved by admin before inviting participants",
-      403
-    );
+    throw new ProjectError("Project must be approved by admin before inviting participants", 403);
   }
 
   if (!email || !trade || !role) {
@@ -164,7 +161,7 @@ export async function acceptInviteSubbie(inviteCode: string, userId: string) {
       dateAccepted: new Date(Date.now()),
       inviteCode: null,
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   return { participant: updatedParticipant };

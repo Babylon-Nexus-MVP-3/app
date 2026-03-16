@@ -45,9 +45,7 @@ export async function rejectUser(userId: string): Promise<void> {
 }
 
 export async function listPendingProjects(): Promise<any[]> {
-  const projects = await ProjectModel.find({ status: "Pending" })
-    .sort({ createdAt: -1 })
-    .lean();
+  const projects = await ProjectModel.find({ status: "Pending" }).sort({ createdAt: -1 }).lean();
   return projects.map((p) => ({
     _id: p._id.toString(),
     location: p.location,
