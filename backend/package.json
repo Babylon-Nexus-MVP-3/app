@@ -1,6 +1,7 @@
 {
   "scripts": {
     "start": "ts-node -T src/server.ts",
+    "seed:admin": "ts-node -T scripts/seedAdmin.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint-fix": "eslint --fix 'src/**/*.{ts,js}'",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles"
