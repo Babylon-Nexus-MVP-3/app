@@ -41,7 +41,11 @@ export default function SignIn() {
       if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
 
       await login(data.accessToken, data.refreshToken, data.user);
-      router.replace("/(app)/projects");
+      if (data.user?.role === "Admin") {
+        router.replace("/(admin)/projects");
+      } else {
+        router.replace("/(app)/projects");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
