@@ -9,6 +9,7 @@ import {
   getPmToken,
   getSubbieToken,
 } from "../requestHelpers";
+import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
 
@@ -42,6 +43,8 @@ beforeEach(async () => {
     .send(validProjectBody);
 
   projectId = projectRes.body.projectId;
+  // Simulate admin approval so invite is allowed (invite only when project is Active)
+  await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
 afterEach(async () => {

@@ -111,15 +111,11 @@ export async function inviteSubbie(
   }
 
   if (project.status !== "Active") {
-  throw new ProjectError(
-    "Project must be approved by admin before inviting participants",
-    403
-  );
-}
-const user = await ProjectParticipantModel.findOne({ projectId, userId });
-if (!user) {
-  throw new ProjectError("User is not part of this project");
-}
+    throw new ProjectError(
+      "Project must be approved by admin before inviting participants",
+      403
+    );
+  }
 
   if (!email || !trade || !role) {
     throw new ProjectError("Missing Required Fields to add partiicpant: email, trade, role");
@@ -166,7 +162,7 @@ export async function acceptInviteSubbie(inviteCode: string, userId: string) {
       userId,
       status: "Accepted",
       dateAccepted: new Date(Date.now()),
-      inviteCode: null, // invalidate the code after use
+      inviteCode: null,
     },
     { new: true }
   );

@@ -5,4 +5,3 @@ import { requireAuth } from "../middleware";
 export const projectsRouter = express.Router();
 
 projectsRouter.get("/", requireAuth, ProjectsController.list);
-

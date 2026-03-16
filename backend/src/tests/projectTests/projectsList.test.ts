@@ -25,7 +25,9 @@ async function registerActiveUser(email: string, role: string) {
 
 beforeAll(async () => {
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI.");
+    throw new Error(
+      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+    );
   }
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
@@ -106,12 +108,14 @@ describe("GET /projects", () => {
     expect(Array.isArray(res.body.projects)).toBe(true);
 
     const ids = res.body.projects.map((p: any) => p._id);
-    expect(ids).toEqual(expect.arrayContaining([
-      ownerProj._id.toString(),
-      builderProj._id.toString(),
-      pmProj._id.toString(),
-      participantProj._id.toString(),
-    ]));
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        ownerProj._id.toString(),
+        builderProj._id.toString(),
+        pmProj._id.toString(),
+        participantProj._id.toString(),
+      ])
+    );
     expect(res.body.projects).toHaveLength(4);
   });
 
@@ -142,4 +146,3 @@ describe("GET /projects", () => {
     expect(res.body.projects[0]._id).toBe(activeProj._id.toString());
   });
 });
-

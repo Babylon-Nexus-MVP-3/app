@@ -36,4 +36,3 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
 
   return { projects, total: projects.length };
 }
-

@@ -14,11 +14,7 @@ export async function listPendingUsers(
   }
 }
 
-export async function approveUser(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function approveUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.params.userId as string;
     await AdminService.approveUser(userId);
@@ -28,11 +24,7 @@ export async function approveUser(
   }
 }
 
-export async function rejectUser(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function rejectUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.params.userId as string;
     await AdminService.rejectUser(userId);

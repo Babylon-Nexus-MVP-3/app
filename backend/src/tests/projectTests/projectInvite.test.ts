@@ -109,10 +109,11 @@ describe("POST /project/:projectId/invite", () => {
       "Subbie"
     );
 
-    expect(inviteRes.status).toBe(400);
+    expect(inviteRes.status).toBe(200);
+    expect(inviteRes.body.success).toBe(true);
   });
 
-   it("returns 403 when project is not approved (status not Active)", async () => {
+  it("returns 403 when project is not approved (status not Active)", async () => {
     await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
     const inviteRes = await requestInviteSubbie(
       projectId,
