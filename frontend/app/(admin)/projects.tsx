@@ -1,0 +1,296 @@
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
+
+type AdminProject = {
+  _id: string;
+  location: string;
+  council: string;
+  ownerId?: string;
+  builderId?: string;
+  pmId?: string;
+  status: "Pending" | "Active" | "Rejected";
+  createdAt: string;
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  Active: Colors.green,
+  Pending: Colors.amber,
+  Rejected: Colors.red,
+};
+
+const STATUS_BG: Record<string, string> = {
+  Active: Colors.greenBg,
+  Pending: Colors.amberBg,
+  Rejected: Colors.redBg,
+};
+
+export default function AdminProjects() {
+  const { fetchWithAuth } = useAuth();
+
+  const [projects, setProjects] = useState<AdminProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchProjects() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth("http://localhost:3229/admin/projects/all");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to load projects.");
+        return;
+      }
+      setProjects(data.projects ?? []);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const total = projects.length;
+  const active = projects.filter((p) => p.status === "Active").length;
+  const pending = projects.filter((p) => p.status === "Pending").length;
+  const rejected = projects.filter((p) => p.status === "Rejected").length;
+
+  return (
+    <View style={styles.screen}>
+      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+        <SafeAreaView edges={["top"]}>
+          <View style={styles.headerInner}>
+            <View>
+              <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
+              <Text style={styles.headerTitle}>All Projects</Text>
+            </View>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNum}>{total}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statNum, { color: Colors.green }]}>{active}</Text>
+              <Text style={styles.statLabel}>Active</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statNum, { color: Colors.amber }]}>{pending}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statNum, { color: Colors.red }]}>{rejected}</Text>
+              <Text style={styles.statLabel}>Rejected</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionLabel}>ALL PROJECTS</Text>
+
+        {loading ? (
+          <ActivityIndicator color={Colors.gold} style={{ marginTop: 32 }} />
+        ) : error ? (
+          <View style={styles.centerBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={fetchProjects} style={styles.retryBtn}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : projects.length === 0 ? (
+          <Text style={styles.emptyText}>No projects found.</Text>
+        ) : (
+          projects.map((project) => (
+            <View key={project._id} style={styles.projectCard}>
+              <View style={styles.cardTop}>
+                <View style={styles.cardTitleBlock}>
+                  <Text style={styles.projectName}>{project.council || "—"}</Text>
+                  <Text style={styles.projectAddress}>{project.location}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: STATUS_BG[project.status] ?? Colors.greyBg },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: STATUS_COLORS[project.status] ?? Colors.grey },
+                    ]}
+                  >
+                    {project.status}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.projectDate}>
+                Submitted {new Date(project.createdAt).toLocaleDateString("en-AU")}
+              </Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.offWhite,
+  },
+  header: {
+    paddingBottom: 20,
+  },
+  headerInner: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  adminBadge: {
+    fontSize: 10,
+    color: Colors.goldLight,
+    fontWeight: "600",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.white,
+  },
+  statsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    alignItems: "center",
+  },
+  statNum: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.white,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.5)",
+    fontWeight: "600",
+    marginTop: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  body: {
+    flex: 1,
+  },
+  bodyContent: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 16,
+  },
+  projectCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  cardTitleBlock: {
+    flex: 1,
+    marginRight: 12,
+  },
+  projectName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  projectAddress: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  statusBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  projectDate: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  centerBox: {
+    alignItems: "center",
+    marginTop: 32,
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.red,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  retryBtn: {
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  retryBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.gold,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 32,
+  },
+});

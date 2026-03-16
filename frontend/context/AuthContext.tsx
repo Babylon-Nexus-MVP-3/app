@@ -6,7 +6,7 @@ export interface AuthUser {
   name: string;
   email: string;
   phoneNumber?: string;
-  role: "PM" | "Subbie" | "Owner" | "Builder" | "Consultant";
+  role: "PM" | "Subbie" | "Owner" | "Builder" | "Consultant" | "Admin";
   verticalGroup?: string;
   horizontalAttribute?: string;
   licenceNumber?: string;
