@@ -5,10 +5,7 @@ import { Colors } from "@/constants/colors";
 
 export default function PendingApproval() {
   return (
-    <LinearGradient
-      colors={[Colors.navy, Colors.navyLight]}
-      style={styles.gradient}
-    >
+    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
       <View style={styles.container}>
         <View style={styles.iconWrapper}>
           <Text style={styles.icon}>⏳</Text>
@@ -16,7 +13,7 @@ export default function PendingApproval() {
 
         <Text style={styles.title}>Request Submitted</Text>
         <Text style={styles.subtitle}>
-          Pending admin approval. You'll be notified once approved.
+          Pending admin approval. You&apos;ll be notified once approved.
         </Text>
 
         <TouchableOpacity

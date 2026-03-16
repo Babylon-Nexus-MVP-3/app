@@ -1,6 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
+import { UserModel } from "../models/userModel";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -48,6 +49,16 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     builderId,
     pmId,
     status,
+  });
+
+  // Associate user with project
+  const user = await UserModel.findById(creatorId);
+  await ProjectParticipantModel.create({
+    projectId: project._id.toString(),
+    userId: user._id.toString(),
+    role: user.role,
+    email: user.email,
+    status: "Accepted",
   });
 
   await EventModel.create({
@@ -100,12 +111,15 @@ export async function inviteSubbie(
   }
 
   if (project.status !== "Active") {
-    throw new ProjectError("Project must be approved by admin before inviting participants", 403);
-  }
-
-  if (project.pmId !== userId) {
-    throw new ProjectError("Project does not exist");
-  }
+  throw new ProjectError(
+    "Project must be approved by admin before inviting participants",
+    403
+  );
+}
+const user = await ProjectParticipantModel.findOne({ projectId, userId });
+if (!user) {
+  throw new ProjectError("User is not part of this project");
+}
 
   if (!email || !trade || !role) {
     throw new ProjectError("Missing Required Fields to add partiicpant: email, trade, role");
@@ -124,4 +138,38 @@ export async function inviteSubbie(
   });
 
   return { participant };
+}
+
+export async function acceptInviteSubbie(inviteCode: string, userId: string) {
+  if (!inviteCode) {
+    throw new ProjectError("Invite code is required");
+  }
+
+  const participant = await ProjectParticipantModel.findOne({ inviteCode });
+
+  if (!participant) {
+    throw new ProjectError("Invalid or expired invite code");
+  }
+
+  if (participant.status !== "Pending") {
+    throw new ProjectError("Invite is no longer valid");
+  }
+
+  const project = await ProjectModel.findById(participant.projectId);
+  if (!project) {
+    throw new ProjectError("Associated project no longer exists");
+  }
+
+  const updatedParticipant = await ProjectParticipantModel.findByIdAndUpdate(
+    participant._id,
+    {
+      userId,
+      status: "Accepted",
+      dateAccepted: new Date(Date.now()),
+      inviteCode: null, // invalidate the code after use
+    },
+    { new: true }
+  );
+
+  return { participant: updatedParticipant };
 }

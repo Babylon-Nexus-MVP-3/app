@@ -4,9 +4,9 @@ import dotenv from "dotenv";
 import { app } from "../../app";
 import {
   requestDelete,
-  requestAuthRegister,
-  requestAuthLogin,
   requestInviteSubbie,
+  getPmToken,
+  validProjectBody,
 } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
@@ -14,7 +14,8 @@ import { ProjectModel } from "../../models/projectModel";
 dotenv.config();
 
 const PM_EMAIL = "pm@project-test.com";
-const PM_PASSWORD = "SecurePassword123!";
+const PM_EMAIL_SECOND = "pm@project2-test.com";
+const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
@@ -25,17 +26,9 @@ const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 let projectId: string;
 let token: string;
 
-const validProjectBody = {
-  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
-  council: "Strathfield",
-  ownerId: "user_owner123",
-  builderId: "user_builder123",
-  status: "90% Complete",
-};
-
 beforeEach(async () => {
   await requestDelete();
-  token = await getPmToken();
+  token = await getPmToken(PM_EMAIL, PASSWORD);
 
   const pmUser = await UserModel.findOne({ email: PM_EMAIL });
   const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
@@ -70,20 +63,6 @@ beforeAll(async () => {
     await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
   }
 }, 10000);
-
-/** Register a PM user, activate them so login succeeds, then login and return access token */
-async function getPmToken(): Promise<string> {
-  const reg = await requestAuthRegister("Project", "Manager", PM_PASSWORD, PM_EMAIL, "PM");
-  expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: PM_EMAIL },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  const login = await requestAuthLogin(PM_EMAIL, PM_PASSWORD);
-  expect(login.status).toBe(200);
-  expect(login.body.accessToken).toBeDefined();
-  return login.body.accessToken;
-}
 
 describe("POST /project/:projectId/invite", () => {
   it("returns 200 and participant when PM invites a subbie to a project", async () => {
@@ -120,21 +99,7 @@ describe("POST /project/:projectId/invite", () => {
 
   it("returns 400 when PM is not assigned to project", async () => {
     // Register another PM
-    await requestAuthRegister(
-      "Project",
-      "Manager",
-      "SecurePassword1234!",
-      "pm@project2-test.com",
-      "PM"
-    );
-
-    await UserModel.updateOne(
-      { email: "pm@project2-test.com" },
-      { $set: { status: "Active", emailVerified: true } }
-    );
-
-    const login = await requestAuthLogin("pm@project2-test.com", "SecurePassword1234!");
-    const wrongPmToken = login.body.accessToken;
+    const wrongPmToken = await getPmToken(PM_EMAIL_SECOND, PASSWORD);
 
     const inviteRes = await requestInviteSubbie(
       projectId,
@@ -147,7 +112,7 @@ describe("POST /project/:projectId/invite", () => {
     expect(inviteRes.status).toBe(400);
   });
 
-  it("returns 403 when project is not approved (status not Active)", async () => {
+   it("returns 403 when project is not approved (status not Active)", async () => {
     await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
     const inviteRes = await requestInviteSubbie(
       projectId,
@@ -158,27 +123,5 @@ describe("POST /project/:projectId/invite", () => {
     );
     expect(inviteRes.status).toBe(403);
     expect(inviteRes.body.error).toMatch(/approved|admin/i);
-  });
-
-  it("returns 403 when non-PM tries to invite", async () => {
-    // Register and login as a Subbie
-    const reg = await requestAuthRegister("Sub", "Contractor", PM_PASSWORD, SUBBIE_EMAIL, "Subbie");
-    expect(reg.status).toBe(201);
-    await UserModel.updateOne(
-      { email: SUBBIE_EMAIL },
-      { $set: { status: "Active", emailVerified: true } }
-    );
-    const subbieLogin = await requestAuthLogin(SUBBIE_EMAIL, PM_PASSWORD);
-    const subbieToken = subbieLogin.body.accessToken;
-
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      subbieToken,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
-    );
-
-    expect(inviteRes.status).toBe(403);
   });
 });

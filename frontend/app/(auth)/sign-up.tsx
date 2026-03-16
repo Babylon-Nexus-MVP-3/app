@@ -55,7 +55,7 @@ export default function SignUp() {
 
   function toggleRole(role: string) {
     setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
     );
   }
 
@@ -112,11 +112,7 @@ export default function SignUp() {
       }
       router.replace("/(auth)/pending-approval");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -125,19 +121,13 @@ export default function SignUp() {
   const progressBar = (
     <View style={styles.progressRow}>
       {[1, 2, 3].map((s) => (
-        <View
-          key={s}
-          style={[styles.progressSegment, s <= step && styles.progressActive]}
-        />
+        <View key={s} style={[styles.progressSegment, s <= step && styles.progressActive]} />
       ))}
     </View>
   );
 
   return (
-    <LinearGradient
-      colors={[Colors.navy, Colors.navyLight]}
-      style={styles.gradient}
-    >
+    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -160,9 +150,7 @@ export default function SignUp() {
           {step === 1 && (
             <>
               <Text style={styles.title}>Create account</Text>
-              <Text style={styles.subtitle}>
-                Enter your details to get started
-              </Text>
+              <Text style={styles.subtitle}>Enter your details to get started</Text>
 
               <Text style={styles.label}>First Name</Text>
               <TextInput
@@ -212,10 +200,25 @@ export default function SignUp() {
               />
               <View style={styles.hints}>
                 <Text style={styles.hintLabel}>Password must contain at least:</Text>
-                <Text style={[styles.hint, password.length >= 12 && password.length <= 50 && styles.hintMet]}>
+                <Text
+                  style={[
+                    styles.hint,
+                    password.length >= 12 && password.length <= 50 && styles.hintMet,
+                  ]}
+                >
                   · 12 characters
                 </Text>
-                <Text style={[styles.hint, [/[a-z]/.test(password), /[A-Z]/.test(password), /[0-9]/.test(password), /[^a-zA-Z0-9]/.test(password)].filter(Boolean).length >= 3 && styles.hintMet]}>
+                <Text
+                  style={[
+                    styles.hint,
+                    [
+                      /[a-z]/.test(password),
+                      /[A-Z]/.test(password),
+                      /[0-9]/.test(password),
+                      /[^a-zA-Z0-9]/.test(password),
+                    ].filter(Boolean).length >= 3 && styles.hintMet,
+                  ]}
+                >
                   · 3 of 4: uppercase, lowercase, number, special character
                 </Text>
               </View>
@@ -252,9 +255,7 @@ export default function SignUp() {
           {step === 2 && (
             <>
               <Text style={styles.title}>Select project</Text>
-              <Text style={styles.subtitle}>
-                Which project are you joining?
-              </Text>
+              <Text style={styles.subtitle}>Which project are you joining?</Text>
 
               <Text style={styles.label}>Project Name or Code</Text>
               <TextInput
@@ -280,9 +281,7 @@ export default function SignUp() {
           {step === 3 && (
             <>
               <Text style={styles.title}>Your role</Text>
-              <Text style={styles.subtitle}>
-                Select your role(s) on this project
-              </Text>
+              <Text style={styles.subtitle}>Select your role(s) on this project</Text>
 
               <View style={styles.rolesContainer}>
                 {ROLES.map((role) => {
@@ -291,28 +290,13 @@ export default function SignUp() {
                     <TouchableOpacity
                       key={role}
                       onPress={() => toggleRole(role)}
-                      style={[
-                        styles.roleButton,
-                        selected && styles.roleButtonSelected,
-                      ]}
+                      style={[styles.roleButton, selected && styles.roleButtonSelected]}
                       activeOpacity={0.8}
                     >
-                      <View
-                        style={[
-                          styles.roleCheckbox,
-                          selected && styles.roleCheckboxSelected,
-                        ]}
-                      >
-                        {selected && (
-                          <Text style={styles.roleCheckmark}>✓</Text>
-                        )}
+                      <View style={[styles.roleCheckbox, selected && styles.roleCheckboxSelected]}>
+                        {selected && <Text style={styles.roleCheckmark}>✓</Text>}
                       </View>
-                      <Text
-                        style={[
-                          styles.roleText,
-                          selected && styles.roleTextSelected,
-                        ]}
-                      >
+                      <Text style={[styles.roleText, selected && styles.roleTextSelected]}>
                         {role}
                       </Text>
                     </TouchableOpacity>
