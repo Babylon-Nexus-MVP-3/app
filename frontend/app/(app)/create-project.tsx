@@ -27,6 +27,11 @@ const ROLES = [
   "Certifier",
 ];
 
+type Invitee = { email: string; role: string };
+
+// Tracks which role picker is open: "creator" or an invitee index
+type RoleTarget = "creator" | number;
+
 export default function CreateProject() {
   const { user, fetchWithAuth } = useAuth();
 
@@ -36,6 +41,7 @@ export default function CreateProject() {
       setName("");
       setAddress("");
       setRole("");
+      setInvitees([]);
       setError(null);
     }, [])
   );
@@ -43,14 +49,50 @@ export default function CreateProject() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [role, setRole] = useState("");
-  const [showRolePicker, setShowRolePicker] = useState(false);
+  const [invitees, setInvitees] = useState<Invitee[]>([]);
+  const [rolePickerTarget, setRolePickerTarget] = useState<RoleTarget | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  function handleRoleSelect(r: string) {
+    if (rolePickerTarget === "creator") {
+      setRole(r);
+    } else if (typeof rolePickerTarget === "number") {
+      setInvitees((prev) =>
+        prev.map((inv, i) => (i === rolePickerTarget ? { ...inv, role: r } : inv))
+      );
+    }
+    setRolePickerTarget(null);
+  }
+
+  function addInvitee() {
+    setInvitees((prev) => [...prev, { email: "", role: "" }]);
+  }
+
+  function removeInvitee(index: number) {
+    setInvitees((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateInviteeEmail(index: number, email: string) {
+    setInvitees((prev) => prev.map((inv, i) => (i === index ? { ...inv, email } : inv)));
+  }
+
+  function getActiveRoleValue(): string {
+    if (rolePickerTarget === "creator") return role;
+    if (typeof rolePickerTarget === "number") return invitees[rolePickerTarget]?.role ?? "";
+    return "";
+  }
+
   async function handleSubmit() {
     if (!name.trim() || !address.trim() || !role) {
       setError("Please fill in all fields.");
+      return;
+    }
+
+    const incompleteInvitee = invitees.find((inv) => !inv.email.trim() || !inv.role);
+    if (incompleteInvitee) {
+      setError("Please fill in the email and role for all invited team members.");
       return;
     }
 
@@ -61,11 +103,13 @@ export default function CreateProject() {
       const response = await fetchWithAuth("http://localhost:3229/project", {
         method: "POST",
         body: JSON.stringify({
+          council: name.trim(),
           location: address.trim(),
-          council: "TBD",
-          ownerId: user?.id ?? "",
-          builderId: "TBD",
-          status: "Pending",
+          creatorRole: role,
+          ...(role === "Owner" && { ownerId: user?.id }),
+          ...(role === "Builder" && { builderId: user?.id }),
+          ...(role === "Project Manager" && { pmId: user?.id }),
+          invitees: invitees.map((inv) => ({ email: inv.email.trim(), role: inv.role })),
         }),
       });
 
@@ -127,6 +171,7 @@ export default function CreateProject() {
           <Text style={styles.title}>Create New Project</Text>
           <Text style={styles.subtitle}>Submit a project for admin approval</Text>
 
+          {/* ── Project details ── */}
           <Text style={styles.label}>Project Name</Text>
           <TextInput
             style={styles.input}
@@ -150,12 +195,58 @@ export default function CreateProject() {
           <Text style={styles.label}>Your Role on This Project</Text>
           <TouchableOpacity
             style={styles.input}
-            onPress={() => setShowRolePicker(true)}
+            onPress={() => setRolePickerTarget("creator")}
             activeOpacity={0.8}
           >
             <Text style={role ? styles.roleSelected : styles.rolePlaceholder}>
               {role || "Select role..."}
             </Text>
+          </TouchableOpacity>
+
+          {/* ── Invite team members ── */}
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Invite Team Members</Text>
+          <Text style={styles.sectionHint}>
+            Add others to this project. They'll receive an invite code once approved.
+          </Text>
+
+          {invitees.map((inv, index) => (
+            <View key={index} style={styles.inviteeCard}>
+              <View style={styles.inviteeCardHeader}>
+                <Text style={styles.inviteeCardLabel}>Person {index + 1}</Text>
+                <TouchableOpacity onPress={() => removeInvitee(index)} hitSlop={8}>
+                  <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inviteeFieldLabel}>Email</Text>
+              <TextInput
+                style={styles.inviteeInput}
+                value={inv.email}
+                onChangeText={(t) => updateInviteeEmail(index, t)}
+                placeholder="their@email.com"
+                placeholderTextColor="rgba(255,255,255,0.25)"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.inviteeFieldLabel}>Role</Text>
+              <TouchableOpacity
+                style={styles.inviteeInput}
+                onPress={() => setRolePickerTarget(index)}
+                activeOpacity={0.8}
+              >
+                <Text style={inv.role ? styles.roleSelected : styles.rolePlaceholder}>
+                  {inv.role || "Select role..."}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.addInviteeBtn} onPress={addInvitee} activeOpacity={0.75}>
+            <Ionicons name="add-circle-outline" size={18} color={Colors.gold} />
+            <Text style={styles.addInviteeBtnText}>Add Team Member</Text>
           </TouchableOpacity>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -175,30 +266,30 @@ export default function CreateProject() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Role picker modal */}
-      <Modal visible={showRolePicker} transparent animationType="slide">
+      {/* Shared role picker modal */}
+      <Modal visible={rolePickerTarget !== null} transparent animationType="slide">
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowRolePicker(false)}
+          onPress={() => setRolePickerTarget(null)}
         >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Select Role</Text>
-            {ROLES.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={styles.roleOption}
-                onPress={() => {
-                  setRole(r);
-                  setShowRolePicker(false);
-                }}
-              >
-                <Text style={[styles.roleOptionText, role === r && styles.roleOptionSelected]}>
-                  {r}
-                </Text>
-                {role === r && <Ionicons name="checkmark" size={18} color={Colors.gold} />}
-              </TouchableOpacity>
-            ))}
+            {ROLES.map((r) => {
+              const active = getActiveRoleValue();
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={styles.roleOption}
+                  onPress={() => handleRoleSelect(r)}
+                >
+                  <Text style={[styles.roleOptionText, active === r && styles.roleOptionSelected]}>
+                    {r}
+                  </Text>
+                  {active === r && <Ionicons name="checkmark" size={18} color={Colors.gold} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -265,6 +356,84 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.white,
   },
+
+  // Team members section
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.white,
+    marginBottom: 6,
+  },
+  sectionHint: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.4)",
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  inviteeCard: {
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.2)",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  inviteeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  inviteeCardLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.gold,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  inviteeFieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.45)",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  inviteeInput: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    marginBottom: 14,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    color: Colors.white,
+    justifyContent: "center",
+  },
+  addInviteeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(201,168,76,0.4)",
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    justifyContent: "center",
+  },
+  addInviteeBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.gold,
+  },
+
   errorText: {
     fontSize: 13,
     color: Colors.red,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -27,59 +27,81 @@ type Project = {
   change: number;
 };
 
-// TODO: Replace with API data
-const PROJECTS: Project[] = [
-  {
-    id: "1",
-    name: "Strathfield Apartments",
-    subtitle: "24 Units — Strathfield NSW",
-    role: "Subcontractor",
-    health: 78,
-    overdue: 2,
-    change: 5,
-  },
-  {
-    id: "2",
-    name: "Parramatta Tower",
-    subtitle: "18 Levels — Parramatta NSW",
-    role: "Builder",
-    health: 65,
-    overdue: 3,
-    change: -3,
-  },
-  {
-    id: "3",
-    name: "Bankstown Mixed-Use",
-    subtitle: "45 Units — Bankstown NSW",
-    role: "Owner",
-    health: 45,
-    overdue: 5,
-    change: -12,
-  },
-  {
-    id: "69b50f3722334dcf9244c2b2",
-    name: "Burwood Central",
-    subtitle: "12 Units — Burwood NSW",
-    role: "Project Manager",
-    health: 92,
-    overdue: 0,
-    change: 8,
-  },
-];
+type ApiProject = {
+  _id: string;
+  location: string;
+  council: string;
+  ownerId?: string;
+  builderId?: string;
+  pmId?: string;
+  status: string;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  PM: "Project Manager",
+  Subbie: "Subcontractor",
+  Owner: "Owner",
+  Builder: "Builder",
+  Consultant: "Consultant",
+};
+
+function deriveRole(project: ApiProject, userId: string, userRole: string): string {
+  if (project.ownerId === userId) return "Owner";
+  if (project.builderId === userId) return "Builder";
+  if (project.pmId === userId) return "Project Manager";
+  return ROLE_LABELS[userRole] ?? "Team Member";
+}
 
 export default function Projects() {
   const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
-  const avgHealth = Math.round(PROJECTS.reduce((sum, p) => sum + p.health, 0) / PROJECTS.length);
-  const totalOverdue = PROJECTS.reduce((sum, p) => sum + p.overdue, 0);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
 
-  const [menuOpen, setMenuOpen] = useState(false);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinedRole, setJoinedRole] = useState<string | null>(null);
+
+  async function fetchProjects() {
+    setProjectsLoading(true);
+    setProjectsError(null);
+    try {
+      const res = await fetchWithAuth("http://localhost:3229/projects");
+      const data = await res.json();
+      if (!res.ok) {
+        setProjectsError(data.error ?? "Failed to load projects.");
+        return;
+      }
+      const mapped: Project[] = (data.projects as ApiProject[]).map((p) => ({
+        id: p._id,
+        name: p.location,
+        subtitle: p.council,
+        role: deriveRole(p, user?.id ?? "", user?.role ?? ""),
+        health: 0,
+        overdue: 0,
+        change: 0,
+      }));
+      setProjects(mapped);
+    } catch {
+      setProjectsError("Network error. Please try again.");
+    } finally {
+      setProjectsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const avgHealth =
+    projects.length > 0
+      ? Math.round(projects.reduce((sum, p) => sum + p.health, 0) / projects.length)
+      : 0;
+  const totalOverdue = projects.reduce((sum, p) => sum + p.overdue, 0);
 
   function openJoinModal() {
     setJoinCode("");
@@ -126,18 +148,25 @@ export default function Projects() {
                 <Text style={styles.greeting}>Hey {firstName} 👋</Text>
               </View>
             </View>
+          </View>
+
+          {/* Action buttons row */}
+          <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.projectMenuBtn}
+              style={styles.actionBtn}
               activeOpacity={0.8}
-              onPress={() => setMenuOpen((o) => !o)}
+              onPress={() => router.push("/(app)/create-project")}
             >
-              <Text style={styles.projectMenuBtnText}>+ Project</Text>
-              <Ionicons
-                name={menuOpen ? "chevron-up" : "chevron-down"}
-                size={13}
-                color={Colors.gold}
-                style={{ marginLeft: 4 }}
-              />
+              <Ionicons name="add" size={15} color={Colors.navy} />
+              <Text style={styles.actionBtnText}>New Project</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtnOutline}
+              activeOpacity={0.8}
+              onPress={openJoinModal}
+            >
+              <Ionicons name="enter-outline" size={15} color={Colors.gold} />
+              <Text style={styles.actionBtnOutlineText}>Join Project</Text>
             </TouchableOpacity>
           </View>
 
@@ -154,7 +183,7 @@ export default function Projects() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{"ACTIVE\nPROJECTS"}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statNum}>{PROJECTS.length}</Text>
+                <Text style={styles.statNum}>{projects.length}</Text>
                 <Text style={styles.statSuffix}> projects</Text>
               </View>
             </View>
@@ -178,97 +207,69 @@ export default function Projects() {
       >
         <Text style={styles.sectionLabel}>YOUR PROJECTS</Text>
 
-        {PROJECTS.map((project) => (
-          <TouchableOpacity
-            key={project.id}
-            style={styles.projectCard}
-            activeOpacity={0.75}
-            onPress={() =>
-              router.push({
-                pathname: "/(app)/project/[id]",
-                params: {
-                  id: project.id,
-                  name: project.name,
-                  subtitle: project.subtitle,
-                  role: project.role,
-                  health: String(project.health),
-                  overdue: String(project.overdue),
-                  change: String(project.change),
-                },
-              })
-            }
-          >
-            <CircularProgress value={project.health} size={68} />
+        {projectsLoading ? (
+          <ActivityIndicator color={Colors.gold} style={{ marginTop: 32 }} />
+        ) : projectsError ? (
+          <Text style={styles.errorText}>{projectsError}</Text>
+        ) : projects.length === 0 ? (
+          <Text style={styles.emptyText}>No active projects yet. Create or join one above.</Text>
+        ) : (
+          projects.map((project) => (
+            <TouchableOpacity
+              key={project.id}
+              style={styles.projectCard}
+              activeOpacity={0.75}
+              onPress={() =>
+                router.push({
+                  pathname: "/(app)/project/[id]",
+                  params: {
+                    id: project.id,
+                    name: project.name,
+                    subtitle: project.subtitle,
+                    role: project.role,
+                    health: String(project.health),
+                    overdue: String(project.overdue),
+                    change: String(project.change),
+                  },
+                })
+              }
+            >
+              <CircularProgress value={project.health} size={68} />
 
-            <View style={styles.projectInfo}>
-              <Text style={styles.projectName}>{project.name}</Text>
-              <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
+              <View style={styles.projectInfo}>
+                <Text style={styles.projectName}>{project.name}</Text>
+                <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
 
-              <View style={styles.badgeRow}>
-                <View style={styles.roleBadge}>
-                  <Text style={styles.roleBadgeText}>{project.role}</Text>
-                </View>
-
-                {project.overdue > 0 && (
-                  <View style={styles.overdueBadge}>
-                    <Text style={styles.overdueBadgeText}>{project.overdue} overdue</Text>
+                <View style={styles.badgeRow}>
+                  <View style={styles.roleBadge}>
+                    <Text style={styles.roleBadgeText}>{project.role}</Text>
                   </View>
-                )}
 
-                {project.change !== 0 && (
-                  <Text
-                    style={[
-                      styles.changeBadge,
-                      { color: project.change > 0 ? Colors.green : Colors.red },
-                    ]}
-                  >
-                    {project.change > 0 ? "+" : ""}
-                    {project.change}%
-                  </Text>
-                )}
+                  {project.overdue > 0 && (
+                    <View style={styles.overdueBadge}>
+                      <Text style={styles.overdueBadgeText}>{project.overdue} overdue</Text>
+                    </View>
+                  )}
+
+                  {project.change !== 0 && (
+                    <Text
+                      style={[
+                        styles.changeBadge,
+                        { color: project.change > 0 ? Colors.green : Colors.red },
+                      ]}
+                    >
+                      {project.change > 0 ? "+" : ""}
+                      {project.change}%
+                    </Text>
+                  )}
+                </View>
               </View>
-            </View>
 
-            <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
-          </TouchableOpacity>
-        ))}
+              <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
-
-      {/* ── Project menu dropdown ── */}
-      <Modal
-        visible={menuOpen}
-        transparent
-        animationType="none"
-        onRequestClose={() => setMenuOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.dropdownBackdrop}
-          activeOpacity={1}
-          onPress={() => setMenuOpen(false)}
-        >
-          <View style={styles.dropdownMenu}>
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => {
-                setMenuOpen(false);
-                router.push("/(app)/create-project");
-              }}
-            >
-              <Text style={styles.dropdownItemText}>New Project</Text>
-            </TouchableOpacity>
-            <View style={styles.dropdownDivider} />
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => {
-                setMenuOpen(false);
-                openJoinModal();
-              }}
-            >
-              <Text style={styles.dropdownItemText}>Join a Project</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* ── Join a Project modal ── */}
       <Modal visible={joinModalVisible} animationType="slide" presentationStyle="fullScreen">
@@ -303,12 +304,12 @@ export default function Projects() {
                 <View style={styles.joinRoleBadge}>
                   <Text style={styles.joinRoleBadgeText}>{joinedRole}</Text>
                 </View>
-                <Text style={styles.joinSuccessNote}>
-                  The project will appear in your list once real project data is connected.
-                </Text>
                 <TouchableOpacity
                   style={[styles.joinPrimaryBtn, { alignSelf: "stretch" }]}
-                  onPress={() => setJoinModalVisible(false)}
+                  onPress={() => {
+                    setJoinModalVisible(false);
+                    fetchProjects();
+                  }}
                 >
                   <Text style={styles.joinPrimaryBtnText}>Done</Text>
                 </TouchableOpacity>
@@ -408,49 +409,42 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: "800",
   },
-  projectMenuBtn: {
+  actionRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 16,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: Colors.gold,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.gold,
+    borderRadius: 12,
+    paddingVertical: 10,
   },
-  projectMenuBtnText: {
-    color: Colors.gold,
+  actionBtnText: {
+    color: Colors.navy,
     fontWeight: "700",
     fontSize: 13,
   },
-  dropdownBackdrop: {
+  actionBtnOutline: {
     flex: 1,
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 56,
-    right: 20,
-    backgroundColor: Colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
     borderRadius: 12,
-    minWidth: 160,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: 10,
   },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-  },
-  dropdownItemText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  dropdownDivider: {
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.07)",
+  actionBtnOutlineText: {
+    color: Colors.gold,
+    fontWeight: "700",
+    fontSize: 13,
   },
 
   // Stats
@@ -511,6 +505,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 16,
+  },
+
+  errorText: {
+    fontSize: 14,
+    color: Colors.red,
+    textAlign: "center",
+    marginTop: 32,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 32,
+    paddingHorizontal: 16,
   },
 
   // Project cards
@@ -585,7 +593,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 52,
     marginBottom: 8,
   },
   joinBackArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
