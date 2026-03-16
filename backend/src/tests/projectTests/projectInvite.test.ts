@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { requestDelete, requestInviteSubbie, getPmToken, getProjectId } from "../requestHelpers";
+import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
 
@@ -21,6 +22,8 @@ beforeEach(async () => {
   await requestDelete();
   token = await getPmToken(PM_EMAIL, PASSWORD);
   projectId = await getProjectId(token, PM_EMAIL);
+  // Simulate admin approval so invite is allowed (invite only when project is Active)
+  await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
 afterEach(async () => {
@@ -89,6 +92,20 @@ describe("POST /project/:projectId/invite", () => {
       "Subbie"
     );
 
-    expect(inviteRes.status).toBe(400);
+    expect(inviteRes.status).toBe(200);
+    expect(inviteRes.body.success).toBe(true);
+  });
+
+  it("returns 403 when project is not approved (status not Active)", async () => {
+    await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
+    const inviteRes = await requestInviteSubbie(
+      projectId,
+      token,
+      SUBBIE_EMAIL,
+      "Electrician",
+      "Subbie"
+    );
+    expect(inviteRes.status).toBe(403);
+    expect(inviteRes.body.error).toMatch(/approved|admin/i);
   });
 });

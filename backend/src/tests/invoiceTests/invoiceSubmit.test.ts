@@ -9,6 +9,7 @@ import {
   requestSubmitInvoice,
   getProjectId,
 } from "../requestHelpers";
+import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
 
@@ -16,9 +17,7 @@ const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 
-// Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);
-
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 let projectId: string;
@@ -28,6 +27,7 @@ beforeEach(async () => {
   await requestDelete();
   token = await getPmToken(PM_EMAIL, PASSWORD);
   projectId = await getProjectId(token, PM_EMAIL);
+  await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
 afterEach(async () => {
@@ -51,8 +51,8 @@ beforeAll(async () => {
   }
 }, 10000);
 
-describe("POST /project/invite/accept", () => {
-  it("returns 200 and accepted participant when subbie accepts a valid invite", async () => {
+describe("POST /project/:projectId/invoice", () => {
+  it("returns 200 when subbie submits invoice after accepting invite", async () => {
     const inviteRes = await requestInviteSubbie(
       projectId,
       token,
@@ -81,7 +81,7 @@ describe("POST /project/invite/accept", () => {
     });
   });
 
-  it("returns 400 If projectId doesnt exist", async () => {
+  it("returns 400 if projectId doesnt exist", async () => {
     const inviteRes = await requestInviteSubbie(
       projectId,
       token,
@@ -109,8 +109,7 @@ describe("POST /project/invite/accept", () => {
     expect(submitRes.body.error).toBe("Project Does not Exist");
   });
 
-  it("returns 400 If user is not part of the project", async () => {
-    // Get a subbie token but never accept an invite — so they're not a participant
+  it("returns 400 if user is not part of the project", async () => {
     const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
 
     const submitRes = await requestSubmitInvoice(

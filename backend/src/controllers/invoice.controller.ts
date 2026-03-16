@@ -5,11 +5,17 @@ export async function create(req: Request, res: Response, next: NextFunction): P
   try {
     const { submittingParty, submittingCategory, dateDue, description } = req.body;
     const projectId = req.params.projectId as string;
-    const participant = req.projectParticipant;
+    const userId = req.user?.sub;
+
+    if (!userId) {
+      res.status(401).json({ error: "Authentication Required" });
+      return;
+    }
+
     const invoiceId = await submitInvoice(
       { submittingParty, submittingCategory, dateDue, description },
       projectId,
-      participant
+      userId
     );
 
     res.status(200).json({ success: true, invoiceId });

@@ -1,12 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export type ProjectStatus = "Pending" | "Active" | "Rejected";
+
 export interface Project extends Document {
   location: string;
   council: string;
   ownerId?: string;
   builderId?: string;
   pmId?: string;
-  status?: string;
+  status: ProjectStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,7 +20,11 @@ const projectSchema = new Schema<Project>(
     ownerId: { type: String },
     builderId: { type: String },
     pmId: { type: String },
-    status: { type: String, default: "Draft" },
+    status: {
+      type: String,
+      enum: ["Pending", "Active", "Rejected"],
+      default: "Pending",
+    },
   },
   {
     timestamps: true,

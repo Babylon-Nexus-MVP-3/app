@@ -1,6 +1,8 @@
 import { InvoiceModel } from "../models/invoiceModel";
 import { EventModel } from "../models/eventModel";
-import { ProjectParticipant } from "../models/projectParticipantModel";
+import { ProjectModel } from "../models/projectModel";
+import { ProjectParticipantModel } from "../models/projectParticipantModel";
+import { ProjectError } from "./project.service";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -21,12 +23,26 @@ export interface SubmitInvoiceInput {
 export async function submitInvoice(
   input: SubmitInvoiceInput,
   projectId: string,
-  projectParticipant: ProjectParticipant
+  userId: string
 ): Promise<string> {
-  const submittingParty = input.submittingParty.trim();
-  const submittingCategory = input.submittingCategory.trim();
+  const project = await ProjectModel.findById(projectId);
+  if (!project) {
+    throw new ProjectError("Project Does not Exist");
+  }
+
+  const participant = await ProjectParticipantModel.findOne({
+    projectId,
+    userId,
+    status: "Accepted",
+  });
+  if (!participant) {
+    throw new InvoiceError("User not part of project");
+  }
+
+  const submittingParty = input.submittingParty?.trim();
+  const submittingCategory = input.submittingCategory?.trim();
   const dateDue = input.dateDue;
-  const description = input.description.trim();
+  const description = input.description?.trim();
 
   if (!submittingParty || !submittingCategory || !dateDue || !description) {
     throw new InvoiceError(
@@ -41,14 +57,15 @@ export async function submitInvoice(
     dateSubmitted: new Date(Date.now()),
     dateDue,
     description,
+    status: "Pending",
   });
 
   await EventModel.create({
     type: "InvoiceSubmitted",
     aggregateType: "Invoice",
     aggregateId: invoice._id.toString(),
-    userId: projectParticipant.userId,
-    payload: { submittingParty, submittingCategory, dateDue, description },
+    userId,
+    payload: { submittingParty, submittingCategory, dateDue, description, projectId },
   });
 
   return invoice._id.toString();

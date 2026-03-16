@@ -65,7 +65,6 @@ export async function requestSubmitInvoice(
     .send({ submittingParty, submittingCategory, dateDue, description })
     .set("Authorization", `Bearer ${token}`);
 }
-
 /** Register a PM user, activate them so login succeeds, then login and return access token */
 export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
   const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
@@ -90,7 +89,13 @@ export async function getSubbieToken(email: string, password: string): Promise<s
   return login.body.accessToken;
 }
 
-export async function getProjectId(token: string, email: string) {
+export const validProjectBody = {
+  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
+  council: "Strathfield",
+  status: "90% Complete",
+};
+
+export async function getProjectId(token: string, email: string): Promise<string> {
   const pmUser = await UserModel.findOne({ email });
   const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
 
@@ -99,12 +104,5 @@ export async function getProjectId(token: string, email: string) {
     .set("Authorization", `Bearer ${token}`)
     .send(body);
 
-  const projectId = projectRes.body.projectId;
-  return projectId;
+  return projectRes.body.projectId as string;
 }
-
-export const validProjectBody = {
-  location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
-  council: "Strathfield",
-  status: "90% Complete",
-};
