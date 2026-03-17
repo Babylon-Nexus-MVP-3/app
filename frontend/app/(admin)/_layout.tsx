@@ -1,8 +1,23 @@
-import { Tabs } from "expo-router";
+import { useEffect } from "react";
+import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLayout() {
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.replace("/");
+    } else if (user.role !== "Admin") {
+      router.replace("/(app)/projects");
+    }
+  }, [user, isLoading]);
+
+  if (isLoading || !user || user.role !== "Admin") return null;
+
   return (
     <Tabs
       screenOptions={{
