@@ -39,7 +39,6 @@ describe("POST /auth/forgot-password", () => {
   it("returns 200 when email is sent successfully", async () => {
     await requestAuthRegister("Mubashir", "Hussain", PASSWORD, EMAIL);
     const res = await requestForgotPassword(EMAIL);
-    console.log(res.body);
 
     expect(res.statusCode).toStrictEqual(200);
     expect(res.body).toStrictEqual({ success: true, code: expect.any(String) });
