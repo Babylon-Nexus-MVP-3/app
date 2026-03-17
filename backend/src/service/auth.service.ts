@@ -226,7 +226,7 @@ export async function resendResetCodeService(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
   const user = await UserModel.findOne({ email: normalisedEmail });
   if (!user) {
-    throw new Error("Email not found");
+    throw new AuthError("Email not found");
   }
 
   const { code, expiry } = generateCode();
@@ -241,7 +241,7 @@ export async function resendResetCodeService(email: string) {
 
 export async function resetPassword(resetCode: string, newPassword: string) {
   if (newPassword.length < 12) {
-    throw new Error("Password must be at least 12 characters");
+    throw new AuthError("Password must be at least 12 characters");
   }
 
   const user = await UserModel.findOne({

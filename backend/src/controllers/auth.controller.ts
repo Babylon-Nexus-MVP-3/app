@@ -104,7 +104,7 @@ export const resetPasswd = async (req: Request, res: Response, next: NextFunctio
 
   try {
     const result = await resetPassword(resetCode, newPassword);
-    res.status(200).json({ result });
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
