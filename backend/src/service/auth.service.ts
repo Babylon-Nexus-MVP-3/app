@@ -184,3 +184,93 @@ export async function authRefresh(token: string) {
 
   return { accessToken, refreshToken: newRefreshToken };
 }
+
+/**
+ * Forgot Password - Request a code to reset password
+ */
+function generateOTP() {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+  return { code, expiry };
+}
+
+export async function forgotPassword(email: string) {
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user) {
+    throw new AuthError("Email not found");
+  }
+
+  const { code, expiry } = generateOTP();
+  user.resetCode = code;
+  user.resetCodeExpiry = expiry;
+  await user.save();
+
+  return { success: true, code };
+}
+
+export async function verifyResetCodeService(resetCode: string) {
+  const user = await UserModel.findOne({
+    resetCode,
+    resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
+  });
+
+  if (!user) {
+    throw new AuthError("Invalid or expired reset code");
+  }
+
+  return { success: true };
+}
+
+export async function resendResetCodeService(email: string) {
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user) {
+    throw new Error("Email not found");
+  }
+
+  const { code, expiry } = generateCode();
+
+  await UserModel.findOneAndUpdate(
+    { _id: user._id },
+    { $set: { resetCode: code, resetCodeExpiry: expiry } }
+  );
+
+  return { success: true, code };
+}
+
+export async function resetPassword(resetCode: string, newPassword: string) {
+  if (newPassword.length < 12) {
+    throw new Error("Password must be at least 12 characters");
+  }
+
+  const user = await UserModel.findOne({
+    resetCode,
+    resetCodeExpiry: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new AuthError("Invalid or expired reset code");
+  }
+
+  // Check if new password is same as current
+  if (await bcrypt.compare(newPassword, user.password)) {
+    throw new AuthError("New password must be different from your current password");
+  }
+
+  try {
+    checkPassword(newPassword);
+  } catch (error) {
+    throw new AuthError("Invalid password, please follow password rules", error);
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  user.resetCode = undefined;
+  user.resetCodeExpiry = undefined;
+  user.updatedAt = new Date();
+
+  await user.save();
+
+  return { success: true };
+}
