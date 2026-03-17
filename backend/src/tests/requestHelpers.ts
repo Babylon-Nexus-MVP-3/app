@@ -28,6 +28,22 @@ export const requestRefreshToken = async (token: string) => {
   return await request(app).post("/auth/refresh").send({ refreshToken: token });
 };
 
+export const requestForgotPassword = async (email: string) => {
+  return await request(app).post("/auth/forgot-password").send({ email });
+};
+
+export const requestResendResetCode = async (email: string) => {
+  return await request(app).post("/auth/resend-reset-code").send({ email });
+};
+
+export const requestVerifyResetCode = async (resetCode: string) => {
+  return await request(app).post("/auth/verify-reset-code").send({ resetCode });
+};
+
+export const resetPassword = async (resetCode: string, newPassword: string) => {
+  return await request(app).post("/auth/reset-password").send({ resetCode, newPassword });
+};
+
 export const requestInviteSubbie = async (
   projectId: string,
   token: string,
