@@ -185,15 +185,6 @@ export async function authRefresh(token: string) {
   return { accessToken, refreshToken: newRefreshToken };
 }
 
-/**
- * Forgot Password - Request a code to reset password
- */
-function generateOTP() {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
-  return { code, expiry };
-}
-
 export async function forgotPassword(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
   const user = await UserModel.findOne({ email: normalisedEmail });
@@ -201,7 +192,7 @@ export async function forgotPassword(email: string) {
     throw new AuthError("Email not found");
   }
 
-  const { code, expiry } = generateOTP();
+  const { code, expiry } = generateCode();
   user.resetCode = code;
   user.resetCodeExpiry = expiry;
   await user.save();
@@ -261,7 +252,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
   try {
     checkPassword(newPassword);
   } catch (error) {
-    throw new AuthError("Invalid password, please follow password rules", error);
+    throw new AuthError(error);
   }
 
   const hashedPassword = await hashPassword(newPassword);
