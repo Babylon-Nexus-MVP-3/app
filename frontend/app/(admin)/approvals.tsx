@@ -25,7 +25,7 @@ type PendingProject = {
 };
 
 export default function AdminApprovals() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, isLoading: authLoading } = useAuth();
 
   const [projects, setProjects] = useState<PendingProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,9 +79,9 @@ export default function AdminApprovals() {
   }
 
   useEffect(() => {
-    fetchPending();
+    if (!authLoading) fetchPending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading]);
 
   return (
     <View style={styles.screen}>

@@ -36,7 +36,7 @@ const STATUS_BG: Record<string, string> = {
 };
 
 export default function AdminProjects() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, isLoading: authLoading } = useAuth();
 
   const [projects, setProjects] = useState<AdminProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,7 @@ export default function AdminProjects() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/admin/projects/all");
+      const res = await fetchWithAuth("http://localhost:3229/admin/projects/pending");
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load projects.");
@@ -61,9 +61,9 @@ export default function AdminProjects() {
   }
 
   useEffect(() => {
-    fetchProjects();
+    if (!authLoading) fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading]);
 
   const total = projects.length;
   const active = projects.filter((p) => p.status === "Active").length;
