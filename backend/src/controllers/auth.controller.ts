@@ -1,5 +1,13 @@
 import { Request, Response, NextFunction } from "express";
-import { authRefresh, loginUser, registerUser } from "../service/auth.service";
+import {
+  authRefresh,
+  forgotPassword,
+  loginUser,
+  registerUser,
+  resendResetCodeService,
+  resetPassword,
+  verifyResetCodeService,
+} from "../service/auth.service";
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -53,3 +61,51 @@ export async function refresh(req: Request, res: Response) {
     res.status(400).json({ error: error.message });
   }
 }
+
+export const forgot = async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  try {
+    const result = await forgotPassword(email);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const resendResetCode = async (req: Request, res: Response, next: NextFunction) => {
+  const { email } = req.body;
+
+  try {
+    const result = await resendResetCodeService(email);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyResetCode = async (req: Request, res: Response, next: NextFunction) => {
+  const { resetCode } = req.body;
+
+  try {
+    const result = await verifyResetCodeService(resetCode);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPasswd = async (req: Request, res: Response, next: NextFunction) => {
+  const { resetCode, newPassword } = req.body;
+
+  if (!resetCode || !newPassword) {
+    return res.status(400).json({ error: "Reset code and password are required" });
+  }
+
+  try {
+    const result = await resetPassword(resetCode, newPassword);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};

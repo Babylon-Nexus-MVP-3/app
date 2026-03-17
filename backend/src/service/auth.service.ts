@@ -184,3 +184,84 @@ export async function authRefresh(token: string) {
 
   return { accessToken, refreshToken: newRefreshToken };
 }
+
+export async function forgotPassword(email: string) {
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user) {
+    throw new AuthError("Email not found");
+  }
+
+  const { code, expiry } = generateCode();
+  user.resetCode = code;
+  user.resetCodeExpiry = expiry;
+  await user.save();
+
+  return { success: true, code };
+}
+
+export async function verifyResetCodeService(resetCode: string) {
+  const user = await UserModel.findOne({
+    resetCode,
+    resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
+  });
+
+  if (!user) {
+    throw new AuthError("Invalid or expired reset code");
+  }
+
+  return { success: true };
+}
+
+export async function resendResetCodeService(email: string) {
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user) {
+    throw new AuthError("Email not found");
+  }
+
+  const { code, expiry } = generateCode();
+
+  await UserModel.findOneAndUpdate(
+    { _id: user._id },
+    { $set: { resetCode: code, resetCodeExpiry: expiry } }
+  );
+
+  return { success: true, code };
+}
+
+export async function resetPassword(resetCode: string, newPassword: string) {
+  if (newPassword.length < 12) {
+    throw new AuthError("Password must be at least 12 characters");
+  }
+
+  const user = await UserModel.findOne({
+    resetCode,
+    resetCodeExpiry: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new AuthError("Invalid or expired reset code");
+  }
+
+  // Check if new password is same as current
+  if (await bcrypt.compare(newPassword, user.password)) {
+    throw new AuthError("New password must be different from your current password");
+  }
+
+  try {
+    checkPassword(newPassword);
+  } catch (error) {
+    throw new AuthError(error);
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  user.resetCode = undefined;
+  user.resetCodeExpiry = undefined;
+  user.updatedAt = new Date();
+
+  await user.save();
+
+  return { success: true };
+}
