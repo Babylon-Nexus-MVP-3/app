@@ -60,18 +60,21 @@ describe("GET /projects", () => {
 
     // Direct association by stored IDs (status Active = admin-approved, visible on dashboard)
     const ownerProj = await ProjectModel.create({
+      name: "Owner Project",
       location: "L1",
       council: "C1",
       ownerId: userId,
       status: "Active",
     });
     const builderProj = await ProjectModel.create({
+      name: "Builder Project",
       location: "L2",
       council: "C2",
       builderId: userId,
       status: "Active",
     });
     const pmProj = await ProjectModel.create({
+      name: "PM Project",
       location: "L3",
       council: "C3",
       pmId: userId,
@@ -80,6 +83,7 @@ describe("GET /projects", () => {
 
     // Participant association (Accepted)
     const participantProj = await ProjectModel.create({
+      name: "Participant Project",
       location: "L4",
       council: "C4",
       status: "Active",
@@ -117,6 +121,14 @@ describe("GET /projects", () => {
       ])
     );
     expect(res.body.projects).toHaveLength(4);
+
+    const byId = new Map<string, any>(res.body.projects.map((p: any) => [p._id, p]));
+    expect(byId.get(ownerProj._id.toString())?.userRole).toBe("Owner");
+    expect(byId.get(builderProj._id.toString())?.userRole).toBe("Builder");
+    expect(byId.get(pmProj._id.toString())?.userRole).toBe("PM");
+    expect(byId.get(participantProj._id.toString())?.userRole).toBe("Subbie");
+
+    expect(byId.get(ownerProj._id.toString())?.name).toBe("Owner Project");
   });
 
   it("returns only Active (admin-approved) projects, not Pending or Rejected", async () => {

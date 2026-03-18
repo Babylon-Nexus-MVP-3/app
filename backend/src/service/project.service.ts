@@ -14,6 +14,7 @@ export class ProjectError extends Error {
 
 export interface CreateProjectInput {
   creatorId: string;
+  name?: string;
   location: string;
   council: string;
   ownerId?: string;
@@ -27,6 +28,7 @@ export interface CreateProjectInput {
  */
 export async function createProject(input: CreateProjectInput): Promise<string> {
   const creatorId = input.creatorId?.trim();
+  const name = input.name?.trim();
   const location = input.location?.trim();
   const council = input.council?.trim();
   const ownerId = input.ownerId?.trim();
@@ -43,6 +45,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   }
 
   const project = await ProjectModel.create({
+    name: name || location,
     location,
     council,
     ownerId,
@@ -66,7 +69,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     aggregateType: "Project",
     aggregateId: project._id.toString(),
     userId: creatorId,
-    payload: { location, council, ownerId, builderId, pmId, status },
+    payload: { name: name || location, location, council, ownerId, builderId, pmId, status },
   });
 
   return project._id.toString();
