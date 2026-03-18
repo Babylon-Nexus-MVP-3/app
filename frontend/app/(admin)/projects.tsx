@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -36,7 +38,7 @@ const STATUS_BG: Record<string, string> = {
 };
 
 export default function AdminProjects() {
-  const { fetchWithAuth, isLoading: authLoading } = useAuth();
+  const { fetchWithAuth, isLoading: authLoading, logout } = useAuth();
 
   const [projects, setProjects] = useState<AdminProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,13 @@ export default function AdminProjects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!authLoading) fetchProjects();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading])
+  );
+
   const total = projects.length;
   const active = projects.filter((p) => p.status === "Active").length;
   const pending = projects.filter((p) => p.status === "Pending").length;
@@ -79,6 +88,9 @@ export default function AdminProjects() {
               <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
               <Text style={styles.headerTitle}>All Projects</Text>
             </View>
+            <TouchableOpacity onPress={logout} style={styles.signOutBtn} activeOpacity={0.7}>
+              <Ionicons name="log-out-outline" size={22} color={Colors.gold} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.statsRow}>
@@ -164,9 +176,15 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   headerInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
+  },
+  signOutBtn: {
+    padding: 4,
   },
   adminBadge: {
     fontSize: 10,

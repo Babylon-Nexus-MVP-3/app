@@ -12,6 +12,11 @@ export class ProjectError extends Error {
   }
 }
 
+export interface InviteeInput {
+  email: string;
+  role: string;
+}
+
 export interface CreateProjectInput {
   creatorId: string;
   name?: string;
@@ -20,6 +25,7 @@ export interface CreateProjectInput {
   ownerId?: string;
   builderId?: string;
   pmId?: string;
+  invitees?: InviteeInput[];
 }
 
 /**
@@ -34,6 +40,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const ownerId = input.ownerId?.trim();
   const builderId = input.builderId?.trim();
   const pmId = input.pmId?.trim();
+  const invitees = input.invitees ?? [];
   const status = "Pending";
 
   if (!creatorId) {
@@ -54,7 +61,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     status,
   });
 
-  // Associate user with project
+  // Associate creator with project
   const user = await UserModel.findById(creatorId);
   await ProjectParticipantModel.create({
     projectId: project._id.toString(),
@@ -63,6 +70,22 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     email: user.email,
     status: "Accepted",
   });
+
+  // Store invitees as pending participants with OTPs (emails sent on admin approval)
+  for (const invitee of invitees) {
+    const email = invitee.email?.trim();
+    const role = invitee.role?.trim();
+    if (email && role) {
+      await ProjectParticipantModel.create({
+        projectId: project._id.toString(),
+        email,
+        role,
+        inviteCode: generateOTP(),
+        dateInvited: new Date(),
+        status: "Pending",
+      });
+    }
+  }
 
   await EventModel.create({
     type: "ProjectCreated",
