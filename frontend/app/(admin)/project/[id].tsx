@@ -6,12 +6,17 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 
 export default function AdminProjectDetail() {
-  const { name, location, createdAt } = useLocalSearchParams<{
+  const { name, location, createdAt, creator, invitees } = useLocalSearchParams<{
     id: string;
     name: string;
     location: string;
     createdAt: string;
+    creator: string;
+    invitees: string;
   }>();
+
+  const creatorData = creator ? JSON.parse(creator) : null;
+  const inviteesData: { email: string; role: string }[] = invitees ? JSON.parse(invitees) : [];
 
   const submittedDate = createdAt
     ? new Date(createdAt).toLocaleDateString("en-AU", {
@@ -51,29 +56,28 @@ export default function AdminProjectDetail() {
         {/* ── Creator ── */}
         <Text style={styles.sectionLabel}>CREATOR</Text>
         <View style={styles.detailCard}>
-          <View style={styles.pendingBanner}>
-            <Ionicons name="time-outline" size={15} color={Colors.amber} />
-            <Text style={styles.pendingBannerText}>
-              Creator details will load once connected to the backend.
-            </Text>
-          </View>
-          <Row label="Name" value="—" />
-          <Row label="Email" value="—" />
-          <Row label="Role on Project" value="—" last />
+          <Row label="Name" value={creatorData?.name ?? "—"} />
+          <Row label="Email" value={creatorData?.email ?? "—"} />
+          <Row label="Role on Project" value={creatorData?.role ?? "—"} last />
         </View>
 
         {/* ── Invited Members ── */}
         <Text style={styles.sectionLabel}>INVITED MEMBERS</Text>
         <View style={styles.detailCard}>
-          <View style={styles.pendingBanner}>
-            <Ionicons name="time-outline" size={15} color={Colors.amber} />
-            <Text style={styles.pendingBannerText}>
-              Invited members will load once connected to the backend.
-            </Text>
-          </View>
-          <View style={styles.emptyMembers}>
-            <Text style={styles.emptyMembersText}>No member data available yet.</Text>
-          </View>
+          {inviteesData.length === 0 ? (
+            <View style={styles.emptyMembers}>
+              <Text style={styles.emptyMembersText}>No invitees for this project.</Text>
+            </View>
+          ) : (
+            inviteesData.map((invitee, i) => (
+              <Row
+                key={i}
+                label={invitee.email}
+                value={invitee.role}
+                last={i === inviteesData.length - 1}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -158,22 +162,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
-  },
-  pendingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.amberBg,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(243,156,18,0.15)",
-  },
-  pendingBannerText: {
-    fontSize: 12,
-    color: Colors.amber,
-    fontWeight: "500",
-    flex: 1,
   },
   row: {
     flexDirection: "row",

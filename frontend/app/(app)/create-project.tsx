@@ -17,15 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
-const ROLES = [
-  "Owner",
-  "Financier",
-  "Builder",
-  "Project Manager",
-  "Subcontractor",
-  "Consultant",
-  "Certifier",
-];
+const ROLES = ["Owner", "Builder", "Project Manager", "Subcontractor"];
 
 type Invitee = { email: string; role: string };
 

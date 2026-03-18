@@ -8,7 +8,7 @@ export const projectRouter = express.Router();
 
 projectRouter.post("/", requireAuth, ProjectController.create);
 projectRouter.post("/:projectId/invite", requireAuth, ProjectController.invite);
-projectRouter.post("/:projectId/accept", requireAuth, ProjectController.acceptInvite);
+projectRouter.post("/accept", requireAuth, ProjectController.acceptInvite);
 projectRouter.post(
   "/:projectId/invoice",
   requireAuth,

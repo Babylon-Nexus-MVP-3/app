@@ -116,7 +116,7 @@ export default function Projects() {
     setJoinLoading(true);
     setJoinError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/project/join/accept", {
+      const res = await fetchWithAuth("http://localhost:3229/project/accept", {
         method: "POST",
         body: JSON.stringify({ inviteCode: joinCode.trim() }),
       });
