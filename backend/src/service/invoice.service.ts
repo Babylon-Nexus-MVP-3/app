@@ -1,8 +1,9 @@
-import { InvoiceModel } from "../models/invoiceModel";
+import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
+import { UserRole } from "../models/userModel";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -18,7 +19,23 @@ export interface SubmitInvoiceInput {
   submittingCategory: string;
   dateDue: Date;
   description: string;
+  amount: number;
 }
+
+/**
+ *  Create a hashmap with Type Safety
+ *  Record<K, V> describes an object
+ *  Where Every key must be of type K and and every value must be of type V
+ *
+ *  Partial makes keys optional ie Owner is UserRole doesnt need an explicit key
+ *  since owner doesnt submit invoices
+ */
+const APPROVAL_ROUTING: Partial<Record<UserRole, UserRole>> = {
+  [UserRole.Subbie]: UserRole.Builder,
+  [UserRole.Consultant]: UserRole.Builder,
+  [UserRole.Builder]: UserRole.Owner,
+  [UserRole.PM]: UserRole.Owner,
+};
 
 export async function submitInvoice(
   input: SubmitInvoiceInput,
@@ -43,13 +60,15 @@ export async function submitInvoice(
   const submittingCategory = input.submittingCategory?.trim();
   const dateDue = input.dateDue;
   const description = input.description?.trim();
+  const amount = input.amount;
 
-  if (!submittingParty || !submittingCategory || !dateDue || !description) {
+  if (!submittingParty || !submittingCategory || !dateDue || !description || !amount) {
     throw new InvoiceError(
-      "Required fields missing: submittingParty, submittingCategory, dateDue, description"
+      "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
     );
   }
 
+  const approverRole = APPROVAL_ROUTING[participant.role as UserRole];
   const invoice = await InvoiceModel.create({
     projectId,
     submittingParty,
@@ -57,7 +76,8 @@ export async function submitInvoice(
     dateSubmitted: new Date(Date.now()),
     dateDue,
     description,
-    status: "Pending",
+    status: InvoiceStatus.Pending,
+    approverRole,
   });
 
   await EventModel.create({
