@@ -63,7 +63,7 @@ export const requestInviteSubbie = async (
 
 export async function requestAcceptInvite(inviteCode: string, token: string) {
   return request(app)
-    .post(`/project/invite/accept`)
+    .post(`/project/accept`)
     .set("Authorization", `Bearer ${token}`)
     .send({ inviteCode });
 }
