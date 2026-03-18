@@ -1,6 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { UserRole } from "./userModel";
 
-export type InvoiceStatus = "Pending" | "Approved" | "Paid" | "Received";
+export const InvoiceStatus = {
+  Pending: "Pending",
+  Approved: "Approved",
+  Paid: "Paid",
+  Recieved: "Recieved",
+} as const;
+
+export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
 export interface Invoice extends Document {
   projectId: string;
@@ -12,6 +20,7 @@ export interface Invoice extends Document {
   datePaid?: Date;
   dateReceived?: Date;
   status: InvoiceStatus;
+  approverRole: UserRole;
 }
 
 const invoiceSchema = new Schema<Invoice>(
@@ -27,9 +36,13 @@ const invoiceSchema = new Schema<Invoice>(
     dateReceived: { type: Schema.Types.Date },
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Paid", "Received"],
+      enum: Object.values(InvoiceStatus),
       default: "Pending",
       required: true,
+    },
+    approverRole: {
+      type: String,
+      enum: Object.values(UserRole),
     },
   },
   { timestamps: true }
