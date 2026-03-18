@@ -73,9 +73,10 @@ export async function submitInvoice(
     projectId,
     submittingParty,
     submittingCategory,
+    description,
+    amount,
     dateSubmitted: new Date(Date.now()),
     dateDue,
-    description,
     status: InvoiceStatus.Pending,
     approverRole,
   });

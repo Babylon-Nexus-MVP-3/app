@@ -15,6 +15,7 @@ export interface Invoice extends Document {
   submittingParty: string;
   submittingCategory: string;
   description: string;
+  amount: number;
   dateSubmitted: Date;
   dateDue: Date;
   datePaid?: Date;
@@ -30,6 +31,7 @@ const invoiceSchema = new Schema<Invoice>(
     submittingParty: { type: String, required: true },
     submittingCategory: { type: String, required: true },
     description: { type: String, required: true },
+    amount: { type: Number, required: true },
     dateSubmitted: { type: Schema.Types.Date, required: true },
     dateDue: { type: Schema.Types.Date, required: true },
     datePaid: { type: Schema.Types.Date },
