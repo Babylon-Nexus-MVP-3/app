@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { UserRole } from "./userModel";
 
 export interface ProjectParticipant extends Document {
   projectId: string;
@@ -14,7 +15,7 @@ export interface ProjectParticipant extends Document {
 export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   projectId: { type: String, ref: "Project", required: true },
   userId: { type: String, ref: "User" },
-  role: { type: String },
+  role: { type: String, enum: Object.values(UserRole) },
   email: { type: String, required: true },
   inviteCode: { type: String },
   trade: { type: String },
