@@ -3,7 +3,7 @@ import { acceptInviteSubbie, createProject, inviteSubbie } from "../service/proj
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, location, council, ownerId, builderId, pmId } = req.body;
+    const { name, location, council, ownerId, builderId, pmId, invitees } = req.body;
 
     if (!req.user?.sub) {
       res.status(401).json({ error: "Authentication Required" });
@@ -18,6 +18,7 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       ownerId,
       builderId,
       pmId,
+      invitees,
     });
     res.status(200).json({ success: true, projectId });
   } catch (err) {
