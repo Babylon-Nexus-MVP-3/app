@@ -3,17 +3,12 @@ import { submitInvoice } from "../service/invoice.service";
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { submittingParty, submittingCategory, dateDue, description } = req.body;
+    const { submittingParty, submittingCategory, dateDue, description, amount } = req.body;
     const projectId = req.params.projectId as string;
     const userId = req.user?.sub;
 
-    if (!userId) {
-      res.status(401).json({ error: "Authentication Required" });
-      return;
-    }
-
     const invoiceId = await submitInvoice(
-      { submittingParty, submittingCategory, dateDue, description },
+      { submittingParty, submittingCategory, dateDue, description, amount },
       projectId,
       userId
     );
