@@ -71,7 +71,8 @@ describe("POST /project/:projectId/invoice", () => {
       "ABC Electrical",
       "Electrical",
       new Date("2026-06-01"),
-      "Phase 2 elec"
+      "Phase 2 elec",
+      5000
     );
 
     expect(submitRes.statusCode).toBe(200);

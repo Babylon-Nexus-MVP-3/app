@@ -74,11 +74,12 @@ export async function requestSubmitInvoice(
   submittingParty: string,
   submittingCategory: string,
   dateDue: Date,
-  description: string
+  description: string,
+  amount: number
 ) {
   return request(app)
     .post(`/project/${projectId}/invoice`)
-    .send({ submittingParty, submittingCategory, dateDue, description })
+    .send({ submittingParty, submittingCategory, dateDue, description, amount })
     .set("Authorization", `Bearer ${token}`);
 }
 /** Register a PM user, activate them so login succeeds, then login and return access token */
