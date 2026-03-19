@@ -4,6 +4,7 @@ import {
   createProject,
   inviteParticipant,
 } from "../service/project.service";
+import { getProjectDetails } from "../service/projectDetails.service";
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -44,6 +45,18 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
     const userId = req.user.sub;
     const { participant } = await acceptInviteParticipant(inviteCode, userId);
     res.status(200).json({ success: true, participant });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getOne(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    // requireAuth already attaches req.user; sub is always present for a valid access token.
+    const userId = req.user!.sub;
+    const projectId = req.params.projectId as string;
+    const details = await getProjectDetails(projectId, userId);
+    res.status(200).json({ success: true, ...details });
   } catch (err) {
     next(err);
   }
