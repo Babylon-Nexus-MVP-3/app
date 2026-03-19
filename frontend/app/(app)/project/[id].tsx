@@ -385,7 +385,7 @@ function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)
 }
 
 /* ─── Invite roles (used in MySpaceTab modal) ─── */
-const INVITE_ROLES = ["Subbie", "Builder", "Owner", "Consultant"] as const;
+const INVITE_ROLES = ["Subbie", "Builder", "Owner", "Consultant", "Financier", "VIP", "Observer"] as const;
 type InviteRole = (typeof INVITE_ROLES)[number];
 
 /* ─── My Space tab (role router) ─── */
