@@ -69,10 +69,29 @@ export async function submitInvoice(
   }
 
   const approverRole = APPROVAL_ROUTING[participant.role as UserRole];
+  if (!approverRole) {
+    throw new InvoiceError("Your role is not permitted to submit invoices");
+  }
+
+  const approverExists = await ProjectParticipantModel.exists({
+    projectId,
+    role: approverRole,
+    status: "Accepted",
+  });
+
+  // Instead of fall back prevent invoice submission until the valid approver role is part of the
+  // project
+  if (!approverExists) {
+    throw new InvoiceError(
+      `No accepted ${approverRole} on this project yet. Invoices cannot be submitted until they join.`
+    );
+  }
+
   const invoice = await InvoiceModel.create({
     projectId,
     submittingParty,
     submittingCategory,
+    submittedByUserId: userId,
     description,
     amount,
     dateSubmitted: new Date(Date.now()),
