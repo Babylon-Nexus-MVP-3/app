@@ -266,7 +266,10 @@ export default function CreateProject() {
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
-            style={[styles.submitBtn, (!name || !address || !council || !role) && styles.submitBtnDisabled]}
+            style={[
+              styles.submitBtn,
+              (!name || !address || !council || !role) && styles.submitBtnDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={loading || !name || !address || !council || !role}
             activeOpacity={0.85}
