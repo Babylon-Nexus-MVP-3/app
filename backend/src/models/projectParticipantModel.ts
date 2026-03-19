@@ -3,12 +3,13 @@ import { UserRole } from "./userModel";
 
 export interface ProjectParticipant extends Document {
   projectId: string;
-  userId: string;
-  role: string;
+  userId?: string;
+  role: UserRole;
   email: string;
-  inviteCode: string;
-  trade: string;
-  dateInvited: Date;
+  inviteCode?: string;
+  trade?: string;
+  dateInvited?: Date;
+  dateAccepted?: Date;
   status: "Pending" | "Accepted";
 }
 
@@ -20,6 +21,7 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   inviteCode: { type: String },
   trade: { type: String },
   dateInvited: { type: Date },
+  dateAccepted: { type: Date },
   status: { type: String },
 });
 
