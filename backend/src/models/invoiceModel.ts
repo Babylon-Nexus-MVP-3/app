@@ -5,7 +5,7 @@ export const InvoiceStatus = {
   Pending: "Pending",
   Approved: "Approved",
   Paid: "Paid",
-  Recieved: "Recieved",
+  Received: "Received",
 } as const;
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
@@ -14,6 +14,7 @@ export interface Invoice extends Document {
   projectId: string;
   submittingParty: string;
   submittingCategory: string;
+  submittedByUserId: mongoose.Types.ObjectId;
   description: string;
   amount: number;
   dateSubmitted: Date;
@@ -30,6 +31,7 @@ const invoiceSchema = new Schema<Invoice>(
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     submittingParty: { type: String, required: true },
     submittingCategory: { type: String, required: true },
+    submittedByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     description: { type: String, required: true },
     amount: { type: Number, required: true },
     dateSubmitted: { type: Schema.Types.Date, required: true },
