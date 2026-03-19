@@ -1,7 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { UserModel } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -14,7 +14,7 @@ export class ProjectError extends Error {
 
 export interface InviteeInput {
   email: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface CreateProjectInput {
@@ -25,7 +25,7 @@ export interface CreateProjectInput {
   ownerId?: string;
   builderId?: string;
   pmId?: string;
-  creatorRole?: string;
+  creatorRole?: UserRole;
   invitees?: InviteeInput[];
 }
 
@@ -102,7 +102,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
 
 export interface InviteSubbieInput {
   email: string;
-  role: string;
+  role: UserRole;
   trade: string;
 }
 
@@ -111,11 +111,11 @@ export interface InviteSubbieInput {
 export interface InviteSubbieResult {
   participant: {
     projectId: string;
-    role: string;
+    role: UserRole;
     email: string;
-    inviteCode: string;
-    trade: string;
-    dateInvited: Date;
+    inviteCode?: string;
+    trade?: string;
+    dateInvited?: Date;
     status: "Pending" | "Accepted";
   };
 }
@@ -124,7 +124,8 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export async function inviteSubbie(
+// Keep userId to tighten role permissions later
+export async function inviteParticipant(
   input: InviteSubbieInput,
   projectId: string,
   userId: string
@@ -142,7 +143,9 @@ export async function inviteSubbie(
     throw new ProjectError("Project must be approved by admin before inviting participants", 403);
   }
 
-  if (!email || !trade || !role) {
+  // Since Builder/PM/Owner/Admin dont have a trade only check if the role is subbie or consultant
+  const requiresTrade = role === UserRole.Subbie || role === UserRole.Consultant;
+  if (!email || (requiresTrade && !trade) || !role) {
     throw new ProjectError("Missing Required Fields to add partiicpant: email, trade, role");
   }
 
@@ -161,7 +164,7 @@ export async function inviteSubbie(
   return { participant };
 }
 
-export async function acceptInviteSubbie(inviteCode: string, userId: string) {
+export async function acceptInviteParticipant(inviteCode: string, userId: string) {
   if (!inviteCode) {
     throw new ProjectError("Invite code is required");
   }
