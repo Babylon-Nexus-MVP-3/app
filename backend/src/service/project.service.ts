@@ -25,6 +25,7 @@ export interface CreateProjectInput {
   ownerId?: string;
   builderId?: string;
   pmId?: string;
+  creatorRole?: string;
   invitees?: InviteeInput[];
 }
 
@@ -40,6 +41,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const ownerId = input.ownerId?.trim();
   const builderId = input.builderId?.trim();
   const pmId = input.pmId?.trim();
+  const creatorRole = input.creatorRole?.trim();
   const invitees = input.invitees ?? [];
   const status = "Pending";
 
@@ -66,7 +68,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   await ProjectParticipantModel.create({
     projectId: project._id.toString(),
     userId: user._id.toString(),
-    role: user.role,
+    role: creatorRole ?? user.role,
     email: user.email,
     status: "Accepted",
   });

@@ -68,10 +68,14 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     accountLocked: false,
     verificationCode: code, // TODO: Hash verification code before storing in production
     verificationCodeExpiry: expiry,
-    emailVerified: false,
+    // TODO: set emailVerified: false and status: "Pending" once email verification is implemented
+    // Send verification email here and add POST /auth/verify-email endpoint to activate account
+    emailVerified: true,
+    status: "Active",
   });
 
   await newUser.save();
+  console.log(`[DEV] Verification code for ${normalisedEmail}: ${code}`);
   return newUser._id.toString();
 }
 
