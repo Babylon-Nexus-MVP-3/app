@@ -17,7 +17,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
-const ROLES = ["Owner", "Builder", "Project Manager", "Subcontractor", "Consultant", "Financier", "VIP", "Observer"];
+const ROLES = [
+  "Owner",
+  "Builder",
+  "Project Manager",
+  "Subcontractor",
+  "Consultant",
+  "Financier",
+  "VIP",
+  "Observer",
+];
 
 type Invitee = { email: string; role: string };
 
@@ -32,6 +41,7 @@ export default function CreateProject() {
       setSubmitted(false);
       setName("");
       setAddress("");
+      setCouncil("");
       setRole("");
       setInvitees([]);
       setError(null);
@@ -40,6 +50,7 @@ export default function CreateProject() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [council, setCouncil] = useState("");
   const [role, setRole] = useState("");
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [rolePickerTarget, setRolePickerTarget] = useState<RoleTarget | null>(null);
@@ -77,7 +88,7 @@ export default function CreateProject() {
   }
 
   async function handleSubmit() {
-    if (!name.trim() || !address.trim() || !role) {
+    if (!name.trim() || !address.trim() || !council.trim() || !role) {
       setError("Please fill in all fields.");
       return;
     }
@@ -97,6 +108,7 @@ export default function CreateProject() {
         body: JSON.stringify({
           name: name.trim(),
           location: address.trim(),
+          council: council.trim(),
           creatorRole: role,
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
@@ -184,6 +196,16 @@ export default function CreateProject() {
             returnKeyType="next"
           />
 
+          <Text style={styles.label}>Council</Text>
+          <TextInput
+            style={styles.input}
+            value={council}
+            onChangeText={setCouncil}
+            placeholder="e.g. Strathfield Council"
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            returnKeyType="next"
+          />
+
           <Text style={styles.label}>Your Role on This Project</Text>
           <TouchableOpacity
             style={styles.input}
@@ -244,9 +266,9 @@ export default function CreateProject() {
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
-            style={[styles.submitBtn, (!name || !address || !role) && styles.submitBtnDisabled]}
+            style={[styles.submitBtn, (!name || !address || !council || !role) && styles.submitBtnDisabled]}
             onPress={handleSubmit}
-            disabled={loading || !name || !address || !role}
+            disabled={loading || !name || !address || !council || !role}
             activeOpacity={0.85}
           >
             {loading ? (
