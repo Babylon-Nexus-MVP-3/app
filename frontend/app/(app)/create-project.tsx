@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
-const ROLES = ["Owner", "Builder", "Project Manager", "Subcontractor"];
+const ROLES = ["Owner", "Builder", "Project Manager", "Subcontractor", "Consultant"];
 
 type Invitee = { email: string; role: string };
 
@@ -95,7 +95,7 @@ export default function CreateProject() {
       const response = await fetchWithAuth("http://localhost:3229/project", {
         method: "POST",
         body: JSON.stringify({
-          council: name.trim(),
+          name: name.trim(),
           location: address.trim(),
           creatorRole: role,
           ...(role === "Owner" && { ownerId: user?.id }),
