@@ -29,28 +29,12 @@ type Project = {
 
 type ApiProject = {
   _id: string;
+  name?: string;
   location: string;
   council: string;
-  ownerId?: string;
-  builderId?: string;
-  pmId?: string;
   status: string;
+  userRole?: string;
 };
-
-const ROLE_LABELS: Record<string, string> = {
-  PM: "Project Manager",
-  Subbie: "Subcontractor",
-  Owner: "Owner",
-  Builder: "Builder",
-  Consultant: "Consultant",
-};
-
-function deriveRole(project: ApiProject, userId: string, userRole: string): string {
-  if (project.ownerId === userId) return "Owner";
-  if (project.builderId === userId) return "Builder";
-  if (project.pmId === userId) return "Project Manager";
-  return ROLE_LABELS[userRole] ?? "Team Member";
-}
 
 export default function Projects() {
   const { user, fetchWithAuth } = useAuth();
@@ -78,9 +62,9 @@ export default function Projects() {
       }
       const mapped: Project[] = (data.projects as ApiProject[]).map((p) => ({
         id: p._id,
-        name: p.location,
+        name: p.name ?? p.location,
         subtitle: p.council,
-        role: deriveRole(p, user?.id ?? "", user?.role ?? ""),
+        role: p.userRole ?? "Team Member",
         health: 0,
         overdue: 0,
         change: 0,
@@ -146,7 +130,7 @@ export default function Projects() {
               </View>
               <View>
                 <Text style={styles.brandLabel}>BABYLON NEXUS</Text>
-                <Text style={styles.greeting}>Hey {firstName} 👋</Text>
+                <Text style={styles.greeting}>Hey, {firstName} 👋</Text>
               </View>
             </View>
           </View>
