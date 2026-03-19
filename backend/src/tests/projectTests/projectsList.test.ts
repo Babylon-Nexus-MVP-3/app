@@ -14,8 +14,8 @@ const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const PASSWORD = "SecurePassword123!";
 
-async function registerActiveUser(email: string, role: string) {
-  const reg = await requestAuthRegister("Test", "User", PASSWORD, email, role);
+async function registerActiveUser(email: string) {
+  const reg = await requestAuthRegister("Test", "User", PASSWORD, email);
   expect(reg.status).toBe(201);
   await UserModel.updateOne({ email }, { $set: { status: "Active", emailVerified: true } });
   const login = await requestAuthLogin(email, PASSWORD);
@@ -56,7 +56,7 @@ describe("GET /projects", () => {
   });
 
   it("returns projects where user is owner/builder/pm, plus participant projects", async () => {
-    const { token, userId } = await registerActiveUser("dash@test.com", "Subbie");
+    const { token, userId } = await registerActiveUser("dash@test.com");
 
     // Direct association by stored IDs (status Active = admin-approved, visible on dashboard)
     const ownerProj = await ProjectModel.create({
@@ -132,7 +132,7 @@ describe("GET /projects", () => {
   });
 
   it("returns only Active (admin-approved) projects, not Pending or Rejected", async () => {
-    const { token, userId } = await registerActiveUser("filter@test.com", "PM");
+    const { token, userId } = await registerActiveUser("filter@test.com");
     const activeProj = await ProjectModel.create({
       location: "L1",
       council: "C1",

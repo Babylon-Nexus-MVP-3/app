@@ -12,11 +12,9 @@ export const requestAuthRegister = async (
   firstName: string,
   lastName: string,
   password: string,
-  email: string,
-  role?: string
+  email: string
 ) => {
   const body: Record<string, string> = { firstName, lastName, password, email };
-  if (role) body.role = role;
   return await request(app).post("/auth/register").send(body);
 };
 
@@ -83,12 +81,8 @@ export async function requestSubmitInvoice(
 }
 /** Register a PM user, activate them so login succeeds, then login and return access token */
 export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
-  const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
+  const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail);
   expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: pmEmail },
-    { $set: { status: "Active", emailVerified: true } }
-  );
   const login = await requestAuthLogin(pmEmail, pmPassword);
   expect(login.status).toBe(200);
   expect(login.body.accessToken).toBeDefined();
@@ -97,9 +91,8 @@ export async function getPmToken(pmEmail: string, pmPassword: string): Promise<s
 
 /** Register a Subbie user, activate them, login and return access token */
 export async function getSubbieToken(email: string, password: string): Promise<string> {
-  const reg = await requestAuthRegister("Sub", "Contractor", password, email, "Subbie");
+  const reg = await requestAuthRegister("Sub", "Contractor", password, email);
   expect(reg.status).toBe(201);
-  await UserModel.updateOne({ email: email }, { $set: { status: "Active", emailVerified: true } });
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
   return login.body.accessToken;

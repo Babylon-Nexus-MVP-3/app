@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../config";
-import { User, UserModel, UserRole } from "../models/userModel";
+import { User, UserModel } from "../models/userModel";
 import { RefreshTokenModel } from "../models/refreshTokenModel";
 import { EventModel } from "../models/eventModel";
 import {
@@ -34,7 +34,6 @@ interface RegisterInput {
   lastName: string;
   password: string;
   email: string;
-  role?: UserRole;
 }
 
 export async function registerUser(input: RegisterInput): Promise<string> {
@@ -63,7 +62,6 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     name: name,
     email: normalisedEmail,
     password: hashedPassword,
-    role: input.role,
     loginAttempts: 0,
     accountLocked: false,
     verificationCode: code, // TODO: Hash verification code before storing in production
