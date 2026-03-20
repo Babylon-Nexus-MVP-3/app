@@ -31,7 +31,7 @@ const APPROVAL_ROUTING: Partial<Record<UserRole, UserRole[]>> = {
   [UserRole.Subbie]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
   [UserRole.Consultant]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
   [UserRole.Builder]: [UserRole.Owner],
-  [UserRole.PM]: [UserRole.Owner, UserRole.Builder],
+  [UserRole.PM]: [UserRole.Builder, UserRole.Owner],
 };
 
 export async function submitInvoice(
