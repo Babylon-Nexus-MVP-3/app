@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../app";
-import { UserModel, UserRole } from "../models/userModel";
+import { UserRole } from "../models/userModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -104,9 +104,8 @@ export const validProjectBody = {
   status: "90% Complete",
 };
 
-export async function getProjectId(token: string, email: string): Promise<string> {
-  const pmUser = await UserModel.findOne({ email });
-  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
+export async function getProjectId(token: string): Promise<string> {
+  const body = { ...validProjectBody };
 
   const projectRes = await request(app)
     .post("/project")
