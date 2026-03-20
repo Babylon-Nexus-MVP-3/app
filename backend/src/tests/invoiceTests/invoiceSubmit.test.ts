@@ -27,27 +27,10 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, UserRole.PM);
-  projectId = await getProjectId(token, PM_EMAIL);
+  token = await getTokenForRole("Subbie", "Person", SUBBIE_EMAIL, PASSWORD, UserRole.Subbie);
+
+  projectId = await getProjectId(token);
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
-
-  // Invite and onboard builder
-  const builderInviteRes = await requestInvite(projectId, token, BUILDER_EMAIL, UserRole.Builder);
-  expect(builderInviteRes.status).toBe(200);
-  const builderToken = await getTokenForRole(
-    "Bob",
-    "Build",
-    BUILDER_EMAIL,
-    PASSWORD,
-    UserRole.Builder
-  );
-  await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
-
-  // Invite and onboard Ownder
-  const ownerInviteRes = await requestInvite(projectId, token, OWNER_EMAIL, UserRole.Owner);
-  expect(ownerInviteRes.status).toBe(200);
-  const ownerToken = await getTokenForRole("Bob", "owner", OWNER_EMAIL, PASSWORD, UserRole.Owner);
-  await requestAcceptInvite(ownerInviteRes.body.participant.inviteCode, ownerToken);
 });
 
 afterEach(async () => {
@@ -73,26 +56,41 @@ beforeAll(async () => {
 
 describe("POST /project/:projectId/invoice", () => {
   it("returns 200 when subbie submits invoice after accepting invite", async () => {
-    // Invite and onboard subbie
-    const subbieInviteRes = await requestInvite(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      UserRole.Subbie,
-      "Electrical"
-    );
-    expect(subbieInviteRes.status).toBe(200);
-    const subbieToken = await getTokenForRole(
-      "Sub",
-      "Contractor",
-      SUBBIE_EMAIL,
+    // Invite and onboard builder
+    const builderInviteRes = await requestInvite(projectId, token, BUILDER_EMAIL, UserRole.Builder);
+    expect(builderInviteRes.status).toBe(200);
+    const builderToken = await getTokenForRole(
+      "Bob",
+      "Build",
+      BUILDER_EMAIL,
       PASSWORD,
-      UserRole.Subbie
+      UserRole.Builder
     );
-    await requestAcceptInvite(subbieInviteRes.body.participant.inviteCode, subbieToken);
+    await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
 
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      5000
+    );
+
+    expect(submitRes.statusCode).toBe(200);
+    expect(submitRes.body).toEqual({ success: true, invoiceId: expect.any(String) });
+  });
+
+  it("returns 200 in case Builder Doesnt exist due to fallback approval", async () => {
+    // Invite and onboard PM
+    const pmInviteRes = await requestInvite(projectId, token, PM_EMAIL, UserRole.PM);
+    expect(pmInviteRes.status).toBe(200);
+    const pmToken = await getTokenForRole("Project", "Manage", PM_EMAIL, PASSWORD, UserRole.PM);
+    await requestAcceptInvite(pmInviteRes.body.participant.inviteCode, pmToken);
+
+    const submitRes = await requestSubmitInvoice(
+      token,
       projectId,
       "ABC Electrical",
       "Electrical",
@@ -106,28 +104,9 @@ describe("POST /project/:projectId/invoice", () => {
   });
 
   it("returns 400 if projectId doesnt exist", async () => {
-    const inviteRes = await requestInvite(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      UserRole.Subbie,
-      "Electrician"
-    );
-    expect(inviteRes.status).toBe(200);
-    const { inviteCode } = inviteRes.body.participant;
-
-    const subbieToken = await getTokenForRole(
-      "Sub",
-      "Contractor",
-      SUBBIE_EMAIL,
-      PASSWORD,
-      UserRole.Subbie
-    );
-    await requestAcceptInvite(inviteCode, subbieToken);
-
     const fakeProjectId = new mongoose.Types.ObjectId().toString();
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      token,
       fakeProjectId,
       "ABC Electrical",
       "Electrical",
@@ -141,16 +120,10 @@ describe("POST /project/:projectId/invoice", () => {
   });
 
   it("returns 400 if user is not part of the project", async () => {
-    const subbieToken = await getTokenForRole(
-      "Sub",
-      "Contractor",
-      SUBBIE_EMAIL,
-      PASSWORD,
-      UserRole.Subbie
-    );
+    const pmToken = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, UserRole.PM);
 
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      pmToken,
       projectId,
       "ABC Electrical",
       "Electrical",
@@ -161,5 +134,22 @@ describe("POST /project/:projectId/invoice", () => {
 
     expect(submitRes.statusCode).toBe(400);
     expect(submitRes.body.error).toBe("User not part of project");
+  });
+
+  it("returns 400 if no PM, Builder or Owner is  part of the project", async () => {
+    const submitRes = await requestSubmitInvoice(
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      5000
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error)
+      .toBe(`Cannot submit invoice: none of the required approver roles are on this project yet.
+      Please Invite them before submitting this invoice`);
   });
 });
