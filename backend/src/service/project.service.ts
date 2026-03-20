@@ -158,7 +158,6 @@ export async function inviteParticipant(
     inviteCode,
     trade,
     dateInvited: new Date(Date.now()),
-    status: "Pending",
   });
 
   return { participant };

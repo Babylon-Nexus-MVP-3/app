@@ -16,13 +16,18 @@ export interface ProjectParticipant extends Document {
 export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   projectId: { type: String, ref: "Project", required: true },
   userId: { type: String, ref: "User" },
-  role: { type: String, enum: Object.values(UserRole) },
+  role: { type: String, enum: Object.values(UserRole), required: true },
   email: { type: String, required: true },
   inviteCode: { type: String },
   trade: { type: String },
   dateInvited: { type: Date },
   dateAccepted: { type: Date },
-  status: { type: String },
+  status: {
+    type: String,
+    enum: ["Pending", "Accepted"],
+    required: true,
+    default: "Pending",
+  },
 });
 
 export const ProjectParticipantModel = mongoose.model<ProjectParticipant>(
