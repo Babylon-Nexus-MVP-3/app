@@ -23,18 +23,15 @@ export interface SubmitInvoiceInput {
 }
 
 /**
- *  Create a hashmap with Type Safety
- *  Record<K, V> describes an object
- *  Where Every key must be of type K and and every value must be of type V
- *
- *  Partial makes keys optional ie Owner is UserRole doesnt need an explicit key
- *  since owner doesnt submit invoices
+ *  Create a hashmap with Type Safety to map allowed roles that can approve based on the role
+ *  that submits. For example an invoice submitted by a subbie can be either approved by
+ *  Builder or PM or Owner depending on fallback chain.
  */
-const APPROVAL_ROUTING: Partial<Record<UserRole, UserRole>> = {
-  [UserRole.Subbie]: UserRole.Builder,
-  [UserRole.Consultant]: UserRole.Builder,
-  [UserRole.Builder]: UserRole.Owner,
-  [UserRole.PM]: UserRole.Owner,
+const APPROVAL_ROUTING: Partial<Record<UserRole, UserRole[]>> = {
+  [UserRole.Subbie]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
+  [UserRole.Consultant]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
+  [UserRole.Builder]: [UserRole.Owner],
+  [UserRole.PM]: [UserRole.Owner, UserRole.Builder],
 };
 
 export async function submitInvoice(
@@ -68,22 +65,23 @@ export async function submitInvoice(
     );
   }
 
-  const approverRole = APPROVAL_ROUTING[participant.role as UserRole];
-  if (!approverRole) {
+  const fallbackChain = APPROVAL_ROUTING[participant.role as UserRole];
+  if (!fallbackChain) {
     throw new InvoiceError("Your role is not permitted to submit invoices");
   }
 
-  const approverExists = await ProjectParticipantModel.exists({
+  // Finds all current roles active within the project
+  const acceptedRoles = await ProjectParticipantModel.distinct("role", {
     projectId,
-    role: approverRole,
     status: "Accepted",
   });
 
-  // Instead of fall back prevent invoice submission until the valid approver role is part of the
-  // project
-  if (!approverExists) {
+  // Checks whether any of the current roles are included within the acceptable fallback chain
+  const resolvedApproverRole = fallbackChain.find((r) => acceptedRoles.includes(r)) ?? null;
+  if (!resolvedApproverRole) {
     throw new InvoiceError(
-      `No accepted ${approverRole} on this project yet. Invoices cannot be submitted until they join.`
+      `Cannot submit invoice: none of the required approver roles are on this project yet.
+      Please Invite them before submitting this invoice`
     );
   }
 
@@ -97,7 +95,7 @@ export async function submitInvoice(
     dateSubmitted: new Date(Date.now()),
     dateDue,
     status: InvoiceStatus.Pending,
-    approverRole,
+    approverRole: resolvedApproverRole,
   });
 
   await EventModel.create({
