@@ -21,7 +21,7 @@ let token: string;
 beforeEach(async () => {
   await requestDelete();
   token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
-  projectId = await getProjectId(token, PM_EMAIL);
+  projectId = await getProjectId(token);
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
