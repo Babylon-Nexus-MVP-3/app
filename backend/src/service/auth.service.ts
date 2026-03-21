@@ -201,6 +201,9 @@ export async function forgotPassword(email: string) {
   user.resetCodeExpiry = expiry;
   await user.save();
 
+  // TODO: Send code via email when email service is ready. Remove log in production.
+  console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+
   return { success: true, code };
 }
 
@@ -230,6 +233,9 @@ export async function resendResetCodeService(email: string) {
     { _id: user._id },
     { $set: { resetCode: code, resetCodeExpiry: expiry } }
   );
+
+  // TODO: Send code via email when email service is ready. Remove log in production.
+  console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
 
   return { success: true, code };
 }
