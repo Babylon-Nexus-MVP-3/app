@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,11 +16,21 @@ import { Colors } from "@/constants/colors";
 export default function VerifyResetCode() {
   const { email } = useLocalSearchParams<{ email: string }>();
 
+  const COOLDOWN = 60;
+
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   async function handleVerify() {
     if (code.length < 6) return;
@@ -45,6 +55,19 @@ export default function VerifyResetCode() {
     }
   }
 
+  function startCooldown() {
+    setCooldown(COOLDOWN);
+    timerRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
   async function handleResend() {
     setResending(true);
     setError(null);
@@ -58,6 +81,7 @@ export default function VerifyResetCode() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to resend code");
       setResendMsg("Code resent. Check the backend console.");
+      startCooldown();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -118,8 +142,18 @@ export default function VerifyResetCode() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleResend} disabled={resending} style={styles.resendButton}>
-            <Text style={styles.resendText}>{resending ? "Resending..." : "Resend code"}</Text>
+          <TouchableOpacity
+            onPress={handleResend}
+            disabled={resending || cooldown > 0}
+            style={styles.resendButton}
+          >
+            <Text style={styles.resendText}>
+              {resending
+                ? "Resending..."
+                : cooldown > 0
+                  ? `Resend code (${cooldown}s)`
+                  : "Resend code"}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
