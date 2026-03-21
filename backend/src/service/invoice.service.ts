@@ -31,7 +31,7 @@ const APPROVAL_ROUTING: Partial<Record<UserRole, UserRole[]>> = {
   [UserRole.Subbie]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
   [UserRole.Consultant]: [UserRole.Builder, UserRole.PM, UserRole.Owner],
   [UserRole.Builder]: [UserRole.Owner],
-  [UserRole.PM]: [UserRole.Builder, UserRole.Owner],
+  [UserRole.PM]: [UserRole.Owner],
 };
 
 export async function submitInvoice(
@@ -59,10 +59,14 @@ export async function submitInvoice(
   const description = input.description?.trim();
   const amount = input.amount;
 
-  if (!submittingParty || !submittingCategory || !dateDue || !description || !amount) {
+  if (!submittingParty || !submittingCategory || !dateDue || !description || amount == null) {
     throw new InvoiceError(
       "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
     );
+  }
+
+  if (amount <= 0) {
+    throw new InvoiceError("Invalid amount. Amount must be a positive number");
   }
 
   const fallbackChain = APPROVAL_ROUTING[participant.role as UserRole];
