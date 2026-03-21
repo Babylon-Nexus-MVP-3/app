@@ -204,7 +204,7 @@ export async function forgotPassword(email: string) {
   // TODO: Send code via email when email service is ready. Remove log in production.
   console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
 
-  return { success: true };
+  return { success: true, code };
 }
 
 export async function verifyResetCodeService(resetCode: string) {
@@ -237,7 +237,7 @@ export async function resendResetCodeService(email: string) {
   // TODO: Send code via email when email service is ready. Remove log in production.
   console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
 
-  return { success: true };
+  return { success: true, code };
 }
 
 export async function resetPassword(resetCode: string, newPassword: string) {

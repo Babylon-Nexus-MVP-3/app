@@ -106,10 +106,7 @@ export default function VerifyResetCode() {
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
-            style={[
-              styles.button,
-              (code.length < 6 || loading) && styles.buttonDisabled,
-            ]}
+            style={[styles.button, (code.length < 6 || loading) && styles.buttonDisabled]}
             onPress={handleVerify}
             disabled={code.length < 6 || loading}
             activeOpacity={0.85}
@@ -121,14 +118,8 @@ export default function VerifyResetCode() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleResend}
-            disabled={resending}
-            style={styles.resendButton}
-          >
-            <Text style={styles.resendText}>
-              {resending ? "Resending..." : "Resend code"}
-            </Text>
+          <TouchableOpacity onPress={handleResend} disabled={resending} style={styles.resendButton}>
+            <Text style={styles.resendText}>{resending ? "Resending..." : "Resend code"}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

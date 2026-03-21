@@ -61,9 +61,7 @@ export default function ForgotPassword() {
           </TouchableOpacity>
 
           <Text style={styles.title}>Forgot password?</Text>
-          <Text style={styles.subtitle}>
-            {"Enter your email and we'll send you a reset code."}
-          </Text>
+          <Text style={styles.subtitle}>{"Enter your email and we'll send you a reset code."}</Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
