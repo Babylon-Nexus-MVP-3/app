@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -63,18 +64,32 @@ export default function AdminApprovals() {
     }
   }
 
-  async function handleReject(projectId: string) {
-    setActioningId(projectId);
-    try {
-      const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${projectId}/reject`, {
-        method: "PUT",
-      });
-      if (res.ok) {
-        setProjects((prev) => prev.filter((p) => p._id !== projectId));
-      }
-    } finally {
-      setActioningId(null);
-    }
+  function handleReject(projectId: string) {
+    Alert.alert(
+      "Reject Project",
+      "Are you sure you want to reject this project?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async () => {
+            setActioningId(projectId);
+            try {
+              const res = await fetchWithAuth(
+                `http://localhost:3229/admin/projects/${projectId}/reject`,
+                { method: "PUT" }
+              );
+              if (res.ok) {
+                setProjects((prev) => prev.filter((p) => p._id !== projectId));
+              }
+            } finally {
+              setActioningId(null);
+            }
+          },
+        },
+      ]
+    );
   }
 
   useEffect(() => {

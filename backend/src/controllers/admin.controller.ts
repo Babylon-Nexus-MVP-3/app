@@ -47,6 +47,19 @@ export async function listPendingProjects(
   }
 }
 
+export async function listActiveProjects(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projects = await AdminService.listActiveProjects();
+    res.status(200).json({ success: true, projects });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function approveProject(
   req: Request,
   res: Response,
