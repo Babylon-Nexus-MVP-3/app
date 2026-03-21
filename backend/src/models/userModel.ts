@@ -1,6 +1,20 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type UserRole = "PM" | "Subbie" | "Owner" | "Builder" | "Consultant" | "Admin";
+// All valid user roles — `as const` locks values to literal types and keeps the object;
+export const UserRole = {
+  Admin: "Admin",
+  Owner: "Owner",
+  Builder: "Builder",
+  PM: "PM",
+  Subbie: "Subbie",
+  Consultant: "Consultant",
+  Financier: "Financier",
+  VIP: "VIP",
+  Observer: "Observer",
+} as const;
+
+// Derives a union type from the values: "Admin" | "Owner" | "Builder" | ...
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export interface User extends Document {
   id: string;
@@ -47,7 +61,7 @@ const userSchema = new Schema<User>(
     },
     role: {
       type: String,
-      enum: ["PM", "Subbie", "Owner", "Builder", "Consultant", "Admin"],
+      enum: Object.values(UserRole),
     },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },

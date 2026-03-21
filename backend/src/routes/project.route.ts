@@ -2,6 +2,7 @@ import express from "express";
 import * as ProjectController from "../controllers/project.controller";
 import * as InvoiceController from "../controllers/invoice.controller";
 import { requireAuth, requireProjectRole } from "../middleware";
+import { UserRole } from "../models/userModel";
 
 export const projectRouter = express.Router();
 
@@ -11,6 +12,6 @@ projectRouter.post("/accept", requireAuth, ProjectController.acceptInvite);
 projectRouter.post(
   "/:projectId/invoice",
   requireAuth,
-  requireProjectRole("Subbie"),
+  requireProjectRole(UserRole.Subbie, UserRole.Consultant, UserRole.Builder, UserRole.PM),
   InvoiceController.create
 );

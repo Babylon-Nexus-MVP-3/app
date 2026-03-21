@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../app";
-import { UserModel } from "../models/userModel";
+import { UserRole } from "../models/userModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -44,20 +44,20 @@ export const resetPassword = async (resetCode: string, newPassword: string) => {
   return await request(app).post("/auth/reset-password").send({ resetCode, newPassword });
 };
 
-export const requestInviteSubbie = async (
+export const requestInvite = async (
   projectId: string,
   token: string,
   email: string,
-  trade: string,
-  role: string
+  role: string,
+  trade?: string
 ) => {
   return await request(app)
     .post(`/project/${projectId}/invite`)
     .set("Authorization", `Bearer ${token}`)
     .send({
       email: email,
-      trade: trade,
       role: role,
+      trade: trade,
     });
 };
 
@@ -74,34 +74,27 @@ export async function requestSubmitInvoice(
   submittingParty: string,
   submittingCategory: string,
   dateDue: Date,
-  description: string
+  description: string,
+  amount: number
 ) {
   return request(app)
     .post(`/project/${projectId}/invoice`)
-    .send({ submittingParty, submittingCategory, dateDue, description })
+    .send({ submittingParty, submittingCategory, dateDue, description, amount })
     .set("Authorization", `Bearer ${token}`);
 }
-/** Register a PM user, activate them so login succeeds, then login and return access token */
-export async function getPmToken(pmEmail: string, pmPassword: string): Promise<string> {
-  const reg = await requestAuthRegister("Project", "Manager", pmPassword, pmEmail, "PM");
-  expect(reg.status).toBe(201);
-  await UserModel.updateOne(
-    { email: pmEmail },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  const login = await requestAuthLogin(pmEmail, pmPassword);
-  expect(login.status).toBe(200);
-  expect(login.body.accessToken).toBeDefined();
-  return login.body.accessToken;
-}
 
-/** Register a Subbie user, activate them, login and return access token */
-export async function getSubbieToken(email: string, password: string): Promise<string> {
-  const reg = await requestAuthRegister("Sub", "Contractor", password, email, "Subbie");
+export async function getTokenForRole(
+  firstName: string,
+  lastName: string,
+  email: string,
+  password: string,
+  role: UserRole
+): Promise<string> {
+  const reg = await requestAuthRegister(firstName, lastName, password, email, role);
   expect(reg.status).toBe(201);
-  await UserModel.updateOne({ email: email }, { $set: { status: "Active", emailVerified: true } });
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
+  expect(login.body.accessToken).toBeDefined();
   return login.body.accessToken;
 }
 
@@ -111,9 +104,8 @@ export const validProjectBody = {
   status: "90% Complete",
 };
 
-export async function getProjectId(token: string, email: string): Promise<string> {
-  const pmUser = await UserModel.findOne({ email });
-  const body = { ...validProjectBody, pmId: pmUser!._id.toString() };
+export async function getProjectId(token: string): Promise<string> {
+  const body = { ...validProjectBody };
 
   const projectRes = await request(app)
     .post("/project")

@@ -2,11 +2,10 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import {
   requestDelete,
-  requestInviteSubbie,
+  requestInvite,
   requestAcceptInvite,
-  getPmToken,
-  getSubbieToken,
   getProjectId,
+  getTokenForRole,
 } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 
@@ -26,8 +25,8 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getPmToken(PM_EMAIL, PASSWORD);
-  projectId = await getProjectId(token, PM_EMAIL);
+  token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
+  projectId = await getProjectId(token);
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
@@ -55,17 +54,11 @@ beforeAll(async () => {
 
 describe("POST /project/invite/accept", () => {
   it("returns 200 and accepted participant when subbie accepts a valid invite", async () => {
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
-    );
+    const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
     expect(inviteRes.status).toBe(200);
     const { inviteCode } = inviteRes.body.participant;
 
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+    const subbieToken = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
     const acceptRes = await requestAcceptInvite(inviteCode, subbieToken);
 
     expect(acceptRes.status).toBe(200);
@@ -76,7 +69,7 @@ describe("POST /project/invite/accept", () => {
   });
 
   it("returns 400 when invite code is invalid", async () => {
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+    const subbieToken = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
     const acceptRes = await requestAcceptInvite("INVALID_CODE", subbieToken);
 
     expect(acceptRes.status).toBe(400);

@@ -2,7 +2,7 @@ import request from "supertest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { app } from "../../app";
-import { getPmToken, getSubbieToken, requestDelete, validProjectBody } from "../requestHelpers";
+import { getTokenForRole, requestDelete, validProjectBody } from "../requestHelpers";
 
 dotenv.config();
 
@@ -41,7 +41,7 @@ beforeAll(async () => {
 
 describe("POST /project", () => {
   it("returns 200 and projectId when authenticated user creates project", async () => {
-    const token = await getPmToken(PM_EMAIL, PASSWORD);
+    const token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
 
     const res = await request(app)
       .post("/project")
@@ -71,7 +71,7 @@ describe("POST /project", () => {
   });
 
   it("returns 200 when Subbie (any role) creates project", async () => {
-    const token = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+    const token = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
 
     const res = await request(app)
       .post("/project")
@@ -84,7 +84,7 @@ describe("POST /project", () => {
   });
 
   it("returns 400 when required fields are missing", async () => {
-    const token = await getPmToken(PM_EMAIL, PASSWORD);
+    const token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
