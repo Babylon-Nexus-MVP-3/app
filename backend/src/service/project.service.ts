@@ -146,7 +146,7 @@ export async function inviteParticipant(
   // Since Builder/PM/Owner/Admin dont have a trade only check if the role is subbie or consultant
   const requiresTrade = role === UserRole.Subbie || role === UserRole.Consultant;
   if (!email || (requiresTrade && !trade) || !role) {
-    throw new ProjectError("Missing Required Fields to add partiicpant: email, trade, role");
+    throw new ProjectError("Missing Required Fields to add particpant: email, trade, role");
   }
 
   const inviteCode = generateOTP();
