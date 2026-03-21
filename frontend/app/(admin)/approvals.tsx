@@ -383,8 +383,3 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 });
-: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-});
