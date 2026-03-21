@@ -25,7 +25,6 @@ type AdminProject = {
   createdAt: string;
 };
 
-
 export default function AdminProjects() {
   const { fetchWithAuth, isLoading: authLoading, logout } = useAuth();
 
@@ -263,3 +262,4 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
 });
+

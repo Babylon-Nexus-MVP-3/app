@@ -65,31 +65,27 @@ export default function AdminApprovals() {
   }
 
   function handleReject(projectId: string) {
-    Alert.alert(
-      "Reject Project",
-      "Are you sure you want to reject this project?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reject",
-          style: "destructive",
-          onPress: async () => {
-            setActioningId(projectId);
-            try {
-              const res = await fetchWithAuth(
-                `http://localhost:3229/admin/projects/${projectId}/reject`,
-                { method: "PUT" }
-              );
-              if (res.ok) {
-                setProjects((prev) => prev.filter((p) => p._id !== projectId));
-              }
-            } finally {
-              setActioningId(null);
+    Alert.alert("Reject Project", "Are you sure you want to reject this project?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reject",
+        style: "destructive",
+        onPress: async () => {
+          setActioningId(projectId);
+          try {
+            const res = await fetchWithAuth(
+              `http://localhost:3229/admin/projects/${projectId}/reject`,
+              { method: "PUT" }
+            );
+            if (res.ok) {
+              setProjects((prev) => prev.filter((p) => p._id !== projectId));
             }
-          },
+          } finally {
+            setActioningId(null);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }
 
   useEffect(() => {
@@ -383,6 +379,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+});
+: {
     fontSize: 14,
     color: Colors.textSecondary,
   },
