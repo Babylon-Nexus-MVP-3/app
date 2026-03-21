@@ -152,4 +152,48 @@ describe("POST /project/:projectId/invoice", () => {
       .toBe(`Cannot submit invoice: none of the required approver roles are on this project yet.
       Please Invite them before submitting this invoice`);
   });
+
+  /**
+   * Each row tests one missing field at a time.
+   * The pattern is that in each row, one field is empty/null while the rest have valid values:
+   */
+  it.each([
+    ["submittingParty", "", "Electrical", new Date("2026-06-01"), "Phase 2 elec", 10000],
+    ["submittingCategory", "Builder", "", new Date("2026-06-01"), "Phase 2 elec", 10000],
+    ["dateDue", "Builder", "Electrical", null, "Phase 2 elec", 10000],
+    ["description", "Builder", "Electrical", new Date("2026-06-01"), "", 10000],
+    ["amount", "Builder", "Electrical", new Date("2026-06-01"), "Phase 2 elec", null],
+  ])(
+    "returns 400 when %s is missing",
+    async (_, submittingParty, submittingCategory, dateDue, description, amount) => {
+      const res = await requestSubmitInvoice(
+        token,
+        projectId,
+        submittingParty,
+        submittingCategory,
+        dateDue,
+        description,
+        amount
+      );
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
+      );
+    }
+  );
+
+  it("returns 400 if amount <= 0", async () => {
+    const submitRes = await requestSubmitInvoice(
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      0
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error).toBe("Invalid amount. Amount must be a positive number");
+  });
 });
