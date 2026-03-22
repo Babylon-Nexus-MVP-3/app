@@ -95,6 +95,7 @@ describe("Admin endpoints", () => {
   it("approves project and returns 200", async () => {
     const token = await getAdminToken();
     const project = await ProjectModel.create({
+      name: "Test Project",
       location: "L1",
       council: "C1",
       status: "Pending",

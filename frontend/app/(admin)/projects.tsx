@@ -16,25 +16,11 @@ import { useAuth } from "@/context/AuthContext";
 
 type AdminProject = {
   _id: string;
+  name: string;
   location: string;
   council: string;
-  ownerId?: string;
-  builderId?: string;
-  pmId?: string;
   status: "Pending" | "Active" | "Rejected";
   createdAt: string;
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  Active: Colors.green,
-  Pending: Colors.amber,
-  Rejected: Colors.red,
-};
-
-const STATUS_BG: Record<string, string> = {
-  Active: Colors.greenBg,
-  Pending: Colors.amberBg,
-  Rejected: Colors.redBg,
 };
 
 export default function AdminProjects() {
@@ -48,7 +34,7 @@ export default function AdminProjects() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/admin/projects/pending");
+      const res = await fetchWithAuth("http://localhost:3229/admin/projects/active");
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load projects.");
@@ -75,9 +61,6 @@ export default function AdminProjects() {
   );
 
   const total = projects.length;
-  const active = projects.filter((p) => p.status === "Active").length;
-  const pending = projects.filter((p) => p.status === "Pending").length;
-  const rejected = projects.filter((p) => p.status === "Rejected").length;
 
   return (
     <View style={styles.screen}>
@@ -95,20 +78,8 @@ export default function AdminProjects() {
 
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statNum}>{total}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: Colors.green }]}>{active}</Text>
-              <Text style={styles.statLabel}>Active</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: Colors.amber }]}>{pending}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: Colors.red }]}>{rejected}</Text>
-              <Text style={styles.statLabel}>Rejected</Text>
+              <Text style={[styles.statNum, { color: Colors.green }]}>{total}</Text>
+              <Text style={styles.statLabel}>Active Projects</Text>
             </View>
           </View>
         </SafeAreaView>
@@ -137,23 +108,8 @@ export default function AdminProjects() {
             <View key={project._id} style={styles.projectCard}>
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>
-                  <Text style={styles.projectName}>{project.council || "—"}</Text>
+                  <Text style={styles.projectName}>{project.name}</Text>
                   <Text style={styles.projectAddress}>{project.location}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: STATUS_BG[project.status] ?? Colors.greyBg },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      { color: STATUS_COLORS[project.status] ?? Colors.grey },
-                    ]}
-                  >
-                    {project.status}
-                  </Text>
                 </View>
               </View>
               <Text style={styles.projectDate}>
@@ -270,15 +226,6 @@ const styles = StyleSheet.create({
   projectAddress: {
     fontSize: 13,
     color: Colors.textSecondary,
-  },
-  statusBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   projectDate: {
     fontSize: 12,
