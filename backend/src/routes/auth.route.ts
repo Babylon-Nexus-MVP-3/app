@@ -16,4 +16,4 @@ authRouter.post("/reset-password", AuthController.resetPasswd);
 
 // Email Verification Flow
 authRouter.post("/verify-email", AuthController.verifyEmail);
-// authRouter.post("/resend-verification", AuthController.resendVerifyEmail)
+authRouter.post("/resend-verification", AuthController.resendVerifyEmail);

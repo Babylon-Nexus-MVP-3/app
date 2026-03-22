@@ -13,7 +13,7 @@ import {
   generateCode,
   hashPassword,
 } from "../utils/authHelper";
-import { sendOnboardingEmail } from "./email.service";
+import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -74,7 +74,11 @@ export async function registerUser(input: RegisterInput): Promise<string> {
   await newUser.save();
 
   // Prevent emails being sent during tests
-  if (process.env.NODE_ENV !== "test") await sendOnboardingEmail(normalisedEmail, code);
+  if (process.env.NODE_ENV !== "test") {
+    await sendOnboardingEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to send invite email to ${normalisedEmail}:`, err);
+    });
+  }
 
   return newUser._id.toString();
 }
@@ -292,5 +296,27 @@ export async function userVerifyEmail(verificationCode: string) {
   user.updatedAt = new Date();
 
   await user.save();
+  return { success: true };
+}
+
+export async function resendVerificationCode(email: string) {
+  const user = await UserModel.findOne({ email: email });
+  if (!user) {
+    throw new AuthError("Email not found");
+  }
+
+  const { code, expiry } = generateCode();
+  await UserModel.findOneAndUpdate(
+    { _id: user._id },
+    { $set: { verificationCode: code, verificationCodeExpiry: expiry } }
+  );
+
+  // Prevent emails being sent from tests
+  if (process.env.NODE_ENV !== "test") {
+    await sendResendVerificationEmail(email, code).catch((err) => {
+      console.error(`Failed to send invite email to ${email}:`, err);
+    });
+  }
+
   return { success: true };
 }

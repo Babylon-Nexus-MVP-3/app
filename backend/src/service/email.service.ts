@@ -66,3 +66,34 @@ export async function sendOnboardingEmail(to: string, verificationCode: string):
     `,
   });
 }
+
+export async function sendResendVerificationEmail(
+  to: string,
+  verificationCode: string
+): Promise<void> {
+  await transporter.sendMail({
+    from: `"Babylon Nexus" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: "Your new verification code",
+    text: `You requested a new verification code.\n\nYour verification code is: ${verificationCode}\n\nTo get started:\n1. Open the Babylon Nexus app\n2. Enter the code above to verify your account\n\nIf you didn't request this, you can safely ignore this email.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>New Verification Code</h2>
+        <p>You requested a new verification code. Use the code below to verify your account.</p>
+        <p>Your code expires in 15 minutes</p>
+        <p>Your verification code is:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f4f4f4; border-radius: 8px; text-align: center;">
+          ${verificationCode}
+        </div>
+        <div style="margin-top: 24px;">
+          <p style="font-weight: bold; margin-bottom: 8px;">To verify your account:</p>
+          <ol style="padding-left: 20px; line-height: 1.8;">
+            <li>Open the <strong>Babylon Nexus</strong> app</li>
+            <li>Enter the code above when prompted</li>
+          </ol>
+        </div>
+        <p style="margin-top: 24px; color: #888; font-size: 12px;">If you didn't request a new code, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
