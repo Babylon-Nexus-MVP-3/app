@@ -100,6 +100,7 @@ describe("GET /projects", () => {
 
     // A project that should NOT appear (different owner; or Pending/Rejected)
     await ProjectModel.create({
+      name: "Other Project",
       location: "L5",
       council: "C5",
       ownerId: "someone-else",
@@ -134,18 +135,21 @@ describe("GET /projects", () => {
   it("returns only Active (admin-approved) projects, not Pending or Rejected", async () => {
     const { token, userId } = await registerActiveUser("filter@test.com", "PM");
     const activeProj = await ProjectModel.create({
+      name: "Active Project",
       location: "L1",
       council: "C1",
       pmId: userId,
       status: "Active",
     });
     await ProjectModel.create({
+      name: "Pending Project",
       location: "L2",
       council: "C2",
       pmId: userId,
       status: "Pending",
     });
     await ProjectModel.create({
+      name: "Rejected Project",
       location: "L3",
       council: "C3",
       pmId: userId,
