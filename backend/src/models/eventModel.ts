@@ -10,6 +10,7 @@ export type EventType =
   | "InvoiceApproved"
   | "InvoicePaid"
   | "InvoiceReceived"
+  | "InvoiceRejected"
   | "ProjectCreated";
 
 export interface EventDocument extends Document {
@@ -34,6 +35,7 @@ const eventSchema = new Schema<EventDocument>(
         "InvoiceApproved",
         "InvoicePaid",
         "InvoiceReceived",
+        "InvoiceRejected",
         "ProjectCreated",
       ],
     },

@@ -6,6 +6,7 @@ export const InvoiceStatus = {
   Approved: "Approved",
   Paid: "Paid",
   Received: "Received",
+  Rejected: "Rejected",
 } as const;
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
@@ -23,6 +24,7 @@ export interface Invoice extends Document {
   dateReceived?: Date;
   status: InvoiceStatus;
   approverRole: UserRole;
+  rejectionReason?: string;
 }
 
 const invoiceSchema = new Schema<Invoice>(
@@ -48,6 +50,7 @@ const invoiceSchema = new Schema<Invoice>(
       type: String,
       enum: Object.values(UserRole),
     },
+    rejectionReason: { type: String },
   },
   { timestamps: true }
 );
