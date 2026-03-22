@@ -11,8 +11,11 @@ info:
     ## Invoice Lifecycle
     Invoices follow this sequential workflow:
     ```
-    Submitted → Approved (PM) → Paid (Builder) → Received (Subcontractor)
+    Pending → Approved → Paid → Received
+                    ↘ Rejected (from Pending only)
     ```
+    The approver is automatically resolved at submission time based on the submitter's role
+    and which roles are present on the project (`approverRole` stored on the invoice).
 
     ## Authentication
     All protected routes require a Bearer JWT token in the `Authorization` header:
@@ -26,12 +29,12 @@ info:
 tags:
   - name: Authentication
     description: User registration, login, token management, and password operations
-  - name: Project Manager
-    description: Routes accessible to users with the Project Manager role
-  - name: Sub Contractor
-    description: Routes accessible to users with the Sub Contractor role
-  - name: Builder
-    description: Routes accessible to users with the Builder role
+  # - name: Project Manager
+  #   description: Routes accessible to users with the Project Manager role
+  # - name: Sub Contractor
+  #   description: Routes accessible to users with the Sub Contractor role
+  # - name: Builder
+  #   description: Routes accessible to users with the Builder role
   - name: Multiple Roles
     description: Routes accessible to two or more roles
 
@@ -153,6 +156,7 @@ components:
         Represents an invoice in the system (maps to INVOICE table).
 
         **Status progression:** `Pending` → `Approved` → `Paid` → `Received`
+        **Or:** `Pending` → `Rejected`
       properties:
         id:
           type: string
@@ -167,16 +171,21 @@ components:
         submittingCategory:
           type: string
           example: "Electrical Contractor"
+        submittedByUserId:
+          type: string
+          description: USER.id of the person who submitted the invoice
+          example: "user_123e4567"
+        description:
+          type: string
+          example: "Phase 2 electrical work"
+        amount:
+          type: number
+          format: float
+          example: 15000.00
         dateSubmitted:
           type: string
           format: date-time
           example: "2026-01-05T09:00:00Z"
-        dateApproved:
-          type: string
-          format: date-time
-          nullable: true
-          description: Set when PM approves the invoice
-          example: "2026-01-07T14:30:00Z"
         dateDue:
           type: string
           format: date-time
@@ -186,23 +195,28 @@ components:
           type: string
           format: date-time
           nullable: true
-          description: Set when builder confirms payment
+          description: Set when approver marks as paid
           example: "2026-01-18T11:00:00Z"
         dateReceived:
           type: string
           format: date-time
           nullable: true
-          description: Set when subcontractor confirms receipt
+          description: Set when submitter confirms receipt
           example: "2026-01-19T09:30:00Z"
         status:
           type: string
-          enum: [Pending, Approved, Paid, Received]
+          enum: [Pending, Approved, Paid, Received, Rejected]
           example: "Pending"
-        statusColour:
+        approverRole:
           type: string
-          description: UI colour indicator for the current status
-          enum: [yellow, green, blue]
-          example: "yellow"
+          description: The role responsible for approving and paying this invoice
+          enum: [Owner, Builder, PM]
+          example: "Builder"
+        rejectionReason:
+          type: string
+          nullable: true
+          description: Optional reason provided when an invoice is rejected
+          example: "Incorrect amount on invoice"
 
     # ── Reusable Responses ─────────────────────
 
@@ -555,7 +569,7 @@ paths:
               example:
                 error: "Email not found"
 
-  /auth/request-password-reset:
+  /auth/forgot-password:
     post:
       tags:
         - Authentication
@@ -576,7 +590,7 @@ paths:
                   example: "user@example.com"
       responses:
         '200':
-          description: Reset code sent
+          description: Reset code sent (code also logged to backend console in dev)
           content:
             application/json:
               schema:
@@ -806,38 +820,35 @@ paths:
   /project:
     post:
       tags:
-        - Project Manager
+        - Multiple Roles
       summary: Create a new project
-      description: Creates a new project. The PM must supply references to the owner, builder, and themselves.
+      description: |
+        Creates a new project. **Any authenticated user can create a project** — there is no role restriction.
+        The creator is automatically added as a participant with the specified `creatorRole`.
+        The project starts with `status: "Pending"` and must be approved by Admin before it becomes `Active`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [location, council, ownerId, builderId, pmId, status]
+              required: [name, council, creatorRole]
               properties:
+                name:
+                  type: string
+                  description: Optional project name
+                  example: "Strathfield Residential Build"
                 location:
                   type: string
-                  example: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)"
+                  example: "2-4 Mintaro Ave, Strathfield 2135"
                 council:
                   type: string
                   example: "Strathfield"
-                ownerId:
+                creatorRole:
                   type: string
-                  description: USER.id of the project owner
-                  example: "user_owner123"
-                builderId:
-                  type: string
-                  description: USER.id of the builder
-                  example: "user_builder123"
-                pmId:
-                  type: string
-                  description: USER.id of the project manager
-                  example: "user_pm123"
-                status:
-                  type: string
-                  example: "90% Complete"
+                  description: The role the creator will hold on this project
+                  enum: [PM, Subbie, Owner, Builder, Consultant, Financier, VIP, Observer]
+                  example: "PM"
       responses:
         '200':
           description: Project created successfully
@@ -857,12 +868,12 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /{project_id}:
+  /project/{project_id}:
     get:
       tags:
         - Multiple Roles
       summary: Get project details
-      description: Returns full details for a single project.
+      description: Returns full details for a single project including participants and invoices.
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -887,44 +898,19 @@ paths:
   # Participants
   # ─────────────────────────────────────────────
 
-  /{project_id}/participants:
-    get:
-      tags:
-        - Multiple Roles
-      summary: Get all project participants
-      description: Returns all participants (from `PROJECT_PARTICIPANTS`) for a given project.
-      parameters:
-        - $ref: '#/components/parameters/ProjectId'
-      responses:
-        '200':
-          description: List of participants
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  participants:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ProjectParticipant'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
+  /project/{project_id}/invite:
     post:
       tags:
-        - Project Manager
+        - Multiple Roles
       summary: Invite a participant to a project
       description: |
-        Invites a person to a project by email. The person does **not** need an existing account.
+        Invites a person to a project by email. **Any authenticated project participant can invite** — there is no role restriction on who can invite.
+        The invited person does **not** need an existing account.
 
         **Invitation workflow:**
-        1. PM provides email, name, role, and trade
-        2. A `PROJECT_PARTICIPANTS` record is created with `userId = null` and `status = "Invited"`
-        3. An invitation email is sent with a registration link
-        4. When the user registers with that email, `userId` is populated and status changes to `"Active"`
+        1. Inviter provides email, role, and optional trade
+        2. A `ProjectParticipant` record is created with `status = "Pending"`
+        3. The invited user calls `POST /project/accept` with the invite code to join
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -933,18 +919,16 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, name, role, trade]
+              required: [email, role]
               properties:
                 email:
                   type: string
                   format: email
                   example: "john.smith@electrical.com"
-                name:
-                  type: string
-                  example: "John Smith"
                 role:
                   type: string
-                  example: "Subcontractor"
+                  enum: [PM, Subbie, Owner, Builder, Consultant, Financier, VIP, Observer, Admin]
+                  example: "Subbie"
                 trade:
                   type: string
                   example: "Electrical Contractor"
@@ -959,11 +943,38 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  participant:
-                    $ref: '#/components/schemas/ProjectParticipant'
                   message:
                     type: string
                     example: "Invitation sent to john.smith@electrical.com"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /project/accept:
+    post:
+      tags:
+        - Multiple Roles
+      summary: Accept a project invitation
+      description: Accepts a pending project invitation using the invite code received via email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inviteCode]
+              properties:
+                inviteCode:
+                  type: string
+                  example: "abc123invitetoken"
+      responses:
+        '200':
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -973,12 +984,20 @@ paths:
   # Invoices
   # ─────────────────────────────────────────────
 
-  /{project_id}/invoice:
+  /project/{project_id}/invoice:
     post:
       tags:
-        - Sub Contractor
+        - Multiple Roles
       summary: Submit a new invoice
-      description: Subcontractor submits an invoice for work completed on a project. Creates a new `INVOICE` record with status `Pending`.
+      description: |
+        Submits an invoice for work completed on a project.
+
+        **Who can submit:** Subbie, Consultant, Builder, PM (enforced by `requireProjectRole` middleware — Owner cannot submit)
+
+        The `approverRole` is automatically resolved at submission time based on the submitter's role and which roles are present on the project:
+        - Subbie / Consultant → Builder (fallback to PM, then Owner)
+        - Builder → Owner
+        - PM → Owner
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -987,7 +1006,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [submittingParty, submittingCategory, dateDue]
+              required: [submittingParty, submittingCategory, dateDue, description, amount]
               properties:
                 submittingParty:
                   type: string
@@ -1025,163 +1044,173 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /{project_id}/invoices:
-    get:
+  /project/{project_id}/invoice/{invoice_id}/approve:
+    patch:
       tags:
         - Multiple Roles
-      summary: Get all invoices for a project
-      description: Returns all invoices for a given project. Useful for calendar and list views.
-      parameters:
-        - $ref: '#/components/parameters/ProjectId'
-      responses:
-        '200':
-          description: List of invoices
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invoices:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Invoice'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /{project_id}/invoices/{invoice_id}/approve:
-    put:
-      tags:
-        - Project Manager
       summary: Approve an invoice
       description: |
-        PM approves a `Pending` invoice. Sets `INVOICE.dateApproved` and updates status to `Approved`.
+        Approves a `Pending` invoice. The caller's role must match `invoice.approverRole`.
 
-        > **Note:** This does not affect `datePaid` or `dateReceived`.
+        **Who can approve:** Whoever holds the `approverRole` on the invoice — this is resolved at submission time and can be Builder, PM, or Owner depending on which roles are present on the project.
+
+        **Status transition:** `Pending` → `Approved`
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/InvoiceId'
       responses:
         '200':
-          description: Invoice approved — status updated to `Approved`
+          description: Invoice approved
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invoice:
-                    $ref: '#/components/schemas/Invoice'
+                $ref: '#/components/schemas/SuccessResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /{project_id}/invoices/{invoice_id}/pay:
-    put:
-      tags:
-        - Builder
-      summary: Confirm invoice payment
-      description: |
-        Builder confirms payment of an `Approved` invoice. Sets `INVOICE.datePaid` and updates status to `Paid`.
-
-        > **Note:** This does not set `dateReceived` — that is confirmed by the subcontractor separately.
-      parameters:
-        - $ref: '#/components/parameters/ProjectId'
-        - $ref: '#/components/parameters/InvoiceId'
-      responses:
-        '200':
-          description: Invoice paid — status updated to `Paid`
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invoice:
-                    $ref: '#/components/schemas/Invoice'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /{project_id}/invoices/{invoice_id}/confirm:
-    put:
-      tags:
-        - Sub Contractor
-      summary: Confirm receipt of payment
-      description: |
-        Subcontractor confirms they have received payment. Sets `INVOICE.dateReceived` and updates status to `Received`.
-
-        This is the **final step** in the invoice lifecycle:
-        ```
-        Submitted → Approved → Paid → Received ✓
-        ```
-      parameters:
-        - $ref: '#/components/parameters/ProjectId'
-        - $ref: '#/components/parameters/InvoiceId'
-      responses:
-        '200':
-          description: Payment receipt confirmed — status updated to `Received`
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invoice:
-                    $ref: '#/components/schemas/Invoice'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /invoices:
-    get:
-      tags:
-        - Multiple Roles
-      summary: Download invoice history as PDF
-      description: Generates and downloads a PDF containing the authenticated user's full invoice history.
-      responses:
-        '200':
-          description: PDF file download
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-          headers:
-            Content-Disposition:
-              schema:
-                type: string
-                example: 'attachment; filename="invoice-history.pdf"'
-        '400':
+          description: Invoice is not in Pending status
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
+          description: User's role does not match the invoice approverRole
           $ref: '#/components/responses/Forbidden'
         '404':
-          description: No invoices found
+          description: Invoice not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "No invoices found matching the specified criteria"
-        '500':
-          description: Server error while generating PDF
+                error: "Invoice not found"
+
+  /project/{project_id}/invoice/{invoice_id}/paid:
+    patch:
+      tags:
+        - Multiple Roles
+      summary: Mark invoice as paid
+      description: |
+        Marks an `Approved` invoice as paid. The caller's role must match `invoice.approverRole`.
+        Sets `datePaid` on the invoice.
+
+        **Who can mark as paid:** Same role as the approver — Builder, PM, or Owner depending on the project's composition.
+
+        **Status transition:** `Approved` → `Paid`
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice marked as paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invoice is not in Approved status
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: User's role does not match the invoice approverRole
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Invoice not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "An error occurred while generating the PDF"
+                error: "Invoice not found"
+
+  /project/{project_id}/invoice/{invoice_id}/received:
+    patch:
+      tags:
+        - Multiple Roles
+      summary: Mark invoice as received
+      description: |
+        Confirms receipt of payment. Only the original submitter of the invoice can call this endpoint.
+        Sets `dateReceived` on the invoice.
+
+        **Who can mark as received:** The user who submitted the invoice — could be Subbie, Consultant, Builder, or PM.
+
+        **Status transition:** `Paid` → `Received`
+
+        This is the **final step** in the invoice lifecycle:
+        ```
+        Pending → Approved → Paid → Received ✓
+        ```
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Invoice marked as received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invoice is not in Paid status
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only the original submitter can mark as received
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invoice not found"
+
+  /project/{project_id}/invoice/{invoice_id}/reject:
+    patch:
+      tags:
+        - Multiple Roles
+      summary: Reject an invoice
+      description: |
+        Rejects a `Pending` invoice. The caller's role must match `invoice.approverRole` — this can be Builder, PM, or Owner depending on the project's composition.
+        An optional rejection reason can be provided.
+
+        **Status transition:** `Pending` → `Rejected`
+
+        > **Note:** Rejected invoices are terminal — the submitter must raise a new invoice if needed.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rejectionReason:
+                  type: string
+                  description: Optional reason for rejection
+                  example: "Incorrect amount — please resubmit with the correct figure"
+      responses:
+        '200':
+          description: Invoice rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invoice is not in Pending or Approved status
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: User's role does not match the invoice approverRole
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invoice not found"
