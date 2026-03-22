@@ -116,7 +116,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
   const { verificationCode } = req.body;
   try {
     const result = await userVerifyEmail(verificationCode);
-    res.status(200).json({ result });
+    res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
