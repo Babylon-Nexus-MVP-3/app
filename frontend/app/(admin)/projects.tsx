@@ -16,11 +16,9 @@ import { useAuth } from "@/context/AuthContext";
 
 type AdminProject = {
   _id: string;
+  name: string;
   location: string;
   council: string;
-  ownerId?: string;
-  builderId?: string;
-  pmId?: string;
   status: "Pending" | "Active" | "Rejected";
   createdAt: string;
 };
@@ -110,7 +108,7 @@ export default function AdminProjects() {
             <View key={project._id} style={styles.projectCard}>
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>
-                  <Text style={styles.projectName}>{project.council || "—"}</Text>
+                  <Text style={styles.projectName}>{project.name}</Text>
                   <Text style={styles.projectAddress}>{project.location}</Text>
                 </View>
               </View>

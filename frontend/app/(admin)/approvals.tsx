@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 
 type PendingProject = {
   _id: string;
+  name: string;
   location: string;
   council: string;
   createdAt: string;
@@ -151,7 +152,7 @@ export default function AdminApprovals() {
                       pathname: "/(admin)/project/[id]",
                       params: {
                         id: project._id,
-                        name: project.council || "Unnamed Project",
+                        name: project.name,
                         location: project.location,
                         createdAt: project.createdAt,
                         creator: JSON.stringify(project.creator),
@@ -161,7 +162,7 @@ export default function AdminApprovals() {
                   }
                 >
                   <View style={styles.cardTitleBlock}>
-                    <Text style={styles.projectName}>{project.council || "Unnamed Project"}</Text>
+                    <Text style={styles.projectName}>{project.name}</Text>
                     <Text style={styles.projectAddress}>{project.location}</Text>
                     <Text style={styles.projectDate}>
                       Submitted {new Date(project.createdAt).toLocaleDateString("en-AU")}

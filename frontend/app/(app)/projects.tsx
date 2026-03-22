@@ -29,7 +29,7 @@ type Project = {
 
 type ApiProject = {
   _id: string;
-  name?: string;
+  name: string;
   location: string;
   council: string;
   status: string;
@@ -62,7 +62,7 @@ export default function Projects() {
       }
       const mapped: Project[] = (data.projects as ApiProject[]).map((p) => ({
         id: p._id,
-        name: p.name ?? p.location,
+        name: p.name,
         subtitle: p.council,
         role: p.userRole ?? "Team Member",
         health: 0,
