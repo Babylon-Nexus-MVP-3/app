@@ -15,7 +15,15 @@ projectRouter.post(
   requireProjectRole(UserRole.Subbie, UserRole.Consultant, UserRole.Builder, UserRole.PM),
   InvoiceController.create
 );
-projectRouter.patch("/:projectId/invoice/:invoiceId/approve", requireAuth, InvoiceController.approve);
+projectRouter.patch(
+  "/:projectId/invoice/:invoiceId/approve",
+  requireAuth,
+  InvoiceController.approve
+);
 projectRouter.patch("/:projectId/invoice/:invoiceId/paid", requireAuth, InvoiceController.paid);
-projectRouter.patch("/:projectId/invoice/:invoiceId/received", requireAuth, InvoiceController.received);
+projectRouter.patch(
+  "/:projectId/invoice/:invoiceId/received",
+  requireAuth,
+  InvoiceController.received
+);
 projectRouter.patch("/:projectId/invoice/:invoiceId/reject", requireAuth, InvoiceController.reject);
