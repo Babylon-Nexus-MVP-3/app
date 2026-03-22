@@ -6,7 +6,7 @@ import {
   requestAcceptInvite,
   requestSubmitInvoice,
   getProjectId,
-  getTokenForRole,
+  getToken,
 } from "../requestHelpers";
 import { UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
@@ -17,7 +17,6 @@ const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 const BUILDER_EMAIL = "builder@project-test.com";
-const OWNER_EMAIL = "owner@project-test.com";
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
@@ -27,9 +26,9 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getTokenForRole("Subbie", "Person", SUBBIE_EMAIL, PASSWORD, UserRole.Subbie);
+  token = await getToken("Subbie", "Person", SUBBIE_EMAIL, PASSWORD);
 
-  projectId = await getProjectId(token);
+  projectId = await getProjectId(token, UserRole.Subbie);
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
@@ -59,13 +58,7 @@ describe("POST /project/:projectId/invoice", () => {
     // Invite and onboard builder
     const builderInviteRes = await requestInvite(projectId, token, BUILDER_EMAIL, UserRole.Builder);
     expect(builderInviteRes.status).toBe(200);
-    const builderToken = await getTokenForRole(
-      "Bob",
-      "Build",
-      BUILDER_EMAIL,
-      PASSWORD,
-      UserRole.Builder
-    );
+    const builderToken = await getToken("Bob", "Build", BUILDER_EMAIL, PASSWORD);
     await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
 
     const submitRes = await requestSubmitInvoice(
@@ -86,7 +79,7 @@ describe("POST /project/:projectId/invoice", () => {
     // Invite and onboard PM
     const pmInviteRes = await requestInvite(projectId, token, PM_EMAIL, UserRole.PM);
     expect(pmInviteRes.status).toBe(200);
-    const pmToken = await getTokenForRole("Project", "Manage", PM_EMAIL, PASSWORD, UserRole.PM);
+    const pmToken = await getToken("Project", "Manage", PM_EMAIL, PASSWORD);
     await requestAcceptInvite(pmInviteRes.body.participant.inviteCode, pmToken);
 
     const submitRes = await requestSubmitInvoice(
@@ -120,7 +113,7 @@ describe("POST /project/:projectId/invoice", () => {
   });
 
   it("returns 400 if user is not part of the project", async () => {
-    const pmToken = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, UserRole.PM);
+    const pmToken = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
 
     const submitRes = await requestSubmitInvoice(
       pmToken,

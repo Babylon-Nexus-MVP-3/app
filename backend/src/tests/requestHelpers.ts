@@ -12,11 +12,9 @@ export const requestAuthRegister = async (
   firstName: string,
   lastName: string,
   password: string,
-  email: string,
-  role?: string
+  email: string
 ) => {
   const body: Record<string, string> = { firstName, lastName, password, email };
-  if (role) body.role = role;
   return await request(app).post("/auth/register").send(body);
 };
 
@@ -83,14 +81,13 @@ export async function requestSubmitInvoice(
     .set("Authorization", `Bearer ${token}`);
 }
 
-export async function getTokenForRole(
+export async function getToken(
   firstName: string,
   lastName: string,
   email: string,
-  password: string,
-  role: UserRole
+  password: string
 ): Promise<string> {
-  const reg = await requestAuthRegister(firstName, lastName, password, email, role);
+  const reg = await requestAuthRegister(firstName, lastName, password, email);
   expect(reg.status).toBe(201);
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
@@ -104,8 +101,8 @@ export const validProjectBody = {
   status: "90% Complete",
 };
 
-export async function getProjectId(token: string): Promise<string> {
-  const body = { ...validProjectBody };
+export async function getProjectId(token: string, creatorRole: UserRole): Promise<string> {
+  const body = { ...validProjectBody, creatorRole };
 
   const projectRes = await request(app)
     .post("/project")

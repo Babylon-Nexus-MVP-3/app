@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { requestDelete, requestInvite, getTokenForRole, getProjectId } from "../requestHelpers";
+import { requestDelete, requestInvite, getToken, getProjectId } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
+import { UserRole } from "../../models/userModel";
 
 dotenv.config();
 
@@ -20,8 +21,8 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
-  projectId = await getProjectId(token);
+  token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+  projectId = await getProjectId(token, UserRole.PM);
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
@@ -76,13 +77,7 @@ describe("POST /project/:projectId/invite", () => {
 
   it("returns 400 when PM is not assigned to project", async () => {
     // Register another PM
-    const wrongPmToken = await getTokenForRole(
-      "Project",
-      "Manager",
-      PM_EMAIL_SECOND,
-      PASSWORD,
-      "PM"
-    );
+    const wrongPmToken = await getToken("Project", "Manager", PM_EMAIL_SECOND, PASSWORD);
 
     const inviteRes = await requestInvite(
       projectId,

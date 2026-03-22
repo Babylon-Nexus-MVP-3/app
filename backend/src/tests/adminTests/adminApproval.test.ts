@@ -58,7 +58,7 @@ describe("Admin endpoints", () => {
   });
 
   it("returns 403 for GET /admin/users/pending when user is not Admin", async () => {
-    await requestAuthRegister("PM", "User", PM_PASSWORD, PM_EMAIL, "PM");
+    await requestAuthRegister("PM", "User", PM_PASSWORD, PM_EMAIL);
     await UserModel.updateOne(
       { email: PM_EMAIL },
       { $set: { status: "Active", emailVerified: true } }

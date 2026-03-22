@@ -2,7 +2,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { app } from "../../app";
-import { getTokenForRole, requestDelete, validProjectBody } from "../requestHelpers";
+import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
+import { UserRole } from "../../models/userModel";
 
 dotenv.config();
 
@@ -41,12 +42,12 @@ beforeAll(async () => {
 
 describe("POST /project", () => {
   it("returns 200 and projectId when authenticated user creates project", async () => {
-    const token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
 
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
-      .send(validProjectBody);
+      .send({ ...validProjectBody, creatorRole: UserRole.PM });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -64,19 +65,19 @@ describe("POST /project", () => {
   it("returns 401 when token is invalid", async () => {
     const res = await request(app)
       .post("/project")
-      .set("Authorization", "Bearer invalid-token")
-      .send(validProjectBody);
+      .set("Authorization", `Bearer InvalidToken`)
+      .send({ ...validProjectBody, creatorRole: UserRole.PM });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Authentication Required");
   });
 
   it("returns 200 when Subbie (any role) creates project", async () => {
-    const token = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
+    const token = await getToken("Sub", "Contract", SUBBIE_EMAIL, PASSWORD);
 
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
-      .send(validProjectBody);
+      .send({ ...validProjectBody, creatorRole: UserRole.Subbie });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -84,7 +85,7 @@ describe("POST /project", () => {
   });
 
   it("returns 400 when required fields are missing", async () => {
-    const token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
