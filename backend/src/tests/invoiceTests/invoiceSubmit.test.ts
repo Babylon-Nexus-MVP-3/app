@@ -59,6 +59,7 @@ describe("POST /project/:projectId/invoice", () => {
     const builderInviteRes = await requestInvite(projectId, token, BUILDER_EMAIL, UserRole.Builder);
     expect(builderInviteRes.status).toBe(200);
     const builderToken = await getToken("Bob", "Build", BUILDER_EMAIL, PASSWORD);
+
     await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
 
     const submitRes = await requestSubmitInvoice(

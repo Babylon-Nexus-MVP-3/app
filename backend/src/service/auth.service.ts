@@ -290,9 +290,10 @@ export async function userVerifyEmail(verificationCode: string) {
     throw new AuthError("Verification code has expired");
   }
 
-  user.verificationCode = null;
-  user.verificationCodeExpiry = null;
+  user.verificationCode = undefined;
+  user.verificationCodeExpiry = undefined;
   user.emailVerified = true;
+  user.status = "Active";
   user.updatedAt = new Date();
 
   await user.save();

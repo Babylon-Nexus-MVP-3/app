@@ -1,5 +1,9 @@
-import { requestDelete, requestAuthRegister, requestVerifyEmail } from "../requestHelpers";
-import { UserModel } from "../../models/userModel";
+import {
+  requestDelete,
+  requestAuthRegister,
+  requestVerifyEmail,
+  verifyEmail,
+} from "../requestHelpers";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 
@@ -27,18 +31,7 @@ afterAll(async () => {
 describe("Success", () => {
   test("verifyEmail marks user as verified", async () => {
     await requestAuthRegister("Mubashir", "Hussain", "Abcdefgh123456$", "example@gmail.com");
-
-    // Get the verification code directly from DB
-    const user = await UserModel.findOne({ email: "example@gmail.com" });
-    const verificationCode = user?.verificationCode;
-
-    const response = await requestVerifyEmail(verificationCode);
-    expect(response.statusCode).toBe(200);
-
-    // Verify user is actually verified from db
-    const updatedUser = await UserModel.findOne({ email: "example@gmail.com" });
-    expect(updatedUser?.emailVerified).toBe(true);
-    expect(updatedUser?.verificationCode).toBe(null);
+    await verifyEmail("example@gmail.com");
   });
 });
 

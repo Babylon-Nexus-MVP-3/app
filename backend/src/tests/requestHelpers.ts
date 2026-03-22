@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../app";
-import { UserRole } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -97,10 +97,28 @@ export async function getToken(
 ): Promise<string> {
   const reg = await requestAuthRegister(firstName, lastName, password, email);
   expect(reg.status).toBe(201);
+
+  await verifyEmail(email);
+
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
   expect(login.body.accessToken).toBeDefined();
   return login.body.accessToken;
+}
+
+export async function verifyEmail(email: string) {
+  // Get the verification code directly from DB
+  const user = await UserModel.findOne({ email: email });
+  const verificationCode = user?.verificationCode;
+
+  const response = await requestVerifyEmail(verificationCode);
+  expect(response.statusCode).toBe(200);
+
+  // Verify user is actually verified from db
+  const updatedUser = await UserModel.findOne({ email: email });
+  expect(updatedUser?.emailVerified).toBe(true);
+  expect(updatedUser?.verificationCode).toBe(undefined);
+  expect(updatedUser?.status).toBe("Active");
 }
 
 export const validProjectBody = {
