@@ -13,6 +13,7 @@ import {
   generateCode,
   hashPassword,
 } from "../utils/authHelper";
+import { sendOnboardingEmail } from "./email.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -66,14 +67,15 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     accountLocked: false,
     verificationCode: code, // TODO: Hash verification code before storing in production
     verificationCodeExpiry: expiry,
-    // TODO: set emailVerified: false and status: "Pending" once email verification is implemented
-    // Send verification email here and add POST /auth/verify-email endpoint to activate account
-    emailVerified: true,
-    status: "Active",
+    emailVerified: false,
+    status: "Pending",
   });
 
   await newUser.save();
-  console.log(`[DEV] Verification code for ${normalisedEmail}: ${code}`);
+
+  // Prevent emails being sent during tests
+  if (process.env.NODE_ENV !== "test") await sendOnboardingEmail(normalisedEmail, code);
+
   return newUser._id.toString();
 }
 
@@ -271,5 +273,24 @@ export async function resetPassword(resetCode: string, newPassword: string) {
 
   await user.save();
 
+  return { success: true };
+}
+
+export async function userVerifyEmail(verificationCode: string) {
+  const user = await UserModel.findOne({ verificationCode: verificationCode });
+  if (!user) {
+    throw new AuthError("Invalid Verification Code");
+  }
+
+  if (user.verificationCodeExpiry && user.verificationCodeExpiry < new Date()) {
+    throw new AuthError("Verification code has expired");
+  }
+
+  user.verificationCode = null;
+  user.verificationCodeExpiry = null;
+  user.emailVerified = true;
+  user.updatedAt = new Date();
+
+  await user.save();
   return { success: true };
 }
