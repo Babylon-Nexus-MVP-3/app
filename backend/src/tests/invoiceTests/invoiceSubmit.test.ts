@@ -2,13 +2,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import {
   requestDelete,
-  requestInviteSubbie,
+  requestInvite,
   requestAcceptInvite,
-  getPmToken,
-  getSubbieToken,
   requestSubmitInvoice,
   getProjectId,
+  getTokenForRole,
 } from "../requestHelpers";
+import { UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
@@ -16,6 +16,8 @@ dotenv.config();
 const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
+const BUILDER_EMAIL = "builder@project-test.com";
+const OWNER_EMAIL = "owner@project-test.com";
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
@@ -25,8 +27,9 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getPmToken(PM_EMAIL, PASSWORD);
-  projectId = await getProjectId(token, PM_EMAIL);
+  token = await getTokenForRole("Subbie", "Person", SUBBIE_EMAIL, PASSWORD, UserRole.Subbie);
+
+  projectId = await getProjectId(token);
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
 
@@ -53,56 +56,63 @@ beforeAll(async () => {
 
 describe("POST /project/:projectId/invoice", () => {
   it("returns 200 when subbie submits invoice after accepting invite", async () => {
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
+    // Invite and onboard builder
+    const builderInviteRes = await requestInvite(projectId, token, BUILDER_EMAIL, UserRole.Builder);
+    expect(builderInviteRes.status).toBe(200);
+    const builderToken = await getTokenForRole(
+      "Bob",
+      "Build",
+      BUILDER_EMAIL,
+      PASSWORD,
+      UserRole.Builder
     );
-    expect(inviteRes.status).toBe(200);
-    const { inviteCode } = inviteRes.body.participant;
+    await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
 
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
-    await requestAcceptInvite(inviteCode, subbieToken);
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      token,
       projectId,
       "ABC Electrical",
       "Electrical",
       new Date("2026-06-01"),
-      "Phase 2 elec"
+      "Phase 2 elec",
+      5000
     );
 
     expect(submitRes.statusCode).toBe(200);
-    expect(submitRes.body).toEqual({
-      success: true,
-      invoiceId: expect.any(String),
-    });
+    expect(submitRes.body).toEqual({ success: true, invoiceId: expect.any(String) });
+  });
+
+  it("returns 200 in case Builder Doesnt exist due to fallback approval", async () => {
+    // Invite and onboard PM
+    const pmInviteRes = await requestInvite(projectId, token, PM_EMAIL, UserRole.PM);
+    expect(pmInviteRes.status).toBe(200);
+    const pmToken = await getTokenForRole("Project", "Manage", PM_EMAIL, PASSWORD, UserRole.PM);
+    await requestAcceptInvite(pmInviteRes.body.participant.inviteCode, pmToken);
+
+    const submitRes = await requestSubmitInvoice(
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      5000
+    );
+
+    expect(submitRes.statusCode).toBe(200);
+    expect(submitRes.body).toEqual({ success: true, invoiceId: expect.any(String) });
   });
 
   it("returns 400 if projectId doesnt exist", async () => {
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
-    );
-    expect(inviteRes.status).toBe(200);
-    const { inviteCode } = inviteRes.body.participant;
-
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
-    await requestAcceptInvite(inviteCode, subbieToken);
-
     const fakeProjectId = new mongoose.Types.ObjectId().toString();
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      token,
       fakeProjectId,
       "ABC Electrical",
       "Electrical",
       new Date("2026-06-01"),
-      "Phase 2 elec"
+      "Phase 2 elec",
+      10000
     );
 
     expect(submitRes.statusCode).toBe(400);
@@ -110,18 +120,80 @@ describe("POST /project/:projectId/invoice", () => {
   });
 
   it("returns 400 if user is not part of the project", async () => {
-    const subbieToken = await getSubbieToken(SUBBIE_EMAIL, PASSWORD);
+    const pmToken = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, UserRole.PM);
 
     const submitRes = await requestSubmitInvoice(
-      subbieToken,
+      pmToken,
       projectId,
       "ABC Electrical",
       "Electrical",
       new Date("2026-06-01"),
-      "Phase 2 elec"
+      "Phase 2 elec",
+      5000
     );
 
     expect(submitRes.statusCode).toBe(400);
     expect(submitRes.body.error).toBe("User not part of project");
+  });
+
+  it("returns 400 if no PM, Builder or Owner is  part of the project", async () => {
+    const submitRes = await requestSubmitInvoice(
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      5000
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error)
+      .toBe(`Cannot submit invoice: none of the required approver roles are on this project yet.
+      Please Invite them before submitting this invoice`);
+  });
+
+  /**
+   * Each row tests one missing field at a time.
+   * The pattern is that in each row, one field is empty/null while the rest have valid values:
+   */
+  it.each([
+    ["submittingParty", "", "Electrical", new Date("2026-06-01"), "Phase 2 elec", 10000],
+    ["submittingCategory", "Builder", "", new Date("2026-06-01"), "Phase 2 elec", 10000],
+    ["dateDue", "Builder", "Electrical", null, "Phase 2 elec", 10000],
+    ["description", "Builder", "Electrical", new Date("2026-06-01"), "", 10000],
+    ["amount", "Builder", "Electrical", new Date("2026-06-01"), "Phase 2 elec", null],
+  ])(
+    "returns 400 when %s is missing",
+    async (_, submittingParty, submittingCategory, dateDue, description, amount) => {
+      const res = await requestSubmitInvoice(
+        token,
+        projectId,
+        submittingParty,
+        submittingCategory,
+        dateDue,
+        description,
+        amount
+      );
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
+      );
+    }
+  );
+
+  it("returns 400 if amount <= 0", async () => {
+    const submitRes = await requestSubmitInvoice(
+      token,
+      projectId,
+      "ABC Electrical",
+      "Electrical",
+      new Date("2026-06-01"),
+      "Phase 2 elec",
+      0
+    );
+
+    expect(submitRes.statusCode).toBe(400);
+    expect(submitRes.body.error).toBe("Invalid amount. Amount must be a positive number");
   });
 });

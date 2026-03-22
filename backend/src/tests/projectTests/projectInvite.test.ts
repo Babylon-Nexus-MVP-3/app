@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { requestDelete, requestInviteSubbie, getPmToken, getProjectId } from "../requestHelpers";
+import { requestDelete, requestInvite, getTokenForRole, getProjectId } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 
 dotenv.config();
@@ -20,8 +20,8 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getPmToken(PM_EMAIL, PASSWORD);
-  projectId = await getProjectId(token, PM_EMAIL);
+  token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
+  projectId = await getProjectId(token);
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
@@ -51,13 +51,7 @@ describe("POST /project/:projectId/invite", () => {
   it("returns 200 and participant when PM invites a subbie to a project", async () => {
     // Then invite a subbie to that project
 
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
-    );
+    const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
 
     expect(inviteRes.status).toBe(200);
     expect(inviteRes.body.success).toBe(true);
@@ -69,7 +63,7 @@ describe("POST /project/:projectId/invite", () => {
   });
 
   it("returns 400 when project does not exist", async () => {
-    const inviteRes = await requestInviteSubbie(
+    const inviteRes = await requestInvite(
       new mongoose.Types.ObjectId().toString(),
       token,
       SUBBIE_EMAIL,
@@ -82,14 +76,20 @@ describe("POST /project/:projectId/invite", () => {
 
   it("returns 400 when PM is not assigned to project", async () => {
     // Register another PM
-    const wrongPmToken = await getPmToken(PM_EMAIL_SECOND, PASSWORD);
+    const wrongPmToken = await getTokenForRole(
+      "Project",
+      "Manager",
+      PM_EMAIL_SECOND,
+      PASSWORD,
+      "PM"
+    );
 
-    const inviteRes = await requestInviteSubbie(
+    const inviteRes = await requestInvite(
       projectId,
       wrongPmToken,
       SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
+      "Subbie",
+      "Electrician"
     );
 
     expect(inviteRes.status).toBe(200);
@@ -98,13 +98,7 @@ describe("POST /project/:projectId/invite", () => {
 
   it("returns 403 when project is not approved (status not Active)", async () => {
     await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
-    const inviteRes = await requestInviteSubbie(
-      projectId,
-      token,
-      SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
-    );
+    const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Electrician", "Subbie");
     expect(inviteRes.status).toBe(403);
     expect(inviteRes.body.error).toMatch(/approved|admin/i);
   });
