@@ -112,3 +112,133 @@ export async function submitInvoice(
 
   return invoice._id.toString();
 }
+
+async function getInvoiceForAction(invoiceId: string, projectId: string, userId: string) {
+  const invoice = await InvoiceModel.findOne({ _id: invoiceId, projectId });
+  if (!invoice) {
+    throw new InvoiceError("Invoice not found", 404);
+  }
+
+  const participant = await ProjectParticipantModel.findOne({
+    projectId,
+    userId,
+    status: "Accepted",
+  });
+  if (!participant) {
+    throw new InvoiceError("User not part of project", 403);
+  }
+
+  return { invoice, participant };
+}
+
+export async function approveInvoice(
+  invoiceId: string,
+  projectId: string,
+  userId: string
+): Promise<void> {
+  const { invoice, participant } = await getInvoiceForAction(invoiceId, projectId, userId);
+
+  if (participant.role !== invoice.approverRole) {
+    throw new InvoiceError("You are not authorised to approve this invoice", 403);
+  }
+
+  if (invoice.status !== InvoiceStatus.Pending) {
+    throw new InvoiceError("Invoice must be in Pending status to approve");
+  }
+
+  invoice.status = InvoiceStatus.Approved;
+  await invoice.save();
+
+  await EventModel.create({
+    type: "InvoiceApproved",
+    aggregateType: "Invoice",
+    aggregateId: invoiceId,
+    userId,
+    payload: { projectId },
+  });
+}
+
+export async function markInvoicePaid(
+  invoiceId: string,
+  projectId: string,
+  userId: string
+): Promise<void> {
+  const { invoice, participant } = await getInvoiceForAction(invoiceId, projectId, userId);
+
+  if (participant.role !== invoice.approverRole) {
+    throw new InvoiceError("You are not authorised to mark this invoice as paid", 403);
+  }
+
+  if (invoice.status !== InvoiceStatus.Approved) {
+    throw new InvoiceError("Invoice must be Approved before marking as paid");
+  }
+
+  invoice.status = InvoiceStatus.Paid;
+  invoice.datePaid = new Date();
+  await invoice.save();
+
+  await EventModel.create({
+    type: "InvoicePaid",
+    aggregateType: "Invoice",
+    aggregateId: invoiceId,
+    userId,
+    payload: { projectId },
+  });
+}
+
+export async function markInvoiceReceived(
+  invoiceId: string,
+  projectId: string,
+  userId: string
+): Promise<void> {
+  const { invoice } = await getInvoiceForAction(invoiceId, projectId, userId);
+
+  if (invoice.submittedByUserId.toString() !== userId) {
+    throw new InvoiceError("Only the invoice submitter can mark it as received", 403);
+  }
+
+  if (invoice.status !== InvoiceStatus.Paid) {
+    throw new InvoiceError("Invoice must be Paid before marking as received");
+  }
+
+  invoice.status = InvoiceStatus.Received;
+  invoice.dateReceived = new Date();
+  await invoice.save();
+
+  await EventModel.create({
+    type: "InvoiceReceived",
+    aggregateType: "Invoice",
+    aggregateId: invoiceId,
+    userId,
+    payload: { projectId },
+  });
+}
+
+export async function rejectInvoice(
+  invoiceId: string,
+  projectId: string,
+  userId: string,
+  rejectionReason?: string
+): Promise<void> {
+  const { invoice, participant } = await getInvoiceForAction(invoiceId, projectId, userId);
+
+  if (participant.role !== invoice.approverRole) {
+    throw new InvoiceError("You are not authorised to reject this invoice", 403);
+  }
+
+  if (invoice.status !== InvoiceStatus.Pending) {
+    throw new InvoiceError("Invoice can only be rejected when Pending");
+  }
+
+  invoice.status = InvoiceStatus.Rejected;
+  if (rejectionReason) invoice.rejectionReason = rejectionReason;
+  await invoice.save();
+
+  await EventModel.create({
+    type: "InvoiceRejected",
+    aggregateType: "Invoice",
+    aggregateId: invoiceId,
+    userId,
+    payload: { projectId, rejectionReason },
+  });
+}
