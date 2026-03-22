@@ -7,21 +7,13 @@ import {
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, location, council, ownerId, builderId, pmId, creatorRole, invitees } = req.body;
-
-    if (!req.user?.sub) {
-      res.status(401).json({ error: "Authentication Required" });
-      return;
-    }
+    const { name, location, council, creatorRole, invitees } = req.body;
 
     const projectId = await createProject({
       creatorId: req.user.sub,
       name,
       location,
       council,
-      ownerId,
-      builderId,
-      pmId,
       creatorRole,
       invitees,
     });
