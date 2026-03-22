@@ -167,12 +167,15 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new ProjectError("Invite code is required");
   }
 
-  const participant = await ProjectParticipantModel.findOne({ inviteCode });
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new AuthError("User Does not exist");
+  }
 
+  const participant = await ProjectParticipantModel.findOne({ inviteCode });
   if (!participant) {
     throw new ProjectError("Invalid or expired invite code");
   }
-
   if (participant.status !== "Pending") {
     throw new ProjectError("Invite is no longer valid");
   }
@@ -192,6 +195,11 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     },
     { returnDocument: "after" }
   );
+
+  if (participant.role === UserRole.PM) project.pmId = userId;
+  if (participant.role === UserRole.Owner) project.ownerId = userId;
+  if (participant.role === UserRole.Builder) project.builderId = userId;
+  await project.save();
 
   return { participant: updatedParticipant };
 }
