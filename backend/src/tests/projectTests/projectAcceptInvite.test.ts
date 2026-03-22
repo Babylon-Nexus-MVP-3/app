@@ -5,9 +5,10 @@ import {
   requestInvite,
   requestAcceptInvite,
   getProjectId,
-  getTokenForRole,
+  getToken,
 } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
+import { UserRole } from "../../models/userModel";
 
 dotenv.config();
 
@@ -25,8 +26,8 @@ let token: string;
 
 beforeEach(async () => {
   await requestDelete();
-  token = await getTokenForRole("Project", "Manager", PM_EMAIL, PASSWORD, "PM");
-  projectId = await getProjectId(token);
+  token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+  projectId = await getProjectId(token, UserRole.PM);
   // Simulate admin approval so invite is allowed (invite only when project is Active)
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 });
@@ -58,7 +59,7 @@ describe("POST /project/invite/accept", () => {
     expect(inviteRes.status).toBe(200);
     const { inviteCode } = inviteRes.body.participant;
 
-    const subbieToken = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
+    const subbieToken = await getToken("Sub", "Contract", SUBBIE_EMAIL, PASSWORD);
     const acceptRes = await requestAcceptInvite(inviteCode, subbieToken);
 
     expect(acceptRes.status).toBe(200);
@@ -69,7 +70,7 @@ describe("POST /project/invite/accept", () => {
   });
 
   it("returns 400 when invite code is invalid", async () => {
-    const subbieToken = await getTokenForRole("Sub", "Contract", SUBBIE_EMAIL, PASSWORD, "Subbie");
+    const subbieToken = await getToken("Sub", "Contract", SUBBIE_EMAIL, PASSWORD);
     const acceptRes = await requestAcceptInvite("INVALID_CODE", subbieToken);
 
     expect(acceptRes.status).toBe(400);
