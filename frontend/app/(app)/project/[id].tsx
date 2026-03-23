@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
@@ -57,140 +57,37 @@ function statusLabel(s: InvoiceStatus): string {
   return map[s] ?? "";
 }
 
-// Dummy data. Need to replace with API calls once endpoints have been built.
-// Feb 2026 calendar — 28 days (matching prototype)
-const CALENDAR_STATUS: InvoiceStatus[] = [
-  "green",
-  "green",
-  "green",
-  "green",
-  "green",
-  "green",
-  "green",
-  "green",
-  "grey",
-  "amber",
-  "green",
-  "green",
-  "green",
-  "red",
-  "green",
-  "green",
-  "grey",
-  "green",
-  "green",
-  "amber",
-  "green",
-  "green",
-  "green",
-  "green",
-  "green",
-  "purple",
-  "green",
-  "green",
-];
-
-const OVERDUE_BY_PROJECT: Record<
-  string,
-  { id: number; from: string; date: string; days: number; status: InvoiceStatus }[]
-> = {
-  "1": [
-    { id: 101, from: "JK Electrical", date: "Feb 3, 2026", days: 20, status: "amber" },
-    { id: 102, from: "AceTech HVAC", date: "Feb 1, 2026", days: 22, status: "amber" },
-  ],
-  "2": [
-    { id: 201, from: "Smith Plumbing", date: "Jan 28, 2026", days: 26, status: "red" },
-    { id: 202, from: "Metro Concrete", date: "Jan 20, 2026", days: 34, status: "red" },
-    { id: 203, from: "SafeGuard Fire", date: "Feb 5, 2026", days: 18, status: "amber" },
-  ],
-  "3": [
-    { id: 301, from: "Apex Roofing", date: "Jan 15, 2026", days: 39, status: "red" },
-    { id: 302, from: "ClearView Glass", date: "Jan 22, 2026", days: 32, status: "red" },
-    { id: 303, from: "UrbanScape Land", date: "Feb 1, 2026", days: 22, status: "amber" },
-    { id: 304, from: "SafeGuard Fire", date: "Feb 3, 2026", days: 20, status: "amber" },
-    { id: 305, from: "Elite Plumbing", date: "Feb 5, 2026", days: 18, status: "amber" },
-  ],
-  "4": [],
+/* ─── API types ─── */
+type ApiInvoice = {
+  id: string;
+  submittingParty: string;
+  description: string;
+  dateSubmitted: string;
+  dateDue: string;
+  amount?: number;
+  status: "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
+  daysOverdue: number;
 };
 
-const SUB_INVOICES = [
-  {
-    id: 1,
-    date: "Feb 3, 2026",
-    amt: 45000,
-    status: "amber" as InvoiceStatus,
-    days: 20,
-    desc: "Electrical rough-in — Level 2",
-  },
-  {
-    id: 2,
-    date: "Jan 15, 2026",
-    amt: 38000,
-    status: "green" as InvoiceStatus,
-    days: 0,
-    desc: "Electrical fit-off — Level 1",
-  },
-];
+const SEVERITY: Record<InvoiceStatus, number> = {
+  red: 5,
+  amber: 4,
+  purple: 3,
+  issued: 2,
+  grey: 1,
+  green: 0,
+};
 
-const BUILDER_INVOICES = [
-  {
-    id: 1,
-    from: "JK Electrical",
-    date: "Feb 3, 2026",
-    amt: 45000,
-    status: "amber" as InvoiceStatus,
-    days: 20,
-    desc: "Electrical rough-in",
-  },
-  {
-    id: 2,
-    from: "Smith Plumbing",
-    date: "Jan 28, 2026",
-    amt: 32000,
-    status: "red" as InvoiceStatus,
-    days: 26,
-    desc: "Main drainage install",
-  },
-  {
-    id: 3,
-    from: "SafeGuard Fire",
-    date: "Feb 10, 2026",
-    amt: 28000,
-    status: "green" as InvoiceStatus,
-    days: 0,
-    desc: "Fire systems Level 1",
-  },
-  {
-    id: 4,
-    from: "Metro Concrete",
-    date: "Feb 14, 2026",
-    amt: 185000,
-    status: "grey" as InvoiceStatus,
-    days: 9,
-    desc: "Slab pour Level 6",
-  },
-  {
-    id: 5,
-    from: "AceTech HVAC",
-    date: "Feb 5, 2026",
-    amt: 67000,
-    status: "amber" as InvoiceStatus,
-    days: 18,
-    desc: "HVAC ducting Level 3",
-  },
-];
-
-const OWNER_INVOICES = [
-  { id: 1, from: "JK Electrical", amt: 45000, status: "amber" as InvoiceStatus, days: 20 },
-  { id: 2, from: "Smith Plumbing", amt: 32000, status: "red" as InvoiceStatus, days: 26 },
-  { id: 3, from: "Metro Concrete", amt: 185000, status: "red" as InvoiceStatus, days: 34 },
-  { id: 4, from: "SafeGuard Fire", amt: 28000, status: "green" as InvoiceStatus, days: 0 },
-  { id: 5, from: "AceTech HVAC", amt: 67000, status: "amber" as InvoiceStatus, days: 22 },
-];
+function apiStatusToCalStatus(inv: ApiInvoice): InvoiceStatus {
+  if (inv.status === "Paid" || inv.status === "Received") {
+    return inv.daysOverdue > 0 ? "amber" : "green";
+  }
+  if (inv.daysOverdue > 0 || inv.status === "Rejected") return "red";
+  if (inv.status === "Approved") return "grey";
+  return "issued";
+}
 
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-// Feb 2026 starts on Sunday — 6 empty cells in Mon-start grid
-const EMPTY_CELLS = 6;
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 // Cap at 46px so cells stay compact on large/tablet screens
@@ -198,26 +95,40 @@ const DAY_CELL = Math.min(Math.floor((SCREEN_WIDTH - 40 - 24) / 7), 46);
 
 /* ─── Main screen ─── */
 export default function ProjectDetail() {
-  const params = useLocalSearchParams<{
-    id: string;
-    name: string;
-    role: string;
-    health: string;
-    overdue: string;
-    change: string;
-  }>();
+  const params = useLocalSearchParams<{ id: string; name: string }>();
+  const id = params.id ?? "";
+  const nameParam = params.name ?? "Project";
 
-  const id = params.id ?? "1";
-  const name = params.name ?? "Project";
-  const role = params.role ?? "Subcontractor";
-  const health = parseInt(params.health ?? "0");
-  const overdue = parseInt(params.overdue ?? "0");
-  const change = parseInt(params.change ?? "0");
-
+  const { fetchWithAuth } = useAuth();
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
-  const [builderActions, setBuilderActions] = useState<Record<number, "paid" | "info">>({});
+  const [builderActions, setBuilderActions] = useState<Record<string, "paid" | "info">>({});
 
-  const overdueList = OVERDUE_BY_PROJECT[id] ?? [];
+  const [projectName, setProjectName] = useState(nameParam);
+  const [health, setHealth] = useState(0);
+  const [overdue, setOverdue] = useState(0);
+  const [change, setChange] = useState<number | null>(null);
+  const [role, setRole] = useState("Member");
+  const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchWithAuth(`http://localhost:3229/project/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setProjectName(data.project?.name ?? nameParam);
+          setHealth(data.healthScore ?? 0);
+          setOverdue(data.overdueInvoiceCount ?? 0);
+          setChange(data.monthOnMonthHealthChangePct ?? null);
+          setRole(data.userRole ?? "Member");
+          setInvoices(data.invoices ?? []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setDataLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   return (
     <View style={styles.screen}>
@@ -229,18 +140,26 @@ export default function ProjectDetail() {
             <Text style={styles.backLabel}>All Projects</Text>
           </TouchableOpacity>
 
-          <Text style={styles.headerProjectName}>{name}</Text>
+          <Text style={styles.headerProjectName}>{projectName}</Text>
 
           <View style={styles.healthWrap}>
-            <CircularProgress
-              value={health}
-              size={120}
-              label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
-            />
-            <Text style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}>
-              {change >= 0 ? "+" : ""}
-              {change}% vs last month
-            </Text>
+            {dataLoading ? (
+              <ActivityIndicator color={Colors.gold} style={{ height: 120 }} />
+            ) : (
+              <CircularProgress
+                value={health}
+                size={120}
+                label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
+              />
+            )}
+            {change !== null && (
+              <Text
+                style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
+              >
+                {change >= 0 ? "+" : ""}
+                {change}% vs last month
+              </Text>
+            )}
           </View>
 
           {overdue > 0 && (
@@ -268,11 +187,12 @@ export default function ProjectDetail() {
       </View>
 
       {activeTab === "calendar" ? (
-        <CalendarTab overdueList={overdueList} />
+        <CalendarTab invoices={invoices} />
       ) : (
         <MySpaceTab
           role={role}
           projectId={id}
+          invoices={invoices}
           builderActions={builderActions}
           setBuilderActions={setBuilderActions}
         />
@@ -282,9 +202,34 @@ export default function ProjectDetail() {
 }
 
 /* ─── Calendar tab ─── */
-function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)["1"] }) {
+function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
   const [selectedDay, setSelectedDay] = useState<{ day: number; status: InvoiceStatus } | null>(
     null
+  );
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+  const emptyBefore = firstDow === 0 ? 6 : firstDow - 1;
+  const monthName = now.toLocaleString("en-AU", { month: "long", year: "numeric" });
+
+  // Map each day of the month to its worst invoice status
+  const dayStatusMap = new Map<number, InvoiceStatus>();
+  for (const inv of invoices) {
+    const due = new Date(inv.dateDue);
+    if (due.getFullYear() !== year || due.getMonth() !== month) continue;
+    const day = due.getDate();
+    const calStatus = apiStatusToCalStatus(inv);
+    const existing = dayStatusMap.get(day);
+    if (!existing || SEVERITY[calStatus] > SEVERITY[existing]) {
+      dayStatusMap.set(day, calStatus);
+    }
+  }
+
+  const overdueList = invoices.filter(
+    (i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received"
   );
 
   return (
@@ -296,7 +241,7 @@ function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)
       {/* Month header */}
       <View style={styles.monthRow}>
         <Text style={styles.monthArrow}>‹</Text>
-        <Text style={styles.monthTitle}>February 2026</Text>
+        <Text style={styles.monthTitle}>{monthName}</Text>
         <Text style={styles.monthArrow}>›</Text>
       </View>
 
@@ -307,27 +252,33 @@ function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)
             <Text style={styles.weekDay}>{d}</Text>
           </View>
         ))}
-        {Array(EMPTY_CELLS)
+        {Array(emptyBefore)
           .fill(null)
           .map((_, i) => (
             <View key={`e${i}`} style={{ width: DAY_CELL, height: DAY_CELL }} />
           ))}
-        {CALENDAR_STATUS.map((status, i) => {
-          const day = i + 1;
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+          const status = dayStatusMap.get(day);
           const selected = selectedDay?.day === day;
           return (
             <TouchableOpacity
               key={day}
               style={[
                 styles.dayCell,
-                { width: DAY_CELL, height: DAY_CELL, backgroundColor: statusColor(status) + "25" },
+                {
+                  width: DAY_CELL,
+                  height: DAY_CELL,
+                  backgroundColor: status ? statusColor(status) + "25" : "transparent",
+                },
                 selected && styles.dayCellSelected,
               ]}
-              onPress={() => setSelectedDay(selected ? null : { day, status })}
-              activeOpacity={0.7}
+              onPress={() =>
+                status ? setSelectedDay(selected ? null : { day, status }) : undefined
+              }
+              activeOpacity={status ? 0.7 : 1}
             >
               <Text style={styles.dayNum}>{day}</Text>
-              <View style={[styles.dayDot, { backgroundColor: statusColor(status) }]} />
+              {status && <View style={[styles.dayDot, { backgroundColor: statusColor(status) }]} />}
             </TouchableOpacity>
           );
         })}
@@ -336,7 +287,9 @@ function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)
       {/* Selected day detail */}
       {selectedDay && (
         <View style={[styles.dayDetail, { borderLeftColor: statusColor(selectedDay.status) }]}>
-          <Text style={styles.dayDetailTitle}>February {selectedDay.day}</Text>
+          <Text style={styles.dayDetailTitle}>
+            {now.toLocaleString("en-AU", { month: "long" })} {selectedDay.day}
+          </Text>
           <Text style={[styles.dayDetailStatus, { color: statusColor(selectedDay.status) }]}>
             {statusLabel(selectedDay.status)}
           </Text>
@@ -357,27 +310,32 @@ function CalendarTab({ overdueList }: { overdueList: (typeof OVERDUE_BY_PROJECT)
       {overdueList.length > 0 && (
         <>
           <Text style={styles.sectionLabel}>OVERDUE INVOICES</Text>
-          {overdueList.map((inv) => (
-            <View
-              key={inv.id}
-              style={[styles.invoiceCard, { borderLeftColor: statusColor(inv.status) }]}
-            >
-              <View style={styles.invoiceRow}>
-                <Text style={styles.invoiceName}>{inv.from}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusBg(inv.status) }]}>
-                  <Text style={[styles.statusBadgeText, { color: statusColor(inv.status) }]}>
-                    {statusLabel(inv.status)}
+          {overdueList.map((inv) => {
+            const calStatus = apiStatusToCalStatus(inv);
+            return (
+              <View
+                key={inv.id}
+                style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+              >
+                <View style={styles.invoiceRow}>
+                  <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                    <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                      {statusLabel(calStatus)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.invoiceRow}>
+                  <Text style={styles.invoiceDate}>
+                    Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+                  </Text>
+                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                    {inv.daysOverdue} days overdue
                   </Text>
                 </View>
               </View>
-              <View style={styles.invoiceRow}>
-                <Text style={styles.invoiceDate}>Issued: {inv.date}</Text>
-                <Text style={[styles.invoiceDays, { color: statusColor(inv.status) }]}>
-                  {inv.days} days overdue
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </>
       )}
     </ScrollView>
@@ -400,14 +358,16 @@ type InviteRole = (typeof INVITE_ROLES)[number];
 function MySpaceTab({
   role,
   projectId,
+  invoices,
   builderActions,
   setBuilderActions,
 }: {
   role: string;
   projectId: string;
-  builderActions: Record<number, "paid" | "info">;
+  invoices: ApiInvoice[];
+  builderActions: Record<string, "paid" | "info">;
   setBuilderActions: (
-    fn: (p: Record<number, "paid" | "info">) => Record<number, "paid" | "info">
+    fn: (p: Record<string, "paid" | "info">) => Record<string, "paid" | "info">
   ) => void;
 }) {
   const { fetchWithAuth } = useAuth();
@@ -456,14 +416,25 @@ function MySpaceTab({
   }
 
   let content: React.ReactNode;
-  if (role === "Subcontractor") content = <SubMySpace />;
+  if (role === "Subbie" || role === "Subcontractor") content = <SubMySpace invoices={invoices} />;
   else if (role === "Builder")
     content = (
-      <BuilderMySpace builderActions={builderActions} setBuilderActions={setBuilderActions} />
+      <BuilderMySpace
+        invoices={invoices}
+        builderActions={builderActions}
+        setBuilderActions={setBuilderActions}
+      />
     );
-  else if (role === "Owner" || role === "Financier") content = <OwnerMySpace />;
-  else if (role === "Project Manager") {
-    const counts = { green: 18, purple: 2, grey: 3, amber: 4, red: 1, total: 28 };
+  else if (role === "Owner" || role === "Financier") content = <OwnerMySpace invoices={invoices} />;
+  else if (role === "PM" || role === "Project Manager") {
+    const calCounts = invoices.reduce(
+      (acc, inv) => {
+        const s = apiStatusToCalStatus(inv);
+        acc[s] = (acc[s] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<InvoiceStatus, number>
+    );
     content = (
       <ScrollView
         style={styles.body}
@@ -479,7 +450,7 @@ function MySpaceTab({
                 <Text style={styles.invoiceName}>{statusLabel(s)}</Text>
               </View>
               <Text style={[styles.invoiceAmt, { color: statusColor(s) }]}>
-                {counts[s]} invoices
+                {calCounts[s] ?? 0} invoices
               </Text>
             </View>
           </View>
@@ -487,7 +458,7 @@ function MySpaceTab({
         <View style={[styles.invoiceCard, { borderLeftColor: Colors.navy, marginTop: 4 }]}>
           <View style={styles.invoiceRow}>
             <Text style={[styles.invoiceName, { fontWeight: "800" }]}>Total</Text>
-            <Text style={styles.invoiceAmt}>{counts.total} invoices</Text>
+            <Text style={styles.invoiceAmt}>{invoices.length} invoices</Text>
           </View>
         </View>
       </ScrollView>
@@ -628,10 +599,10 @@ function MySpaceTab({
 }
 
 /* ─── Subcontractor ─── */
-function SubMySpace() {
-  const [confirmed, setConfirmed] = useState<Record<number, boolean>>({});
-  const outstanding = SUB_INVOICES.filter((i) => i.status !== "green");
-  const paid = SUB_INVOICES.filter((i) => i.status === "green");
+function SubMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
+  const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
 
   return (
     <ScrollView
@@ -643,7 +614,7 @@ function SubMySpace() {
         <View style={styles.statBox}>
           <Text style={styles.statBoxLabel}>Outstanding</Text>
           <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-            ${(outstanding.reduce((a, i) => a + i.amt, 0) / 1000).toFixed(0)}K
+            ${(outstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
           </Text>
           <Text style={styles.statBoxSub}>
             {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
@@ -652,7 +623,7 @@ function SubMySpace() {
         <View style={styles.statBox}>
           <Text style={styles.statBoxLabel}>Paid</Text>
           <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-            ${(paid.reduce((a, i) => a + i.amt, 0) / 1000).toFixed(0)}K
+            ${(paid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
           </Text>
           <Text style={styles.statBoxSub}>
             {paid.length} invoice{paid.length !== 1 ? "s" : ""}
@@ -661,62 +632,73 @@ function SubMySpace() {
       </View>
 
       <Text style={styles.sectionLabel}>MY INVOICES</Text>
-      {SUB_INVOICES.map((inv) => (
-        <View
-          key={inv.id}
-          style={[styles.invoiceCard, { borderLeftColor: statusColor(inv.status) }]}
-        >
-          <View style={styles.invoiceRow}>
-            <Text style={styles.invoiceName}>{inv.desc}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: statusBg(inv.status) }]}>
-              <Text style={[styles.statusBadgeText, { color: statusColor(inv.status) }]}>
-                {statusLabel(inv.status)}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.invoiceRow}>
-            <Text style={styles.invoiceDate}>{inv.date}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Text style={styles.invoiceAmt}>${(inv.amt / 1000).toFixed(0)}K</Text>
-              {inv.status === "green" &&
-                (confirmed[inv.id] ? (
-                  <Text style={styles.confirmedText}>✓ Confirmed</Text>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.confirmBtn}
-                    onPress={() => setConfirmed((p) => ({ ...p, [inv.id]: true }))}
-                  >
-                    <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
-                  </TouchableOpacity>
-                ))}
-              {inv.status !== "green" && inv.days > 0 && (
-                <Text style={[styles.invoiceDays, { color: statusColor(inv.status) }]}>
-                  {inv.days} days overdue
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        const isPaid = inv.status === "Paid" || inv.status === "Received";
+        return (
+          <View
+            key={inv.id}
+            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+          >
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.description}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {statusLabel(calStatus)}
                 </Text>
-              )}
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceDate}>
+                Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                {inv.amount != null && (
+                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+                )}
+                {isPaid &&
+                  (confirmed[inv.id] ? (
+                    <Text style={styles.confirmedText}>✓ Confirmed</Text>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.confirmBtn}
+                      onPress={() => setConfirmed((p) => ({ ...p, [inv.id]: true }))}
+                    >
+                      <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
+                    </TouchableOpacity>
+                  ))}
+                {!isPaid && inv.daysOverdue > 0 && (
+                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                    {inv.daysOverdue} days overdue
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
 
 /* ─── Builder ─── */
 function BuilderMySpace({
+  invoices,
   builderActions,
   setBuilderActions,
 }: {
-  builderActions: Record<number, "paid" | "info">;
+  invoices: ApiInvoice[];
+  builderActions: Record<string, "paid" | "info">;
   setBuilderActions: (
-    fn: (p: Record<number, "paid" | "info">) => Record<number, "paid" | "info">
+    fn: (p: Record<string, "paid" | "info">) => Record<string, "paid" | "info">
   ) => void;
 }) {
-  const paidInvs = BUILDER_INVOICES.filter((i) => builderActions[i.id] === "paid");
-  const outInvs = BUILDER_INVOICES.filter((i) => builderActions[i.id] !== "paid");
-  const valTotal = BUILDER_INVOICES.reduce((a, i) => a + i.amt, 0);
-  const valPaid = paidInvs.reduce((a, i) => a + i.amt, 0);
-  const valOut = outInvs.reduce((a, i) => a + i.amt, 0);
+  const paidInvs = invoices.filter((i) => builderActions[i.id] === "paid");
+  const outInvs = invoices.filter((i) => builderActions[i.id] !== "paid");
+  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
 
   return (
     <ScrollView
@@ -728,12 +710,7 @@ function BuilderMySpace({
         <Text style={[styles.sectionLabel, { marginBottom: 12 }]}>PAYMENT SUMMARY</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
           {[
-            [
-              "Received",
-              BUILDER_INVOICES.length,
-              `$${(valTotal / 1000).toFixed(0)}K`,
-              Colors.textPrimary,
-            ],
+            ["Received", invoices.length, `$${(valTotal / 1000).toFixed(0)}K`, Colors.textPrimary],
             ["Paid", paidInvs.length, `$${(valPaid / 1000).toFixed(0)}K`, Colors.green],
             ["Outstanding", outInvs.length, `$${(valOut / 1000).toFixed(0)}K`, Colors.amber],
           ].map(([label, count, val, color]) => (
@@ -749,39 +726,43 @@ function BuilderMySpace({
       </View>
 
       <Text style={styles.sectionLabel}>ALL INVOICES</Text>
-      {BUILDER_INVOICES.map((inv) => {
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
         const acted = builderActions[inv.id];
+        const calStatus = apiStatusToCalStatus(inv);
         const displayColor =
           acted === "paid"
             ? Colors.green
             : acted === "info"
               ? Colors.purple
-              : statusColor(inv.status);
+              : statusColor(calStatus);
         return (
           <View key={inv.id} style={[styles.invoiceCard, { borderLeftColor: displayColor }]}>
             <View style={styles.invoiceRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.invoiceName}>{inv.from}</Text>
+                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
                 <Text style={styles.invoiceDate}>
-                  {inv.desc} · {inv.date}
+                  {inv.description} · Due {new Date(inv.dateDue).toLocaleDateString("en-AU")}
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
-                <Text style={styles.invoiceAmt}>${(inv.amt / 1000).toFixed(0)}K</Text>
+                {inv.amount != null && (
+                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+                )}
                 <Text style={[styles.statusBadgeText, { color: displayColor }]}>
                   {acted === "paid"
                     ? "✓ Paid"
                     : acted === "info"
                       ? "ℹ Info Req."
-                      : statusLabel(inv.status)}
+                      : statusLabel(calStatus)}
                 </Text>
               </View>
             </View>
-            {inv.days > 0 && !acted && (
+            {inv.daysOverdue > 0 && !acted && (
               <Text
-                style={[styles.invoiceDays, { color: statusColor(inv.status), marginBottom: 8 }]}
+                style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}
               >
-                {inv.days} days overdue
+                {inv.daysOverdue} days overdue
               </Text>
             )}
             {!acted && (
@@ -808,15 +789,13 @@ function BuilderMySpace({
 }
 
 /* ─── Owner / Financier ─── */
-function OwnerMySpace() {
-  const stats = {
-    raised: 18,
-    paid: 11,
-    outstanding: 7,
-    valRaised: 1850000,
-    valPaid: 1120000,
-    valOut: 730000,
-  };
+function OwnerMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+  const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+
   return (
     <ScrollView
       style={styles.body}
@@ -827,12 +806,12 @@ function OwnerMySpace() {
         {[
           [
             "Total Raised",
-            stats.raised,
-            `$${(stats.valRaised / 1000).toFixed(0)}K`,
+            invoices.length,
+            `$${(valTotal / 1000).toFixed(0)}K`,
             Colors.textPrimary,
           ],
-          ["Paid", stats.paid, `$${(stats.valPaid / 1000).toFixed(0)}K`, Colors.green],
-          ["Outstanding", stats.outstanding, `$${(stats.valOut / 1000).toFixed(0)}K`, Colors.amber],
+          ["Paid", paidInvs.length, `$${(valPaid / 1000).toFixed(0)}K`, Colors.green],
+          ["Outstanding", outInvs.length, `$${(valOut / 1000).toFixed(0)}K`, Colors.amber],
         ].map(([label, count, val, color]) => (
           <View key={label as string} style={styles.statBox}>
             <Text style={styles.statBoxLabel}>{label as string}</Text>
@@ -845,29 +824,35 @@ function OwnerMySpace() {
       </View>
 
       <Text style={styles.sectionLabel}>ALL INVOICES</Text>
-      {OWNER_INVOICES.map((inv) => (
-        <View
-          key={inv.id}
-          style={[styles.invoiceCard, { borderLeftColor: statusColor(inv.status) }]}
-        >
-          <View style={styles.invoiceRow}>
-            <Text style={styles.invoiceName}>{inv.from}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: statusBg(inv.status) }]}>
-              <Text style={[styles.statusBadgeText, { color: statusColor(inv.status) }]}>
-                {statusLabel(inv.status)}
-              </Text>
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        return (
+          <View
+            key={inv.id}
+            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+          >
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {statusLabel(calStatus)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              {inv.amount != null && (
+                <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+              )}
+              {inv.daysOverdue > 0 && (
+                <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                  {inv.daysOverdue} days overdue
+                </Text>
+              )}
             </View>
           </View>
-          <View style={styles.invoiceRow}>
-            <Text style={styles.invoiceAmt}>${(inv.amt / 1000).toFixed(0)}K</Text>
-            {inv.days > 0 && (
-              <Text style={[styles.invoiceDays, { color: statusColor(inv.status) }]}>
-                {inv.days} days overdue
-              </Text>
-            )}
-          </View>
-        </View>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
@@ -1045,6 +1030,7 @@ const styles = StyleSheet.create({
   // Placeholder
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
   placeholderText: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 8 },
+  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center", marginTop: 16 },
   placeholderSub: { fontSize: 14, color: Colors.textSecondary },
 
   // Invite footer (visible for all roles)
