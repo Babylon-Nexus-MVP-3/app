@@ -306,7 +306,8 @@ export async function userVerifyEmail(verificationCode: string) {
 }
 
 export async function resendVerificationCode(email: string) {
-  const user = await UserModel.findOne({ email: email });
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
   if (!user) {
     throw new AuthError("Email not found");
   }
