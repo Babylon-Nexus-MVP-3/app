@@ -112,23 +112,23 @@ export const resetPasswd = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const verifyEmail = async (req: Request, res: Response) => {
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   const { verificationCode } = req.body;
   try {
     const result = await userVerifyEmail(verificationCode);
     res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    next(err);
   }
 };
 
-export const resendVerifyEmail = async (req: Request, res: Response) => {
+export const resendVerifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   const { email } = req.body;
 
   try {
     const result = await resendVerificationCode(email);
     res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    next(err);
   }
 };
