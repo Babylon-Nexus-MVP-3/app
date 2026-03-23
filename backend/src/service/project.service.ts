@@ -31,14 +31,14 @@ export interface CreateProjectInput {
 export async function syncProjectRoleDisplayFields(
   projectId: string,
   userId: string,
-  role: string | undefined
+  role: UserRole | undefined
 ): Promise<void> {
-  const r = role?.trim();
+  const r = role;
   if (!r) return;
   const set: Record<string, string> = {};
-  if (r === "PM") set.pmId = userId;
-  else if (r === "Owner") set.ownerId = userId;
-  else if (r === "Builder") set.builderId = userId;
+  if (r === UserRole.PM) set.pmId = userId;
+  else if (r === UserRole.Owner) set.ownerId = userId;
+  else if (r === UserRole.Builder) set.builderId = userId;
   if (Object.keys(set).length === 0) return;
   await ProjectModel.updateOne({ _id: projectId }, { $set: set });
 }
@@ -52,7 +52,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const name = input.name?.trim();
   const location = input.location?.trim();
   const council = input.council?.trim();
-  const creatorRole = input.creatorRole?.trim();
+  const creatorRole = input.creatorRole;
   const invitees = input.invitees ?? [];
   const status = "Pending";
 
@@ -76,7 +76,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     status,
   });
 
-  const participantRole = (creatorRole ?? user.role)?.toString().trim();
+  const participantRole = creatorRole ?? user.role;
 
   // Associate creator with project
   await ProjectParticipantModel.create({
@@ -92,7 +92,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   // Store invitees as pending participants with OTPs (emails sent on admin approval)
   for (const invitee of invitees) {
     const email = invitee.email?.trim();
-    const role = invitee.role?.trim();
+    const role = invitee.role;
     if (email && role) {
       await ProjectParticipantModel.create({
         projectId: project._id.toString(),
@@ -217,7 +217,7 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     await syncProjectRoleDisplayFields(
       participant.projectId,
       userId,
-      updatedParticipant.role as string
+      updatedParticipant.role
     );
   }
 

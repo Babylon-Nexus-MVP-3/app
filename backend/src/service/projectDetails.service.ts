@@ -1,6 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+import { UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
 
@@ -39,7 +40,7 @@ export interface GetProjectDetailsResult {
     location: string;
     council: string;
   };
-  userRole: string;
+  userRole: UserRole;
   healthScore: number; // 0-100
   overdueInvoiceCount: number;
   monthOnMonthHealthChangePct: number | null;
@@ -84,7 +85,7 @@ export async function getProjectDetails(
 
   // ProjectParticipant is the source of truth for the user's role on this project
   // (Project.pmId / ownerId / builderId are display-only, synced on invite accept).
-  const userRole = participant?.role?.trim();
+  const userRole = participant?.role;
   if (!userRole) {
     throw new AuthError("Forbidden", 403);
   }
