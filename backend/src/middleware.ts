@@ -32,7 +32,7 @@ declare global {
 // Skipped in test environments.
 export const registrationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
   message: "Too many registration attempts. Please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -49,7 +49,7 @@ export const loginLimiter = rateLimit({
 
 export const resendVerifLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
+  max: process.env.NODE_ENV === "test" ? 1000 : 3,
   keyGenerator: (req) => req.body.email, // Rate limit per email
   message: "Too many attempts to resend verification code, Please try again later",
   standardHeaders: true,
@@ -58,7 +58,7 @@ export const resendVerifLimiter = rateLimit({
 
 export const verifyEmailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
   keyGenerator: (req) => req.body.email, // Per email
   message: "Too many verification attempts. Please request a new code.",
   standardHeaders: true,
@@ -67,7 +67,7 @@ export const verifyEmailLimiter = rateLimit({
 
 export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
   message: "Too many refresh attempts please try again later",
   standardHeaders: true,
   legacyHeaders: true,
