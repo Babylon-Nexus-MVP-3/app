@@ -82,7 +82,8 @@ export async function getProjectDetails(
     .select("role")
     .lean();
 
-  // ProjectParticipant is the source of truth for the user's role on this project.
+  // ProjectParticipant is the source of truth for the user's role on this project
+  // (Project.pmId / ownerId / builderId are display-only, synced on invite accept).
   const userRole = participant?.role?.trim();
   if (!userRole) {
     throw new AuthError("Forbidden", 403);
@@ -133,6 +134,7 @@ export async function getProjectDetails(
   const prevMonthHealth = computeHealthScoreByDueDate(prevMonthInvoices, now);
 
   const prevMonthHadPaid = prevMonthInvoices.some((i: any) => isPaidStatus(i.status));
+  // Avoid NaN when prev month had paid invoices but 0% on-time health (divide by 0).
   const monthOnMonthHealthChangePct =
     !prevMonthHadPaid || prevMonthHealth === 0
       ? null

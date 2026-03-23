@@ -27,6 +27,22 @@ export interface CreateProjectInput {
   invitees?: InviteeInput[];
 }
 
+/** Sets Project.pmId / ownerId / builderId for frontend display when role is PM / Owner / Builder. */
+export async function syncProjectRoleDisplayFields(
+  projectId: string,
+  userId: string,
+  role: string | undefined
+): Promise<void> {
+  const r = role?.trim();
+  if (!r) return;
+  const set: Record<string, string> = {};
+  if (r === "PM") set.pmId = userId;
+  else if (r === "Owner") set.ownerId = userId;
+  else if (r === "Builder") set.builderId = userId;
+  if (Object.keys(set).length === 0) return;
+  await ProjectModel.updateOne({ _id: projectId }, { $set: set });
+}
+
 /**
  * Creates a new project. Any authenticated user can create a project.
  * Emits ProjectCreated event to the immutable event ledger.
@@ -57,20 +73,21 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     name: name || location,
     location,
     council,
-    ownerId: creatorRole === UserRole.Owner ? creatorId : undefined,
-    builderId: creatorRole === UserRole.Builder ? creatorId : undefined,
-    pmId: creatorRole === UserRole.PM ? creatorId : undefined,
     status,
   });
+
+  const participantRole = (creatorRole ?? user.role)?.toString().trim();
 
   // Associate creator with project
   await ProjectParticipantModel.create({
     projectId: project._id.toString(),
     userId: user._id.toString(),
-    role: creatorRole ?? user.role,
+    role: participantRole,
     email: user.email,
     status: "Accepted",
   });
+
+  await syncProjectRoleDisplayFields(project._id.toString(), user._id.toString(), participantRole);
 
   // Store invitees as pending participants with OTPs (emails sent on admin approval)
   for (const invitee of invitees) {
@@ -196,10 +213,13 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     { returnDocument: "after" }
   );
 
-  if (participant.role === UserRole.PM) project.pmId = userId;
-  if (participant.role === UserRole.Owner) project.ownerId = userId;
-  if (participant.role === UserRole.Builder) project.builderId = userId;
-  await project.save();
+  if (updatedParticipant) {
+    await syncProjectRoleDisplayFields(
+      participant.projectId,
+      userId,
+      updatedParticipant.role as string
+    );
+  }
 
   return { participant: updatedParticipant };
 }

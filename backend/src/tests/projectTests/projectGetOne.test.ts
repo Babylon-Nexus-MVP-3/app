@@ -60,7 +60,6 @@ describe("GET /project/:projectId", () => {
       name: "Test Project",
       location: "123 St",
       council: "C1",
-      pmId: userId,
       status: "Active",
     });
 
