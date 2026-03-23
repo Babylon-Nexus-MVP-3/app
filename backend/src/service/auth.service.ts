@@ -297,7 +297,12 @@ export async function userVerifyEmail(verificationCode: string) {
   user.updatedAt = new Date();
 
   await user.save();
-  return { success: true };
+
+  // Return accessToken and refreshToken so user is immediately logged in by the frontend
+  const accessToken = createAccessToken(user);
+  const refreshToken = createRefreshToken(user);
+
+  return { success: true, accessToken, refreshToken };
 }
 
 export async function resendVerificationCode(email: string) {
