@@ -1,11 +1,17 @@
 import express from "express";
 import * as AuthController from "../controllers/auth.controller";
-import { refreshLimiter, registrationLimiter } from "../middleware";
+import {
+  refreshLimiter,
+  registrationLimiter,
+  resendVerifLimiter,
+  loginLimiter,
+  verifyEmailLimiter,
+} from "../middleware";
 
 export const authRouter = express.Router();
 
 authRouter.post("/register", registrationLimiter, AuthController.register);
-authRouter.post("/login", AuthController.login);
+authRouter.post("/login", loginLimiter, AuthController.login);
 authRouter.post("/refresh", refreshLimiter, AuthController.refresh);
 
 // Forgot Password Flow
@@ -15,5 +21,5 @@ authRouter.post("/verify-reset-code", AuthController.verifyResetCode);
 authRouter.post("/reset-password", AuthController.resetPasswd);
 
 // Email Verification Flow
-authRouter.post("/verify-email", AuthController.verifyEmail);
-authRouter.post("/resend-verification", AuthController.resendVerifyEmail);
+authRouter.post("/verify-email", verifyEmailLimiter, AuthController.verifyEmail);
+authRouter.post("/resend-verification", resendVerifLimiter, AuthController.resendVerifyEmail);
