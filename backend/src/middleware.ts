@@ -6,6 +6,7 @@ import { ProjectModel } from "./models/projectModel";
 import { ProjectError } from "./service/project.service";
 import { ProjectParticipant, ProjectParticipantModel } from "./models/projectParticipantModel";
 import { AuthError } from "./service/auth.service";
+import { UserRole } from "./models/userModel";
 
 export interface JwtPayload {
   sub: string;
@@ -71,7 +72,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 /**
  * Validate projectParticipant role for a particular project
  */
-export function requireProjectRole(...allowedRoles: string[]) {
+export function requireProjectRole(...allowedRoles: UserRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = req.params.projectId;
@@ -87,7 +88,7 @@ export function requireProjectRole(...allowedRoles: string[]) {
       });
       if (!participant) throw new AuthError("User not part of project");
 
-      if (!allowedRoles.includes(participant.role as string)) {
+      if (!allowedRoles.includes(participant.role)) {
         throw new AuthError("Unauthorised");
       }
 

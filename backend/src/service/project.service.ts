@@ -214,11 +214,7 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
   );
 
   if (updatedParticipant) {
-    await syncProjectRoleDisplayFields(
-      participant.projectId,
-      userId,
-      updatedParticipant.role
-    );
+    await syncProjectRoleDisplayFields(participant.projectId, userId, updatedParticipant.role);
   }
 
   return { participant: updatedParticipant };
