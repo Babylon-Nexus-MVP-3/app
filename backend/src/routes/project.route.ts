@@ -7,6 +7,7 @@ import { UserRole } from "../models/userModel";
 export const projectRouter = express.Router();
 
 projectRouter.post("/", requireAuth, ProjectController.create);
+projectRouter.get("/:projectId", requireAuth, ProjectController.getOne);
 projectRouter.post("/:projectId/invite", requireAuth, ProjectController.invite);
 projectRouter.post("/accept", requireAuth, ProjectController.acceptInvite);
 projectRouter.post(

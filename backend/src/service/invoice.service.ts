@@ -107,7 +107,7 @@ export async function submitInvoice(
     aggregateType: "Invoice",
     aggregateId: invoice._id.toString(),
     userId,
-    payload: { submittingParty, submittingCategory, dateDue, description, projectId },
+    payload: { submittingParty, submittingCategory, dateDue, description, amount, projectId },
   });
 
   return invoice._id.toString();
