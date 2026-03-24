@@ -210,11 +210,6 @@ export default function Projects() {
                   params: {
                     id: project.id,
                     name: project.name,
-                    subtitle: project.subtitle,
-                    role: project.role,
-                    health: String(project.health),
-                    overdue: String(project.overdue),
-                    change: String(project.change),
                   },
                 })
               }
