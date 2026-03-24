@@ -20,8 +20,8 @@ import { useAuth } from "@/context/AuthContext";
 const ROLES = [
   "Owner",
   "Builder",
-  "Project Manager",
-  "Subcontractor",
+  "PM",
+  "Subbie",
   "Consultant",
   "Financier",
   "VIP",
@@ -112,7 +112,7 @@ export default function CreateProject() {
           creatorRole: role,
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
-          ...(role === "Project Manager" && { pmId: user?.id }),
+          ...(role === "PM" && { pmId: user?.id }),
           invitees: invitees.map((inv) => ({ email: inv.email.trim(), role: inv.role })),
         }),
       });

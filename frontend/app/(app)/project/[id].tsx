@@ -109,6 +109,58 @@ export default function ProjectDetail() {
   const [change, setChange] = useState<number | null>(null);
   const [role, setRole] = useState("Member");
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
+
+  const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
+  const isInvoiceUploader = INVOICE_UPLOADER_ROLES.includes(role);
+
+  // ── Raise Invoice state ──
+  const [invoiceVisible, setInvoiceVisible] = useState(false);
+  const [invDesc, setInvDesc] = useState("");
+  const [invAmount, setInvAmount] = useState("");
+  const [invDueDate, setInvDueDate] = useState("");
+  const [invSubmittingParty, setInvSubmittingParty] = useState("");
+  const [invCategory, setInvCategory] = useState("");
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [invoiceSuccess, setInvoiceSuccess] = useState(false);
+
+  function openInvoice() {
+    setInvDesc("");
+    setInvAmount("");
+    setInvDueDate("");
+    setInvSubmittingParty("");
+    setInvCategory("");
+    setInvoiceError(null);
+    setInvoiceSuccess(false);
+    setInvoiceVisible(true);
+  }
+
+  async function handleAddInvoice() {
+    setInvoiceLoading(true);
+    setInvoiceError(null);
+    try {
+      const res = await fetchWithAuth(`http://localhost:3229/project/${id}/invoice`, {
+        method: "POST",
+        body: JSON.stringify({
+          submittingParty: invSubmittingParty.trim(),
+          submittingCategory: invCategory.trim(),
+          description: invDesc.trim(),
+          amount: parseFloat(invAmount),
+          dateDue: invDueDate.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInvoiceError(data.error ?? "Failed to submit invoice");
+      } else {
+        setInvoiceSuccess(true);
+      }
+    } catch {
+      setInvoiceError("Network error. Please try again.");
+    } finally {
+      setInvoiceLoading(false);
+    }
+  }
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -171,7 +223,19 @@ export default function ProjectDetail() {
         </SafeAreaView>
       </LinearGradient>
 
-      {/* Sub-tab bar */}
+      {activeTab === "calendar" ? (
+        <CalendarTab invoices={invoices} />
+      ) : (
+        <MySpaceTab
+          role={role}
+          projectId={id}
+          invoices={invoices}
+          builderActions={builderActions}
+          setBuilderActions={setBuilderActions}
+        />
+      )}
+
+      {/* Bottom tab bar */}
       <View style={styles.subTabBar}>
         {(["calendar", "myspace"] as const).map((t) => (
           <TouchableOpacity
@@ -186,17 +250,114 @@ export default function ProjectDetail() {
         ))}
       </View>
 
-      {activeTab === "calendar" ? (
-        <CalendarTab invoices={invoices} />
-      ) : (
-        <MySpaceTab
-          role={role}
-          projectId={id}
-          invoices={invoices}
-          builderActions={builderActions}
-          setBuilderActions={setBuilderActions}
-        />
+      {/* Floating + FAB — only on My Space tab for invoice-uploading roles */}
+      {activeTab === "myspace" && isInvoiceUploader && (
+        <TouchableOpacity style={styles.fab} onPress={openInvoice}>
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
       )}
+
+      {/* ── Raise Invoice modal ── */}
+      <Modal visible={invoiceVisible} animationType="slide" presentationStyle="fullScreen">
+        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={styles.raiseBody}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {invoiceSuccess ? (
+              <View style={[styles.inviteSuccess, { marginTop: 80 }]}>
+                <View style={styles.inviteSuccessIcon}>
+                  <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
+                </View>
+                <Text style={styles.inviteSuccessTitle}>Invoice Submitted!</Text>
+                <Text style={styles.inviteSuccessHint}>Your invoice has been submitted successfully.</Text>
+                <TouchableOpacity
+                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 24 }]}
+                  onPress={() => setInvoiceVisible(false)}
+                >
+                  <Text style={styles.invitePrimaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity onPress={() => setInvoiceVisible(false)} style={styles.raiseBack}>
+                  <Text style={styles.raiseBackArrow}>←</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.raiseTitle}>Raise Invoice</Text>
+                <Text style={styles.raiseSubtitle}>{projectName}</Text>
+
+                <Text style={styles.raiseFieldLabel}>Invoice Date</Text>
+                <View style={styles.raiseDateWrap}>
+                  <TextInput
+                    style={[styles.raiseInput, { flex: 1, marginBottom: 0, borderWidth: 0, backgroundColor: "transparent", paddingHorizontal: 0 }]}
+                    placeholder="dd/mm/yyyy"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={invDueDate}
+                    onChangeText={setInvDueDate}
+                  />
+                  <Text style={styles.raiseCalIcon}>📅</Text>
+                </View>
+
+                <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. 45000"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invAmount}
+                  onChangeText={setInvAmount}
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.raiseFieldLabel}>Description</Text>
+                <TextInput
+                  style={[styles.raiseInput, styles.raiseMultiline]}
+                  placeholder="e.g. Electrical rough-in — Level 3"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invDesc}
+                  onChangeText={setInvDesc}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <Text style={styles.raiseFieldLabel}>Submitting Party</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. ABC Electrical"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invSubmittingParty}
+                  onChangeText={setInvSubmittingParty}
+                />
+
+                <Text style={styles.raiseFieldLabel}>Category</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. Electrical, Plumbing"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invCategory}
+                  onChangeText={setInvCategory}
+                />
+
+                {invoiceError && <Text style={styles.inviteError}>{invoiceError}</Text>}
+
+                <TouchableOpacity
+                  style={styles.raisePrimaryBtn}
+                  onPress={handleAddInvoice}
+                  disabled={invoiceLoading}
+                >
+                  {invoiceLoading ? (
+                    <ActivityIndicator color={Colors.navy} />
+                  ) : (
+                    <Text style={styles.raisePrimaryBtnText}>Submit Invoice</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </LinearGradient>
+      </Modal>
     </View>
   );
 }
@@ -354,6 +515,8 @@ const INVITE_ROLES = [
 ] as const;
 type InviteRole = (typeof INVITE_ROLES)[number];
 
+const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
+
 /* ─── My Space tab (role router) ─── */
 function MySpaceTab({
   role,
@@ -366,33 +529,33 @@ function MySpaceTab({
   projectId: string;
   invoices: ApiInvoice[];
   builderActions: Record<string, "paid" | "info">;
-  setBuilderActions: (
-    fn: (p: Record<string, "paid" | "info">) => Record<string, "paid" | "info">
-  ) => void;
+  setBuilderActions: React.Dispatch<React.SetStateAction<Record<string, "paid" | "info">>>;
 }) {
   const { fetchWithAuth } = useAuth();
+  const isInvoiceUploader = INVOICE_UPLOADER_ROLES.includes(role);
 
-  const [modalVisible, setModalVisible] = useState(false);
+  // ── Invite modal state ──
+  const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("Subbie");
   const [inviteTrade, setInviteTrade] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  function openModal() {
+  function openInvite() {
     setInviteEmail("");
     setInviteRole("Subbie");
     setInviteTrade("");
     setInviteCode(null);
-    setError(null);
-    setModalVisible(true);
+    setInviteError(null);
+    setInviteVisible(true);
   }
 
   async function handleInvite() {
-    setLoading(true);
-    setError(null);
+    setInviteLoading(true);
+    setInviteError(null);
     try {
       const res = await fetchWithAuth(`http://localhost:3229/project/${projectId}/invite`, {
         method: "POST",
@@ -404,20 +567,19 @@ function MySpaceTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to send invite");
+        setInviteError(data.error ?? "Failed to send invite");
       } else {
         setInviteCode(data.participant.inviteCode);
       }
     } catch {
-      setError("Network error. Please try again.");
+      setInviteError("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setInviteLoading(false);
     }
   }
 
   let content: React.ReactNode;
-  if (role === "Subbie" || role === "Subcontractor") content = <SubMySpace invoices={invoices} />;
-  else if (role === "Builder")
+  if (role === "Builder")
     content = (
       <BuilderMySpace
         invoices={invoices}
@@ -425,45 +587,9 @@ function MySpaceTab({
         setBuilderActions={setBuilderActions}
       />
     );
+  else if (isInvoiceUploader) content = <InvoiceUploaderView invoices={invoices} />;
   else if (role === "Owner" || role === "Financier") content = <OwnerMySpace invoices={invoices} />;
-  else if (role === "PM" || role === "Project Manager") {
-    const calCounts = invoices.reduce(
-      (acc, inv) => {
-        const s = apiStatusToCalStatus(inv);
-        acc[s] = (acc[s] ?? 0) + 1;
-        return acc;
-      },
-      {} as Record<InvoiceStatus, number>
-    );
-    content = (
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.sectionLabel}>INVOICE STATUS OVERVIEW</Text>
-        {(["green", "amber", "red", "purple", "grey"] as const).map((s) => (
-          <View key={s} style={[styles.invoiceCard, { borderLeftColor: statusColor(s) }]}>
-            <View style={styles.invoiceRow}>
-              <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
-                <View style={[styles.statusDot, { backgroundColor: statusColor(s) }]} />
-                <Text style={styles.invoiceName}>{statusLabel(s)}</Text>
-              </View>
-              <Text style={[styles.invoiceAmt, { color: statusColor(s) }]}>
-                {calCounts[s] ?? 0} invoices
-              </Text>
-            </View>
-          </View>
-        ))}
-        <View style={[styles.invoiceCard, { borderLeftColor: Colors.navy, marginTop: 4 }]}>
-          <View style={styles.invoiceRow}>
-            <Text style={[styles.invoiceName, { fontWeight: "800" }]}>Total</Text>
-            <Text style={styles.invoiceAmt}>{invoices.length} invoices</Text>
-          </View>
-        </View>
-      </ScrollView>
-    );
-  } else
+  else
     content = (
       <View style={styles.placeholder}>
         <Text style={styles.placeholderText}>My Space</Text>
@@ -475,17 +601,19 @@ function MySpaceTab({
     <View style={{ flex: 1 }}>
       {content}
 
+      {/* Invite footer — always visible */}
       <View style={styles.inviteFooter}>
-        <TouchableOpacity style={styles.inviteBtn} onPress={openModal}>
+        <TouchableOpacity style={styles.inviteBtn} onPress={openInvite}>
           <Text style={styles.inviteBtnText}>+ Invite Team Member</Text>
         </TouchableOpacity>
       </View>
 
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="fullScreen">
+      {/* ── Invite modal ── */}
+      <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={styles.inviteScreen}>
           <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
             <SafeAreaView edges={["top"]}>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.inviteBackBtn}>
+              <TouchableOpacity onPress={() => setInviteVisible(false)} style={styles.inviteBackBtn}>
                 <Text style={styles.inviteBackArrow}>‹</Text>
                 <Text style={styles.inviteBackLabel}>My Space</Text>
               </TouchableOpacity>
@@ -525,7 +653,7 @@ function MySpaceTab({
                 </Text>
                 <TouchableOpacity
                   style={[styles.invitePrimaryBtn, { alignSelf: "stretch" }]}
-                  onPress={() => setModalVisible(false)}
+                  onPress={() => setInviteVisible(false)}
                 >
                   <Text style={styles.invitePrimaryBtnText}>Done</Text>
                 </TouchableOpacity>
@@ -576,14 +704,14 @@ function MySpaceTab({
                   onChangeText={setInviteTrade}
                 />
 
-                {error && <Text style={styles.inviteError}>{error}</Text>}
+                {inviteError && <Text style={styles.inviteError}>{inviteError}</Text>}
 
                 <TouchableOpacity
                   style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
                   onPress={handleInvite}
-                  disabled={loading}
+                  disabled={inviteLoading}
                 >
-                  {loading ? (
+                  {inviteLoading ? (
                     <ActivityIndicator color={Colors.navy} />
                   ) : (
                     <Text style={styles.invitePrimaryBtnText}>Send Invite</Text>
@@ -594,12 +722,13 @@ function MySpaceTab({
           </ScrollView>
         </View>
       </Modal>
+
     </View>
   );
 }
 
-/* ─── Subcontractor ─── */
-function SubMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+/* ─── Invoice uploader view (Subcontractor / Builder / Consultant / PM) ─── */
+function InvoiceUploaderView({ invoices }: { invoices: ApiInvoice[] }) {
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
   const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
   const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
@@ -682,7 +811,7 @@ function SubMySpace({ invoices }: { invoices: ApiInvoice[] }) {
   );
 }
 
-/* ─── Builder ─── */
+/* ─── Builder (own invoices + incoming invoice review) ─── */
 function BuilderMySpace({
   invoices,
   builderActions,
@@ -690,13 +819,14 @@ function BuilderMySpace({
 }: {
   invoices: ApiInvoice[];
   builderActions: Record<string, "paid" | "info">;
-  setBuilderActions: (
-    fn: (p: Record<string, "paid" | "info">) => Record<string, "paid" | "info">
-  ) => void;
+  setBuilderActions: React.Dispatch<React.SetStateAction<Record<string, "paid" | "info">>>;
 }) {
+  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
+  const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+
   const paidInvs = invoices.filter((i) => builderActions[i.id] === "paid");
   const outInvs = invoices.filter((i) => builderActions[i.id] !== "paid");
-  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
 
@@ -706,38 +836,106 @@ function BuilderMySpace({
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.invoiceCard, { borderLeftColor: Colors.navy, marginBottom: 16 }]}>
-        <Text style={[styles.sectionLabel, { marginBottom: 12 }]}>PAYMENT SUMMARY</Text>
-        <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-          {[
-            ["Received", invoices.length, `$${(valTotal / 1000).toFixed(0)}K`, Colors.textPrimary],
-            ["Paid", paidInvs.length, `$${(valPaid / 1000).toFixed(0)}K`, Colors.green],
-            ["Outstanding", outInvs.length, `$${(valOut / 1000).toFixed(0)}K`, Colors.amber],
-          ].map(([label, count, val, color]) => (
-            <View key={label as string} style={{ alignItems: "center" }}>
-              <Text style={styles.statBoxLabel}>{label as string}</Text>
-              <Text style={[styles.statBoxNum, { color: color as string, fontSize: 18 }]}>
-                {val as string}
-              </Text>
-              <Text style={styles.statBoxSub}>{count as number} invoices</Text>
-            </View>
-          ))}
+      {/* ── My Invoices section ── */}
+      <View style={styles.statRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>Outstanding</Text>
+          <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+            ${(outstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+          </Text>
+          <Text style={styles.statBoxSub}>
+            {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>Paid</Text>
+          <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+            ${(paid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+          </Text>
+          <Text style={styles.statBoxSub}>
+            {paid.length} invoice{paid.length !== 1 ? "s" : ""}
+          </Text>
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
+      <Text style={styles.sectionLabel}>MY INVOICES</Text>
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        const isPaid = inv.status === "Paid" || inv.status === "Received";
+        return (
+          <View key={`my-${inv.id}`} style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.description}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {statusLabel(calStatus)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceDate}>
+                Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                {inv.amount != null && (
+                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+                )}
+                {isPaid &&
+                  (confirmed[inv.id] ? (
+                    <Text style={styles.confirmedText}>✓ Confirmed</Text>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.confirmBtn}
+                      onPress={() => setConfirmed((p) => ({ ...p, [inv.id]: true }))}
+                    >
+                      <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
+                    </TouchableOpacity>
+                  ))}
+                {!isPaid && inv.daysOverdue > 0 && (
+                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                    {inv.daysOverdue} days overdue
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        );
+      })}
+
+      {/* ── Incoming Invoices section ── */}
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.statRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>To Pay</Text>
+          <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+            ${(valOut / 1000).toFixed(0)}K
+          </Text>
+          <Text style={styles.statBoxSub}>
+            {outInvs.length} invoice{outInvs.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>Paid Out</Text>
+          <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+            ${(valPaid / 1000).toFixed(0)}K
+          </Text>
+          <Text style={styles.statBoxSub}>
+            {paidInvs.length} invoice{paidInvs.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>INCOMING INVOICES</Text>
       {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
       {invoices.map((inv) => {
         const acted = builderActions[inv.id];
         const calStatus = apiStatusToCalStatus(inv);
         const displayColor =
-          acted === "paid"
-            ? Colors.green
-            : acted === "info"
-              ? Colors.purple
-              : statusColor(calStatus);
+          acted === "paid" ? Colors.green : acted === "info" ? Colors.purple : statusColor(calStatus);
         return (
-          <View key={inv.id} style={[styles.invoiceCard, { borderLeftColor: displayColor }]}>
+          <View key={`in-${inv.id}`} style={[styles.invoiceCard, { borderLeftColor: displayColor }]}>
             <View style={styles.invoiceRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
@@ -750,18 +948,12 @@ function BuilderMySpace({
                   <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
                 )}
                 <Text style={[styles.statusBadgeText, { color: displayColor }]}>
-                  {acted === "paid"
-                    ? "✓ Paid"
-                    : acted === "info"
-                      ? "ℹ Info Req."
-                      : statusLabel(calStatus)}
+                  {acted === "paid" ? "✓ Paid" : acted === "info" ? "ℹ Info Req." : statusLabel(calStatus)}
                 </Text>
               </View>
             </View>
             {inv.daysOverdue > 0 && !acted && (
-              <Text
-                style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}
-              >
+              <Text style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}>
                 {inv.daysOverdue} days overdue
               </Text>
             )}
@@ -898,15 +1090,15 @@ const styles = StyleSheet.create({
   overdueAlertArrow: { fontSize: 16, color: Colors.red },
 
   // Sub-tab bar
-  subTabBar: { flexDirection: "row", backgroundColor: Colors.navy, paddingBottom: 12 },
+  subTabBar: { flexDirection: "row", backgroundColor: Colors.navy, paddingBottom: 24 },
   subTab: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    borderTopWidth: 2,
+    borderTopColor: "transparent",
   },
-  subTabActive: { borderBottomColor: Colors.gold },
+  subTabActive: { borderTopColor: Colors.gold },
   subTabText: { fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.4)" },
   subTabTextActive: { color: Colors.gold },
 
@@ -1027,11 +1219,84 @@ const styles = StyleSheet.create({
   },
   actionBtnText: { fontSize: 12, fontWeight: "700", color: Colors.white },
 
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.08)",
+    marginVertical: 20,
+  },
+
   // Placeholder
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
   placeholderText: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 8 },
   emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center", marginTop: 16 },
   placeholderSub: { fontSize: 14, color: Colors.textSecondary },
+
+  // Floating action button
+  fab: {
+    position: "absolute",
+    bottom: 145,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabText: { fontSize: 28, color: Colors.white, lineHeight: 32, fontWeight: "300" },
+
+  // Raise Invoice — matches create-project aesthetic
+  raiseBody: { paddingTop: 70, paddingHorizontal: 24, paddingBottom: 48 },
+  raiseBack: { alignSelf: "flex-start", marginBottom: 24 },
+  raiseBackArrow: { fontSize: 28, color: Colors.gold },
+  raiseTitle: { fontSize: 28, fontWeight: "800", color: Colors.white, marginBottom: 6 },
+  raiseSubtitle: { fontSize: 14, color: "rgba(255,255,255,0.5)", marginBottom: 36 },
+  raiseFieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.goldLight,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  raiseInput: {
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "rgba(201,168,76,0.25)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: Colors.white,
+  },
+  raiseDateWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "rgba(201,168,76,0.25)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginBottom: 20,
+  },
+  raiseCalIcon: { fontSize: 18 },
+  raiseMultiline: { height: 100, paddingTop: 14 },
+  raisePrimaryBtn: {
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  raisePrimaryBtnText: { fontSize: 16, fontWeight: "700", color: Colors.navy },
 
   // Invite footer (visible for all roles)
   inviteFooter: {
