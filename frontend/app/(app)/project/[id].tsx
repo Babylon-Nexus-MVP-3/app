@@ -271,7 +271,9 @@ export default function ProjectDetail() {
                   <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
                 </View>
                 <Text style={styles.inviteSuccessTitle}>Invoice Submitted!</Text>
-                <Text style={styles.inviteSuccessHint}>Your invoice has been submitted successfully.</Text>
+                <Text style={styles.inviteSuccessHint}>
+                  Your invoice has been submitted successfully.
+                </Text>
                 <TouchableOpacity
                   style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 24 }]}
                   onPress={() => setInvoiceVisible(false)}
@@ -291,7 +293,16 @@ export default function ProjectDetail() {
                 <Text style={styles.raiseFieldLabel}>Invoice Date</Text>
                 <View style={styles.raiseDateWrap}>
                   <TextInput
-                    style={[styles.raiseInput, { flex: 1, marginBottom: 0, borderWidth: 0, backgroundColor: "transparent", paddingHorizontal: 0 }]}
+                    style={[
+                      styles.raiseInput,
+                      {
+                        flex: 1,
+                        marginBottom: 0,
+                        borderWidth: 0,
+                        backgroundColor: "transparent",
+                        paddingHorizontal: 0,
+                      },
+                    ]}
                     placeholder="dd/mm/yyyy"
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={invDueDate}
@@ -613,7 +624,10 @@ function MySpaceTab({
         <View style={styles.inviteScreen}>
           <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
             <SafeAreaView edges={["top"]}>
-              <TouchableOpacity onPress={() => setInviteVisible(false)} style={styles.inviteBackBtn}>
+              <TouchableOpacity
+                onPress={() => setInviteVisible(false)}
+                style={styles.inviteBackBtn}
+              >
                 <Text style={styles.inviteBackArrow}>‹</Text>
                 <Text style={styles.inviteBackLabel}>My Space</Text>
               </TouchableOpacity>
@@ -722,7 +736,6 @@ function MySpaceTab({
           </ScrollView>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -864,7 +877,10 @@ function BuilderMySpace({
         const calStatus = apiStatusToCalStatus(inv);
         const isPaid = inv.status === "Paid" || inv.status === "Received";
         return (
-          <View key={`my-${inv.id}`} style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+          <View
+            key={`my-${inv.id}`}
+            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+          >
             <View style={styles.invoiceRow}>
               <Text style={styles.invoiceName}>{inv.description}</Text>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
@@ -933,9 +949,16 @@ function BuilderMySpace({
         const acted = builderActions[inv.id];
         const calStatus = apiStatusToCalStatus(inv);
         const displayColor =
-          acted === "paid" ? Colors.green : acted === "info" ? Colors.purple : statusColor(calStatus);
+          acted === "paid"
+            ? Colors.green
+            : acted === "info"
+              ? Colors.purple
+              : statusColor(calStatus);
         return (
-          <View key={`in-${inv.id}`} style={[styles.invoiceCard, { borderLeftColor: displayColor }]}>
+          <View
+            key={`in-${inv.id}`}
+            style={[styles.invoiceCard, { borderLeftColor: displayColor }]}
+          >
             <View style={styles.invoiceRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
@@ -948,12 +971,18 @@ function BuilderMySpace({
                   <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
                 )}
                 <Text style={[styles.statusBadgeText, { color: displayColor }]}>
-                  {acted === "paid" ? "✓ Paid" : acted === "info" ? "ℹ Info Req." : statusLabel(calStatus)}
+                  {acted === "paid"
+                    ? "✓ Paid"
+                    : acted === "info"
+                      ? "ℹ Info Req."
+                      : statusLabel(calStatus)}
                 </Text>
               </View>
             </View>
             {inv.daysOverdue > 0 && !acted && (
-              <Text style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}>
+              <Text
+                style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}
+              >
                 {inv.daysOverdue} days overdue
               </Text>
             )}
