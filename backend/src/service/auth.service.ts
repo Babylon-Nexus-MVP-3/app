@@ -13,6 +13,7 @@ import {
   generateCode,
   hashPassword,
 } from "../utils/authHelper";
+import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -66,14 +67,19 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     accountLocked: false,
     verificationCode: code, // TODO: Hash verification code before storing in production
     verificationCodeExpiry: expiry,
-    // TODO: set emailVerified: false and status: "Pending" once email verification is implemented
-    // Send verification email here and add POST /auth/verify-email endpoint to activate account
-    emailVerified: true,
-    status: "Active",
+    emailVerified: false,
+    status: "Pending",
   });
 
   await newUser.save();
-  console.log(`[DEV] Verification code for ${normalisedEmail}: ${code}`);
+
+  // Prevent emails being sent during tests
+  if (process.env.NODE_ENV !== "test") {
+    await sendOnboardingEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to send invite email to ${normalisedEmail}:`, err);
+    });
+  }
+
   return newUser._id.toString();
 }
 
@@ -270,6 +276,54 @@ export async function resetPassword(resetCode: string, newPassword: string) {
   user.updatedAt = new Date();
 
   await user.save();
+
+  return { success: true };
+}
+
+export async function userVerifyEmail(verificationCode: string) {
+  const user = await UserModel.findOne({ verificationCode: verificationCode });
+  if (!user) {
+    throw new AuthError("Invalid Verification Code");
+  }
+
+  if (user.verificationCodeExpiry && user.verificationCodeExpiry < new Date()) {
+    throw new AuthError("Verification code has expired");
+  }
+
+  user.verificationCode = undefined;
+  user.verificationCodeExpiry = undefined;
+  user.emailVerified = true;
+  user.status = "Active";
+  user.updatedAt = new Date();
+
+  await user.save();
+
+  // Return accessToken and refreshToken so user is immediately logged in by the frontend
+  const accessToken = createAccessToken(user);
+  const refreshToken = createRefreshToken(user);
+
+  return { success: true, accessToken, refreshToken };
+}
+
+export async function resendVerificationCode(email: string) {
+  const normalisedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user) {
+    throw new AuthError("Email not found");
+  }
+
+  const { code, expiry } = generateCode();
+  await UserModel.findOneAndUpdate(
+    { _id: user._id },
+    { $set: { verificationCode: code, verificationCodeExpiry: expiry } }
+  );
+
+  // Prevent emails being sent from tests
+  if (process.env.NODE_ENV !== "test") {
+    await sendResendVerificationEmail(email, code).catch((err) => {
+      console.error(`Failed to send invite email to ${email}:`, err);
+    });
+  }
 
   return { success: true };
 }

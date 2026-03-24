@@ -5,7 +5,9 @@ import {
   loginUser,
   registerUser,
   resendResetCodeService,
+  resendVerificationCode,
   resetPassword,
+  userVerifyEmail,
   verifyResetCodeService,
 } from "../service/auth.service";
 
@@ -104,6 +106,27 @@ export const resetPasswd = async (req: Request, res: Response, next: NextFunctio
 
   try {
     const result = await resetPassword(resetCode, newPassword);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
+  const { verificationCode } = req.body;
+  try {
+    const result = await userVerifyEmail(verificationCode);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resendVerifyEmail = async (req: Request, res: Response, next: NextFunction) => {
+  const { email } = req.body;
+
+  try {
+    const result = await resendVerificationCode(email);
     res.status(200).json(result);
   } catch (err) {
     next(err);

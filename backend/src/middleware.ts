@@ -31,17 +31,44 @@ declare global {
 
 // Limits registration attempts to 5 per IP every 15 minutes to prevent abuse.
 // Skipped in test environments.
-const registrationLimiter = rateLimit({
+export const registrationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
   message: "Too many registration attempts. Please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV === "test",
 });
-const refreshLimiter = rateLimit({
+
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  message: "Too many login attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: true,
+});
+
+export const resendVerifLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 3,
+  keyGenerator: (req) => req.body.email, // Rate limit per email
+  message: "Too many attempts to resend verification code, Please try again later",
+  standardHeaders: true,
+  legacyHeaders: true,
+});
+
+export const verifyEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
+  keyGenerator: (req) => req.body.email, // Per email
+  message: "Too many verification attempts. Please request a new code.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
   message: "Too many refresh attempts please try again later",
   standardHeaders: true,
   legacyHeaders: true,
@@ -116,5 +143,3 @@ export function requireRole(...allowedRoles: string[]) {
     next();
   };
 }
-
-export { registrationLimiter, refreshLimiter };
