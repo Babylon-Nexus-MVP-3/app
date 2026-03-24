@@ -59,9 +59,8 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
 
   const projectIds = projects.map((p: any) => p._id.toString());
 
-  const allInvoices = projectIds.length > 0
-    ? await InvoiceModel.find({ projectId: { $in: projectIds } }).lean()
-    : [];
+  const allInvoices =
+    projectIds.length > 0 ? await InvoiceModel.find({ projectId: { $in: projectIds } }).lean() : [];
 
   const invoicesByProject = new Map<string, any[]>();
   for (const inv of allInvoices) {
