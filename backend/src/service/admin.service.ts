@@ -1,4 +1,4 @@
-import { UserModel } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { sendInviteEmail } from "./email.service";
@@ -138,4 +138,115 @@ export async function rejectProject(projectId: string): Promise<void> {
   if (result.matchedCount === 0) {
     throw new AdminError("Project not found or already processed", 404);
   }
+}
+
+export interface RemoveProjectParticipantInput {
+  projectId: string;
+  email?: string;
+  role?: string;
+}
+
+export async function removeProjectParticipant(
+  input: RemoveProjectParticipantInput
+): Promise<{ removedCount: number }> {
+  const projectId = input.projectId?.toString();
+  const email = input.email?.trim();
+  const role = input.role?.trim();
+
+  if (!projectId) throw new AdminError("projectId is required", 400);
+  if (!email) throw new AdminError("email is required", 400);
+  if (!role) throw new AdminError("role is required", 400);
+
+  if (!Object.values(UserRole).includes(role as UserRole)) {
+    throw new AdminError("Invalid role", 400);
+  }
+
+  const project = await ProjectModel.findById(projectId);
+  if (!project) throw new AdminError("Project does not exist", 404);
+
+  const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const emailRegex = new RegExp(`^${escapedEmail}$`, "i");
+
+  const deletedAcceptedUserIds: string[] = [];
+  const participantsToDelete = await ProjectParticipantModel.find({
+    projectId,
+    email: { $regex: emailRegex },
+    role,
+  }).select("status userId role email");
+
+  if (participantsToDelete.length === 0) {
+    throw new AdminError("Participant not found", 404);
+  }
+
+  for (const p of participantsToDelete) {
+    if (p.status === "Accepted" && p.userId) deletedAcceptedUserIds.push(p.userId);
+  }
+
+  // Keep a snapshot of the current display-only role fields so we only touch the matching one.
+  const pmIdBefore = project.pmId;
+  const ownerIdBefore = project.ownerId;
+  const builderIdBefore = project.builderId;
+
+  const deleteResult = await ProjectParticipantModel.deleteMany({
+    projectId,
+    email: { $regex: emailRegex },
+    role,
+  });
+
+  const removedCount = deleteResult.deletedCount ?? 0;
+
+  // If we just removed the current PM/Owner/Builder user for this project,
+  // keep the display fields in sync with what's left after deletion.
+  if (role === UserRole.PM && pmIdBefore && deletedAcceptedUserIds.includes(pmIdBefore)) {
+    const replacement = await ProjectParticipantModel.findOne({
+      projectId,
+      status: "Accepted",
+      role: UserRole.PM,
+      userId: { $exists: true, $ne: "" },
+    }).select("userId");
+
+    if (replacement?.userId) {
+      project.pmId = replacement.userId;
+    } else {
+      project.pmId = undefined;
+    }
+  }
+
+  if (role === UserRole.Owner && ownerIdBefore && deletedAcceptedUserIds.includes(ownerIdBefore)) {
+    const replacement = await ProjectParticipantModel.findOne({
+      projectId,
+      status: "Accepted",
+      role: UserRole.Owner,
+      userId: { $exists: true, $ne: "" },
+    }).select("userId");
+
+    if (replacement?.userId) {
+      project.ownerId = replacement.userId;
+    } else {
+      project.ownerId = undefined;
+    }
+  }
+
+  if (
+    role === UserRole.Builder &&
+    builderIdBefore &&
+    deletedAcceptedUserIds.includes(builderIdBefore)
+  ) {
+    const replacement = await ProjectParticipantModel.findOne({
+      projectId,
+      status: "Accepted",
+      role: UserRole.Builder,
+      userId: { $exists: true, $ne: "" },
+    }).select("userId");
+
+    if (replacement?.userId) {
+      project.builderId = replacement.userId;
+    } else {
+      project.builderId = undefined;
+    }
+  }
+
+  await project.save();
+
+  return { removedCount };
 }
