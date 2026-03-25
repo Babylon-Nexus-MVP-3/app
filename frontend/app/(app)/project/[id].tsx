@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
@@ -92,6 +93,7 @@ const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 // Cap at 46px so cells stay compact on large/tablet screens
 const DAY_CELL = Math.min(Math.floor((SCREEN_WIDTH - 40 - 24) / 7), 46);
+const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
 
 /* ─── Main screen ─── */
 export default function ProjectDetail() {
@@ -109,15 +111,14 @@ export default function ProjectDetail() {
   const [change, setChange] = useState<number | null>(null);
   const [role, setRole] = useState("Member");
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
-
-  const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
   const isInvoiceUploader = INVOICE_UPLOADER_ROLES.includes(role);
 
   // ── Raise Invoice state ──
   const [invoiceVisible, setInvoiceVisible] = useState(false);
   const [invDesc, setInvDesc] = useState("");
   const [invAmount, setInvAmount] = useState("");
-  const [invDueDate, setInvDueDate] = useState("");
+  const [invDueDate, setInvDueDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [invSubmittingParty, setInvSubmittingParty] = useState("");
   const [invCategory, setInvCategory] = useState("");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -127,7 +128,7 @@ export default function ProjectDetail() {
   function openInvoice() {
     setInvDesc("");
     setInvAmount("");
-    setInvDueDate("");
+    setInvDueDate(null);
     setInvSubmittingParty("");
     setInvCategory("");
     setInvoiceError(null);
@@ -146,7 +147,7 @@ export default function ProjectDetail() {
           submittingCategory: invCategory.trim(),
           description: invDesc.trim(),
           amount: parseFloat(invAmount),
-          dateDue: invDueDate.trim(),
+          dateDue: invDueDate?.toISOString(),
         }),
       });
       const data = await res.json();
@@ -291,8 +292,11 @@ export default function ProjectDetail() {
                 <Text style={styles.raiseSubtitle}>{projectName}</Text>
 
                 <Text style={styles.raiseFieldLabel}>Invoice Date</Text>
-                <View style={styles.raiseDateWrap}>
-                  <TextInput
+                <TouchableOpacity
+                  style={styles.raiseDateWrap}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text
                     style={[
                       styles.raiseInput,
                       {
@@ -301,15 +305,26 @@ export default function ProjectDetail() {
                         borderWidth: 0,
                         backgroundColor: "transparent",
                         paddingHorizontal: 0,
+                        color: invDueDate ? "#fff" : "rgba(255,255,255,0.3)",
+                        lineHeight: 20,
                       },
                     ]}
-                    placeholder="dd/mm/yyyy"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={invDueDate}
-                    onChangeText={setInvDueDate}
-                  />
+                  >
+                    {invDueDate ? invDueDate.toLocaleDateString("en-AU") : "dd/mm/yyyy"}
+                  </Text>
                   <Text style={styles.raiseCalIcon}>📅</Text>
-                </View>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={invDueDate ?? new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event: DateTimePickerEvent, date?: Date) => {
+                      setShowDatePicker(false);
+                      if (event.type === "set" && date) setInvDueDate(date);
+                    }}
+                  />
+                )}
 
                 <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
                 <TextInput
@@ -525,8 +540,6 @@ const INVITE_ROLES = [
   "Observer",
 ] as const;
 type InviteRole = (typeof INVITE_ROLES)[number];
-
-const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
 
 /* ─── My Space tab (role router) ─── */
 function MySpaceTab({
