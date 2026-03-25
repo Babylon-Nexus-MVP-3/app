@@ -49,7 +49,7 @@ export interface GetProjectDetailsResult {
 
 function computeHealthScoreByDueDate(invoices: any[], now: Date): number {
   const paid = invoices.filter((i) => isPaidStatus(i.status));
-  if (paid.length === 0) return 0;
+  if (paid.length === 0) return 100;
 
   const onTime = paid.filter((i) => {
     const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;

@@ -34,6 +34,8 @@ type ApiProject = {
   council: string;
   status: string;
   userRole?: string;
+  healthScore?: number;
+  overdueInvoiceCount?: number;
 };
 
 export default function Projects() {
@@ -65,8 +67,8 @@ export default function Projects() {
         name: p.name,
         subtitle: p.council,
         role: p.userRole ?? "Team Member",
-        health: 0,
-        overdue: 0,
+        health: p.healthScore ?? 100,
+        overdue: p.overdueInvoiceCount ?? 0,
         change: 0,
       }));
       setProjects(mapped);

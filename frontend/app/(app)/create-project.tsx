@@ -17,16 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
-const ROLES = [
-  "Owner",
-  "Builder",
-  "Project Manager",
-  "Subcontractor",
-  "Consultant",
-  "Financier",
-  "VIP",
-  "Observer",
-];
+const ROLES = ["Owner", "Builder", "PM", "Subbie", "Consultant", "Financier", "VIP", "Observer"];
 
 type Invitee = { email: string; role: string };
 
@@ -112,7 +103,7 @@ export default function CreateProject() {
           creatorRole: role,
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
-          ...(role === "Project Manager" && { pmId: user?.id }),
+          ...(role === "PM" && { pmId: user?.id }),
           invitees: invitees.map((inv) => ({ email: inv.email.trim(), role: inv.role })),
         }),
       });

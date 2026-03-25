@@ -1,5 +1,21 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
+import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+
+function isPaidStatus(status: InvoiceStatus): boolean {
+  return status === "Paid" || status === "Received";
+}
+
+function computeHealthScore(invoices: any[], now: Date): number {
+  const paid = invoices.filter((i) => isPaidStatus(i.status));
+  if (paid.length === 0) return 100;
+  const onTime = paid.filter((i) => {
+    const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;
+    if (!paidDate) return false;
+    return paidDate.getTime() <= new Date(i.dateDue).getTime();
+  });
+  return Math.round((onTime.length / paid.length) * 100);
+}
 
 export interface ListProjectsResult {
   projects: any[];
@@ -41,11 +57,24 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
     .sort({ createdAt: -1 })
     .lean();
 
+  const projectIds = projects.map((p: any) => p._id.toString());
+
+  const allInvoices =
+    projectIds.length > 0 ? await InvoiceModel.find({ projectId: { $in: projectIds } }).lean() : [];
+
+  const invoicesByProject = new Map<string, any[]>();
+  for (const inv of allInvoices) {
+    const pid = inv.projectId.toString();
+    if (!invoicesByProject.has(pid)) invoicesByProject.set(pid, []);
+    invoicesByProject.get(pid)!.push(inv);
+  }
+
+  const now = new Date();
+
   const projectsWithRole = projects.map((p: any) => {
     const projectId = p._id.toString();
     const participantRole = roleByProjectId.get(projectId);
 
-    // Fallback: infer role from explicit assignment fields when no participant record exists.
     const inferredRole =
       participantRole ??
       (p.pmId === normalizedUserId
@@ -56,7 +85,13 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
             ? "Builder"
             : undefined);
 
-    return { ...p, userRole: inferredRole };
+    const invoices = invoicesByProject.get(projectId) ?? [];
+    const healthScore = computeHealthScore(invoices, now);
+    const overdueInvoiceCount = invoices.filter(
+      (i) => !isPaidStatus(i.status) && i.daysOverdue > 0
+    ).length;
+
+    return { ...p, userRole: inferredRole, healthScore, overdueInvoiceCount };
   });
 
   return { projects: projectsWithRole, total: projectsWithRole.length };
