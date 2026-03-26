@@ -31,6 +31,8 @@ export interface ProjectInvoiceListItem {
   amount?: number;
   status: InvoiceStatus;
   daysOverdue: number;
+  approverRole: string;
+  submittedByUserId: string;
 }
 
 export interface GetProjectDetailsResult {
@@ -108,6 +110,8 @@ export async function getProjectDetails(
       amount: i.amount,
       status: i.status,
       daysOverdue: overdue,
+      approverRole: i.approverRole,
+      submittedByUserId: i.submittedByUserId.toString(),
     };
   });
 

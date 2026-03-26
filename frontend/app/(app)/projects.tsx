@@ -13,6 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+
+const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
+function displayRole(role: string): string { return ROLE_DISPLAY[role] ?? role; }
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
@@ -224,7 +227,7 @@ export default function Projects() {
 
                 <View style={styles.badgeRow}>
                   <View style={styles.roleBadge}>
-                    <Text style={styles.roleBadgeText}>{project.role}</Text>
+                    <Text style={styles.roleBadgeText}>{displayRole(project.role)}</Text>
                   </View>
 
                   {project.overdue > 0 && (
@@ -284,7 +287,7 @@ export default function Projects() {
                 <Text style={styles.joinSuccessTitle}>{"You've joined!"}</Text>
                 <Text style={styles.joinSuccessHint}>{"You've been added as"}</Text>
                 <View style={styles.joinRoleBadge}>
-                  <Text style={styles.joinRoleBadgeText}>{joinedRole}</Text>
+                  <Text style={styles.joinRoleBadgeText}>{displayRole(joinedRole!)}</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.joinPrimaryBtn, { alignSelf: "stretch" }]}

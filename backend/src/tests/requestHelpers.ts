@@ -67,6 +67,36 @@ export const requestInvite = async (
     });
 };
 
+export async function requestApproveInvoice(token: string, projectId: string, invoiceId: string) {
+  return request(app)
+    .patch(`/project/${projectId}/invoice/${invoiceId}/approve`)
+    .set("Authorization", `Bearer ${token}`);
+}
+
+export async function requestMarkPaid(token: string, projectId: string, invoiceId: string) {
+  return request(app)
+    .patch(`/project/${projectId}/invoice/${invoiceId}/paid`)
+    .set("Authorization", `Bearer ${token}`);
+}
+
+export async function requestMarkReceived(token: string, projectId: string, invoiceId: string) {
+  return request(app)
+    .patch(`/project/${projectId}/invoice/${invoiceId}/received`)
+    .set("Authorization", `Bearer ${token}`);
+}
+
+export async function requestRejectInvoice(
+  token: string,
+  projectId: string,
+  invoiceId: string,
+  rejectionReason?: string
+) {
+  return request(app)
+    .patch(`/project/${projectId}/invoice/${invoiceId}/reject`)
+    .set("Authorization", `Bearer ${token}`)
+    .send(rejectionReason ? { rejectionReason } : {});
+}
+
 export async function requestAcceptInvite(inviteCode: string, token: string) {
   return request(app)
     .post(`/project/accept`)

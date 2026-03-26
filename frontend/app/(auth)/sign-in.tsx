@@ -37,7 +37,8 @@ export default function SignIn() {
         body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
       });
       const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      let data: any = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { /* plain text response */ }
       if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
 
       await login(data.accessToken, data.refreshToken, data.user);
