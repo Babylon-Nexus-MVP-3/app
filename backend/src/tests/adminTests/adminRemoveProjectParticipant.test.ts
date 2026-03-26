@@ -72,7 +72,7 @@ describe("Admin participant removal endpoints", () => {
     });
 
     const res = await request(app)
-      .put(`/admin/projects/${project._id}/participants/reject`)
+      .delete(`/admin/projects/${project._id}/participants/remove`)
       .set("Authorization", `Bearer ${token}`)
       .send({ email: "pending@example.com", role: UserRole.Subbie });
 
@@ -128,7 +128,7 @@ describe("Admin participant removal endpoints", () => {
     });
 
     const res = await request(app)
-      .put(`/admin/projects/${project._id}/participants/reject`)
+      .delete(`/admin/projects/${project._id}/participants/remove`)
       .set("Authorization", `Bearer ${token}`)
       .send({ email: "pm@example.com", role: UserRole.PM });
 
@@ -153,7 +153,7 @@ describe("Admin participant removal endpoints", () => {
     });
 
     const res = await request(app)
-      .put(`/admin/projects/${project._id}/participants/reject`)
+      .delete(`/admin/projects/${project._id}/participants/remove`)
       .set("Authorization", `Bearer ${token}`)
       .send({ email: "missing@example.com", role: UserRole.Subbie });
 
@@ -187,7 +187,7 @@ describe("Admin participant removal endpoints", () => {
     });
 
     const res = await request(app)
-      .put(`/admin/projects/${project._id}/participants/reject`)
+      .delete(`/admin/projects/${project._id}/participants/remove`)
       .set("Authorization", `Bearer ${token}`)
       .send({ email: "any@example.com", role: UserRole.Subbie });
 

@@ -13,7 +13,7 @@ adminRouter.get("/projects/pending", AdminController.listPendingProjects);
 adminRouter.get("/projects/active", AdminController.listActiveProjects);
 adminRouter.put("/projects/:projectId/approve", AdminController.approveProject);
 adminRouter.put("/projects/:projectId/reject", AdminController.rejectProject);
-adminRouter.put(
-  "/projects/:projectId/participants/reject",
+adminRouter.delete(
+  "/projects/:projectId/participants/remove",
   AdminController.removeProjectParticipant
 );
