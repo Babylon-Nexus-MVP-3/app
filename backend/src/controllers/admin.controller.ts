@@ -87,3 +87,24 @@ export async function rejectProject(
     next(err);
   }
 }
+
+export async function removeProjectParticipant(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projectId = req.params.projectId as string;
+    const { email, role } = req.body as { email?: string; role?: string };
+
+    const { removedCount } = await AdminService.removeProjectParticipant({
+      projectId,
+      email,
+      role,
+    });
+
+    res.status(200).json({ success: true, removedCount, message: "Participant removed" });
+  } catch (err) {
+    next(err);
+  }
+}
