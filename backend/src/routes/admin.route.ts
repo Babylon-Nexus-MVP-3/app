@@ -1,10 +1,11 @@
 import express from "express";
 import * as AdminController from "../controllers/admin.controller";
 import { requireAuth, requireRole } from "../middleware";
+import { UserRole } from "../models/userModel";
 
 export const adminRouter = express.Router();
 
-adminRouter.use(requireAuth, requireRole("Admin"));
+adminRouter.use(requireAuth, requireRole(UserRole.Admin));
 
 adminRouter.get("/users/pending", AdminController.listPendingUsers);
 adminRouter.put("/users/:userId/approve", AdminController.approveUser);
@@ -17,3 +18,5 @@ adminRouter.delete(
   "/projects/:projectId/participants/remove",
   AdminController.removeProjectParticipant
 );
+
+adminRouter.delete("/projects/:projectId", AdminController.removeProject);

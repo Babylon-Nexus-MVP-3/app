@@ -2,6 +2,7 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { sendInviteEmail } from "./email.service";
+import { ProjectError } from "./project.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -249,4 +250,16 @@ export async function removeProjectParticipant(
   await project.save();
 
   return { removedCount };
+}
+
+export async function deleteProject(projectId: string) {
+  const project = await ProjectModel.findById(projectId);
+  if (!project) {
+    throw new ProjectError("Project Does not exist");
+  }
+
+  await ProjectParticipantModel.deleteMany({ projectId });
+  await project.deleteOne();
+
+  return { success: true };
 }

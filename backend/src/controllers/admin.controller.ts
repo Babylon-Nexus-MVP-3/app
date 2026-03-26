@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as AdminService from "../service/admin.service";
+import { deleteProject } from "../service/admin.service";
 
 export async function listPendingUsers(
   _req: Request,
@@ -104,6 +105,20 @@ export async function removeProjectParticipant(
     });
 
     res.status(200).json({ success: true, removedCount, message: "Participant removed" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function removeProject(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projectId = req.params.projectId as string;
+    const result = await deleteProject(projectId);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
