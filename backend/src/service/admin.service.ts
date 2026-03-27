@@ -268,7 +268,7 @@ export async function getAdminProjectDetail(projectId: string) {
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
-    .select("email role status")
+    .select("_id email role status")
     .sort({ status: 1, role: 1 })
     .lean();
 
@@ -332,7 +332,12 @@ export async function getAdminProjectDetail(projectId: string) {
       location: project.location,
       council: project.council,
     },
-    participants: participants.map((p) => ({ email: p.email, role: p.role, status: p.status })),
+    participants: participants.map((p) => ({
+      participantId: p._id.toString(),
+      email: p.email,
+      role: p.role,
+      status: p.status,
+    })),
     healthScore,
     overdueInvoiceCount,
     monthOnMonthHealthChangePct,

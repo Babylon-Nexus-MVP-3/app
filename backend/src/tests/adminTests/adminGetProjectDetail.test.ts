@@ -157,10 +157,12 @@ describe("GET /admin/projects/:projectId", () => {
 
     const subbie = res.body.participants.find((p: any) => p.email === "subbie@test.com");
     expect(subbie.status).toBe("Pending");
+    expect(subbie.participantId).toBeDefined();
 
     const builder = res.body.participants.find((p: any) => p.email === "builder@test.com");
     expect(builder.status).toBe("Accepted");
     expect(builder.role).toBe(UserRole.Builder);
+    expect(builder.participantId).toBeDefined();
   });
 
   it("returns invoices with correct fields", async () => {

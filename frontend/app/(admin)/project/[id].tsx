@@ -32,6 +32,7 @@ type ApiInvoice = {
 };
 
 type Participant = {
+  participantId: string;
   email: string;
   role: string;
   status: "Pending" | "Accepted";
@@ -412,7 +413,7 @@ function MembersTab({
       <View style={styles.membersCard}>
         {participants.map((p, i) => (
           <View
-            key={`${p.email}-${p.role}`}
+            key={p.participantId}
             style={[styles.memberRow, i < participants.length - 1 && styles.memberRowBorder]}
           >
             <View style={styles.memberInfo}>
