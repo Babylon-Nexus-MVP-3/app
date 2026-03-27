@@ -136,6 +136,7 @@ export default function AdminProjectDetail() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -203,8 +204,11 @@ export default function AdminProjectDetail() {
               />
             )}
             {change !== null && (
-              <Text style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}>
-                {change >= 0 ? "+" : ""}{change}% vs last month
+              <Text
+                style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
+              >
+                {change >= 0 ? "+" : ""}
+                {change}% vs last month
               </Text>
             )}
           </View>
@@ -315,7 +319,9 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
                 },
                 selected && styles.dayCellSelected,
               ]}
-              onPress={() => (status ? setSelectedDay(selected ? null : { day, status }) : undefined)}
+              onPress={() =>
+                status ? setSelectedDay(selected ? null : { day, status }) : undefined
+              }
               activeOpacity={status ? 0.7 : 1}
             >
               <Text style={styles.dayNum}>{day}</Text>
@@ -534,7 +540,13 @@ const styles = StyleSheet.create({
   // Calendar
   monthRow: { alignItems: "center", marginBottom: 12 },
   monthTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
-  calGrid: { flexDirection: "row", flexWrap: "wrap", gap: 2, marginBottom: 16, justifyContent: "center" },
+  calGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 2,
+    marginBottom: 16,
+    justifyContent: "center",
+  },
   weekDay: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
   dayCell: { borderRadius: 8, alignItems: "center", justifyContent: "center" },
   dayCellSelected: { borderWidth: 2, borderColor: Colors.navy },
@@ -570,7 +582,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  invoiceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  invoiceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   invoiceName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
   invoiceDate: { fontSize: 12, color: Colors.textSecondary },
   invoiceDays: { fontSize: 12, fontWeight: "600" },
