@@ -13,12 +13,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-
-const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
-function displayRole(role: string): string { return ROLE_DISPLAY[role] ?? role; }
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
+
+const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
+function displayRole(role: string): string {
+  return ROLE_DISPLAY[role] ?? role;
+}
 
 type Project = {
   id: string;
