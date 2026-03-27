@@ -108,8 +108,8 @@ export default function CreateProject() {
           creatorRole: ROLE_MAP[role] ?? role,
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
-          ...(role === "Project Manager" && { pmId: user?.id }),
-          invitees: invitees.map((inv) => ({ email: inv.email.trim(), role: inv.role })),
+          ...((ROLE_MAP[role] ?? role) === "PM" && { pmId: user?.id }),
+          invitees: invitees.map((inv) => ({ email: inv.email.trim(), role: ROLE_MAP[inv.role] ?? inv.role })),
         }),
       });
 
