@@ -188,6 +188,7 @@ export default function ProjectDetail() {
         setInvoiceError(data.error ?? "Failed to submit invoice");
       } else {
         setInvoiceSuccess(true);
+        await loadProject();
       }
     } catch {
       setInvoiceError("Network error. Please try again.");
@@ -790,8 +791,12 @@ function MySpaceTab({
     content = <PMMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
   else if (role === "Subbie" || role === "Consultant")
     content = <InvoiceUploaderView invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
-  else if (role === "Owner" || role === "Financier" || role === "VIP")
+  else if (role === "Owner")
     content = <OwnerMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+  else if (role === "Financier" || role === "VIP")
+    content = <FinancierMySpace invoices={invoices} />;
+  else if (role === "Observer")
+    content = <ObserverMySpace invoices={invoices} />;
   else
     content = (
       <View style={styles.placeholder}>
@@ -958,7 +963,7 @@ function MyInvoiceCard({
         <Text style={styles.invoiceDate}>Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {inv.amount != null && (
-            <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
           )}
           {!isDone && inv.daysOverdue > 0 && !canConfirm && (
             <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
@@ -1003,7 +1008,7 @@ function ApprovalCard({
         </View>
         <View style={{ alignItems: "flex-end" }}>
           {inv.amount != null && (
-            <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
           )}
           <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginTop: 4 }]}>
             <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
@@ -1085,14 +1090,14 @@ function InvoiceUploaderView({
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>Outstanding</Text>
             <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${(outstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${outstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>Paid</Text>
             <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${(paid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${paid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{paid.length} invoice{paid.length !== 1 ? "s" : ""}</Text>
           </View>
@@ -1164,14 +1169,14 @@ function DualRoleMySpace({
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>Outstanding</Text>
             <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${(myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>Paid</Text>
             <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${(myPaid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}</Text>
           </View>
@@ -1188,14 +1193,14 @@ function DualRoleMySpace({
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>To Action</Text>
             <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${(toAction.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{toAction.length} invoice{toAction.length !== 1 ? "s" : ""}</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statBoxLabel}>Completed</Text>
             <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${(actionDone.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
+              ${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.statBoxSub}>{actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}</Text>
           </View>
@@ -1278,9 +1283,9 @@ function OwnerMySpace({
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
         <View style={styles.statRow}>
           {([
-            ["Total Raised", invoices.length, `$${(valTotal / 1000).toFixed(0)}K`, Colors.textPrimary],
-            ["Paid", paidInvs.length, `$${(valPaid / 1000).toFixed(0)}K`, Colors.green],
-            ["Outstanding", outInvs.length, `$${(valOut / 1000).toFixed(0)}K`, Colors.amber],
+            ["Total Raised", invoices.length, `$${valTotal.toLocaleString()}`, Colors.textPrimary],
+            ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
+            ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
           ] as const).map(([label, count, val, color]) => (
             <View key={label} style={styles.statBox}>
               <Text style={styles.statBoxLabel}>{label}</Text>
@@ -1316,7 +1321,7 @@ function OwnerMySpace({
                 </View>
               </View>
               <View style={styles.invoiceRow}>
-                {inv.amount != null && <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>}
+                {inv.amount != null && <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>}
                 {inv.daysOverdue > 0 && <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>{inv.daysOverdue} days overdue</Text>}
               </View>
             </View>
@@ -1333,6 +1338,101 @@ function OwnerMySpace({
         error={confirmError}
       />
     </>
+  );
+}
+
+/* ─── Financier / VIP — read-only, full amounts ─── */
+function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+  const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+
+  return (
+    <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.statRow}>
+        {([
+          ["Total Raised", invoices.length, `$${valTotal.toLocaleString()}`, Colors.textPrimary],
+          ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
+          ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
+        ] as const).map(([label, count, val, color]) => (
+          <View key={label} style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>{label}</Text>
+            <Text style={[styles.statBoxNum, { color, fontSize: 18 }]}>{val}</Text>
+            <Text style={styles.statBoxSub}>{count} invoices</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        return (
+          <View key={inv.id} style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>{inv.status}</Text>
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              {inv.amount != null && <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>}
+              {inv.daysOverdue > 0 && <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>{inv.daysOverdue} days overdue</Text>}
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+/* ─── Observer — read-only, no amounts ─── */
+function ObserverMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+  const pendingCount = invoices.filter((i) => i.status === "Pending").length;
+  const overdueCount = invoices.filter((i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received").length;
+  const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
+
+  return (
+    <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.statRow}>
+        {([
+          ["Total", invoices.length, Colors.textPrimary],
+          ["Overdue", overdueCount, Colors.red],
+          ["Pending", pendingCount, Colors.purple],
+          ["Paid", paidCount, Colors.green],
+        ] as const).map(([label, count, color]) => (
+          <View key={label} style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>{label}</Text>
+            <Text style={[styles.statBoxNum, { color, fontSize: 22 }]}>{count}</Text>
+            <Text style={styles.statBoxSub}>invoices</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        return (
+          <View key={inv.id} style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>{inv.status}</Text>
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceDate}>Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}</Text>
+              {inv.daysOverdue > 0 && (
+                <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>{inv.daysOverdue} days overdue</Text>
+              )}
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 }
 
