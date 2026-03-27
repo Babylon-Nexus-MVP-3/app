@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -68,6 +69,24 @@ type ApiInvoice = {
   amount?: number;
   status: "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
   daysOverdue: number;
+  approverRole: string;
+  submittedByUserId: string;
+};
+
+type InvoiceActionType = "approve" | "paid" | "received" | "reject";
+
+const ACTION_WORD: Record<InvoiceActionType, string> = {
+  approve: "approve",
+  paid: "paid",
+  received: "received",
+  reject: "reject",
+};
+
+const ACTION_LABEL: Record<InvoiceActionType, string> = {
+  approve: "Approve Invoice",
+  paid: "Mark as Paid",
+  received: "Confirm Receipt",
+  reject: "Reject Invoice",
 };
 
 const SEVERITY: Record<InvoiceStatus, number> = {
@@ -88,6 +107,18 @@ function apiStatusToCalStatus(inv: ApiInvoice): InvoiceStatus {
   return "issued";
 }
 
+const ROLE_DISPLAY: Record<string, string> = {
+  PM: "Project Manager",
+  Subbie: "Subcontractor",
+};
+const ROLE_API: Record<string, string> = {
+  "Project Manager": "PM",
+  Subcontractor: "Subbie",
+};
+function displayRole(role: string): string {
+  return ROLE_DISPLAY[role] ?? role;
+}
+
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -101,9 +132,9 @@ export default function ProjectDetail() {
   const id = params.id ?? "";
   const nameParam = params.name ?? "Project";
 
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
+  const userId = user?.id ?? "";
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
-  const [builderActions, setBuilderActions] = useState<Record<string, "paid" | "info">>({});
 
   const [projectName, setProjectName] = useState(nameParam);
   const [health, setHealth] = useState(0);
@@ -118,6 +149,7 @@ export default function ProjectDetail() {
   const [invDesc, setInvDesc] = useState("");
   const [invAmount, setInvAmount] = useState("");
   const [invDueDate, setInvDueDate] = useState<Date | null>(null);
+  const [invDueDateText, setInvDueDateText] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [invSubmittingParty, setInvSubmittingParty] = useState("");
   const [invCategory, setInvCategory] = useState("");
@@ -129,6 +161,7 @@ export default function ProjectDetail() {
     setInvDesc("");
     setInvAmount("");
     setInvDueDate(null);
+    setInvDueDateText("");
     setInvSubmittingParty("");
     setInvCategory("");
     setInvoiceError(null);
@@ -155,6 +188,7 @@ export default function ProjectDetail() {
         setInvoiceError(data.error ?? "Failed to submit invoice");
       } else {
         setInvoiceSuccess(true);
+        await loadProject();
       }
     } catch {
       setInvoiceError("Network error. Please try again.");
@@ -164,22 +198,44 @@ export default function ProjectDetail() {
   }
   const [dataLoading, setDataLoading] = useState(true);
 
-  useEffect(() => {
+  async function loadProject() {
     if (!id) return;
-    fetchWithAuth(`http://localhost:3229/project/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setProjectName(data.project?.name ?? nameParam);
-          setHealth(data.healthScore ?? 0);
-          setOverdue(data.overdueInvoiceCount ?? 0);
-          setChange(data.monthOnMonthHealthChangePct ?? null);
-          setRole(data.userRole ?? "Member");
-          setInvoices(data.invoices ?? []);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setDataLoading(false));
+    try {
+      const res = await fetchWithAuth(`http://localhost:3229/project/${id}`);
+      const data = await res.json();
+      if (data.success) {
+        setProjectName(data.project?.name ?? nameParam);
+        setHealth(data.healthScore ?? 0);
+        setOverdue(data.overdueInvoiceCount ?? 0);
+        setChange(data.monthOnMonthHealthChangePct ?? null);
+        setRole(data.userRole ?? "Member");
+        setInvoices(data.invoices ?? []);
+      }
+    } catch {}
+  }
+
+  async function invoiceAction(
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ): Promise<string | null> {
+    try {
+      const body = rejectionReason ? JSON.stringify({ rejectionReason }) : undefined;
+      const res = await fetchWithAuth(
+        `http://localhost:3229/project/${id}/invoice/${invoiceId}/${action}`,
+        { method: "PATCH", body }
+      );
+      const data = await res.json();
+      if (!res.ok) return data.error ?? "Action failed";
+      await loadProject();
+      return null;
+    } catch {
+      return "Network error. Please try again.";
+    }
+  }
+
+  useEffect(() => {
+    loadProject().finally(() => setDataLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -231,8 +287,8 @@ export default function ProjectDetail() {
           role={role}
           projectId={id}
           invoices={invoices}
-          builderActions={builderActions}
-          setBuilderActions={setBuilderActions}
+          userId={userId}
+          invoiceAction={invoiceAction}
         />
       )}
 
@@ -291,39 +347,59 @@ export default function ProjectDetail() {
                 <Text style={styles.raiseTitle}>Raise Invoice</Text>
                 <Text style={styles.raiseSubtitle}>{projectName}</Text>
 
-                <Text style={styles.raiseFieldLabel}>Invoice Date</Text>
-                <TouchableOpacity
-                  style={styles.raiseDateWrap}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text
-                    style={[
-                      styles.raiseInput,
-                      {
-                        flex: 1,
-                        marginBottom: 0,
-                        borderWidth: 0,
-                        backgroundColor: "transparent",
-                        paddingHorizontal: 0,
-                        color: invDueDate ? "#fff" : "rgba(255,255,255,0.3)",
-                        lineHeight: 20,
-                      },
-                    ]}
-                  >
-                    {invDueDate ? invDueDate.toLocaleDateString("en-AU") : "dd/mm/yyyy"}
-                  </Text>
-                  <Text style={styles.raiseCalIcon}>📅</Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={invDueDate ?? new Date()}
-                    mode="date"
-                    display="default"
-                    onChange={(event: DateTimePickerEvent, date?: Date) => {
-                      setShowDatePicker(false);
-                      if (event.type === "set" && date) setInvDueDate(date);
+                <Text style={styles.raiseFieldLabel}>Invoice Due Date</Text>
+                {Platform.OS === "web" ? (
+                  <TextInput
+                    style={styles.raiseInput}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={invDueDateText}
+                    onChangeText={(text) => {
+                      setInvDueDateText(text);
+                      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+                        const d = new Date(text);
+                        setInvDueDate(!isNaN(d.getTime()) ? d : null);
+                      } else {
+                        setInvDueDate(null);
+                      }
                     }}
                   />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.raiseDateWrap}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text
+                        style={[
+                          styles.raiseInput,
+                          {
+                            flex: 1,
+                            marginBottom: 0,
+                            borderWidth: 0,
+                            backgroundColor: "transparent",
+                            paddingHorizontal: 0,
+                            color: invDueDate ? "#fff" : "rgba(255,255,255,0.3)",
+                            lineHeight: 20,
+                          },
+                        ]}
+                      >
+                        {invDueDate ? invDueDate.toLocaleDateString("en-AU") : "dd/mm/yyyy"}
+                      </Text>
+                      <Text style={styles.raiseCalIcon}>📅</Text>
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={invDueDate ?? new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event: DateTimePickerEvent, date?: Date) => {
+                          setShowDatePicker(false);
+                          if (event.type === "set" && date) setInvDueDate(date);
+                        }}
+                      />
+                    )}
+                  </>
                 )}
 
                 <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
@@ -529,10 +605,117 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
   );
 }
 
+/* ─── Confirmation modal (type-to-confirm for approve / paid / received / reject) ─── */
+function ConfirmModal({
+  visible,
+  action,
+  invoice,
+  onClose,
+  onConfirm,
+  loading,
+  error,
+}: {
+  visible: boolean;
+  action: InvoiceActionType | null;
+  invoice: ApiInvoice | null;
+  onClose: () => void;
+  onConfirm: (rejectionReason?: string) => void;
+  loading: boolean;
+  error: string | null;
+}) {
+  const [typed, setTyped] = useState("");
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (visible) {
+      setTyped("");
+      setReason("");
+    }
+  }, [visible]);
+
+  if (!action || !invoice) return null;
+
+  const word = ACTION_WORD[action];
+  const isReject = action === "reject";
+  // Reject: no type-to-confirm — reason field is sufficient
+  const isValid = isReject ? true : typed.trim().toLowerCase() === word;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.confirmOverlay}>
+        <View style={styles.confirmBox}>
+          <Text style={styles.confirmTitle}>{ACTION_LABEL[action]}</Text>
+          <Text style={styles.confirmInvDesc} numberOfLines={2}>
+            {invoice.description}
+          </Text>
+          {invoice.amount != null && (
+            <Text style={styles.confirmInvAmt}>${invoice.amount.toLocaleString()}</Text>
+          )}
+
+          {isReject ? (
+            <>
+              <Text style={styles.confirmFieldLabel}>Reason (optional)</Text>
+              <TextInput
+                style={styles.confirmReasonInput}
+                placeholder="e.g. Invoice details are incorrect"
+                placeholderTextColor={Colors.textSecondary}
+                value={reason}
+                onChangeText={setReason}
+                multiline
+                numberOfLines={2}
+                textAlignVertical="top"
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.confirmHint}>
+                Type <Text style={{ fontWeight: "800" }}>{word}</Text> to confirm
+              </Text>
+              <TextInput
+                style={styles.confirmTypeInput}
+                value={typed}
+                onChangeText={setTyped}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder={word}
+                placeholderTextColor={Colors.textSecondary}
+              />
+            </>
+          )}
+
+          {error && <Text style={styles.confirmError}>{error}</Text>}
+
+          <View style={styles.confirmBtnRow}>
+            <TouchableOpacity style={styles.confirmCancelBtn} onPress={onClose} disabled={loading}>
+              <Text style={styles.confirmCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmActionBtn,
+                isReject && { backgroundColor: Colors.red },
+                !isValid && { opacity: 0.35 },
+              ]}
+              onPress={() => onConfirm(isReject ? reason || undefined : undefined)}
+              disabled={!isValid || loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.confirmActionText}>{ACTION_LABEL[action]}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 /* ─── Invite roles (used in MySpaceTab modal) ─── */
 const INVITE_ROLES = [
-  "Subbie",
+  "Subcontractor",
   "Builder",
+  "Project Manager",
   "Owner",
   "Consultant",
   "Financier",
@@ -546,22 +729,25 @@ function MySpaceTab({
   role,
   projectId,
   invoices,
-  builderActions,
-  setBuilderActions,
+  userId,
+  invoiceAction,
 }: {
   role: string;
   projectId: string;
   invoices: ApiInvoice[];
-  builderActions: Record<string, "paid" | "info">;
-  setBuilderActions: React.Dispatch<React.SetStateAction<Record<string, "paid" | "info">>>;
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
 }) {
   const { fetchWithAuth } = useAuth();
-  const isInvoiceUploader = INVOICE_UPLOADER_ROLES.includes(role);
 
   // ── Invite modal state ──
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<InviteRole>("Subbie");
+  const [inviteRole, setInviteRole] = useState<InviteRole>("Subcontractor");
   const [inviteTrade, setInviteTrade] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -570,7 +756,7 @@ function MySpaceTab({
 
   function openInvite() {
     setInviteEmail("");
-    setInviteRole("Subbie");
+    setInviteRole("Subcontractor");
     setInviteTrade("");
     setInviteCode(null);
     setInviteError(null);
@@ -585,7 +771,7 @@ function MySpaceTab({
         method: "POST",
         body: JSON.stringify({
           email: inviteEmail.trim(),
-          role: inviteRole,
+          role: ROLE_API[inviteRole] ?? inviteRole,
           trade: inviteTrade.trim(),
         }),
       });
@@ -604,20 +790,23 @@ function MySpaceTab({
 
   let content: React.ReactNode;
   if (role === "Builder")
+    content = <BuilderMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+  else if (role === "PM")
+    content = <PMMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+  else if (role === "Subbie" || role === "Consultant")
     content = (
-      <BuilderMySpace
-        invoices={invoices}
-        builderActions={builderActions}
-        setBuilderActions={setBuilderActions}
-      />
+      <InvoiceUploaderView invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
     );
-  else if (isInvoiceUploader) content = <InvoiceUploaderView invoices={invoices} />;
-  else if (role === "Owner" || role === "Financier") content = <OwnerMySpace invoices={invoices} />;
+  else if (role === "Owner")
+    content = <OwnerMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+  else if (role === "Financier" || role === "VIP")
+    content = <FinancierMySpace invoices={invoices} />;
+  else if (role === "Observer") content = <ObserverMySpace invoices={invoices} />;
   else
     content = (
       <View style={styles.placeholder}>
         <Text style={styles.placeholderText}>My Space</Text>
-        <Text style={styles.placeholderSub}>View for {role} — coming soon</Text>
+        <Text style={styles.placeholderSub}>View for {displayRole(role)} — coming soon</Text>
       </View>
     );
 
@@ -754,276 +943,541 @@ function MySpaceTab({
 }
 
 /* ─── Invoice uploader view (Subcontractor / Builder / Consultant / PM) ─── */
-function InvoiceUploaderView({ invoices }: { invoices: ApiInvoice[] }) {
-  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
-  const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
-  const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-
+/* ─── Shared: invoice card for submitter (My Invoices) ─── */
+function MyInvoiceCard({ inv, onReceived }: { inv: ApiInvoice; onReceived: () => void }) {
+  const calStatus = apiStatusToCalStatus(inv);
+  const canConfirm = inv.status === "Paid";
+  const isDone = inv.status === "Received";
   return (
-    <ScrollView
-      style={styles.body}
-      contentContainerStyle={styles.bodyContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.statRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Outstanding</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-            ${(outstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Paid</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-            ${(paid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {paid.length} invoice{paid.length !== 1 ? "s" : ""}
+    <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+      <View style={styles.invoiceRow}>
+        <Text style={[styles.invoiceName, { flex: 1 }]} numberOfLines={1}>
+          {inv.description}
+        </Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+          <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+            {inv.status}
           </Text>
         </View>
       </View>
-
-      <Text style={styles.sectionLabel}>MY INVOICES</Text>
-      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-      {invoices.map((inv) => {
-        const calStatus = apiStatusToCalStatus(inv);
-        const isPaid = inv.status === "Paid" || inv.status === "Received";
-        return (
-          <View
-            key={inv.id}
-            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
-          >
-            <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceName}>{inv.description}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {statusLabel(calStatus)}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceDate}>
-                Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                {inv.amount != null && (
-                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
-                )}
-                {isPaid &&
-                  (confirmed[inv.id] ? (
-                    <Text style={styles.confirmedText}>✓ Confirmed</Text>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.confirmBtn}
-                      onPress={() => setConfirmed((p) => ({ ...p, [inv.id]: true }))}
-                    >
-                      <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
-                    </TouchableOpacity>
-                  ))}
-                {!isPaid && inv.daysOverdue > 0 && (
-                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
-                    {inv.daysOverdue} days overdue
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+      <View style={styles.invoiceRow}>
+        <Text style={styles.invoiceDate}>
+          Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {inv.amount != null && (
+            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+          )}
+          {!isDone && inv.daysOverdue > 0 && !canConfirm && (
+            <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+              {inv.daysOverdue}d overdue
+            </Text>
+          )}
+        </View>
+      </View>
+      {canConfirm && (
+        <TouchableOpacity style={styles.confirmBtn} onPress={onReceived}>
+          <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
+        </TouchableOpacity>
+      )}
+      {isDone && <Text style={styles.confirmedText}>✓ Receipt Confirmed</Text>}
+    </View>
   );
 }
 
-/* ─── Builder (own invoices + incoming invoice review) ─── */
-function BuilderMySpace({
+/* ─── Shared: invoice card for approver (Incoming Approvals) ─── */
+function ApprovalCard({
+  inv,
+  onApprove,
+  onPaid,
+  onReject,
+}: {
+  inv: ApiInvoice;
+  onApprove: () => void;
+  onPaid: () => void;
+  onReject: () => void;
+}) {
+  const calStatus = apiStatusToCalStatus(inv);
+  const canApprove = inv.status === "Pending";
+  const canPay = inv.status === "Approved";
+  const isDone = inv.status === "Paid" || inv.status === "Received";
+  const isRejected = inv.status === "Rejected";
+  return (
+    <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+      <View style={styles.invoiceRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+          <Text style={styles.invoiceDate} numberOfLines={1}>
+            {inv.description}
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          {inv.amount != null && (
+            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+          )}
+          <View
+            style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginTop: 4 }]}
+          >
+            <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+              {inv.status}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <Text style={styles.invoiceDate}>
+        Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+      </Text>
+      {inv.daysOverdue > 0 && !isDone && (
+        <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+          {inv.daysOverdue} days overdue
+        </Text>
+      )}
+      {(canApprove || canPay) && (
+        <View style={styles.actionRow}>
+          {canApprove && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: Colors.green }]}
+                onPress={onApprove}
+              >
+                <Text style={styles.actionBtnText}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: Colors.red }]}
+                onPress={onReject}
+              >
+                <Text style={styles.actionBtnText}>Reject</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {canPay && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: Colors.green, flex: 1 }]}
+              onPress={onPaid}
+            >
+              <Text style={styles.actionBtnText}>Mark as Paid</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+      {isDone && <Text style={[styles.confirmedText, { marginTop: 6 }]}>✓ {inv.status}</Text>}
+      {isRejected && (
+        <Text style={[styles.invoiceDays, { color: Colors.red, marginTop: 6 }]}>✗ Rejected</Text>
+      )}
+    </View>
+  );
+}
+
+/* ─── Invoice uploader view (Subcontractor / Consultant) ─── */
+function InvoiceUploaderView({
   invoices,
-  builderActions,
-  setBuilderActions,
+  userId,
+  invoiceAction,
 }: {
   invoices: ApiInvoice[];
-  builderActions: Record<string, "paid" | "info">;
-  setBuilderActions: React.Dispatch<React.SetStateAction<Record<string, "paid" | "info">>>;
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
 }) {
-  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
-  const outstanding = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
-  const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
+  const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
-  const paidInvs = invoices.filter((i) => builderActions[i.id] === "paid");
-  const outInvs = invoices.filter((i) => builderActions[i.id] !== "paid");
+  function openConfirm(action: InvoiceActionType, inv: ApiInvoice) {
+    setConfirmAction(action);
+    setConfirmInvoice(inv);
+    setConfirmError(null);
+  }
+  function closeConfirm() {
+    setConfirmAction(null);
+    setConfirmInvoice(null);
+  }
+  async function handleConfirm(reason?: string) {
+    if (!confirmAction || !confirmInvoice) return;
+    setConfirmLoading(true);
+    setConfirmError(null);
+    const err = await invoiceAction(confirmAction, confirmInvoice.id, reason);
+    setConfirmLoading(false);
+    if (err) setConfirmError(err);
+    else closeConfirm();
+  }
+
+  const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
+  const outstanding = myInvoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const paid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
+
+  return (
+    <>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.statRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>Outstanding</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+              ${outstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>Paid</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+              ${paid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {paid.length} invoice{paid.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.sectionLabel}>MY INVOICES</Text>
+        {myInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+        {myInvoices.map((inv) => (
+          <MyInvoiceCard key={inv.id} inv={inv} onReceived={() => openConfirm("received", inv)} />
+        ))}
+      </ScrollView>
+      <ConfirmModal
+        visible={confirmAction !== null}
+        action={confirmAction}
+        invoice={confirmInvoice}
+        onClose={closeConfirm}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        error={confirmError}
+      />
+    </>
+  );
+}
+
+/* ─── Shared dual-role view (Builder / PM): My Invoices + Incoming Approvals ─── */
+function DualRoleMySpace({
+  invoices,
+  userId,
+  approverRole,
+  invoiceAction,
+}: {
+  invoices: ApiInvoice[];
+  userId: string;
+  approverRole: "Builder" | "PM";
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+}) {
+  const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
+  const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  function openConfirm(action: InvoiceActionType, inv: ApiInvoice) {
+    setConfirmAction(action);
+    setConfirmInvoice(inv);
+    setConfirmError(null);
+  }
+  function closeConfirm() {
+    setConfirmAction(null);
+    setConfirmInvoice(null);
+  }
+  async function handleConfirm(reason?: string) {
+    if (!confirmAction || !confirmInvoice) return;
+    setConfirmLoading(true);
+    setConfirmError(null);
+    const err = await invoiceAction(confirmAction, confirmInvoice.id, reason);
+    setConfirmLoading(false);
+    if (err) setConfirmError(err);
+    else closeConfirm();
+  }
+
+  const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
+  const approvalInvoices = invoices.filter((i) => i.approverRole === approverRole);
+  const myOutstanding = myInvoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const toAction = approvalInvoices.filter(
+    (i) => i.status === "Pending" || i.status === "Approved"
+  );
+  const actionDone = approvalInvoices.filter(
+    (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
+  );
+
+  return (
+    <>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── My submitted invoices ── */}
+        <View style={styles.statRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>Outstanding</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+              ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>Paid</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+              ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.sectionLabel}>MY INVOICES</Text>
+        {myInvoices.length === 0 && (
+          <Text style={styles.emptyText}>No invoices submitted yet.</Text>
+        )}
+        {myInvoices.map((inv) => (
+          <MyInvoiceCard
+            key={`my-${inv.id}`}
+            inv={inv}
+            onReceived={() => openConfirm("received", inv)}
+          />
+        ))}
+
+        {/* ── Incoming approvals ── */}
+        <View style={styles.sectionDivider} />
+        <View style={styles.statRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>To Action</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+              ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>Completed</Text>
+            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+              ${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statBoxSub}>
+              {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.sectionLabel}>INCOMING APPROVALS</Text>
+        {approvalInvoices.length === 0 && (
+          <Text style={styles.emptyText}>No invoices to approve.</Text>
+        )}
+        {approvalInvoices.map((inv) => (
+          <ApprovalCard
+            key={`in-${inv.id}`}
+            inv={inv}
+            onApprove={() => openConfirm("approve", inv)}
+            onPaid={() => openConfirm("paid", inv)}
+            onReject={() => openConfirm("reject", inv)}
+          />
+        ))}
+      </ScrollView>
+      <ConfirmModal
+        visible={confirmAction !== null}
+        action={confirmAction}
+        invoice={confirmInvoice}
+        onClose={closeConfirm}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        error={confirmError}
+      />
+    </>
+  );
+}
+
+/* ─── Builder ─── */
+function BuilderMySpace({
+  invoices,
+  userId,
+  invoiceAction,
+}: {
+  invoices: ApiInvoice[];
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+}) {
+  return (
+    <DualRoleMySpace
+      invoices={invoices}
+      userId={userId}
+      approverRole="Builder"
+      invoiceAction={invoiceAction}
+    />
+  );
+}
+
+/* ─── Project Manager ─── */
+function PMMySpace({
+  invoices,
+  userId,
+  invoiceAction,
+}: {
+  invoices: ApiInvoice[];
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+}) {
+  return (
+    <DualRoleMySpace
+      invoices={invoices}
+      userId={userId}
+      approverRole="PM"
+      invoiceAction={invoiceAction}
+    />
+  );
+}
+
+/* ─── Owner / Financier / VIP ─── */
+function OwnerMySpace({
+  invoices,
+  userId: _userId,
+  invoiceAction,
+}: {
+  invoices: ApiInvoice[];
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+}) {
+  const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
+  const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  function openConfirm(action: InvoiceActionType, inv: ApiInvoice) {
+    setConfirmAction(action);
+    setConfirmInvoice(inv);
+    setConfirmError(null);
+  }
+  function closeConfirm() {
+    setConfirmAction(null);
+    setConfirmInvoice(null);
+  }
+  async function handleConfirm(reason?: string) {
+    if (!confirmAction || !confirmInvoice) return;
+    setConfirmLoading(true);
+    setConfirmError(null);
+    const err = await invoiceAction(confirmAction, confirmInvoice.id, reason);
+    setConfirmLoading(false);
+    if (err) setConfirmError(err);
+    else closeConfirm();
+  }
+
+  const approvalInvoices = invoices.filter((i) => i.approverRole === "Owner");
+  const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
 
   return (
-    <ScrollView
-      style={styles.body}
-      contentContainerStyle={styles.bodyContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* ── My Invoices section ── */}
-      <View style={styles.statRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Outstanding</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-            ${(outstanding.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Paid</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-            ${(paid.reduce((a, i) => a + (i.amount ?? 0), 0) / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {paid.length} invoice{paid.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionLabel}>MY INVOICES</Text>
-      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-      {invoices.map((inv) => {
-        const calStatus = apiStatusToCalStatus(inv);
-        const isPaid = inv.status === "Paid" || inv.status === "Received";
-        return (
-          <View
-            key={`my-${inv.id}`}
-            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
-          >
-            <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceName}>{inv.description}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {statusLabel(calStatus)}
-                </Text>
-              </View>
+    <>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.statRow}>
+          {(
+            [
+              [
+                "Total Raised",
+                invoices.length,
+                `$${valTotal.toLocaleString()}`,
+                Colors.textPrimary,
+              ],
+              ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
+              ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
+            ] as const
+          ).map(([label, count, val, color]) => (
+            <View key={label} style={styles.statBox}>
+              <Text style={styles.statBoxLabel}>{label}</Text>
+              <Text style={[styles.statBoxNum, { color, fontSize: 18 }]}>{val}</Text>
+              <Text style={styles.statBoxSub}>{count} invoices</Text>
             </View>
-            <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceDate}>
-                Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>AWAITING MY APPROVAL</Text>
+        {approvalInvoices.length === 0 && (
+          <Text style={styles.emptyText}>No invoices awaiting approval.</Text>
+        )}
+        {approvalInvoices.map((inv) => (
+          <ApprovalCard
+            key={`ap-${inv.id}`}
+            inv={inv}
+            onApprove={() => openConfirm("approve", inv)}
+            onPaid={() => openConfirm("paid", inv)}
+            onReject={() => openConfirm("reject", inv)}
+          />
+        ))}
+
+        <View style={styles.sectionDivider} />
+        <Text style={styles.sectionLabel}>ALL INVOICES</Text>
+        {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+        {invoices.map((inv) => {
+          const calStatus = apiStatusToCalStatus(inv);
+          return (
+            <View
+              key={inv.id}
+              style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+            >
+              <View style={styles.invoiceRow}>
+                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                  <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                    {inv.status}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.invoiceRow}>
                 {inv.amount != null && (
-                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+                  <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
                 )}
-                {isPaid &&
-                  (confirmed[inv.id] ? (
-                    <Text style={styles.confirmedText}>✓ Confirmed</Text>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.confirmBtn}
-                      onPress={() => setConfirmed((p) => ({ ...p, [inv.id]: true }))}
-                    >
-                      <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
-                    </TouchableOpacity>
-                  ))}
-                {!isPaid && inv.daysOverdue > 0 && (
+                {inv.daysOverdue > 0 && (
                   <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                     {inv.daysOverdue} days overdue
                   </Text>
                 )}
               </View>
             </View>
-          </View>
-        );
-      })}
-
-      {/* ── Incoming Invoices section ── */}
-      <View style={styles.sectionDivider} />
-
-      <View style={styles.statRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>To Pay</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-            ${(valOut / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {outInvs.length} invoice{outInvs.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Paid Out</Text>
-          <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-            ${(valPaid / 1000).toFixed(0)}K
-          </Text>
-          <Text style={styles.statBoxSub}>
-            {paidInvs.length} invoice{paidInvs.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionLabel}>INCOMING INVOICES</Text>
-      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-      {invoices.map((inv) => {
-        const acted = builderActions[inv.id];
-        const calStatus = apiStatusToCalStatus(inv);
-        const displayColor =
-          acted === "paid"
-            ? Colors.green
-            : acted === "info"
-              ? Colors.purple
-              : statusColor(calStatus);
-        return (
-          <View
-            key={`in-${inv.id}`}
-            style={[styles.invoiceCard, { borderLeftColor: displayColor }]}
-          >
-            <View style={styles.invoiceRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
-                <Text style={styles.invoiceDate}>
-                  {inv.description} · Due {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-                </Text>
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                {inv.amount != null && (
-                  <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
-                )}
-                <Text style={[styles.statusBadgeText, { color: displayColor }]}>
-                  {acted === "paid"
-                    ? "✓ Paid"
-                    : acted === "info"
-                      ? "ℹ Info Req."
-                      : statusLabel(calStatus)}
-                </Text>
-              </View>
-            </View>
-            {inv.daysOverdue > 0 && !acted && (
-              <Text
-                style={[styles.invoiceDays, { color: statusColor(calStatus), marginBottom: 8 }]}
-              >
-                {inv.daysOverdue} days overdue
-              </Text>
-            )}
-            {!acted && (
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: Colors.green }]}
-                  onPress={() => setBuilderActions((p) => ({ ...p, [inv.id]: "paid" }))}
-                >
-                  <Text style={styles.actionBtnText}>I Have Paid</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: Colors.purple }]}
-                  onPress={() => setBuilderActions((p) => ({ ...p, [inv.id]: "info" }))}
-                >
-                  <Text style={styles.actionBtnText}>More Info</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        );
-      })}
-    </ScrollView>
+          );
+        })}
+      </ScrollView>
+      <ConfirmModal
+        visible={confirmAction !== null}
+        action={confirmAction}
+        invoice={confirmInvoice}
+        onClose={closeConfirm}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        error={confirmError}
+      />
+    </>
   );
 }
 
-/* ─── Owner / Financier ─── */
-function OwnerMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+/* ─── Financier / VIP — read-only, full amounts ─── */
+function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
   const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
   const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
@@ -1037,22 +1491,17 @@ function OwnerMySpace({ invoices }: { invoices: ApiInvoice[] }) {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.statRow}>
-        {[
+        {(
           [
-            "Total Raised",
-            invoices.length,
-            `$${(valTotal / 1000).toFixed(0)}K`,
-            Colors.textPrimary,
-          ],
-          ["Paid", paidInvs.length, `$${(valPaid / 1000).toFixed(0)}K`, Colors.green],
-          ["Outstanding", outInvs.length, `$${(valOut / 1000).toFixed(0)}K`, Colors.amber],
-        ].map(([label, count, val, color]) => (
-          <View key={label as string} style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>{label as string}</Text>
-            <Text style={[styles.statBoxNum, { color: color as string, fontSize: 18 }]}>
-              {val as string}
-            </Text>
-            <Text style={styles.statBoxSub}>{count as number} invoices</Text>
+            ["Total Raised", invoices.length, `$${valTotal.toLocaleString()}`, Colors.textPrimary],
+            ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
+            ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
+          ] as const
+        ).map(([label, count, val, color]) => (
+          <View key={label} style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>{label}</Text>
+            <Text style={[styles.statBoxNum, { color, fontSize: 18 }]}>{val}</Text>
+            <Text style={styles.statBoxSub}>{count} invoices</Text>
           </View>
         ))}
       </View>
@@ -1070,14 +1519,79 @@ function OwnerMySpace({ invoices }: { invoices: ApiInvoice[] }) {
               <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {statusLabel(calStatus)}
+                  {inv.status}
                 </Text>
               </View>
             </View>
             <View style={styles.invoiceRow}>
               {inv.amount != null && (
-                <Text style={styles.invoiceAmt}>${(inv.amount / 1000).toFixed(0)}K</Text>
+                <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
               )}
+              {inv.daysOverdue > 0 && (
+                <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                  {inv.daysOverdue} days overdue
+                </Text>
+              )}
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+/* ─── Observer — read-only, no amounts ─── */
+function ObserverMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+  const pendingCount = invoices.filter((i) => i.status === "Pending").length;
+  const overdueCount = invoices.filter(
+    (i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received"
+  ).length;
+  const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
+
+  return (
+    <ScrollView
+      style={styles.body}
+      contentContainerStyle={styles.bodyContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.statRow}>
+        {(
+          [
+            ["Total", invoices.length, Colors.textPrimary],
+            ["Overdue", overdueCount, Colors.red],
+            ["Pending", pendingCount, Colors.purple],
+            ["Paid", paidCount, Colors.green],
+          ] as const
+        ).map(([label, count, color]) => (
+          <View key={label} style={styles.statBox}>
+            <Text style={styles.statBoxLabel}>{label}</Text>
+            <Text style={[styles.statBoxNum, { color, fontSize: 22 }]}>{count}</Text>
+            <Text style={styles.statBoxSub}>invoices</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
+      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {invoices.map((inv) => {
+        const calStatus = apiStatusToCalStatus(inv);
+        return (
+          <View
+            key={inv.id}
+            style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+          >
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {inv.status}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceDate}>
+                Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
+              </Text>
               {inv.daysOverdue > 0 && (
                 <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                   {inv.daysOverdue} days overdue
@@ -1265,6 +1779,107 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(0,0,0,0.08)",
     marginVertical: 20,
+  },
+
+  // Confirm modal
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  confirmBox: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  confirmInvDesc: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  confirmInvAmt: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  confirmFieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  confirmReasonInput: {
+    borderWidth: 1.5,
+    borderColor: "rgba(0,0,0,0.12)",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    marginBottom: 16,
+    minHeight: 64,
+  },
+  confirmHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+  },
+  confirmTypeInput: {
+    borderWidth: 1.5,
+    borderColor: "rgba(0,0,0,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  confirmError: {
+    fontSize: 13,
+    color: Colors.red,
+    marginBottom: 12,
+  },
+  confirmBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,0,0,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  confirmActionBtn: {
+    flex: 2,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.white,
   },
 
   // Placeholder
