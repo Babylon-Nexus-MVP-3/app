@@ -19,7 +19,6 @@ dotenv.config();
 
 const SUBBIE_EMAIL = "subbie@invoice-actions-test.com";
 const BUILDER_EMAIL = "builder@invoice-actions-test.com";
-const PM_EMAIL = "pm@invoice-actions-test.com";
 const PASSWORD = "SecurePassword123!";
 
 jest.setTimeout(20000);
@@ -67,7 +66,12 @@ beforeEach(async () => {
   projectId = await getProjectId(subbieToken, UserRole.Subbie);
   await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Active" } });
 
-  const builderInviteRes = await requestInvite(projectId, subbieToken, BUILDER_EMAIL, UserRole.Builder);
+  const builderInviteRes = await requestInvite(
+    projectId,
+    subbieToken,
+    BUILDER_EMAIL,
+    UserRole.Builder
+  );
   expect(builderInviteRes.status).toBe(200);
   builderToken = await getToken("Bob", "Builder", BUILDER_EMAIL, PASSWORD);
   await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
