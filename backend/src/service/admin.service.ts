@@ -276,7 +276,9 @@ export async function getAdminProjectDetail(projectId: string) {
   const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
     .select("name")
     .lean();
-  const participantUserMap = Object.fromEntries(participantUsers.map((u) => [u._id.toString(), u.name]));
+  const participantUserMap = Object.fromEntries(
+    participantUsers.map((u) => [u._id.toString(), u.name])
+  );
 
   const now = new Date();
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
