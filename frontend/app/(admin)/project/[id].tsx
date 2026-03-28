@@ -33,6 +33,7 @@ type ApiInvoice = {
 
 type Participant = {
   participantId: string;
+  name: string | null;
   email: string;
   role: string;
   status: "Pending" | "Accepted";
@@ -417,6 +418,7 @@ function MembersTab({
             style={[styles.memberRow, i < participants.length - 1 && styles.memberRowBorder]}
           >
             <View style={styles.memberInfo}>
+              {p.name && <Text style={styles.memberName}>{p.name}</Text>}
               <Text style={styles.memberEmail}>{p.email}</Text>
               <View style={styles.memberMeta}>
                 <Text style={styles.memberRole}>{p.role}</Text>
@@ -616,7 +618,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
   memberInfo: { flex: 1 },
-  memberEmail: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 4 },
+  memberName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 2 },
+  memberEmail: { fontSize: 12, color: Colors.textSecondary, marginBottom: 4 },
   memberMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
   memberRole: { fontSize: 12, color: Colors.textSecondary, fontWeight: "500" },
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },

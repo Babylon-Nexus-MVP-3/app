@@ -268,9 +268,15 @@ export async function getAdminProjectDetail(projectId: string) {
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
-    .select("_id email role status")
+    .select("_id email role status userId")
     .sort({ status: 1, role: 1 })
     .lean();
+
+  const acceptedUserIds = participants.filter((p) => p.userId).map((p) => p.userId!);
+  const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
+    .select("name")
+    .lean();
+  const participantUserMap = Object.fromEntries(participantUsers.map((u) => [u._id.toString(), u.name]));
 
   const now = new Date();
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
@@ -334,6 +340,7 @@ export async function getAdminProjectDetail(projectId: string) {
     },
     participants: participants.map((p) => ({
       participantId: p._id.toString(),
+      name: p.userId ? (participantUserMap[p.userId] ?? null) : null,
       email: p.email,
       role: p.role,
       status: p.status,

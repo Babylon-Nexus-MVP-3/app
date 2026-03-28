@@ -158,11 +158,56 @@ describe("GET /admin/projects/:projectId", () => {
     const subbie = res.body.participants.find((p: any) => p.email === "subbie@test.com");
     expect(subbie.status).toBe("Pending");
     expect(subbie.participantId).toBeDefined();
+    expect(subbie.name).toBeNull();
 
     const builder = res.body.participants.find((p: any) => p.email === "builder@test.com");
     expect(builder.status).toBe("Accepted");
     expect(builder.role).toBe(UserRole.Builder);
     expect(builder.participantId).toBeDefined();
+  });
+
+  it("resolves participant name from UserModel for accepted participants", async () => {
+    const token = await getAdminToken();
+    const project = await ProjectModel.create({
+      name: "Named Member Project",
+      location: "Sydney",
+      council: "Inner West",
+      status: "Active",
+    });
+    const projectId = project._id.toString();
+
+    const hashed = await hashPassword("SecurePassword123!");
+    const user = await UserModel.create({
+      name: "Jane Builder",
+      email: "jane@admin-project-detail-test.com",
+      password: hashed,
+      role: UserRole.Builder,
+      status: "Active",
+      emailVerified: true,
+    });
+
+    await ProjectParticipantModel.create([
+      {
+        projectId,
+        email: "jane@admin-project-detail-test.com",
+        role: UserRole.Builder,
+        status: "Accepted",
+        userId: user._id.toString(),
+      },
+      { projectId, email: "pending@test.com", role: UserRole.Subbie, status: "Pending" },
+    ]);
+
+    const res = await request(app)
+      .get(`/admin/projects/${projectId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+
+    const jane = res.body.participants.find((p: any) => p.email === "jane@admin-project-detail-test.com");
+    expect(jane.name).toBe("Jane Builder");
+
+    const pending = res.body.participants.find((p: any) => p.email === "pending@test.com");
+    expect(pending.name).toBeNull();
   });
 
   it("returns invoices with correct fields", async () => {
