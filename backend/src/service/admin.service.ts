@@ -1,6 +1,7 @@
 import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
+import { InvoiceModel } from "../models/invoiceModel";
 import { sendInviteEmail } from "./email.service";
 
 export class AdminError extends Error {
@@ -249,4 +250,106 @@ export async function removeProjectParticipant(
   await project.save();
 
   return { removedCount };
+}
+
+function computeHealthScore(invoices: any[]): number {
+  const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  if (paid.length === 0) return 100;
+  const onTime = paid.filter((i) => {
+    const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;
+    if (!paidDate) return false;
+    return paidDate.getTime() <= new Date(i.dateDue).getTime();
+  });
+  return Math.round((onTime.length / paid.length) * 100);
+}
+
+export async function getAdminProjectDetail(projectId: string) {
+  const project = await ProjectModel.findById(projectId).lean();
+  if (!project) throw new AdminError("Project not found", 404);
+
+  const participants = await ProjectParticipantModel.find({ projectId })
+    .select("_id email role status userId")
+    .sort({ status: 1, role: 1 })
+    .lean();
+
+  const acceptedUserIds = participants.filter((p) => p.userId).map((p) => p.userId!);
+  const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
+    .select("name")
+    .lean();
+  const participantUserMap = Object.fromEntries(
+    participantUsers.map((u) => [u._id.toString(), u.name])
+  );
+
+  const now = new Date();
+  const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
+
+  const invoices = invoicesRaw.map((i: any) => {
+    const due = new Date(i.dateDue);
+    const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;
+    const overdueBase = paidDate ?? now;
+    const daysOverdue =
+      overdueBase.getTime() > due.getTime()
+        ? Math.ceil((overdueBase.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+    return {
+      id: i._id.toString(),
+      submittingParty: i.submittingParty,
+      description: i.description,
+      dateSubmitted: i.dateSubmitted,
+      dateDue: i.dateDue,
+      amount: i.amount,
+      status: i.status,
+      daysOverdue,
+    };
+  });
+
+  const overdueInvoiceCount = invoicesRaw.filter((i: any) => {
+    if (i.status === "Paid" || i.status === "Received") return false;
+    return new Date(i.dateDue).getTime() < now.getTime();
+  }).length;
+
+  const healthScore = computeHealthScore(invoicesRaw);
+
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const currentMonthInvoices = invoicesRaw.filter((i: any) => {
+    const due = new Date(i.dateDue);
+    return due >= currentMonthStart && due < nextMonthStart;
+  });
+  const prevMonthInvoices = invoicesRaw.filter((i: any) => {
+    const due = new Date(i.dateDue);
+    return due >= prevMonthStart && due < currentMonthStart;
+  });
+
+  const prevMonthHealth = computeHealthScore(prevMonthInvoices);
+  const currentMonthHealth = computeHealthScore(currentMonthInvoices);
+  const prevMonthHadPaid = prevMonthInvoices.some(
+    (i: any) => i.status === "Paid" || i.status === "Received"
+  );
+  const monthOnMonthHealthChangePct =
+    !prevMonthHadPaid || prevMonthHealth === 0
+      ? null
+      : Math.round(((currentMonthHealth - prevMonthHealth) / prevMonthHealth) * 100);
+
+  return {
+    project: {
+      id: project._id.toString(),
+      name: project.name,
+      location: project.location,
+      council: project.council,
+    },
+    participants: participants.map((p) => ({
+      participantId: p._id.toString(),
+      name: p.userId ? (participantUserMap[p.userId] ?? null) : null,
+      email: p.email,
+      role: p.role,
+      status: p.status,
+    })),
+    healthScore,
+    overdueInvoiceCount,
+    monthOnMonthHealthChangePct,
+    invoices,
+  };
 }
