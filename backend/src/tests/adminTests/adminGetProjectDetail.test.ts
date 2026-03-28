@@ -203,7 +203,9 @@ describe("GET /admin/projects/:projectId", () => {
 
     expect(res.status).toBe(200);
 
-    const jane = res.body.participants.find((p: any) => p.email === "jane@admin-project-detail-test.com");
+    const jane = res.body.participants.find(
+      (p: any) => p.email === "jane@admin-project-detail-test.com"
+    );
     expect(jane.name).toBe("Jane Builder");
 
     const pending = res.body.participants.find((p: any) => p.email === "pending@test.com");
