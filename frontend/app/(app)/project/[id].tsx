@@ -63,6 +63,7 @@ function statusLabel(s: InvoiceStatus): string {
 type ApiInvoice = {
   id: string;
   submittingParty: string;
+  submittingCategory: string;
   description: string;
   dateSubmitted: string;
   dateDue: string;
@@ -71,6 +72,7 @@ type ApiInvoice = {
   daysOverdue: number;
   approverRole: string;
   submittedByUserId: string;
+  rejectionReason?: string;
 };
 
 type InvoiceActionType = "approve" | "paid" | "received" | "reject";
@@ -651,6 +653,210 @@ export default function ProjectDetail() {
   );
 }
 
+/* ─── Invoice Detail Modal ─── */
+function InvoiceDetailModal({
+  visible,
+  inv,
+  viewerRole,
+  userId,
+  showAmount,
+  invoiceAction,
+  onClose,
+}: {
+  visible: boolean;
+  inv: ApiInvoice | null;
+  viewerRole: string;
+  userId: string;
+  showAmount: boolean;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+  onClose: () => void;
+}) {
+  const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  function openConfirm(action: InvoiceActionType) {
+    setConfirmAction(action);
+    setConfirmError(null);
+  }
+  function closeConfirm() {
+    setConfirmAction(null);
+  }
+  async function handleConfirm(reason?: string) {
+    if (!confirmAction || !inv) return;
+    setConfirmLoading(true);
+    setConfirmError(null);
+    const err = await invoiceAction(confirmAction, inv.id, reason);
+    setConfirmLoading(false);
+    if (err) {
+      setConfirmError(err);
+    } else {
+      closeConfirm();
+      onClose();
+    }
+  }
+
+  if (!inv) return null;
+
+  const calStatus = apiStatusToCalStatus(inv);
+  const canApprove = viewerRole === inv.approverRole && inv.status === "Pending";
+  const canPay = viewerRole === inv.approverRole && inv.status === "Approved";
+  const canReceive = userId === inv.submittedByUserId && inv.status === "Paid";
+  const hasActions = canApprove || canPay || canReceive;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <View style={styles.detailScreen}>
+        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.detailHeader}>
+          <SafeAreaView edges={["top"]}>
+            <TouchableOpacity onPress={onClose} style={styles.detailBackBtn}>
+              <Text style={styles.detailBackArrow}>‹</Text>
+              <Text style={styles.detailBackLabel}>My Space</Text>
+            </TouchableOpacity>
+            <Text style={styles.detailTitle}>Invoice Details</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: statusBg(calStatus),
+                  alignSelf: "center",
+                  marginTop: 8,
+                  paddingHorizontal: 16,
+                  paddingVertical: 6,
+                },
+              ]}
+            >
+              <Text
+                style={[styles.statusBadgeText, { color: statusColor(calStatus), fontSize: 14 }]}
+              >
+                {invoiceStatusLabel(inv.status)}
+              </Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+
+        <ScrollView
+          style={styles.detailBody}
+          contentContainerStyle={styles.detailBodyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.detailDesc}>{inv.description}</Text>
+
+          <View style={styles.detailSection}>
+            <Text style={styles.detailSectionLabel}>DETAILS</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailKey}>Submitted by</Text>
+              <Text style={styles.detailVal}>{inv.submittingParty}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailKey}>Category</Text>
+              <Text style={styles.detailVal}>{inv.submittingCategory}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailKey}>Date submitted</Text>
+              <Text style={styles.detailVal}>
+                {new Date(inv.dateSubmitted).toLocaleDateString("en-AU", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailKey}>Due date</Text>
+              <Text style={styles.detailVal}>
+                {new Date(inv.dateDue).toLocaleDateString("en-AU", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </Text>
+            </View>
+            {showAmount && inv.amount != null && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>Amount</Text>
+                <Text style={[styles.detailVal, { fontWeight: "700", color: Colors.navy }]}>
+                  ${inv.amount.toLocaleString()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailKey}>Approver</Text>
+              <Text style={styles.detailVal}>{displayRole(inv.approverRole)}</Text>
+            </View>
+            {inv.daysOverdue > 0 && inv.status !== "Paid" && inv.status !== "Received" && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>Overdue by</Text>
+                <Text style={[styles.detailVal, { color: Colors.red, fontWeight: "600" }]}>
+                  {inv.daysOverdue} days
+                </Text>
+              </View>
+            )}
+            {inv.status === "Rejected" && inv.rejectionReason && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>Rejection reason</Text>
+                <Text style={[styles.detailVal, { color: Colors.red }]}>{inv.rejectionReason}</Text>
+              </View>
+            )}
+          </View>
+
+          {hasActions && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionLabel}>ACTIONS</Text>
+              {canApprove && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
+                    onPress={() => openConfirm("approve")}
+                  >
+                    <Text style={styles.detailActionBtnText}>Approve Invoice</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.detailActionBtn, { backgroundColor: Colors.red, marginTop: 10 }]}
+                    onPress={() => openConfirm("reject")}
+                  >
+                    <Text style={styles.detailActionBtnText}>Reject Invoice</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {canPay && (
+                <TouchableOpacity
+                  style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
+                  onPress={() => openConfirm("paid")}
+                >
+                  <Text style={styles.detailActionBtnText}>Mark as Paid</Text>
+                </TouchableOpacity>
+              )}
+              {canReceive && (
+                <TouchableOpacity
+                  style={[styles.detailActionBtn, { backgroundColor: Colors.navy }]}
+                  onPress={() => openConfirm("received")}
+                >
+                  <Text style={styles.detailActionBtnText}>Confirm Receipt</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </View>
+
+      <ConfirmModal
+        visible={confirmAction !== null}
+        action={confirmAction}
+        invoice={inv}
+        onClose={closeConfirm}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        error={confirmError}
+      />
+    </Modal>
+  );
+}
+
 /* ─── Calendar tab ─── */
 function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
   const [selectedDay, setSelectedDay] = useState<{ day: number; status: InvoiceStatus } | null>(
@@ -679,7 +885,8 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
   }
 
   const overdueList = invoices.filter(
-    (i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received"
+    (i) =>
+      i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   );
 
   return (
@@ -927,20 +1134,50 @@ function MySpaceTab({
     rejectionReason?: string
   ) => Promise<string | null>;
 }) {
+  const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
+  const showAmount = role !== "Observer";
+
   let content: React.ReactNode;
   if (role === "Builder")
-    content = <BuilderMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+    content = (
+      <BuilderMySpace
+        invoices={invoices}
+        userId={userId}
+        invoiceAction={invoiceAction}
+        onTapInvoice={setDetailInvoice}
+      />
+    );
   else if (role === "PM")
-    content = <PMMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+    content = (
+      <PMMySpace
+        invoices={invoices}
+        userId={userId}
+        invoiceAction={invoiceAction}
+        onTapInvoice={setDetailInvoice}
+      />
+    );
   else if (role === "Subbie" || role === "Consultant")
     content = (
-      <InvoiceUploaderView invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
+      <InvoiceUploaderView
+        invoices={invoices}
+        userId={userId}
+        invoiceAction={invoiceAction}
+        onTapInvoice={setDetailInvoice}
+      />
     );
   else if (role === "Owner")
-    content = <OwnerMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
+    content = (
+      <OwnerMySpace
+        invoices={invoices}
+        userId={userId}
+        invoiceAction={invoiceAction}
+        onTapInvoice={setDetailInvoice}
+      />
+    );
   else if (role === "Financier" || role === "VIP")
-    content = <FinancierMySpace invoices={invoices} />;
-  else if (role === "Observer") content = <ObserverMySpace invoices={invoices} />;
+    content = <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
+  else if (role === "Observer")
+    content = <ObserverMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
   else
     content = (
       <View style={styles.placeholder}>
@@ -949,17 +1186,42 @@ function MySpaceTab({
       </View>
     );
 
-  return <View style={{ flex: 1 }}>{content}</View>;
+  return (
+    <View style={{ flex: 1 }}>
+      {content}
+      <InvoiceDetailModal
+        visible={detailInvoice !== null}
+        inv={detailInvoice}
+        viewerRole={role}
+        userId={userId}
+        showAmount={showAmount}
+        invoiceAction={invoiceAction}
+        onClose={() => setDetailInvoice(null)}
+      />
+    </View>
+  );
 }
 
 /* ─── Invoice uploader view (Subcontractor / Builder / Consultant / PM) ─── */
 /* ─── Shared: invoice card for submitter (My Invoices) ─── */
-function MyInvoiceCard({ inv, onReceived }: { inv: ApiInvoice; onReceived: () => void }) {
+function MyInvoiceCard({
+  inv,
+  onReceived,
+  onTap,
+}: {
+  inv: ApiInvoice;
+  onReceived: () => void;
+  onTap: () => void;
+}) {
   const calStatus = apiStatusToCalStatus(inv);
   const canConfirm = inv.status === "Paid";
   const isDone = inv.status === "Received";
   return (
-    <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+    <TouchableOpacity
+      style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+      onPress={onTap}
+      activeOpacity={0.85}
+    >
       <View style={styles.invoiceRow}>
         <Text style={[styles.invoiceName, { flex: 1 }]} numberOfLines={1}>
           {inv.description}
@@ -990,7 +1252,7 @@ function MyInvoiceCard({ inv, onReceived }: { inv: ApiInvoice; onReceived: () =>
           <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -1000,11 +1262,13 @@ function ApprovalCard({
   onApprove,
   onPaid,
   onReject,
+  onTap,
 }: {
   inv: ApiInvoice;
   onApprove: () => void;
   onPaid: () => void;
   onReject: () => void;
+  onTap: () => void;
 }) {
   const calStatus = apiStatusToCalStatus(inv);
   const canApprove = inv.status === "Pending";
@@ -1012,7 +1276,11 @@ function ApprovalCard({
   const isDone = inv.status === "Paid" || inv.status === "Received";
   const isRejected = inv.status === "Rejected";
   return (
-    <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+    <TouchableOpacity
+      style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+      onPress={onTap}
+      activeOpacity={0.85}
+    >
       <View style={styles.invoiceRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
@@ -1061,7 +1329,7 @@ function ApprovalCard({
           )}
           {canPay && (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: Colors.green, flex: 1 }]}
+              style={[styles.actionBtn, { backgroundColor: Colors.green }]}
               onPress={onPaid}
             >
               <Text style={styles.actionBtnText}>Mark as Paid</Text>
@@ -1072,7 +1340,7 @@ function ApprovalCard({
       {isRejected && (
         <Text style={[styles.invoiceDays, { color: Colors.red, marginTop: 6 }]}>✗ Rejected</Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -1081,6 +1349,7 @@ function InvoiceUploaderView({
   invoices,
   userId,
   invoiceAction,
+  onTapInvoice,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -1089,6 +1358,7 @@ function InvoiceUploaderView({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
@@ -1115,7 +1385,9 @@ function InvoiceUploaderView({
   }
 
   const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
-  const outstanding = myInvoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const outstanding = myInvoices.filter(
+    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
+  );
   const paid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
 
   return (
@@ -1148,7 +1420,12 @@ function InvoiceUploaderView({
         <Text style={styles.sectionLabel}>MY INVOICES</Text>
         {myInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
         {myInvoices.map((inv) => (
-          <MyInvoiceCard key={inv.id} inv={inv} onReceived={() => openConfirm("received", inv)} />
+          <MyInvoiceCard
+            key={inv.id}
+            inv={inv}
+            onReceived={() => openConfirm("received", inv)}
+            onTap={() => onTapInvoice(inv)}
+          />
         ))}
       </ScrollView>
       <ConfirmModal
@@ -1170,6 +1447,7 @@ function DualRoleMySpace({
   userId,
   approverRole,
   invoiceAction,
+  onTapInvoice,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -1179,6 +1457,7 @@ function DualRoleMySpace({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "toApprove" | "allInvoices">("myInvoices");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
@@ -1207,7 +1486,9 @@ function DualRoleMySpace({
 
   const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
   const approvalInvoices = invoices.filter((i) => i.approverRole === approverRole);
-  const myOutstanding = myInvoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const myOutstanding = myInvoices.filter(
+    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
+  );
   const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const toAction = approvalInvoices.filter(
     (i) => i.status === "Pending" || i.status === "Approved"
@@ -1215,12 +1496,20 @@ function DualRoleMySpace({
   const actionDone = approvalInvoices.filter(
     (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
   );
-  const allPaid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const allOut = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  // Builder only sees their own invoices + invoices they approve (Subbie/Consultant).
+  // PM sees all project invoices.
+  const allInvoices =
+    approverRole === "Builder"
+      ? invoices.filter((i) => i.submittedByUserId === userId || i.approverRole === "Builder")
+      : invoices;
+  const allPaid = allInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const allOut = allInvoices.filter(
+    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
+  );
 
   const SUB_TABS = [
     { key: "myInvoices" as const, label: "My Invoices" },
-    { key: "toApprove" as const, label: "To Approve" },
+    { key: "toApprove" as const, label: "To Action" },
     { key: "allInvoices" as const, label: "All Invoices" },
   ];
 
@@ -1276,6 +1565,7 @@ function DualRoleMySpace({
                 key={`my-${inv.id}`}
                 inv={inv}
                 onReceived={() => openConfirm("received", inv)}
+                onTap={() => onTapInvoice(inv)}
               />
             ))}
           </>
@@ -1311,6 +1601,7 @@ function DualRoleMySpace({
                 onApprove={() => openConfirm("approve", inv)}
                 onPaid={() => openConfirm("paid", inv)}
                 onReject={() => openConfirm("reject", inv)}
+                onTap={() => onTapInvoice(inv)}
               />
             ))}
           </>
@@ -1323,8 +1614,8 @@ function DualRoleMySpace({
                 [
                   [
                     "Total",
-                    invoices.length,
-                    `$${invoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    allInvoices.length,
+                    `$${allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
                     Colors.textPrimary,
                   ],
                   [
@@ -1348,13 +1639,15 @@ function DualRoleMySpace({
                 </View>
               ))}
             </View>
-            {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-            {invoices.map((inv) => {
+            {allInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+            {allInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
               return (
-                <View
+                <TouchableOpacity
                   key={inv.id}
                   style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+                  onPress={() => onTapInvoice(inv)}
+                  activeOpacity={0.85}
                 >
                   <View style={styles.invoiceRow}>
                     <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
@@ -1374,7 +1667,7 @@ function DualRoleMySpace({
                       </Text>
                     )}
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </>
@@ -1398,6 +1691,7 @@ function BuilderMySpace({
   invoices,
   userId,
   invoiceAction,
+  onTapInvoice,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -1406,6 +1700,7 @@ function BuilderMySpace({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   return (
     <DualRoleMySpace
@@ -1413,6 +1708,7 @@ function BuilderMySpace({
       userId={userId}
       approverRole="Builder"
       invoiceAction={invoiceAction}
+      onTapInvoice={onTapInvoice}
     />
   );
 }
@@ -1422,6 +1718,7 @@ function PMMySpace({
   invoices,
   userId,
   invoiceAction,
+  onTapInvoice,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -1430,6 +1727,7 @@ function PMMySpace({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   return (
     <DualRoleMySpace
@@ -1437,6 +1735,7 @@ function PMMySpace({
       userId={userId}
       approverRole="PM"
       invoiceAction={invoiceAction}
+      onTapInvoice={onTapInvoice}
     />
   );
 }
@@ -1446,6 +1745,7 @@ function OwnerMySpace({
   invoices,
   userId: _userId,
   invoiceAction,
+  onTapInvoice,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -1454,8 +1754,9 @@ function OwnerMySpace({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  onTapInvoice: (inv: ApiInvoice) => void;
 }) {
-  const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("toApprove");
+  const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("allInvoices");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -1485,11 +1786,13 @@ function OwnerMySpace({
     (i) => i.status === "Pending" || i.status === "Approved"
   );
   const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const outInvs = invoices.filter(
+    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
+  );
 
   const OWNER_TABS = [
-    { key: "toApprove" as const, label: "To Approve" },
     { key: "allInvoices" as const, label: "All Invoices" },
+    { key: "toApprove" as const, label: "To Action" },
   ];
 
   return (
@@ -1543,16 +1846,17 @@ function OwnerMySpace({
                 </Text>
               </View>
             </View>
-            {approvalInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices awaiting approval.</Text>
+            {toAction.length === 0 && (
+              <Text style={styles.emptyText}>No invoices awaiting action.</Text>
             )}
-            {approvalInvoices.map((inv) => (
+            {toAction.map((inv) => (
               <ApprovalCard
                 key={`ap-${inv.id}`}
                 inv={inv}
                 onApprove={() => openConfirm("approve", inv)}
                 onPaid={() => openConfirm("paid", inv)}
                 onReject={() => openConfirm("reject", inv)}
+                onTap={() => onTapInvoice(inv)}
               />
             ))}
           </>
@@ -1594,9 +1898,11 @@ function OwnerMySpace({
             {invoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
               return (
-                <View
+                <TouchableOpacity
                   key={inv.id}
                   style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+                  onPress={() => onTapInvoice(inv)}
+                  activeOpacity={0.85}
                 >
                   <View style={styles.invoiceRow}>
                     <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
@@ -1616,7 +1922,7 @@ function OwnerMySpace({
                       </Text>
                     )}
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </>
@@ -1636,9 +1942,17 @@ function OwnerMySpace({
 }
 
 /* ─── Financier / VIP — read-only, full amounts ─── */
-function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+function FinancierMySpace({
+  invoices,
+  onTapInvoice,
+}: {
+  invoices: ApiInvoice[];
+  onTapInvoice: (inv: ApiInvoice) => void;
+}) {
   const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+  const outInvs = invoices.filter(
+    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
+  );
   const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
   const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
@@ -1670,15 +1984,17 @@ function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
       {invoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
-          <View
+          <TouchableOpacity
             key={inv.id}
             style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+            onPress={() => onTapInvoice(inv)}
+            activeOpacity={0.85}
           >
             <View style={styles.invoiceRow}>
               <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {inv.status}
+                  {invoiceStatusLabel(inv.status)}
                 </Text>
               </View>
             </View>
@@ -1692,7 +2008,7 @@ function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
                 </Text>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </ScrollView>
@@ -1700,10 +2016,17 @@ function FinancierMySpace({ invoices }: { invoices: ApiInvoice[] }) {
 }
 
 /* ─── Observer — read-only, no amounts ─── */
-function ObserverMySpace({ invoices }: { invoices: ApiInvoice[] }) {
+function ObserverMySpace({
+  invoices,
+  onTapInvoice,
+}: {
+  invoices: ApiInvoice[];
+  onTapInvoice: (inv: ApiInvoice) => void;
+}) {
   const pendingCount = invoices.filter((i) => i.status === "Pending").length;
   const overdueCount = invoices.filter(
-    (i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received"
+    (i) =>
+      i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   ).length;
   const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
 
@@ -1735,15 +2058,17 @@ function ObserverMySpace({ invoices }: { invoices: ApiInvoice[] }) {
       {invoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
-          <View
+          <TouchableOpacity
             key={inv.id}
             style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+            onPress={() => onTapInvoice(inv)}
+            activeOpacity={0.85}
           >
             <View style={styles.invoiceRow}>
               <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {inv.status}
+                  {invoiceStatusLabel(inv.status)}
                 </Text>
               </View>
             </View>
@@ -1757,7 +2082,7 @@ function ObserverMySpace({ invoices }: { invoices: ApiInvoice[] }) {
                 </Text>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </ScrollView>
@@ -1918,17 +2243,19 @@ const styles = StyleSheet.create({
   confirmBtn: {
     backgroundColor: Colors.green,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    alignSelf: "flex-end",
+    marginTop: 8,
   },
   confirmBtnText: { fontSize: 12, fontWeight: "700", color: Colors.white },
 
   // Builder
-  actionRow: { flexDirection: "row", gap: 8, marginTop: 4 },
+  actionRow: { flexDirection: "row", gap: 8, marginTop: 8, justifyContent: "flex-end" },
   actionBtn: {
-    flex: 1,
     height: 34,
     borderRadius: 8,
+    paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2276,4 +2603,69 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 32,
   },
+
+  // Invoice Detail Modal
+  detailScreen: { flex: 1, backgroundColor: Colors.offWhite },
+  detailHeader: { paddingBottom: 20 },
+  detailBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    marginBottom: 8,
+  },
+  detailBackArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
+  detailBackLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.white,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  detailBody: { flex: 1 },
+  detailBodyContent: { padding: 20, paddingBottom: 48 },
+  detailDesc: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.navy,
+    marginBottom: 20,
+    lineHeight: 26,
+  },
+  detailSection: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  detailSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.offWhite,
+  },
+  detailKey: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
+  detailVal: { fontSize: 13, color: Colors.textPrimary, flex: 2, textAlign: "right" },
+  detailActionBtn: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  detailActionBtnText: { fontSize: 15, fontWeight: "700", color: Colors.white },
 });
