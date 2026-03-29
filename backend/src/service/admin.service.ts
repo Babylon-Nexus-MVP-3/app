@@ -3,6 +3,8 @@ import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
+import { InvoiceModel } from "../models/invoiceModel";
+import { EventModel } from "../models/eventModel";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -258,6 +260,10 @@ export async function deleteProject(projectId: string) {
     throw new ProjectError("Project Does not exist");
   }
 
+  // Delete all events, invoices and participants associated with project
+
+  await EventModel.deleteMany({ aggregateId: projectId });
+  await InvoiceModel.deleteMany({ projectId });
   await ProjectParticipantModel.deleteMany({ projectId });
   await project.deleteOne();
 
