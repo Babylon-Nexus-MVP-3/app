@@ -4,7 +4,6 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
-import { InvoiceModel } from "../models/invoiceModel";
 import { EventModel } from "../models/eventModel";
 
 export class AdminError extends Error {
