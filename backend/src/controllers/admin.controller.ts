@@ -89,6 +89,20 @@ export async function rejectProject(
   }
 }
 
+export async function getAdminProjectDetail(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projectId = req.params.projectId as string;
+    const result = await AdminService.getAdminProjectDetail(projectId);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function removeProjectParticipant(
   req: Request,
   res: Response,

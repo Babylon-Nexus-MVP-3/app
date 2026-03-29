@@ -322,11 +322,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, email, password, role]
+              required: [firstName, lastName, email, password]
               properties:
-                name:
+                firstName:
                   type: string
-                  example: "John Doe"
+                  example: "John"
+                lastName:
+                  type: string
+                  example: "Doe"
                 email:
                   type: string
                   format: email
@@ -336,23 +339,6 @@ paths:
                   format: password
                   minLength: 8
                   example: "SecurePass123!"
-                phoneNumber:
-                  type: string
-                  example: "+61412345678"
-                role:
-                  type: string
-                  enum: [PM, Subbie, Owner, Builder, Consultant]
-                  example: "Subbie"
-                verticalGroup:
-                  type: string
-                  example: "Residential"
-                horizontalAttribute:
-                  type: string
-                  example: "Junior"
-                licenceNumber:
-                  type: string
-                  description: Required for licensed trades
-                  example: "123456"
       responses:
         '201':
           description: User created — verification email sent

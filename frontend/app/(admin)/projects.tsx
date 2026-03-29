@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -105,17 +105,28 @@ export default function AdminProjects() {
           <Text style={styles.emptyText}>No projects found.</Text>
         ) : (
           projects.map((project) => (
-            <View key={project._id} style={styles.projectCard}>
+            <TouchableOpacity
+              key={project._id}
+              style={styles.projectCard}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push({
+                  pathname: "/(admin)/project/[id]",
+                  params: { id: project._id },
+                })
+              }
+            >
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>
                   <Text style={styles.projectName}>{project.name}</Text>
                   <Text style={styles.projectAddress}>{project.location}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
               </View>
               <Text style={styles.projectDate}>
                 Submitted {new Date(project.createdAt).toLocaleDateString("en-AU")}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>

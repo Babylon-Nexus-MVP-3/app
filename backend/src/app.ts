@@ -23,15 +23,17 @@ const swaggerDoc = YAML.parse(swaggerFile);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
-// Utility endpoint for testing
-app.delete("/clear", async (req: Request, res: Response) => {
-  try {
-    const result = await clear();
-    res.status(200).json(result);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
+// Utility endpoint for testing — only available in test environment
+if (process.env.NODE_ENV === "test") {
+  app.delete("/clear", async (_req: Request, res: Response) => {
+    try {
+      const result = await clear();
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+}
 
 app.use("/auth", authRouter);
 app.use("/project", projectRouter);
