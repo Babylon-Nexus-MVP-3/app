@@ -119,6 +119,11 @@ function displayRole(role: string): string {
   return ROLE_DISPLAY[role] ?? role;
 }
 
+function invoiceStatusLabel(status: ApiInvoice["status"]): string {
+  if (status === "Received") return "Payment Received";
+  return status;
+}
+
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -156,6 +161,54 @@ export default function ProjectDetail() {
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [invoiceSuccess, setInvoiceSuccess] = useState(false);
+
+  // ── Invite state ──
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<InviteRole>("Subcontractor");
+  const [inviteTrade, setInviteTrade] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // ── FAB menu state ──
+  const [fabMenuVisible, setFabMenuVisible] = useState(false);
+
+  function openInvite() {
+    setInviteEmail("");
+    setInviteRole("Subcontractor");
+    setInviteTrade("");
+    setInviteCode(null);
+    setInviteError(null);
+    setInviteVisible(true);
+    setFabMenuVisible(false);
+  }
+
+  async function handleInvite() {
+    setInviteLoading(true);
+    setInviteError(null);
+    try {
+      const res = await fetchWithAuth(`http://localhost:3229/project/${id}/invite`, {
+        method: "POST",
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: ROLE_API[inviteRole] ?? inviteRole,
+          trade: inviteTrade.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteError(data.error ?? "Failed to send invite");
+      } else {
+        setInviteCode(data.participant.inviteCode);
+      }
+    } catch {
+      setInviteError("Network error. Please try again.");
+    } finally {
+      setInviteLoading(false);
+    }
+  }
 
   function openInvoice() {
     setInvDesc("");
@@ -283,13 +336,7 @@ export default function ProjectDetail() {
       {activeTab === "calendar" ? (
         <CalendarTab invoices={invoices} />
       ) : (
-        <MySpaceTab
-          role={role}
-          projectId={id}
-          invoices={invoices}
-          userId={userId}
-          invoiceAction={invoiceAction}
-        />
+        <MySpaceTab role={role} invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
       )}
 
       {/* Bottom tab bar */}
@@ -307,11 +354,38 @@ export default function ProjectDetail() {
         ))}
       </View>
 
-      {/* Floating + FAB — only on My Space tab for invoice-uploading roles */}
-      {activeTab === "myspace" && isInvoiceUploader && (
-        <TouchableOpacity style={styles.fab} onPress={openInvoice}>
-          <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
+      {/* Floating + FAB */}
+      {activeTab === "myspace" && (
+        <View style={styles.fabWrap}>
+          {fabMenuVisible && (
+            <View style={styles.fabMenu}>
+              <TouchableOpacity
+                style={styles.fabMenuItem}
+                onPress={() => {
+                  setFabMenuVisible(false);
+                  openInvoice();
+                }}
+              >
+                <Text style={styles.fabMenuText}>Raise Invoice</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fabMenuItem} onPress={openInvite}>
+                <Text style={styles.fabMenuText}>Invite Team Member</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            style={[styles.fab, fabMenuVisible && styles.fabActive]}
+            onPress={() => {
+              if (isInvoiceUploader) {
+                setFabMenuVisible((v) => !v);
+                return;
+              }
+              openInvite();
+            }}
+          >
+            <Text style={styles.fabText}>{fabMenuVisible ? "✕" : "+"}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ── Raise Invoice modal ── */}
@@ -459,6 +533,119 @@ export default function ProjectDetail() {
             )}
           </ScrollView>
         </LinearGradient>
+      </Modal>
+
+      {/* ── Invite modal ── */}
+      <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={styles.inviteScreen}>
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
+            <SafeAreaView edges={["top"]}>
+              <TouchableOpacity
+                onPress={() => setInviteVisible(false)}
+                style={styles.inviteBackBtn}
+              >
+                <Text style={styles.inviteBackArrow}>‹</Text>
+                <Text style={styles.inviteBackLabel}>My Space</Text>
+              </TouchableOpacity>
+              <Text style={styles.inviteTitle}>
+                {inviteCode ? "Invite Sent" : "Invite Team Member"}
+              </Text>
+            </SafeAreaView>
+          </LinearGradient>
+          <ScrollView
+            style={styles.inviteBody}
+            contentContainerStyle={styles.inviteBodyContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {inviteCode ? (
+              <View style={styles.inviteSuccess}>
+                <View style={styles.inviteSuccessIcon}>
+                  <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
+                </View>
+                <Text style={styles.inviteSuccessTitle}>Invite Sent!</Text>
+                <Text style={styles.inviteSuccessHint}>Share this code with {inviteEmail}:</Text>
+                <View style={styles.inviteCodeBox}>
+                  <Text style={styles.inviteCodeText}>{inviteCode}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.copyBtn}
+                  onPress={async () => {
+                    await Clipboard.setStringAsync(inviteCode!);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  <Text style={styles.copyBtnText}>{copied ? "✓ Copied!" : "Copy Code"}</Text>
+                </TouchableOpacity>
+                <Text style={styles.inviteCodeNote}>
+                  The invitee will use this code to join the project.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch" }]}
+                  onPress={() => setInviteVisible(false)}
+                >
+                  <Text style={styles.invitePrimaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.inviteFieldLabel}>Email</Text>
+                <TextInput
+                  style={styles.inviteInput}
+                  placeholder="name@company.com"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Text style={styles.inviteFieldLabel}>Role</Text>
+                <View style={styles.inviteRoleRow}>
+                  {INVITE_ROLES.map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[
+                        styles.inviteRoleChip,
+                        inviteRole === r && styles.inviteRoleChipActive,
+                      ]}
+                      onPress={() => setInviteRole(r)}
+                    >
+                      <Text
+                        style={[
+                          styles.inviteRoleChipText,
+                          inviteRole === r && styles.inviteRoleChipTextActive,
+                        ]}
+                      >
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.inviteFieldLabel}>Trade</Text>
+                <TextInput
+                  style={styles.inviteInput}
+                  placeholder="e.g. Electrical, Plumbing"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={inviteTrade}
+                  onChangeText={setInviteTrade}
+                />
+                {inviteError && <Text style={styles.inviteError}>{inviteError}</Text>}
+                <TouchableOpacity
+                  style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
+                  onPress={handleInvite}
+                  disabled={inviteLoading}
+                >
+                  {inviteLoading ? (
+                    <ActivityIndicator color={Colors.navy} />
+                  ) : (
+                    <Text style={styles.invitePrimaryBtnText}>Send Invite</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </View>
       </Modal>
     </View>
   );
@@ -727,13 +914,11 @@ type InviteRole = (typeof INVITE_ROLES)[number];
 /* ─── My Space tab (role router) ─── */
 function MySpaceTab({
   role,
-  projectId,
   invoices,
   userId,
   invoiceAction,
 }: {
   role: string;
-  projectId: string;
   invoices: ApiInvoice[];
   userId: string;
   invoiceAction: (
@@ -742,52 +927,6 @@ function MySpaceTab({
     rejectionReason?: string
   ) => Promise<string | null>;
 }) {
-  const { fetchWithAuth } = useAuth();
-
-  // ── Invite modal state ──
-  const [inviteVisible, setInviteVisible] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<InviteRole>("Subcontractor");
-  const [inviteTrade, setInviteTrade] = useState("");
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  function openInvite() {
-    setInviteEmail("");
-    setInviteRole("Subcontractor");
-    setInviteTrade("");
-    setInviteCode(null);
-    setInviteError(null);
-    setInviteVisible(true);
-  }
-
-  async function handleInvite() {
-    setInviteLoading(true);
-    setInviteError(null);
-    try {
-      const res = await fetchWithAuth(`http://localhost:3229/project/${projectId}/invite`, {
-        method: "POST",
-        body: JSON.stringify({
-          email: inviteEmail.trim(),
-          role: ROLE_API[inviteRole] ?? inviteRole,
-          trade: inviteTrade.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setInviteError(data.error ?? "Failed to send invite");
-      } else {
-        setInviteCode(data.participant.inviteCode);
-      }
-    } catch {
-      setInviteError("Network error. Please try again.");
-    } finally {
-      setInviteLoading(false);
-    }
-  }
-
   let content: React.ReactNode;
   if (role === "Builder")
     content = <BuilderMySpace invoices={invoices} userId={userId} invoiceAction={invoiceAction} />;
@@ -810,136 +949,7 @@ function MySpaceTab({
       </View>
     );
 
-  return (
-    <View style={{ flex: 1 }}>
-      {content}
-
-      {/* Invite footer — always visible */}
-      <View style={styles.inviteFooter}>
-        <TouchableOpacity style={styles.inviteBtn} onPress={openInvite}>
-          <Text style={styles.inviteBtnText}>+ Invite Team Member</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Invite modal ── */}
-      <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
-        <View style={styles.inviteScreen}>
-          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
-            <SafeAreaView edges={["top"]}>
-              <TouchableOpacity
-                onPress={() => setInviteVisible(false)}
-                style={styles.inviteBackBtn}
-              >
-                <Text style={styles.inviteBackArrow}>‹</Text>
-                <Text style={styles.inviteBackLabel}>My Space</Text>
-              </TouchableOpacity>
-              <Text style={styles.inviteTitle}>
-                {inviteCode ? "Invite Sent" : "Invite Team Member"}
-              </Text>
-            </SafeAreaView>
-          </LinearGradient>
-
-          <ScrollView
-            style={styles.inviteBody}
-            contentContainerStyle={styles.inviteBodyContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {inviteCode ? (
-              <View style={styles.inviteSuccess}>
-                <View style={styles.inviteSuccessIcon}>
-                  <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
-                </View>
-                <Text style={styles.inviteSuccessTitle}>Invite Sent!</Text>
-                <Text style={styles.inviteSuccessHint}>Share this code with {inviteEmail}:</Text>
-                <View style={styles.inviteCodeBox}>
-                  <Text style={styles.inviteCodeText}>{inviteCode}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.copyBtn}
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(inviteCode!);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
-                >
-                  <Text style={styles.copyBtnText}>{copied ? "✓ Copied!" : "Copy Code"}</Text>
-                </TouchableOpacity>
-                <Text style={styles.inviteCodeNote}>
-                  The invitee will use this code to join the project.
-                </Text>
-                <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch" }]}
-                  onPress={() => setInviteVisible(false)}
-                >
-                  <Text style={styles.invitePrimaryBtnText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.inviteFieldLabel}>Email</Text>
-                <TextInput
-                  style={styles.inviteInput}
-                  placeholder="name@company.com"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={inviteEmail}
-                  onChangeText={setInviteEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-
-                <Text style={styles.inviteFieldLabel}>Role</Text>
-                <View style={styles.inviteRoleRow}>
-                  {INVITE_ROLES.map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      style={[
-                        styles.inviteRoleChip,
-                        inviteRole === r && styles.inviteRoleChipActive,
-                      ]}
-                      onPress={() => setInviteRole(r)}
-                    >
-                      <Text
-                        style={[
-                          styles.inviteRoleChipText,
-                          inviteRole === r && styles.inviteRoleChipTextActive,
-                        ]}
-                      >
-                        {r}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.inviteFieldLabel}>Trade</Text>
-                <TextInput
-                  style={styles.inviteInput}
-                  placeholder="e.g. Electrical, Plumbing"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={inviteTrade}
-                  onChangeText={setInviteTrade}
-                />
-
-                {inviteError && <Text style={styles.inviteError}>{inviteError}</Text>}
-
-                <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
-                  onPress={handleInvite}
-                  disabled={inviteLoading}
-                >
-                  {inviteLoading ? (
-                    <ActivityIndicator color={Colors.navy} />
-                  ) : (
-                    <Text style={styles.invitePrimaryBtnText}>Send Invite</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
-  );
+  return <View style={{ flex: 1 }}>{content}</View>;
 }
 
 /* ─── Invoice uploader view (Subcontractor / Builder / Consultant / PM) ─── */
@@ -956,7 +966,7 @@ function MyInvoiceCard({ inv, onReceived }: { inv: ApiInvoice; onReceived: () =>
         </Text>
         <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
           <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-            {inv.status}
+            {invoiceStatusLabel(inv.status)}
           </Text>
         </View>
       </View>
@@ -980,7 +990,6 @@ function MyInvoiceCard({ inv, onReceived }: { inv: ApiInvoice; onReceived: () =>
           <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
         </TouchableOpacity>
       )}
-      {isDone && <Text style={styles.confirmedText}>✓ Receipt Confirmed</Text>}
     </View>
   );
 }
@@ -1019,7 +1028,7 @@ function ApprovalCard({
             style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginTop: 4 }]}
           >
             <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-              {inv.status}
+              {invoiceStatusLabel(inv.status)}
             </Text>
           </View>
         </View>
@@ -1060,7 +1069,6 @@ function ApprovalCard({
           )}
         </View>
       )}
-      {isDone && <Text style={[styles.confirmedText, { marginTop: 6 }]}>✓ {inv.status}</Text>}
       {isRejected && (
         <Text style={[styles.invoiceDays, { color: Colors.red, marginTop: 6 }]}>✗ Rejected</Text>
       )}
@@ -1156,7 +1164,7 @@ function InvoiceUploaderView({
   );
 }
 
-/* ─── Shared dual-role view (Builder / PM): My Invoices + Incoming Approvals ─── */
+/* ─── Shared dual-role view (Builder / PM): My Invoices + To Approve + All Invoices ─── */
 function DualRoleMySpace({
   invoices,
   userId,
@@ -1172,6 +1180,7 @@ function DualRoleMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
 }) {
+  const [subTab, setSubTab] = useState<"myInvoices" | "toApprove" | "allInvoices">("myInvoices");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -1206,82 +1215,170 @@ function DualRoleMySpace({
   const actionDone = approvalInvoices.filter(
     (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
   );
+  const allPaid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const allOut = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
+
+  const SUB_TABS = [
+    { key: "myInvoices" as const, label: "My Invoices" },
+    { key: "toApprove" as const, label: "To Approve" },
+    { key: "allInvoices" as const, label: "All Invoices" },
+  ];
 
   return (
     <>
+      {/* Inner sub-tab bar */}
+      <View style={styles.innerTabBar}>
+        {SUB_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
+            onPress={() => setSubTab(t.key)}
+          >
+            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── My submitted invoices ── */}
-        <View style={styles.statRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>Outstanding</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>Paid</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.sectionLabel}>MY INVOICES</Text>
-        {myInvoices.length === 0 && (
-          <Text style={styles.emptyText}>No invoices submitted yet.</Text>
+        {subTab === "myInvoices" && (
+          <>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Outstanding</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                  ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Paid</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                  ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+            </View>
+            {myInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices submitted yet.</Text>
+            )}
+            {myInvoices.map((inv) => (
+              <MyInvoiceCard
+                key={`my-${inv.id}`}
+                inv={inv}
+                onReceived={() => openConfirm("received", inv)}
+              />
+            ))}
+          </>
         )}
-        {myInvoices.map((inv) => (
-          <MyInvoiceCard
-            key={`my-${inv.id}`}
-            inv={inv}
-            onReceived={() => openConfirm("received", inv)}
-          />
-        ))}
 
-        {/* ── Incoming approvals ── */}
-        <View style={styles.sectionDivider} />
-        <View style={styles.statRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>To Action</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>Completed</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.sectionLabel}>INCOMING APPROVALS</Text>
-        {approvalInvoices.length === 0 && (
-          <Text style={styles.emptyText}>No invoices to approve.</Text>
+        {subTab === "toApprove" && (
+          <>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>To Action</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                  ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Completed</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                  ${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+            </View>
+            {toAction.length === 0 && <Text style={styles.emptyText}>No invoices to approve.</Text>}
+            {toAction.map((inv) => (
+              <ApprovalCard
+                key={`ap-${inv.id}`}
+                inv={inv}
+                onApprove={() => openConfirm("approve", inv)}
+                onPaid={() => openConfirm("paid", inv)}
+                onReject={() => openConfirm("reject", inv)}
+              />
+            ))}
+          </>
         )}
-        {approvalInvoices.map((inv) => (
-          <ApprovalCard
-            key={`in-${inv.id}`}
-            inv={inv}
-            onApprove={() => openConfirm("approve", inv)}
-            onPaid={() => openConfirm("paid", inv)}
-            onReject={() => openConfirm("reject", inv)}
-          />
-        ))}
+
+        {subTab === "allInvoices" && (
+          <>
+            <View style={styles.statRow}>
+              {(
+                [
+                  [
+                    "Total",
+                    invoices.length,
+                    `$${invoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.textPrimary,
+                  ],
+                  [
+                    "Paid",
+                    allPaid.length,
+                    `$${allPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.green,
+                  ],
+                  [
+                    "Outstanding",
+                    allOut.length,
+                    `$${allOut.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.amber,
+                  ],
+                ] as const
+              ).map(([label, count, val, color]) => (
+                <View key={label} style={styles.statBox}>
+                  <Text style={styles.statBoxLabel}>{label}</Text>
+                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>{val}</Text>
+                  <Text style={styles.statBoxSub}>{count} invoices</Text>
+                </View>
+              ))}
+            </View>
+            {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+            {invoices.map((inv) => {
+              const calStatus = apiStatusToCalStatus(inv);
+              return (
+                <View
+                  key={inv.id}
+                  style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+                >
+                  <View style={styles.invoiceRow}>
+                    <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                        {invoiceStatusLabel(inv.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.invoiceRow}>
+                    {inv.amount != null && (
+                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                    )}
+                    {inv.daysOverdue > 0 && (
+                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                        {inv.daysOverdue} days overdue
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
       <ConfirmModal
         visible={confirmAction !== null}
@@ -1344,7 +1441,7 @@ function PMMySpace({
   );
 }
 
-/* ─── Owner / Financier / VIP ─── */
+/* ─── Owner ─── */
 function OwnerMySpace({
   invoices,
   userId: _userId,
@@ -1358,6 +1455,7 @@ function OwnerMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
 }) {
+  const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("toApprove");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -1383,85 +1481,146 @@ function OwnerMySpace({
   }
 
   const approvalInvoices = invoices.filter((i) => i.approverRole === "Owner");
+  const toAction = approvalInvoices.filter(
+    (i) => i.status === "Pending" || i.status === "Approved"
+  );
   const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const outInvs = invoices.filter((i) => i.status !== "Paid" && i.status !== "Received");
-  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
-  const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
-  const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+
+  const OWNER_TABS = [
+    { key: "toApprove" as const, label: "To Approve" },
+    { key: "allInvoices" as const, label: "All Invoices" },
+  ];
 
   return (
     <>
+      <View style={styles.innerTabBar}>
+        {OWNER_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
+            onPress={() => setSubTab(t.key)}
+          >
+            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.statRow}>
-          {(
-            [
-              [
-                "Total Raised",
-                invoices.length,
-                `$${valTotal.toLocaleString()}`,
-                Colors.textPrimary,
-              ],
-              ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
-              ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
-            ] as const
-          ).map(([label, count, val, color]) => (
-            <View key={label} style={styles.statBox}>
-              <Text style={styles.statBoxLabel}>{label}</Text>
-              <Text style={[styles.statBoxNum, { color, fontSize: 18 }]}>{val}</Text>
-              <Text style={styles.statBoxSub}>{count} invoices</Text>
+        {subTab === "toApprove" && (
+          <>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>To Action</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                  ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Approved/Paid</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                  $
+                  {approvalInvoices
+                    .filter((i) => i.status === "Paid" || i.status === "Received")
+                    .reduce((a, i) => a + (i.amount ?? 0), 0)
+                    .toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {
+                    approvalInvoices.filter((i) => i.status === "Paid" || i.status === "Received")
+                      .length
+                  }{" "}
+                  invoices
+                </Text>
+              </View>
             </View>
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>AWAITING MY APPROVAL</Text>
-        {approvalInvoices.length === 0 && (
-          <Text style={styles.emptyText}>No invoices awaiting approval.</Text>
+            {approvalInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices awaiting approval.</Text>
+            )}
+            {approvalInvoices.map((inv) => (
+              <ApprovalCard
+                key={`ap-${inv.id}`}
+                inv={inv}
+                onApprove={() => openConfirm("approve", inv)}
+                onPaid={() => openConfirm("paid", inv)}
+                onReject={() => openConfirm("reject", inv)}
+              />
+            ))}
+          </>
         )}
-        {approvalInvoices.map((inv) => (
-          <ApprovalCard
-            key={`ap-${inv.id}`}
-            inv={inv}
-            onApprove={() => openConfirm("approve", inv)}
-            onPaid={() => openConfirm("paid", inv)}
-            onReject={() => openConfirm("reject", inv)}
-          />
-        ))}
 
-        <View style={styles.sectionDivider} />
-        <Text style={styles.sectionLabel}>ALL INVOICES</Text>
-        {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-        {invoices.map((inv) => {
-          const calStatus = apiStatusToCalStatus(inv);
-          return (
-            <View
-              key={inv.id}
-              style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
-            >
-              <View style={styles.invoiceRow}>
-                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                  <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                    {inv.status}
-                  </Text>
+        {subTab === "allInvoices" && (
+          <>
+            <View style={styles.statRow}>
+              {(
+                [
+                  [
+                    "Total Raised",
+                    invoices.length,
+                    `$${invoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.textPrimary,
+                  ],
+                  [
+                    "Paid",
+                    paidInvs.length,
+                    `$${paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.green,
+                  ],
+                  [
+                    "Outstanding",
+                    outInvs.length,
+                    `$${outInvs.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
+                    Colors.amber,
+                  ],
+                ] as const
+              ).map(([label, count, val, color]) => (
+                <View key={label} style={styles.statBox}>
+                  <Text style={styles.statBoxLabel}>{label}</Text>
+                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>{val}</Text>
+                  <Text style={styles.statBoxSub}>{count} invoices</Text>
                 </View>
-              </View>
-              <View style={styles.invoiceRow}>
-                {inv.amount != null && (
-                  <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
-                )}
-                {inv.daysOverdue > 0 && (
-                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
-                    {inv.daysOverdue} days overdue
-                  </Text>
-                )}
-              </View>
+              ))}
             </View>
-          );
-        })}
+            {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+            {invoices.map((inv) => {
+              const calStatus = apiStatusToCalStatus(inv);
+              return (
+                <View
+                  key={inv.id}
+                  style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+                >
+                  <View style={styles.invoiceRow}>
+                    <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                        {invoiceStatusLabel(inv.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.invoiceRow}>
+                    {inv.amount != null && (
+                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                    )}
+                    {inv.daysOverdue > 0 && (
+                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                        {inv.daysOverdue} days overdue
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
       <ConfirmModal
         visible={confirmAction !== null}
@@ -1888,11 +2047,48 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center", marginTop: 16 },
   placeholderSub: { fontSize: 14, color: Colors.textSecondary },
 
+  // Inner sub-tab bar (inside role views)
+  innerTabBar: {
+    flexDirection: "row",
+    backgroundColor: Colors.offWhite,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.07)",
+  },
+  innerTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  innerTabActive: { borderBottomColor: Colors.navy },
+  innerTabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  innerTabTextActive: { color: Colors.navy },
+
+  // FAB wrap + menu
+  fabWrap: { position: "absolute", bottom: 80, right: 20, alignItems: "flex-end" },
+  fabMenu: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    overflow: "hidden",
+  },
+  fabMenuItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+  },
+  fabMenuText: { fontSize: 15, fontWeight: "600", color: Colors.navy },
+  fabActive: { backgroundColor: Colors.navy },
+
   // Floating action button
   fab: {
-    position: "absolute",
-    bottom: 145,
-    right: 20,
     width: 56,
     height: 56,
     borderRadius: 16,
