@@ -24,6 +24,7 @@ function isPaidStatus(status: InvoiceStatus): boolean {
 
 export interface ProjectInvoiceListItem {
   id: string;
+  invoiceNumber: string;
   submittingParty: string;
   submittingCategory: string;
   description: string;
@@ -105,6 +106,7 @@ export async function getProjectDetails(
 
     return {
       id: i._id.toString(),
+      invoiceNumber: i.invoiceNumber ?? "",
       submittingParty: i.submittingParty,
       submittingCategory: i.submittingCategory,
       description: i.description,

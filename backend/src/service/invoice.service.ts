@@ -4,6 +4,7 @@ import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
 import { UserRole } from "../models/userModel";
+import { getNextSequence } from "../models/counterModel";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -89,7 +90,11 @@ export async function submitInvoice(
     );
   }
 
+  const seq = await getNextSequence("invoice");
+  const invoiceNumber = `INV-${String(seq).padStart(4, "0")}`;
+
   const invoice = await InvoiceModel.create({
+    invoiceNumber,
     projectId,
     submittingParty,
     submittingCategory,

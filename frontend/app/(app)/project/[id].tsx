@@ -62,6 +62,7 @@ function statusLabel(s: InvoiceStatus): string {
 /* ─── API types ─── */
 type ApiInvoice = {
   id: string;
+  invoiceNumber: string;
   submittingParty: string;
   submittingCategory: string;
   description: string;
@@ -725,7 +726,9 @@ function InvoiceDetailModal({
               <Text style={styles.detailBackArrow}>‹</Text>
               <Text style={styles.detailBackLabel}>My Space</Text>
             </TouchableOpacity>
-            <Text style={styles.detailTitle}>Invoice Details</Text>
+            <Text style={styles.detailTitle}>
+              {inv.invoiceNumber ? `${inv.invoiceNumber} — Invoice` : "Invoice Details"}
+            </Text>
             <View
               style={[
                 styles.statusBadge,
@@ -982,7 +985,14 @@ function CalendarTab({
                 >
                   <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
                     <View style={styles.invoiceRow}>
-                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                        {inv.invoiceNumber ? (
+                          <View style={styles.invoiceNumPill}>
+                            <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                          </View>
+                        ) : null}
+                      </View>
                       <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                         <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                           {invoiceStatusLabel(inv.status)}
@@ -1253,6 +1263,11 @@ function MyInvoiceCard({
           </Text>
         </View>
       </View>
+      {inv.invoiceNumber ? (
+        <View style={styles.invoiceNumPill}>
+          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+        </View>
+      ) : null}
       <View style={styles.invoiceRow}>
         <Text style={styles.invoiceDate}>
           Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
@@ -1324,6 +1339,11 @@ function ApprovalCard({
           </View>
         </View>
       </View>
+      {inv.invoiceNumber ? (
+        <View style={styles.invoiceNumPill}>
+          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+        </View>
+      ) : null}
       <Text style={styles.invoiceDate}>
         Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
       </Text>
@@ -1688,7 +1708,14 @@ function DualRoleMySpace({
                   activeOpacity={0.85}
                 >
                   <View style={styles.invoiceRow}>
-                    <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      {inv.invoiceNumber ? (
+                        <View style={styles.invoiceNumPill}>
+                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                       <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                         {invoiceStatusLabel(inv.status)}
@@ -1946,7 +1973,14 @@ function OwnerMySpace({
                   activeOpacity={0.85}
                 >
                   <View style={styles.invoiceRow}>
-                    <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      {inv.invoiceNumber ? (
+                        <View style={styles.invoiceNumPill}>
+                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                       <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                         {invoiceStatusLabel(inv.status)}
@@ -2032,7 +2066,14 @@ function FinancierMySpace({
             activeOpacity={0.85}
           >
             <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                {inv.invoiceNumber ? (
+                  <View style={styles.invoiceNumPill}>
+                    <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                  </View>
+                ) : null}
+              </View>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                   {invoiceStatusLabel(inv.status)}
@@ -2106,7 +2147,14 @@ function ObserverMySpace({
             activeOpacity={0.85}
           >
             <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                {inv.invoiceNumber ? (
+                  <View style={styles.invoiceNumPill}>
+                    <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                  </View>
+                ) : null}
+              </View>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                   {invoiceStatusLabel(inv.status)}
@@ -2231,7 +2279,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  invoiceName: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, flex: 1 },
+  invoiceName: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  invoiceNumPill: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.gold,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  invoiceNumText: { fontSize: 10, fontWeight: "700", color: Colors.white },
   invoiceDate: { fontSize: 12, color: Colors.textSecondary },
   invoiceDays: { fontSize: 12, fontWeight: "600" },
   invoiceAmt: { fontSize: 16, fontWeight: "800", color: Colors.textPrimary },
