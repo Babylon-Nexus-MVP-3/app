@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as Clipboard from "expo-clipboard";
+import { Calendar } from "react-native-calendars";
 import {
   ActivityIndicator,
-  Dimensions,
   Modal,
   Platform,
   ScrollView,
@@ -49,12 +49,12 @@ function statusBg(s: InvoiceStatus): string {
 
 function statusLabel(s: InvoiceStatus): string {
   const map: Record<InvoiceStatus, string> = {
-    green: "Paid",
-    amber: "Warning",
-    red: "Overdue",
+    green: "Paid On Time",
+    amber: "Paid Late",
+    red: "Overdue / Rejected",
     purple: "Info Pending",
-    grey: "Buffer",
-    issued: "Issued",
+    grey: "Approved",
+    issued: "Pending Approval",
   };
   return map[s] ?? "";
 }
@@ -126,11 +126,15 @@ function invoiceStatusLabel(status: ApiInvoice["status"]): string {
   return status;
 }
 
-const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+// Owner, PM, Financier, VIP see all amounts.
+// Everyone else sees amounts only for invoices they submitted OR invoices where they are the approver.
+// Observer sees no amounts at all.
+function canViewAmount(role: string, inv: ApiInvoice, userId: string): boolean {
+  if (role === "Observer") return false;
+  if (role === "Owner" || role === "PM" || role === "Financier" || role === "VIP") return true;
+  return inv.submittedByUserId === userId || inv.approverRole === role;
+}
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-// Cap at 46px so cells stay compact on large/tablet screens
-const DAY_CELL = Math.min(Math.floor((SCREEN_WIDTH - 40 - 24) / 7), 46);
 const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
 
 /* ─── Main screen ─── */
@@ -336,7 +340,12 @@ export default function ProjectDetail() {
       </LinearGradient>
 
       {activeTab === "calendar" ? (
-        <CalendarTab invoices={invoices} />
+        <CalendarTab
+          invoices={invoices}
+          role={role}
+          userId={userId}
+          invoiceAction={invoiceAction}
+        />
       ) : (
         <MySpaceTab role={role} invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
       )}
@@ -659,7 +668,6 @@ function InvoiceDetailModal({
   inv,
   viewerRole,
   userId,
-  showAmount,
   invoiceAction,
   onClose,
 }: {
@@ -667,7 +675,6 @@ function InvoiceDetailModal({
   inv: ApiInvoice | null;
   viewerRole: string;
   userId: string;
-  showAmount: boolean;
   invoiceAction: (
     action: InvoiceActionType,
     invoiceId: string,
@@ -702,6 +709,7 @@ function InvoiceDetailModal({
 
   if (!inv) return null;
 
+  const showAmount = canViewAmount(viewerRole, inv, userId);
   const calStatus = apiStatusToCalStatus(inv);
   const canApprove = viewerRole === inv.approverRole && inv.status === "Pending";
   const canPay = viewerRole === inv.approverRole && inv.status === "Approved";
@@ -852,42 +860,67 @@ function InvoiceDetailModal({
         onConfirm={handleConfirm}
         loading={confirmLoading}
         error={confirmError}
+        showAmount={showAmount}
       />
     </Modal>
   );
 }
 
 /* ─── Calendar tab ─── */
-function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
-  const [selectedDay, setSelectedDay] = useState<{ day: number; status: InvoiceStatus } | null>(
-    null
-  );
+function CalendarTab({
+  invoices,
+  role,
+  userId,
+  invoiceAction,
+}: {
+  invoices: ApiInvoice[];
+  role: string;
+  userId: string;
+  invoiceAction: (
+    action: InvoiceActionType,
+    invoiceId: string,
+    rejectionReason?: string
+  ) => Promise<string | null>;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
-  const emptyBefore = firstDow === 0 ? 6 : firstDow - 1;
-  const monthName = now.toLocaleString("en-AU", { month: "long", year: "numeric" });
-
-  // Map each day of the month to its worst invoice status
-  const dayStatusMap = new Map<number, InvoiceStatus>();
+  // Build worst-status dot per date (YYYY-MM-DD key)
+  const dayStatusMap = new Map<string, InvoiceStatus>();
   for (const inv of invoices) {
-    const due = new Date(inv.dateDue);
-    if (due.getFullYear() !== year || due.getMonth() !== month) continue;
-    const day = due.getDate();
+    const dateStr = inv.dateDue.split("T")[0];
     const calStatus = apiStatusToCalStatus(inv);
-    const existing = dayStatusMap.get(day);
+    const existing = dayStatusMap.get(dateStr);
     if (!existing || SEVERITY[calStatus] > SEVERITY[existing]) {
-      dayStatusMap.set(day, calStatus);
+      dayStatusMap.set(dateStr, calStatus);
     }
   }
 
-  const overdueList = invoices.filter(
-    (i) =>
-      i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
+  // Build markedDates for react-native-calendars (multi-dot)
+  const markedDates: Record<string, any> = {};
+  for (const [dateStr, calStatus] of dayStatusMap) {
+    markedDates[dateStr] = {
+      dots: [{ key: dateStr, color: statusColor(calStatus) }],
+      ...(selectedDate === dateStr && { selected: true, selectedColor: Colors.navy }),
+    };
+  }
+  if (selectedDate && !markedDates[selectedDate]) {
+    markedDates[selectedDate] = { selected: true, selectedColor: Colors.navy };
+  }
+
+  // Invoices due on the selected date
+  const selectedInvoices = selectedDate
+    ? invoices.filter((i) => i.dateDue.split("T")[0] === selectedDate)
+    : [];
+
+  const selectedDateLabel = selectedDate
+    ? new Date(selectedDate + "T00:00:00").toLocaleDateString("en-AU", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <ScrollView
@@ -895,67 +928,36 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Month header */}
-      <View style={styles.monthRow}>
-        <Text style={styles.monthArrow}>‹</Text>
-        <Text style={styles.monthTitle}>{monthName}</Text>
-        <Text style={styles.monthArrow}>›</Text>
-      </View>
-
-      {/* Calendar grid */}
-      <View style={styles.calGrid}>
-        {WEEK_DAYS.map((d, i) => (
-          <View key={`h${i}`} style={{ width: DAY_CELL, alignItems: "center", paddingVertical: 4 }}>
-            <Text style={styles.weekDay}>{d}</Text>
-          </View>
-        ))}
-        {Array(emptyBefore)
-          .fill(null)
-          .map((_, i) => (
-            <View key={`e${i}`} style={{ width: DAY_CELL, height: DAY_CELL }} />
-          ))}
-        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-          const status = dayStatusMap.get(day);
-          const selected = selectedDay?.day === day;
-          return (
-            <TouchableOpacity
-              key={day}
-              style={[
-                styles.dayCell,
-                {
-                  width: DAY_CELL,
-                  height: DAY_CELL,
-                  backgroundColor: status ? statusColor(status) + "25" : "transparent",
-                },
-                selected && styles.dayCellSelected,
-              ]}
-              onPress={() =>
-                status ? setSelectedDay(selected ? null : { day, status }) : undefined
-              }
-              activeOpacity={status ? 0.7 : 1}
-            >
-              <Text style={styles.dayNum}>{day}</Text>
-              {status && <View style={[styles.dayDot, { backgroundColor: statusColor(status) }]} />}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Selected day detail */}
-      {selectedDay && (
-        <View style={[styles.dayDetail, { borderLeftColor: statusColor(selectedDay.status) }]}>
-          <Text style={styles.dayDetailTitle}>
-            {now.toLocaleString("en-AU", { month: "long" })} {selectedDay.day}
-          </Text>
-          <Text style={[styles.dayDetailStatus, { color: statusColor(selectedDay.status) }]}>
-            {statusLabel(selectedDay.status)}
-          </Text>
-        </View>
-      )}
+      <Calendar
+        markingType="multi-dot"
+        markedDates={markedDates}
+        onDayPress={(day) =>
+          setSelectedDate(day.dateString === selectedDate ? null : day.dateString)
+        }
+        theme={{
+          backgroundColor: Colors.offWhite,
+          calendarBackground: Colors.offWhite,
+          textSectionTitleColor: Colors.textSecondary,
+          selectedDayBackgroundColor: Colors.navy,
+          selectedDayTextColor: Colors.white,
+          todayTextColor: Colors.white,
+          todayBackgroundColor: Colors.gold,
+          dayTextColor: Colors.textPrimary,
+          textDisabledColor: "rgba(0,0,0,0.2)",
+          dotColor: Colors.navy,
+          selectedDotColor: Colors.white,
+          arrowColor: Colors.navy,
+          monthTextColor: Colors.textPrimary,
+          textMonthFontWeight: "bold",
+          textMonthFontSize: 16,
+          textDayFontSize: 13,
+        }}
+        style={styles.calendarWidget}
+      />
 
       {/* Legend */}
       <View style={styles.legend}>
-        {(["green", "purple", "grey", "amber", "red"] as InvoiceStatus[]).map((s) => (
+        {(["green", "issued", "grey", "amber", "red"] as InvoiceStatus[]).map((s) => (
           <View key={s} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: statusColor(s) }]} />
             <Text style={styles.legendLabel}>{statusLabel(s)}</Text>
@@ -963,38 +965,57 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
         ))}
       </View>
 
-      {/* Overdue invoices */}
-      {overdueList.length > 0 && (
+      {/* Selected date invoice list */}
+      {selectedDate && (
         <>
-          <Text style={styles.sectionLabel}>OVERDUE INVOICES</Text>
-          {overdueList.map((inv) => {
-            const calStatus = apiStatusToCalStatus(inv);
-            return (
-              <View
-                key={inv.id}
-                style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
-              >
-                <View style={styles.invoiceRow}>
-                  <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                    <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                      {statusLabel(calStatus)}
+          <Text style={styles.sectionLabel}>{selectedDateLabel}</Text>
+          {selectedInvoices.length === 0 ? (
+            <Text style={styles.emptyText}>No invoices due on this date.</Text>
+          ) : (
+            selectedInvoices.map((inv) => {
+              const calStatus = apiStatusToCalStatus(inv);
+              return (
+                <TouchableOpacity
+                  key={inv.id}
+                  onPress={() => setDetailInvoice(inv)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
+                    <View style={styles.invoiceRow}>
+                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                        <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                          {invoiceStatusLabel(inv.status)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.invoiceDate} numberOfLines={1}>
+                      {inv.description}
                     </Text>
+                    {canViewAmount(role, inv, userId) && inv.amount != null && (
+                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                    )}
+                    {inv.daysOverdue > 0 && (
+                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                        {inv.daysOverdue} days overdue
+                      </Text>
+                    )}
                   </View>
-                </View>
-                <View style={styles.invoiceRow}>
-                  <Text style={styles.invoiceDate}>
-                    Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-                  </Text>
-                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
-                    {inv.daysOverdue} days overdue
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </>
       )}
+
+      <InvoiceDetailModal
+        visible={detailInvoice !== null}
+        inv={detailInvoice}
+        viewerRole={role}
+        userId={userId}
+        invoiceAction={invoiceAction}
+        onClose={() => setDetailInvoice(null)}
+      />
     </ScrollView>
   );
 }
@@ -1008,6 +1029,7 @@ function ConfirmModal({
   onConfirm,
   loading,
   error,
+  showAmount = true,
 }: {
   visible: boolean;
   action: InvoiceActionType | null;
@@ -1016,6 +1038,7 @@ function ConfirmModal({
   onConfirm: (rejectionReason?: string) => void;
   loading: boolean;
   error: string | null;
+  showAmount?: boolean;
 }) {
   const [typed, setTyped] = useState("");
   const [reason, setReason] = useState("");
@@ -1042,7 +1065,7 @@ function ConfirmModal({
           <Text style={styles.confirmInvDesc} numberOfLines={2}>
             {invoice.description}
           </Text>
-          {invoice.amount != null && (
+          {showAmount && invoice.amount != null && (
             <Text style={styles.confirmInvAmt}>${invoice.amount.toLocaleString()}</Text>
           )}
 
@@ -1135,7 +1158,6 @@ function MySpaceTab({
   ) => Promise<string | null>;
 }) {
   const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
-  const showAmount = role !== "Observer";
 
   let content: React.ReactNode;
   if (role === "Builder")
@@ -1194,7 +1216,6 @@ function MySpaceTab({
         inv={detailInvoice}
         viewerRole={role}
         userId={userId}
-        showAmount={showAmount}
         invoiceAction={invoiceAction}
         onClose={() => setDetailInvoice(null)}
       />
@@ -1263,12 +1284,14 @@ function ApprovalCard({
   onPaid,
   onReject,
   onTap,
+  showAmount = true,
 }: {
   inv: ApiInvoice;
   onApprove: () => void;
   onPaid: () => void;
   onReject: () => void;
   onTap: () => void;
+  showAmount?: boolean;
 }) {
   const calStatus = apiStatusToCalStatus(inv);
   const canApprove = inv.status === "Pending";
@@ -1289,7 +1312,7 @@ function ApprovalCard({
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          {inv.amount != null && (
+          {showAmount && inv.amount != null && (
             <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
           )}
           <View
@@ -1496,16 +1519,17 @@ function DualRoleMySpace({
   const actionDone = approvalInvoices.filter(
     (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
   );
-  // Builder only sees their own invoices + invoices they approve (Subbie/Consultant).
-  // PM sees all project invoices.
-  const allInvoices =
-    approverRole === "Builder"
-      ? invoices.filter((i) => i.submittedByUserId === userId || i.approverRole === "Builder")
-      : invoices;
+  // All roles see all project invoices; amounts are gated per canViewAmount.
+  const allInvoices = invoices;
   const allPaid = allInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const allOut = allInvoices.filter(
     (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   );
+
+  // PM sees all amounts; Builder sees amounts on own + approved invoices
+  const canSeeAllAmounts = approverRole === "PM";
+  // For "To Action" tab: Builder IS the approver for all those invoices → show dollar total
+  const canSeeToActionAmounts = true;
 
   const SUB_TABS = [
     { key: "myInvoices" as const, label: "My Invoices" },
@@ -1577,20 +1601,28 @@ function DualRoleMySpace({
               <View style={styles.statBox}>
                 <Text style={styles.statBoxLabel}>To Action</Text>
                 <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-                  ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                  {canSeeToActionAmounts
+                    ? `$${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`
+                    : `${toAction.length} invoice${toAction.length !== 1 ? "s" : ""}`}
                 </Text>
-                <Text style={styles.statBoxSub}>
-                  {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
-                </Text>
+                {canSeeToActionAmounts && (
+                  <Text style={styles.statBoxSub}>
+                    {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
+                  </Text>
+                )}
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statBoxLabel}>Completed</Text>
                 <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-                  ${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                  {canSeeToActionAmounts
+                    ? `$${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`
+                    : `${actionDone.length} invoice${actionDone.length !== 1 ? "s" : ""}`}
                 </Text>
-                <Text style={styles.statBoxSub}>
-                  {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
-                </Text>
+                {canSeeToActionAmounts && (
+                  <Text style={styles.statBoxSub}>
+                    {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
+                  </Text>
+                )}
               </View>
             </View>
             {toAction.length === 0 && <Text style={styles.emptyText}>No invoices to approve.</Text>}
@@ -1602,6 +1634,7 @@ function DualRoleMySpace({
                 onPaid={() => openConfirm("paid", inv)}
                 onReject={() => openConfirm("reject", inv)}
                 onTap={() => onTapInvoice(inv)}
+                showAmount={canSeeAllAmounts || inv.submittedByUserId === userId}
               />
             ))}
           </>
@@ -1612,36 +1645,26 @@ function DualRoleMySpace({
             <View style={styles.statRow}>
               {(
                 [
-                  [
-                    "Total",
-                    allInvoices.length,
-                    `$${allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.textPrimary,
-                  ],
-                  [
-                    "Paid",
-                    allPaid.length,
-                    `$${allPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.green,
-                  ],
-                  [
-                    "Outstanding",
-                    allOut.length,
-                    `$${allOut.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.amber,
-                  ],
+                  ["Total", allInvoices.length, allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.textPrimary],
+                  ["Paid", allPaid.length, allPaid.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.green],
+                  ["Outstanding", allOut.length, allOut.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.amber],
                 ] as const
               ).map(([label, count, val, color]) => (
                 <View key={label} style={styles.statBox}>
                   <Text style={styles.statBoxLabel}>{label}</Text>
-                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>{val}</Text>
-                  <Text style={styles.statBoxSub}>{count} invoices</Text>
+                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>
+                    {canSeeAllAmounts ? `$${val.toLocaleString()}` : `${count} invoice${count !== 1 ? "s" : ""}`}
+                  </Text>
+                  {canSeeAllAmounts && (
+                    <Text style={styles.statBoxSub}>{count} invoices</Text>
+                  )}
                 </View>
               ))}
             </View>
             {allInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
             {allInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
+              const showAmt = canSeeAllAmounts || inv.submittedByUserId === userId;
               return (
                 <TouchableOpacity
                   key={inv.id}
@@ -1658,7 +1681,7 @@ function DualRoleMySpace({
                     </View>
                   </View>
                   <View style={styles.invoiceRow}>
-                    {inv.amount != null && (
+                    {showAmt && inv.amount != null && (
                       <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
                     )}
                     {inv.daysOverdue > 0 && (
@@ -1681,6 +1704,7 @@ function DualRoleMySpace({
         onConfirm={handleConfirm}
         loading={confirmLoading}
         error={confirmError}
+        showAmount={confirmInvoice ? canSeeAllAmounts || confirmInvoice.submittedByUserId === userId : true}
       />
     </>
   );
@@ -2147,34 +2171,11 @@ const styles = StyleSheet.create({
   bodyContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 },
 
   // Calendar
-  monthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  calendarWidget: {
+    borderRadius: 16,
+    overflow: "hidden",
     marginBottom: 16,
   },
-  monthTitle: { fontSize: 17, fontWeight: "700", color: Colors.textPrimary },
-  monthArrow: { fontSize: 22, color: Colors.textSecondary, width: 28, textAlign: "center" },
-  calGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 16 },
-  weekDay: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
-  dayCell: { borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  dayCellSelected: { borderWidth: 1.5, borderColor: Colors.gold },
-  dayNum: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
-  dayDot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
-  dayDetail: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  dayDetailTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, marginBottom: 4 },
-  dayDetailStatus: { fontSize: 13, fontWeight: "600" },
   legend: {
     flexDirection: "row",
     flexWrap: "wrap",
