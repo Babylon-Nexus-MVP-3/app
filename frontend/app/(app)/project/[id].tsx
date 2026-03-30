@@ -303,10 +303,22 @@ export default function ProjectDetail() {
       {/* Header */}
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
         <SafeAreaView edges={["top"]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backArrow}>‹</Text>
-            <Text style={styles.backLabel}>All Projects</Text>
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text style={styles.backArrow}>‹</Text>
+              <Text style={styles.backLabel}>All Projects</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.auditLogBtn}
+              onPress={() => {
+                router.push(
+                  `/(app)/project/audit-log/${id}?name=${encodeURIComponent(projectName)}` as any
+                );
+              }}
+            >
+              <Text style={styles.auditLogBtnText}>Audit Log</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.headerProjectName}>{projectName}</Text>
 
@@ -2136,13 +2148,30 @@ const styles = StyleSheet.create({
 
   // Header
   header: { paddingBottom: 20 },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    marginBottom: 8,
+  },
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    marginBottom: 8,
+  },
+  auditLogBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.6)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  auditLogBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.gold,
   },
   backArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
   backLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
