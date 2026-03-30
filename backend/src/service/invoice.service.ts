@@ -313,9 +313,7 @@ export async function getProjectAuditLog(
   }
 
   const isRestricted = RESTRICTED_ROLES.includes(participant.role as UserRole);
-  const invoiceQuery = isRestricted
-    ? { projectId, submittedByUserId: userId }
-    : { projectId };
+  const invoiceQuery = isRestricted ? { projectId, submittedByUserId: userId } : { projectId };
 
   const invoices = await InvoiceModel.find(invoiceQuery).sort({ dateSubmitted: 1 });
 
@@ -325,9 +323,7 @@ export async function getProjectAuditLog(
     status: "Accepted",
   });
 
-  const participantUserIds = allParticipants
-    .filter((p) => p.userId)
-    .map((p) => p.userId as string);
+  const participantUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId as string);
 
   const users = await UserModel.find({ _id: { $in: participantUserIds } }).select("_id name");
 
