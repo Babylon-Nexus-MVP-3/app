@@ -308,7 +308,6 @@ export default function ProjectDetail() {
               style={styles.auditLogBtn}
               onPress={() => {
                 router.push(
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   `/(app)/project/audit-log/${id}?name=${encodeURIComponent(projectName)}` as any
                 );
               }}

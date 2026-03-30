@@ -193,10 +193,14 @@ function buildPlainText(data: AuditLogData): string {
   ];
 
   for (const entry of data.entries) {
-    lines.push(`\n${entry.description} — ${formatCurrency(entry.amount)} (${entry.submittingParty})`);
+    lines.push(
+      `\n${entry.description} — ${formatCurrency(entry.amount)} (${entry.submittingParty})`
+    );
     for (const ev of entry.events) {
       const rejection = ev.rejectionReason ? ` — "${ev.rejectionReason}"` : "";
-      lines.push(`  ${EVENT_LABEL[ev.type].padEnd(10)} ${ev.actorName} (${ev.actorRole})  ${formatDateTime(ev.timestamp)}${rejection}`);
+      lines.push(
+        `  ${EVENT_LABEL[ev.type].padEnd(10)} ${ev.actorName} (${ev.actorRole})  ${formatDateTime(ev.timestamp)}${rejection}`
+      );
     }
   }
 
@@ -227,13 +231,12 @@ function TimelineEvent({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
       <View style={styles.eventContent}>
         <Text style={styles.eventType}>{EVENT_LABEL[ev.type]}</Text>
         <Text style={styles.eventActor}>
-          {ev.actorName}{" "}
-          <Text style={styles.eventRole}>({ev.actorRole})</Text>
+          {ev.actorName} <Text style={styles.eventRole}>({ev.actorRole})</Text>
         </Text>
         <Text style={styles.eventTime}>{formatDateTime(ev.timestamp)}</Text>
         {ev.rejectionReason && (
           <View style={styles.rejectionBox}>
-            <Text style={styles.rejectionText}>Reason: "{ev.rejectionReason}"</Text>
+            <Text style={styles.rejectionText}>Reason: &quot;{ev.rejectionReason}&quot;</Text>
           </View>
         )}
       </View>
@@ -318,7 +321,8 @@ export default function AuditLog() {
     loadData();
   }, [loadData]);
 
-  const filteredEntries = data?.entries.filter((e) => filter === "All" || e.status === filter) ?? [];
+  const filteredEntries =
+    data?.entries.filter((e) => filter === "All" || e.status === filter) ?? [];
 
   async function handleCopy() {
     if (!data) return;
@@ -331,7 +335,11 @@ export default function AuditLog() {
     if (!data) return;
     setExporting(true);
     try {
-      const { uri } = await Print.printToFileAsync({ html: buildHtml(data), width: 595, height: 842 });
+      const { uri } = await Print.printToFileAsync({
+        html: buildHtml(data),
+        width: 595,
+        height: 842,
+      });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
       }
@@ -509,7 +517,12 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: "center",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+      },
       android: { elevation: 1 },
     }),
   },
@@ -542,7 +555,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     padding: 14,
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+      },
       android: { elevation: 1 },
     }),
   },
