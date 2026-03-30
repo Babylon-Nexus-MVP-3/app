@@ -1645,19 +1645,34 @@ function DualRoleMySpace({
             <View style={styles.statRow}>
               {(
                 [
-                  ["Total", allInvoices.length, allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.textPrimary],
-                  ["Paid", allPaid.length, allPaid.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.green],
-                  ["Outstanding", allOut.length, allOut.reduce((a, i) => a + (i.amount ?? 0), 0), Colors.amber],
+                  [
+                    "Total",
+                    allInvoices.length,
+                    allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0),
+                    Colors.textPrimary,
+                  ],
+                  [
+                    "Paid",
+                    allPaid.length,
+                    allPaid.reduce((a, i) => a + (i.amount ?? 0), 0),
+                    Colors.green,
+                  ],
+                  [
+                    "Outstanding",
+                    allOut.length,
+                    allOut.reduce((a, i) => a + (i.amount ?? 0), 0),
+                    Colors.amber,
+                  ],
                 ] as const
               ).map(([label, count, val, color]) => (
                 <View key={label} style={styles.statBox}>
                   <Text style={styles.statBoxLabel}>{label}</Text>
                   <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>
-                    {canSeeAllAmounts ? `$${val.toLocaleString()}` : `${count} invoice${count !== 1 ? "s" : ""}`}
+                    {canSeeAllAmounts
+                      ? `$${val.toLocaleString()}`
+                      : `${count} invoice${count !== 1 ? "s" : ""}`}
                   </Text>
-                  {canSeeAllAmounts && (
-                    <Text style={styles.statBoxSub}>{count} invoices</Text>
-                  )}
+                  {canSeeAllAmounts && <Text style={styles.statBoxSub}>{count} invoices</Text>}
                 </View>
               ))}
             </View>
@@ -1704,7 +1719,9 @@ function DualRoleMySpace({
         onConfirm={handleConfirm}
         loading={confirmLoading}
         error={confirmError}
-        showAmount={confirmInvoice ? canSeeAllAmounts || confirmInvoice.submittedByUserId === userId : true}
+        showAmount={
+          confirmInvoice ? canSeeAllAmounts || confirmInvoice.submittedByUserId === userId : true
+        }
       />
     </>
   );
