@@ -106,7 +106,7 @@ async function seedDev() {
       projectId,
       userId: p.user._id.toString(),
       role: p.role,
-      email: (p.user as any).email,
+      email: p.user.email,
       status: "Accepted",
       dateAccepted: daysAgo(30),
     });
