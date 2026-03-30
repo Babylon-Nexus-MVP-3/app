@@ -119,6 +119,12 @@ export async function requestSubmitInvoice(
     .set("Authorization", `Bearer ${token}`);
 }
 
+export async function requestDeleteProject(token: string, projectId: string) {
+  return request(app)
+    .delete(`/admin/projects/${projectId}`)
+    .set("Authorization", `Bearer ${token}`);
+}
+
 export async function getToken(
   firstName: string,
   lastName: string,
