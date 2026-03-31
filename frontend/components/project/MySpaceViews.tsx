@@ -153,9 +153,9 @@ export function DualRoleMySpace({
     (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   );
   const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const toAction = approvalInvoices.filter(
-    (i) => i.status === "Pending" || i.status === "Approved"
-  );
+  const toAction = approvalInvoices
+    .filter((i) => i.status === "Pending" || i.status === "Approved")
+    .sort((a, b) => new Date(a.dateDue).getTime() - new Date(b.dateDue).getTime());
   const actionDone = approvalInvoices.filter(
     (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
   );
@@ -469,9 +469,9 @@ export function OwnerMySpace({
   }
 
   const approvalInvoices = invoices.filter((i) => i.approverRole === "Owner");
-  const toAction = approvalInvoices.filter(
-    (i) => i.status === "Pending" || i.status === "Approved"
-  );
+  const toAction = approvalInvoices
+    .filter((i) => i.status === "Pending" || i.status === "Approved")
+    .sort((a, b) => new Date(a.dateDue).getTime() - new Date(b.dateDue).getTime());
   const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const outInvs = invoices.filter(
     (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
