@@ -73,6 +73,7 @@ describe("GET /project/:projectId", () => {
 
     // Previous month paid on time (June)
     await InvoiceModel.create({
+      invoiceNumber: "INV-TEST-001",
       projectId: project._id.toString(),
       submittingParty: "ABC",
       submittingCategory: "Electrical",
@@ -88,6 +89,7 @@ describe("GET /project/:projectId", () => {
 
     // Current month: one paid on time, one unpaid overdue
     await InvoiceModel.create({
+      invoiceNumber: "INV-TEST-002",
       projectId: project._id.toString(),
       submittingParty: "DEF",
       submittingCategory: "Plumbing",
@@ -102,6 +104,7 @@ describe("GET /project/:projectId", () => {
     });
 
     await InvoiceModel.create({
+      invoiceNumber: "INV-TEST-003",
       projectId: project._id.toString(),
       submittingParty: "GHI",
       submittingCategory: "Concrete",
