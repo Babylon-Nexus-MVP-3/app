@@ -261,16 +261,20 @@ export async function deleteProject(projectId: string) {
     throw new ProjectError("Project does not exist");
   }
 
-  const events = await EventModel.find({ aggregateId: projectId });
   const invoices = await InvoiceModel.find({ projectId });
+  const invoiceIds = invoices.map((i) => i._id.toString());
+  const invoiceEvents = await EventModel.find({ aggregateId: { $in: invoiceIds } });
+
+  const projectEvents = await EventModel.find({ aggregateId: projectId });
   const participants = await ProjectParticipantModel.find({ projectId });
 
   // First move to deleted project model
   await DeletedProjectModel.create({
     deletedAt: new Date(),
     project: project.toObject(),
-    events: events.map((e) => e.toObject()),
+    projectEvents: projectEvents.map((i) => i.toObject()),
     invoices: invoices.map((i) => i.toObject()),
+    invoiceEvents: invoiceEvents.map((i) => i.toObject()),
     participants: participants.map((p) => p.toObject()),
   });
 
