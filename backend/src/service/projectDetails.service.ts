@@ -122,7 +122,7 @@ export async function getProjectDetails(
   });
 
   const overdueInvoiceCount = invoicesRaw.filter((i: any) => {
-    if (isPaidStatus(i.status)) return false;
+    if (isPaidStatus(i.status) || i.status === "Rejected") return false;
     return new Date(i.dateDue).getTime() < now.getTime();
   }).length;
 

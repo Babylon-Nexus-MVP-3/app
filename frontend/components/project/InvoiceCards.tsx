@@ -46,7 +46,7 @@ export function MyInvoiceCard({
           {inv.amount != null && (
             <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
           )}
-          {!isDone && inv.daysOverdue > 0 && !canConfirm && (
+          {!isDone && inv.daysOverdue > 0 && !canConfirm && inv.status !== "Rejected" && (
             <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
               {inv.daysOverdue}d overdue
             </Text>
@@ -116,7 +116,7 @@ export function ApprovalCard({
       <Text style={styles.invoiceDate}>
         Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
       </Text>
-      {inv.daysOverdue > 0 && !isDone && (
+      {inv.daysOverdue > 0 && !isDone && inv.status !== "Rejected" && (
         <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
           {inv.daysOverdue} days overdue
         </Text>

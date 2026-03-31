@@ -251,7 +251,7 @@ export function DualRoleMySpace({
                 )}
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>Completed</Text>
+                <Text style={styles.statBoxLabel}>Actioned</Text>
                 <Text style={[styles.statBoxNum, { color: Colors.green }]}>
                   {canSeeToActionAmounts
                     ? `$${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`
@@ -347,7 +347,7 @@ export function DualRoleMySpace({
                     {showAmt && inv.amount != null && (
                       <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
                     )}
-                    {inv.daysOverdue > 0 && (
+                    {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
                       <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
                       </Text>
@@ -614,7 +614,7 @@ export function OwnerMySpace({
                     {inv.amount != null && (
                       <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
                     )}
-                    {inv.daysOverdue > 0 && (
+                    {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
                       <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
                       </Text>
@@ -707,7 +707,7 @@ export function FinancierMySpace({
               {inv.amount != null && (
                 <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
               )}
-              {inv.daysOverdue > 0 && (
+              {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
                 <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                   {inv.daysOverdue} days overdue
                 </Text>
@@ -791,7 +791,7 @@ export function ObserverMySpace({
               <Text style={styles.invoiceDate}>
                 Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
               </Text>
-              {inv.daysOverdue > 0 && (
+              {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
                 <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                   {inv.daysOverdue} days overdue
                 </Text>

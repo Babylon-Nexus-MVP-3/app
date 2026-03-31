@@ -36,7 +36,7 @@ export function CalendarTab({
 
   // Build worst-status dot per date (YYYY-MM-DD key)
   const dayStatusMap = new Map<string, InvoiceStatus>();
-  for (const inv of invoices) {
+  for (const inv of invoices.filter((i) => i.status !== "Rejected")) {
     const dateStr = inv.dateDue.split("T")[0];
     const calStatus = apiStatusToCalStatus(inv);
     const existing = dayStatusMap.get(dateStr);
@@ -59,7 +59,7 @@ export function CalendarTab({
 
   // Invoices due on the selected date
   const selectedInvoices = selectedDate
-    ? invoices.filter((i) => i.dateDue.split("T")[0] === selectedDate)
+    ? invoices.filter((i) => i.status !== "Rejected" && i.dateDue.split("T")[0] === selectedDate)
     : [];
 
   const selectedDateLabel = selectedDate
@@ -155,7 +155,7 @@ export function CalendarTab({
                     {canViewAmount(role, inv, userId) && inv.amount != null && (
                       <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
                     )}
-                    {inv.daysOverdue > 0 && (
+                    {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
                       <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
                       </Text>

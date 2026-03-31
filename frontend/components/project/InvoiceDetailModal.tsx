@@ -77,39 +77,27 @@ export function InvoiceDetailModal({
               <Text style={styles.detailBackArrow}>‹</Text>
               <Text style={styles.detailBackLabel}>My Space</Text>
             </TouchableOpacity>
-            <Text style={styles.detailTitle}>
-              {inv.invoiceNumber ? `${inv.invoiceNumber} — Invoice` : "Invoice Details"}
-            </Text>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: statusBg(calStatus),
-                  alignSelf: "center",
-                  marginTop: 8,
-                  paddingHorizontal: 16,
-                  paddingVertical: 6,
-                },
-              ]}
-            >
-              <Text
-                style={[styles.statusBadgeText, { color: statusColor(calStatus), fontSize: 14 }]}
-              >
-                {invoiceStatusLabel(inv.status)}
+            <View style={styles.detailTitleRow}>
+              <Text style={styles.detailTitle}>
+                {inv.invoiceNumber ?? "Invoice Details"}
               </Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginLeft: 10 }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {invoiceStatusLabel(inv.status)}
+                </Text>
+              </View>
             </View>
           </SafeAreaView>
         </LinearGradient>
 
         <ScrollView
           style={styles.detailBody}
-          contentContainerStyle={styles.detailBodyContent}
+          contentContainerStyle={[styles.detailBodyContent, hasActions && { paddingBottom: 96 }]}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.detailDesc}>{inv.description}</Text>
 
           <View style={styles.detailSection}>
-            <Text style={styles.detailSectionLabel}>DETAILS</Text>
             <View style={styles.detailRow}>
               <Text style={styles.detailKey}>Submitted by</Text>
               <Text style={styles.detailVal}>{inv.submittingParty}</Text>
@@ -150,7 +138,7 @@ export function InvoiceDetailModal({
               <Text style={styles.detailKey}>Approver</Text>
               <Text style={styles.detailVal}>{displayRole(inv.approverRole)}</Text>
             </View>
-            {inv.daysOverdue > 0 && inv.status !== "Paid" && inv.status !== "Received" && (
+            {inv.daysOverdue > 0 && inv.status !== "Paid" && inv.status !== "Received" && inv.status !== "Rejected" && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailKey}>Overdue by</Text>
                 <Text style={[styles.detailVal, { color: Colors.red, fontWeight: "600" }]}>
@@ -159,7 +147,7 @@ export function InvoiceDetailModal({
               </View>
             )}
             {inv.status === "Rejected" && inv.rejectionReason && (
-              <View style={styles.detailRow}>
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.detailKey}>Rejection reason</Text>
                 <Text style={[styles.detailVal, { color: Colors.red }]}>
                   {inv.rejectionReason}
@@ -167,48 +155,44 @@ export function InvoiceDetailModal({
               </View>
             )}
           </View>
-
-          {hasActions && (
-            <View style={styles.detailSection}>
-              <Text style={styles.detailSectionLabel}>ACTIONS</Text>
-              {canApprove && (
-                <>
-                  <TouchableOpacity
-                    style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
-                    onPress={() => openConfirm("approve")}
-                  >
-                    <Text style={styles.detailActionBtnText}>Approve Invoice</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.detailActionBtn,
-                      { backgroundColor: Colors.red, marginTop: 10 },
-                    ]}
-                    onPress={() => openConfirm("reject")}
-                  >
-                    <Text style={styles.detailActionBtnText}>Reject Invoice</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              {canPay && (
-                <TouchableOpacity
-                  style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
-                  onPress={() => openConfirm("paid")}
-                >
-                  <Text style={styles.detailActionBtnText}>Mark as Paid</Text>
-                </TouchableOpacity>
-              )}
-              {canReceive && (
-                <TouchableOpacity
-                  style={[styles.detailActionBtn, { backgroundColor: Colors.navy }]}
-                  onPress={() => openConfirm("received")}
-                >
-                  <Text style={styles.detailActionBtnText}>Confirm Receipt</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
         </ScrollView>
+
+        {hasActions && (
+          <View style={styles.detailFooter}>
+            {canApprove && (
+              <View style={styles.detailFooterRow}>
+                <TouchableOpacity
+                  style={[styles.detailActionBtn, { backgroundColor: Colors.green, flex: 1 }]}
+                  onPress={() => openConfirm("approve")}
+                >
+                  <Text style={styles.detailActionBtnText}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.detailActionBtn, { backgroundColor: Colors.red, flex: 1 }]}
+                  onPress={() => openConfirm("reject")}
+                >
+                  <Text style={styles.detailActionBtnText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {canPay && (
+              <TouchableOpacity
+                style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
+                onPress={() => openConfirm("paid")}
+              >
+                <Text style={styles.detailActionBtnText}>Mark as Paid</Text>
+              </TouchableOpacity>
+            )}
+            {canReceive && (
+              <TouchableOpacity
+                style={[styles.detailActionBtn, { backgroundColor: Colors.navy }]}
+                onPress={() => openConfirm("received")}
+              >
+                <Text style={styles.detailActionBtnText}>Confirm Receipt</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       <ConfirmModal

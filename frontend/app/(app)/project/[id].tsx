@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -51,9 +49,6 @@ export default function ProjectDetail() {
   const [invoiceVisible, setInvoiceVisible] = useState(false);
   const [invDesc, setInvDesc] = useState("");
   const [invAmount, setInvAmount] = useState("");
-  const [invDueDate, setInvDueDate] = useState<Date | null>(null);
-  const [invDueDateText, setInvDueDateText] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [invSubmittingParty, setInvSubmittingParty] = useState("");
   const [invCategory, setInvCategory] = useState("");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -111,8 +106,6 @@ export default function ProjectDetail() {
   function openInvoice() {
     setInvDesc("");
     setInvAmount("");
-    setInvDueDate(null);
-    setInvDueDateText("");
     setInvSubmittingParty("");
     setInvCategory("");
     setInvoiceError(null);
@@ -131,7 +124,6 @@ export default function ProjectDetail() {
           submittingCategory: invCategory.trim(),
           description: invDesc.trim(),
           amount: parseFloat(invAmount),
-          dateDue: invDueDate?.toISOString(),
         }),
       });
       const data = await res.json();
@@ -245,7 +237,7 @@ export default function ProjectDetail() {
 
           {overdue > 0 && (
             <View style={styles.overdueAlert}>
-              <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
+              <Text style={styles.overdueAlertText}>{overdue} {overdue === 1 ? "invoice" : "invoices"} overdue</Text>
               <Text style={styles.overdueAlertArrow}>›</Text>
             </View>
           )}
@@ -320,13 +312,9 @@ export default function ProjectDetail() {
       {/* ── Raise Invoice modal ── */}
       <Modal visible={invoiceVisible} animationType="slide" presentationStyle="fullScreen">
         <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={styles.raiseBody}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {invoiceSuccess ? (
-              <View style={[styles.inviteSuccess, { marginTop: 80 }]}>
+          {invoiceSuccess ? (
+            <SafeAreaView style={{ flex: 1, justifyContent: "space-between", paddingHorizontal: 24 }} edges={["top", "bottom"]}>
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
                 <View style={styles.inviteSuccessIcon}>
                   <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
                 </View>
@@ -334,136 +322,85 @@ export default function ProjectDetail() {
                 <Text style={styles.inviteSuccessHint}>
                   Your invoice has been submitted successfully.
                 </Text>
-                <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 24 }]}
-                  onPress={() => setInvoiceVisible(false)}
-                >
-                  <Text style={styles.invitePrimaryBtnText}>Done</Text>
-                </TouchableOpacity>
               </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  onPress={() => setInvoiceVisible(false)}
-                  style={styles.raiseBack}
-                >
-                  <Text style={styles.raiseBackArrow}>←</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.invitePrimaryBtn, { marginBottom: 48 }]}
+                onPress={() => setInvoiceVisible(false)}
+              >
+                <Text style={styles.invitePrimaryBtnText}>Done</Text>
+              </TouchableOpacity>
+            </SafeAreaView>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.raiseBody}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                onPress={() => setInvoiceVisible(false)}
+                style={styles.raiseBack}
+              >
+                <Text style={styles.raiseBackArrow}>←</Text>
+              </TouchableOpacity>
 
-                <Text style={styles.raiseTitle}>Raise Invoice</Text>
-                <Text style={styles.raiseSubtitle}>{projectName}</Text>
+              <Text style={styles.raiseTitle}>Raise Invoice</Text>
+              <Text style={styles.raiseSubtitle}>{projectName}</Text>
 
-                <Text style={styles.raiseFieldLabel}>Invoice Due Date</Text>
-                {Platform.OS === "web" ? (
-                  <TextInput
-                    style={styles.raiseInput}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={invDueDateText}
-                    onChangeText={(text) => {
-                      setInvDueDateText(text);
-                      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                        const d = new Date(text);
-                        setInvDueDate(!isNaN(d.getTime()) ? d : null);
-                      } else {
-                        setInvDueDate(null);
-                      }
-                    }}
-                  />
+              <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
+              <TextInput
+                style={styles.raiseInput}
+                placeholder="e.g. 45000"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={invAmount}
+                onChangeText={setInvAmount}
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.raiseFieldLabel}>Description</Text>
+              <TextInput
+                style={[styles.raiseInput, styles.raiseMultiline]}
+                placeholder="e.g. Electrical rough-in — Level 3"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={invDesc}
+                onChangeText={setInvDesc}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+
+              <Text style={styles.raiseFieldLabel}>Submitting Party</Text>
+              <TextInput
+                style={styles.raiseInput}
+                placeholder="e.g. ABC Electrical"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={invSubmittingParty}
+                onChangeText={setInvSubmittingParty}
+              />
+
+              <Text style={styles.raiseFieldLabel}>Category</Text>
+              <TextInput
+                style={styles.raiseInput}
+                placeholder="e.g. Electrical, Plumbing"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={invCategory}
+                onChangeText={setInvCategory}
+              />
+
+              {invoiceError && <Text style={styles.inviteError}>{invoiceError}</Text>}
+
+              <TouchableOpacity
+                style={styles.raisePrimaryBtn}
+                onPress={handleAddInvoice}
+                disabled={invoiceLoading}
+              >
+                {invoiceLoading ? (
+                  <ActivityIndicator color={Colors.navy} />
                 ) : (
-                  <>
-                    <TouchableOpacity
-                      style={styles.raiseDateWrap}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text
-                        style={[
-                          styles.raiseInput,
-                          {
-                            flex: 1,
-                            marginBottom: 0,
-                            borderWidth: 0,
-                            backgroundColor: "transparent",
-                            paddingHorizontal: 0,
-                            color: invDueDate ? "#fff" : "rgba(255,255,255,0.3)",
-                            lineHeight: 20,
-                          },
-                        ]}
-                      >
-                        {invDueDate ? invDueDate.toLocaleDateString("en-AU") : "dd/mm/yyyy"}
-                      </Text>
-                      <Text style={styles.raiseCalIcon}>📅</Text>
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={invDueDate ?? new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={(event: DateTimePickerEvent, date?: Date) => {
-                          setShowDatePicker(false);
-                          if (event.type === "set" && date) setInvDueDate(date);
-                        }}
-                      />
-                    )}
-                  </>
+                  <Text style={styles.raisePrimaryBtnText}>Submit Invoice</Text>
                 )}
-
-                <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. 45000"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={invAmount}
-                  onChangeText={setInvAmount}
-                  keyboardType="numeric"
-                />
-
-                <Text style={styles.raiseFieldLabel}>Description</Text>
-                <TextInput
-                  style={[styles.raiseInput, styles.raiseMultiline]}
-                  placeholder="e.g. Electrical rough-in — Level 3"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={invDesc}
-                  onChangeText={setInvDesc}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-
-                <Text style={styles.raiseFieldLabel}>Submitting Party</Text>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. ABC Electrical"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={invSubmittingParty}
-                  onChangeText={setInvSubmittingParty}
-                />
-
-                <Text style={styles.raiseFieldLabel}>Category</Text>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. Electrical, Plumbing"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={invCategory}
-                  onChangeText={setInvCategory}
-                />
-
-                {invoiceError && <Text style={styles.inviteError}>{invoiceError}</Text>}
-
-                <TouchableOpacity
-                  style={styles.raisePrimaryBtn}
-                  onPress={handleAddInvoice}
-                  disabled={invoiceLoading}
-                >
-                  {invoiceLoading ? (
-                    <ActivityIndicator color={Colors.navy} />
-                  ) : (
-                    <Text style={styles.raisePrimaryBtnText}>Submit Invoice</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
         </LinearGradient>
       </Modal>
 
