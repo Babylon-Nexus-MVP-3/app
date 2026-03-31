@@ -28,3 +28,4 @@ projectRouter.patch(
   InvoiceController.received
 );
 projectRouter.patch("/:projectId/invoice/:invoiceId/reject", requireAuth, InvoiceController.reject);
+projectRouter.get("/:projectId/audit-log", requireAuth, InvoiceController.auditLog);

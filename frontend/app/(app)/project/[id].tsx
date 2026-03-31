@@ -196,10 +196,22 @@ export default function ProjectDetail() {
       {/* Header */}
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
         <SafeAreaView edges={["top"]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backArrow}>‹</Text>
-            <Text style={styles.backLabel}>All Projects</Text>
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text style={styles.backArrow}>‹</Text>
+              <Text style={styles.backLabel}>All Projects</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.auditLogBtn}
+              onPress={() => {
+                router.push(
+                  `/(app)/project/audit-log/${id}?name=${encodeURIComponent(projectName)}` as any
+                );
+              }}
+            >
+              <Text style={styles.auditLogBtnText}>Audit Log</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.headerProjectName}>{projectName}</Text>
 

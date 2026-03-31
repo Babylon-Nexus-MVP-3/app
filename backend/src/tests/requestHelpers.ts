@@ -109,13 +109,18 @@ export async function requestSubmitInvoice(
   projectId: string,
   submittingParty: string,
   submittingCategory: string,
-  dateDue: Date,
   description: string,
   amount: number
 ) {
   return request(app)
     .post(`/project/${projectId}/invoice`)
-    .send({ submittingParty, submittingCategory, dateDue, description, amount })
+    .send({ submittingParty, submittingCategory, description, amount })
+    .set("Authorization", `Bearer ${token}`);
+}
+
+export async function requestDeleteProject(token: string, projectId: string) {
+  return request(app)
+    .delete(`/admin/projects/${projectId}`)
     .set("Authorization", `Bearer ${token}`);
 }
 
