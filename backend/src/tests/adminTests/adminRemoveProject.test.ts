@@ -7,6 +7,7 @@ import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 import { hashPassword } from "../../utils/authHelper";
+import { DeletedProjectModel } from "../../models/deletedProjectModel";
 
 dotenv.config();
 
@@ -63,7 +64,7 @@ beforeAll(async () => {
 }, 10000);
 
 describe("Delete /project/:projectId", () => {
-  it("returns 200 and deletes a pending participant by email + role", async () => {
+  it("returns 200 and moves project to Deleted Project", async () => {
     const token = await getAdminToken();
 
     const project = await ProjectModel.create({
@@ -85,13 +86,21 @@ describe("Delete /project/:projectId", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
-    // participants should also be removed
-    const remaining = await ProjectParticipantModel.find({
+    // original records should be removed
+    const remainingParticipants = await ProjectParticipantModel.find({
       projectId: project._id.toString(),
-      email: "pending@example.com",
-      role: UserRole.Subbie,
     }).lean();
-    expect(remaining.length).toBe(0);
+    expect(remainingParticipants.length).toBe(0);
+
+    const remainingProject = await ProjectModel.findById(project._id);
+    expect(remainingProject).toBeNull();
+
+    // archived record should exist with all data
+    const archived = await DeletedProjectModel.findOne({
+      "project._id": project._id,
+    }).lean();
+    expect(archived).not.toBeNull();
+    expect(archived?.participants).toHaveLength(1);
   });
 
   it("returns 400 for a non existing project", async () => {

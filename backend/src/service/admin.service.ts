@@ -275,10 +275,10 @@ export async function deleteProject(projectId: string) {
   });
 
   // Then delete
-  EventModel.deleteMany({ aggregateId: projectId });
-  InvoiceModel.deleteMany({ projectId });
-  ProjectParticipantModel.deleteMany({ projectId });
-  project.deleteOne();
+  await EventModel.deleteMany({ aggregateId: projectId });
+  await InvoiceModel.deleteMany({ projectId });
+  await ProjectParticipantModel.deleteMany({ projectId });
+  await project.deleteOne();
 
   return { success: true };
 }
