@@ -612,7 +612,13 @@ export const styles = StyleSheet.create({
     borderBottomColor: Colors.offWhite,
   },
   detailKey: { fontSize: 14, color: Colors.textSecondary, flex: 1, fontWeight: "500" },
-  detailVal: { fontSize: 14, color: Colors.textPrimary, flex: 2, textAlign: "right", fontWeight: "600" },
+  detailVal: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    flex: 2,
+    textAlign: "right",
+    fontWeight: "600",
+  },
   detailActionBtn: {
     borderRadius: 10,
     paddingVertical: 12,

@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
 import { ACTION_LABEL, ACTION_WORD, ApiInvoice, InvoiceActionType } from "./types";
 import { styles } from "./styles";
@@ -93,11 +86,7 @@ export function ConfirmModal({
           {error && <Text style={styles.confirmError}>{error}</Text>}
 
           <View style={styles.confirmBtnRow}>
-            <TouchableOpacity
-              style={styles.confirmCancelBtn}
-              onPress={onClose}
-              disabled={loading}
-            >
+            <TouchableOpacity style={styles.confirmCancelBtn} onPress={onClose} disabled={loading}>
               <Text style={styles.confirmCancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity

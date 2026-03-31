@@ -237,7 +237,9 @@ export default function ProjectDetail() {
 
           {overdue > 0 && (
             <View style={styles.overdueAlert}>
-              <Text style={styles.overdueAlertText}>{overdue} {overdue === 1 ? "invoice" : "invoices"} overdue</Text>
+              <Text style={styles.overdueAlertText}>
+                {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
+              </Text>
               <Text style={styles.overdueAlertArrow}>›</Text>
             </View>
           )}
@@ -252,12 +254,7 @@ export default function ProjectDetail() {
           invoiceAction={invoiceAction}
         />
       ) : (
-        <MySpaceTab
-          role={role}
-          invoices={invoices}
-          userId={userId}
-          invoiceAction={invoiceAction}
-        />
+        <MySpaceTab role={role} invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
       )}
 
       {/* Bottom tab bar */}
@@ -313,7 +310,10 @@ export default function ProjectDetail() {
       <Modal visible={invoiceVisible} animationType="slide" presentationStyle="fullScreen">
         <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={{ flex: 1 }}>
           {invoiceSuccess ? (
-            <SafeAreaView style={{ flex: 1, justifyContent: "space-between", paddingHorizontal: 24 }} edges={["top", "bottom"]}>
+            <SafeAreaView
+              style={{ flex: 1, justifyContent: "space-between", paddingHorizontal: 24 }}
+              edges={["top", "bottom"]}
+            >
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
                 <View style={styles.inviteSuccessIcon}>
                   <Text style={{ fontSize: 36, color: Colors.green }}>✓</Text>
@@ -336,10 +336,7 @@ export default function ProjectDetail() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <TouchableOpacity
-                onPress={() => setInvoiceVisible(false)}
-                style={styles.raiseBack}
-              >
+              <TouchableOpacity onPress={() => setInvoiceVisible(false)} style={styles.raiseBack}>
                 <Text style={styles.raiseBackArrow}>←</Text>
               </TouchableOpacity>
 

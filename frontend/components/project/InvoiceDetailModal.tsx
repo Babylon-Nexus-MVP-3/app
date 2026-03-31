@@ -78,10 +78,13 @@ export function InvoiceDetailModal({
               <Text style={styles.detailBackLabel}>My Space</Text>
             </TouchableOpacity>
             <View style={styles.detailTitleRow}>
-              <Text style={styles.detailTitle}>
-                {inv.invoiceNumber ?? "Invoice Details"}
-              </Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginLeft: 10 }]}>
+              <Text style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: statusBg(calStatus), marginLeft: 10 },
+                ]}
+              >
                 <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                   {invoiceStatusLabel(inv.status)}
                 </Text>
@@ -138,20 +141,21 @@ export function InvoiceDetailModal({
               <Text style={styles.detailKey}>Approver</Text>
               <Text style={styles.detailVal}>{displayRole(inv.approverRole)}</Text>
             </View>
-            {inv.daysOverdue > 0 && inv.status !== "Paid" && inv.status !== "Received" && inv.status !== "Rejected" && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailKey}>Overdue by</Text>
-                <Text style={[styles.detailVal, { color: Colors.red, fontWeight: "600" }]}>
-                  {inv.daysOverdue} days
-                </Text>
-              </View>
-            )}
+            {inv.daysOverdue > 0 &&
+              inv.status !== "Paid" &&
+              inv.status !== "Received" &&
+              inv.status !== "Rejected" && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailKey}>Overdue by</Text>
+                  <Text style={[styles.detailVal, { color: Colors.red, fontWeight: "600" }]}>
+                    {inv.daysOverdue} days
+                  </Text>
+                </View>
+              )}
             {inv.status === "Rejected" && inv.rejectionReason && (
               <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.detailKey}>Rejection reason</Text>
-                <Text style={[styles.detailVal, { color: Colors.red }]}>
-                  {inv.rejectionReason}
-                </Text>
+                <Text style={[styles.detailVal, { color: Colors.red }]}>{inv.rejectionReason}</Text>
               </View>
             )}
           </View>

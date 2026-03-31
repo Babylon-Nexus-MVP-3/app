@@ -3,8 +3,9 @@ import { EventModel, EventType } from "../models/eventModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
-import { UserRole } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 import { getNextSequence } from "../models/counterModel";
+import { createNotification } from "./notification.service";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -114,6 +115,20 @@ export async function submitInvoice(
     payload: { submittingParty, submittingCategory, description, amount, projectId },
   });
 
+  const approverParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    role: resolvedApproverRole,
+    status: "Accepted",
+  });
+  if (approverParticipant) {
+    await createNotification({
+      userId: approverParticipant.userId.toString(),
+      projectId,
+      invoiceId: invoice._id.toString(),
+      message: `${submittingParty} submitted invoice ${invoiceNumber} on ${project.name} for your review.`,
+    });
+  }
+
   return invoice._id.toString();
 }
 
@@ -160,6 +175,16 @@ export async function approveInvoice(
     userId,
     payload: { projectId },
   });
+
+  const project = await ProjectModel.findById(projectId);
+  if (project) {
+    await createNotification({
+      userId: invoice.submittedByUserId.toString(),
+      projectId,
+      invoiceId,
+      message: `Your invoice ${invoice.invoiceNumber} on ${project.name} has been approved.`,
+    });
+  }
 }
 
 export async function markInvoicePaid(
@@ -188,6 +213,16 @@ export async function markInvoicePaid(
     userId,
     payload: { projectId },
   });
+
+  const project = await ProjectModel.findById(projectId);
+  if (project) {
+    await createNotification({
+      userId: invoice.submittedByUserId.toString(),
+      projectId,
+      invoiceId,
+      message: `Your invoice ${invoice.invoiceNumber} on ${project.name} has been marked as paid.`,
+    });
+  }
 }
 
 export async function markInvoiceReceived(
@@ -216,6 +251,21 @@ export async function markInvoiceReceived(
     userId,
     payload: { projectId },
   });
+
+  const project = await ProjectModel.findById(projectId);
+  const approverParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    role: invoice.approverRole,
+    status: "Accepted",
+  });
+  if (project && approverParticipant) {
+    await createNotification({
+      userId: approverParticipant.userId.toString(),
+      projectId,
+      invoiceId,
+      message: `${invoice.submittingParty}'s invoice ${invoice.invoiceNumber} on ${project.name} has been marked as received.`,
+    });
+  }
 }
 
 export async function rejectInvoice(
@@ -245,6 +295,17 @@ export async function rejectInvoice(
     userId,
     payload: { projectId, rejectionReason },
   });
+
+  const project = await ProjectModel.findById(projectId);
+  if (project) {
+    const reason = rejectionReason ? ` Reason: ${rejectionReason}` : "";
+    await createNotification({
+      userId: invoice.submittedByUserId.toString(),
+      projectId,
+      invoiceId,
+      message: `Your invoice ${invoice.invoiceNumber} on ${project.name} has been rejected.${reason}`,
+    });
+  }
 }
 
 /* ─── Audit Log ─── */

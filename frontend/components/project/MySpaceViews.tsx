@@ -264,9 +264,7 @@ export function DualRoleMySpace({
                 )}
               </View>
             </View>
-            {toAction.length === 0 && (
-              <Text style={styles.emptyText}>No invoices to approve.</Text>
-            )}
+            {toAction.length === 0 && <Text style={styles.emptyText}>No invoices to approve.</Text>}
             {toAction.map((inv) => (
               <ApprovalCard
                 key={`ap-${inv.id}`}
@@ -368,9 +366,7 @@ export function DualRoleMySpace({
         loading={confirmLoading}
         error={confirmError}
         showAmount={
-          confirmInvoice
-            ? canSeeAllAmounts || confirmInvoice.submittedByUserId === userId
-            : true
+          confirmInvoice ? canSeeAllAmounts || confirmInvoice.submittedByUserId === userId : true
         }
       />
     </>
@@ -731,10 +727,7 @@ export function ObserverMySpace({
   const pendingCount = invoices.filter((i) => i.status === "Pending").length;
   const overdueCount = invoices.filter(
     (i) =>
-      i.daysOverdue > 0 &&
-      i.status !== "Paid" &&
-      i.status !== "Received" &&
-      i.status !== "Rejected"
+      i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   ).length;
   const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
 

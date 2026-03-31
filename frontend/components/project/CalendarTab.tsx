@@ -139,12 +139,8 @@ export function CalendarTab({
                           </View>
                         ) : null}
                       </View>
-                      <View
-                        style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}
-                      >
-                        <Text
-                          style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}
-                        >
+                      <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                        <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                           {invoiceStatusLabel(inv.status)}
                         </Text>
                       </View>
