@@ -7,8 +7,9 @@ import { EventDocument } from "./eventModel";
 export interface DeletedProjectDocument extends Document {
   deletedAt: Date;
   project: Project;
-  events: EventDocument[];
+  projectEvents: EventDocument[];
   invoices: Invoice[];
+  invoiceEvents: EventDocument[];
   participants: ProjectParticipant[];
 }
 
@@ -16,8 +17,9 @@ export interface DeletedProjectDocument extends Document {
 const DeletedProjectSchema = new Schema<DeletedProjectDocument>({
   deletedAt: { type: Date, required: true },
   project: { type: Schema.Types.Mixed, required: true },
-  events: [{ type: Schema.Types.Mixed }],
+  projectEvents: [{ type: Schema.Types.Mixed }],
   invoices: [{ type: Schema.Types.Mixed }],
+  invoiceEvents: [{ type: Schema.Types.Mixed }],
   participants: [{ type: Schema.Types.Mixed }],
 });
 
