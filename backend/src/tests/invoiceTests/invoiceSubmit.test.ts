@@ -67,7 +67,6 @@ describe("POST /project/:projectId/invoice", () => {
       projectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       5000
     );
@@ -88,7 +87,6 @@ describe("POST /project/:projectId/invoice", () => {
       projectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       5000
     );
@@ -104,7 +102,6 @@ describe("POST /project/:projectId/invoice", () => {
       fakeProjectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       10000
     );
@@ -121,7 +118,6 @@ describe("POST /project/:projectId/invoice", () => {
       projectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       5000
     );
@@ -136,7 +132,6 @@ describe("POST /project/:projectId/invoice", () => {
       projectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       5000
     );
@@ -152,26 +147,24 @@ describe("POST /project/:projectId/invoice", () => {
    * The pattern is that in each row, one field is empty/null while the rest have valid values:
    */
   it.each([
-    ["submittingParty", "", "Electrical", new Date("2026-06-01"), "Phase 2 elec", 10000],
-    ["submittingCategory", "Builder", "", new Date("2026-06-01"), "Phase 2 elec", 10000],
-    ["dateDue", "Builder", "Electrical", null, "Phase 2 elec", 10000],
-    ["description", "Builder", "Electrical", new Date("2026-06-01"), "", 10000],
-    ["amount", "Builder", "Electrical", new Date("2026-06-01"), "Phase 2 elec", null],
+    ["submittingParty", "", "Electrical", "Phase 2 elec", 10000],
+    ["submittingCategory", "Builder", "", "Phase 2 elec", 10000],
+    ["description", "Builder", "Electrical", "", 10000],
+    ["amount", "Builder", "Electrical", "Phase 2 elec", null],
   ])(
     "returns 400 when %s is missing",
-    async (_, submittingParty, submittingCategory, dateDue, description, amount) => {
+    async (_, submittingParty, submittingCategory, description, amount) => {
       const res = await requestSubmitInvoice(
         token,
         projectId,
         submittingParty,
         submittingCategory,
-        dateDue,
         description,
         amount
       );
       expect(res.status).toBe(400);
       expect(res.body.error).toBe(
-        "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
+        "Required fields missing: submittingParty, submittingCategory, description, amount"
       );
     }
   );
@@ -182,7 +175,6 @@ describe("POST /project/:projectId/invoice", () => {
       projectId,
       "ABC Electrical",
       "Electrical",
-      new Date("2026-06-01"),
       "Phase 2 elec",
       0
     );
