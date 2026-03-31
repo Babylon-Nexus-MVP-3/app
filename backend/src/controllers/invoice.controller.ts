@@ -10,12 +10,12 @@ import {
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { submittingParty, submittingCategory, dateDue, description, amount } = req.body;
+    const { submittingParty, submittingCategory, description, amount } = req.body;
     const projectId = req.params.projectId as string;
     const userId = req.user?.sub;
 
     const invoiceId = await submitInvoice(
-      { submittingParty, submittingCategory, dateDue, description, amount },
+      { submittingParty, submittingCategory, description, amount },
       projectId,
       userId
     );

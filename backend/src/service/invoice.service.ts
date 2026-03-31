@@ -17,7 +17,6 @@ export class InvoiceError extends Error {
 export interface SubmitInvoiceInput {
   submittingParty: string;
   submittingCategory: string;
-  dateDue: Date;
   description: string;
   amount: number;
 }
@@ -55,13 +54,12 @@ export async function submitInvoice(
 
   const submittingParty = input.submittingParty?.trim();
   const submittingCategory = input.submittingCategory?.trim();
-  const dateDue = input.dateDue;
   const description = input.description?.trim();
   const amount = input.amount;
 
-  if (!submittingParty || !submittingCategory || !dateDue || !description || amount == null) {
+  if (!submittingParty || !submittingCategory || !description || amount == null) {
     throw new InvoiceError(
-      "Required fields missing: submittingParty, submittingCategory, dateDue, description, amount"
+      "Required fields missing: submittingParty, submittingCategory, description, amount"
     );
   }
 
@@ -89,6 +87,7 @@ export async function submitInvoice(
     );
   }
 
+  const submitDate = Date.now();
   const invoice = await InvoiceModel.create({
     projectId,
     submittingParty,
@@ -96,8 +95,8 @@ export async function submitInvoice(
     submittedByUserId: userId,
     description,
     amount,
-    dateSubmitted: new Date(Date.now()),
-    dateDue,
+    dateSubmitted: submitDate,
+    dateDue: submitDate + 2 * 7 * 24 * 60 * 60 * 1000, // 2 weeks from submit date
     status: InvoiceStatus.Pending,
     approverRole: resolvedApproverRole,
   });
@@ -107,7 +106,7 @@ export async function submitInvoice(
     aggregateType: "Invoice",
     aggregateId: invoice._id.toString(),
     userId,
-    payload: { submittingParty, submittingCategory, dateDue, description, amount, projectId },
+    payload: { submittingParty, submittingCategory, description, amount, projectId },
   });
 
   return invoice._id.toString();
