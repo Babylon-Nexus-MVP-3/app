@@ -160,7 +160,6 @@ export async function approveInvoice(
     userId,
     payload: { projectId },
   });
-
 }
 
 export async function markInvoicePaid(
@@ -189,7 +188,6 @@ export async function markInvoicePaid(
     userId,
     payload: { projectId },
   });
-
 }
 
 export async function markInvoiceReceived(
@@ -218,7 +216,6 @@ export async function markInvoiceReceived(
     userId,
     payload: { projectId },
   });
-
 }
 
 export async function rejectInvoice(
@@ -248,7 +245,6 @@ export async function rejectInvoice(
     userId,
     payload: { projectId, rejectionReason },
   });
-
 }
 
 /* ─── Audit Log ─── */
