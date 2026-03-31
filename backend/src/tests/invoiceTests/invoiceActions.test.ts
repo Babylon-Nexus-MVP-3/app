@@ -34,7 +34,6 @@ async function submitTestInvoice(token: string, pId: string): Promise<string> {
     pId,
     "ABC Electrical",
     "Electrical",
-    new Date("2026-06-01"),
     "Phase 1 work",
     5000
   );
