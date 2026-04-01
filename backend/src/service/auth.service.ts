@@ -327,3 +327,45 @@ export async function resendVerificationCode(email: string) {
 
   return { success: true };
 }
+
+export async function userChangePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  if (newPassword.length < 12) {
+    throw new AuthError("Password must be at least 8 characters");
+  }
+
+  const user = await UserModel.findById(userId);
+
+  if (!user) {
+    throw new AuthError("User doesnt exist");
+  }
+
+  // Verify current password is valid
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isCurrentPasswordValid) {
+    throw new AuthError("Current password is incorrect");
+  }
+
+  // Check if new password is same as current
+  if (await bcrypt.compare(newPassword, user.password)) {
+    throw new AuthError("New password must be different from your current password");
+  }
+
+  try {
+    checkPassword(newPassword);
+  } catch (error) {
+    console.log(error);
+    throw new AuthError("Invalid password, please follow password rules");
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  user.updatedAt = new Date();
+
+  await user.save();
+
+  return { success: true };
+}

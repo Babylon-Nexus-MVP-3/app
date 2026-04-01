@@ -7,6 +7,7 @@ import {
   resendResetCodeService,
   resendVerificationCode,
   resetPassword,
+  userChangePassword,
   userVerifyEmail,
   verifyResetCodeService,
 } from "../service/auth.service";
@@ -127,6 +128,22 @@ export const resendVerifyEmail = async (req: Request, res: Response, next: NextF
 
   try {
     const result = await resendVerificationCode(email);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user.sub;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || !currentPassword) {
+    return res.status(400).json({ error: "Reset code and password are required" });
+  }
+
+  try {
+    const result = await userChangePassword(userId, currentPassword, newPassword);
     res.status(200).json(result);
   } catch (err) {
     next(err);
