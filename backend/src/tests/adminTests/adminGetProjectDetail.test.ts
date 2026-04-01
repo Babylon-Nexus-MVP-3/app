@@ -225,6 +225,7 @@ describe("GET /admin/projects/:projectId", () => {
     const submittedByUserId = new mongoose.Types.ObjectId();
     const dateDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
     await InvoiceModel.create({
+      invoiceNumber: "INV-TEST-001",
       projectId,
       submittingParty: "Acme Builders",
       submittingCategory: "Construction",
@@ -262,6 +263,7 @@ describe("GET /admin/projects/:projectId", () => {
     const submittedByUserId = new mongoose.Types.ObjectId();
     const pastDue = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
     await InvoiceModel.create({
+      invoiceNumber: "INV-TEST-002",
       projectId,
       submittingParty: "Late Co",
       submittingCategory: "Electrical",
