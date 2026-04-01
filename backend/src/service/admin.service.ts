@@ -109,6 +109,18 @@ export async function listActiveProjects(): Promise<any[]> {
   }));
 }
 
+export async function listInactiveProjects(): Promise<any[]> {
+  const projects = await ProjectModel.find({ status: "Inactive" }).sort({ createdAt: -1 }).lean();
+  return projects.map((p) => ({
+    _id: p._id.toString(),
+    name: p.name,
+    location: p.location,
+    council: p.council,
+    status: p.status,
+    createdAt: p.createdAt,
+  }));
+}
+
 export async function approveProject(projectId: string): Promise<void> {
   const project = await ProjectModel.findOneAndUpdate(
     { _id: projectId, status: "Pending" },

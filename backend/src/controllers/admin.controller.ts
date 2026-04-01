@@ -61,6 +61,19 @@ export async function listActiveProjects(
   }
 }
 
+export async function listInactiveProjects(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const projects = await AdminService.listInactiveProjects();
+    res.status(200).json({ success: true, projects });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function approveProject(
   req: Request,
   res: Response,
