@@ -4,8 +4,6 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
-import { EventModel } from "../models/eventModel";
-import { DeletedProjectModel } from "../models/deletedProjectModel";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -256,33 +254,21 @@ export async function removeProjectParticipant(
 }
 
 export async function deleteProject(projectId: string) {
-  const project = await ProjectModel.findById(projectId);
+  // bypass the soft-delete middleware to find already-deleted projects
+  const project = await ProjectModel.findOne({ _id: projectId }).setOptions({
+    skipMiddleware: true,
+  });
+
   if (!project) {
     throw new ProjectError("Project does not exist");
   }
+  if (project.isDeleted) {
+    throw new ProjectError("Project is already deleted");
+  }
 
-  const invoices = await InvoiceModel.find({ projectId });
-  const invoiceIds = invoices.map((i) => i._id.toString());
-  const invoiceEvents = await EventModel.find({ aggregateId: { $in: invoiceIds } });
-
-  const projectEvents = await EventModel.find({ aggregateId: projectId });
-  const participants = await ProjectParticipantModel.find({ projectId });
-
-  // First move to deleted project model
-  await DeletedProjectModel.create({
-    deletedAt: new Date(),
-    project: project.toObject(),
-    projectEvents: projectEvents.map((i) => i.toObject()),
-    invoices: invoices.map((i) => i.toObject()),
-    invoiceEvents: invoiceEvents.map((i) => i.toObject()),
-    participants: participants.map((p) => p.toObject()),
-  });
-
-  // Then delete
-  await EventModel.deleteMany({ aggregateId: projectId });
-  await InvoiceModel.deleteMany({ projectId });
-  await ProjectParticipantModel.deleteMany({ projectId });
-  await project.deleteOne();
+  project.isDeleted = true;
+  project.deletedAt = new Date();
+  await project.save();
 
   return { success: true };
 }
