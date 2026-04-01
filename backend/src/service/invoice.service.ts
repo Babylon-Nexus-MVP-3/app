@@ -5,6 +5,13 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
 import { UserModel, UserRole } from "../models/userModel";
 import { getNextSequence } from "../models/counterModel";
+import {
+  notifyInvoiceApproved,
+  notifyInvoicePaid,
+  notifyInvoiceReceived,
+  notifyInvoiceRejected,
+  notifyInvoiceSubmitted,
+} from "./notification.service";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -114,6 +121,13 @@ export async function submitInvoice(
     payload: { submittingParty, submittingCategory, description, amount, projectId },
   });
 
+  await notifyInvoiceSubmitted(
+    invoice._id.toString(),
+    projectId,
+    resolvedApproverRole,
+    submittingParty
+  );
+
   return invoice._id.toString();
 }
 
@@ -160,6 +174,8 @@ export async function approveInvoice(
     userId,
     payload: { projectId },
   });
+
+  await notifyInvoiceApproved(invoiceId, projectId, invoice.submittedByUserId.toString());
 }
 
 export async function markInvoicePaid(
@@ -188,6 +204,8 @@ export async function markInvoicePaid(
     userId,
     payload: { projectId },
   });
+
+  await notifyInvoicePaid(invoiceId, projectId, invoice.submittedByUserId.toString());
 }
 
 export async function markInvoiceReceived(
@@ -216,6 +234,8 @@ export async function markInvoiceReceived(
     userId,
     payload: { projectId },
   });
+
+  await notifyInvoiceReceived(invoiceId, projectId, invoice.approverRole as UserRole);
 }
 
 export async function rejectInvoice(
@@ -245,6 +265,13 @@ export async function rejectInvoice(
     userId,
     payload: { projectId, rejectionReason },
   });
+
+  await notifyInvoiceRejected(
+    invoiceId,
+    projectId,
+    invoice.submittedByUserId.toString(),
+    rejectionReason
+  );
 }
 
 /* ─── Audit Log ─── */

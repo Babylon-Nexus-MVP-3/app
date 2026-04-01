@@ -26,6 +26,7 @@ export interface Invoice extends Document {
   status: InvoiceStatus;
   approverRole: UserRole;
   rejectionReason?: string;
+  escalationsSent: number[];
 }
 
 const invoiceSchema = new Schema<Invoice>(
@@ -53,6 +54,7 @@ const invoiceSchema = new Schema<Invoice>(
       enum: Object.values(UserRole),
     },
     rejectionReason: { type: String },
+    escalationsSent: { type: [Number], required: true, default: [] },
   },
   { timestamps: true }
 );
