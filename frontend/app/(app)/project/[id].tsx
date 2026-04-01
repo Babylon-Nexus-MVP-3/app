@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
@@ -73,6 +73,8 @@ export default function ProjectDetail() {
   // ── Kebab + Members state ──
   const [kebabVisible, setKebabVisible] = useState(false);
   const [membersVisible, setMembersVisible] = useState(false);
+  const [menuTop, setMenuTop] = useState(80);
+  const kebabRef = useRef<View>(null);
 
   // ── FAB menu state ──
   const [fabMenuVisible, setFabMenuVisible] = useState(false);
@@ -203,8 +205,17 @@ export default function ProjectDetail() {
               <Text style={styles.backArrow}>‹</Text>
               <Text style={styles.backLabel}>All Projects</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.kebabBtn} onPress={() => setKebabVisible(true)}>
-              <Text style={styles.kebabBtnText}>⋯</Text>
+            <TouchableOpacity
+              ref={kebabRef}
+              style={styles.kebabBtn}
+              onPress={() => {
+                kebabRef.current?.measure((_x, _y, _w, h, _px, py) => {
+                  setMenuTop(py + h + 4);
+                });
+                setKebabVisible(true);
+              }}
+            >
+              <Text style={styles.kebabBtnText}>⋮</Text>
             </TouchableOpacity>
           </View>
 
@@ -316,17 +327,7 @@ export default function ProjectDetail() {
           activeOpacity={1}
           onPress={() => setKebabVisible(false)}
         >
-          <View style={styles.kebabMenu}>
-            <TouchableOpacity
-              style={styles.kebabMenuItem}
-              onPress={() => {
-                setKebabVisible(false);
-                setMembersVisible(true);
-              }}
-            >
-              <Text style={styles.kebabMenuItemText}>View Members</Text>
-            </TouchableOpacity>
-            <View style={styles.kebabMenuDivider} />
+          <View style={[styles.kebabMenu, { top: menuTop }]}>
             <TouchableOpacity
               style={styles.kebabMenuItem}
               onPress={() => {
@@ -337,6 +338,16 @@ export default function ProjectDetail() {
               }}
             >
               <Text style={styles.kebabMenuItemText}>Audit Log</Text>
+            </TouchableOpacity>
+            <View style={styles.kebabMenuDivider} />
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabVisible(false);
+                setMembersVisible(true);
+              }}
+            >
+              <Text style={styles.kebabMenuItemText}>View Members</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

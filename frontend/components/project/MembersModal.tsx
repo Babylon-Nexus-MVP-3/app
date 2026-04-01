@@ -29,7 +29,7 @@ export function MembersModal({
           <SafeAreaView edges={["top"]}>
             <TouchableOpacity onPress={onClose} style={styles.detailBackBtn}>
               <Text style={styles.detailBackArrow}>‹</Text>
-              <Text style={styles.detailBackLabel}>Members</Text>
+              <Text style={styles.detailBackLabel}>Back</Text>
             </TouchableOpacity>
             <Text style={styles.membersTitle}>Project Members</Text>
           </SafeAreaView>
