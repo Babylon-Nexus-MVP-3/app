@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type ProjectStatus = "Pending" | "Active" | "Rejected";
+export type ProjectStatus = "Pending" | "Active" | "Rejected" | "Inactive";
 
 export interface Project extends Document {
   name: string;
@@ -24,7 +24,7 @@ const projectSchema = new Schema<Project>(
     pmId: { type: String },
     status: {
       type: String,
-      enum: ["Pending", "Active", "Rejected"],
+      enum: ["Pending", "Active", "Rejected", "Inactive"],
       default: "Pending",
     },
   },
