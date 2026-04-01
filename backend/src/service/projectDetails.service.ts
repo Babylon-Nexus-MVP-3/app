@@ -1,7 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
-import { UserRole } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
 
@@ -38,6 +38,14 @@ export interface ProjectInvoiceListItem {
   rejectionReason?: string;
 }
 
+export interface ProjectParticipantListItem {
+  participantId: string;
+  name: string | null;
+  email: string;
+  role: string;
+  status: string;
+}
+
 export interface GetProjectDetailsResult {
   project: {
     id: string;
@@ -50,6 +58,7 @@ export interface GetProjectDetailsResult {
   overdueInvoiceCount: number;
   monthOnMonthHealthChangePct: number | null;
   invoices: ProjectInvoiceListItem[];
+  participants: ProjectParticipantListItem[];
 }
 
 function computeHealthScoreByDueDate(invoices: any[], now: Date): number {
@@ -94,6 +103,19 @@ export async function getProjectDetails(
   if (!userRole) {
     throw new AuthError("Forbidden", 403);
   }
+
+  const allParticipants = await ProjectParticipantModel.find({ projectId })
+    .select("_id email role status userId")
+    .sort({ status: 1, role: 1 })
+    .lean();
+
+  const acceptedUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId!);
+  const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
+    .select("name")
+    .lean();
+  const participantUserMap = Object.fromEntries(
+    participantUsers.map((u) => [u._id.toString(), u.name])
+  );
 
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
 
@@ -163,5 +185,12 @@ export async function getProjectDetails(
     overdueInvoiceCount,
     monthOnMonthHealthChangePct,
     invoices,
+    participants: allParticipants.map((p) => ({
+      participantId: p._id.toString(),
+      name: p.userId ? (participantUserMap[p.userId] ?? null) : null,
+      email: p.email,
+      role: p.role,
+      status: p.status,
+    })),
   };
 }
