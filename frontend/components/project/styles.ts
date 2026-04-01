@@ -29,6 +29,43 @@ export const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.25)",
   },
   auditLogBtnText: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
+  kebabBtn: {
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kebabBtnText: { fontSize: 26, color: "rgba(255,255,255,0.7)", lineHeight: 28 },
+  kebabOverlay: {
+    flex: 1,
+  },
+  kebabMenu: {
+    position: "absolute",
+    top: 0,
+    right: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    minWidth: 160,
+  },
+  kebabMenuItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  kebabMenuItemText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  kebabMenuDivider: {
+    height: 1,
+    backgroundColor: Colors.greyBg,
+  },
   backArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
   backLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
   headerProjectName: {
@@ -150,6 +187,8 @@ export const styles = StyleSheet.create({
 
   // My Space stats
   statRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  statGrid: { gap: 10, marginBottom: 20 },
+  statGridRow: { flexDirection: "row", gap: 10 },
   statBox: {
     flex: 1,
     backgroundColor: Colors.white,
@@ -625,4 +664,59 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailActionBtnText: { fontSize: 15, fontWeight: "700", color: Colors.white },
+
+  // Filter chips
+  filterScroll: { flexGrow: 0, marginBottom: 14 },
+  filterRow: { flexDirection: "row", gap: 8, paddingVertical: 4 },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.35)",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    backgroundColor: Colors.white,
+  },
+  filterChipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  filterChipText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  filterChipTextActive: { color: Colors.white },
+
+  // Members modal
+  membersContainer: { flex: 1, backgroundColor: Colors.offWhite },
+  membersHeader: { paddingBottom: 20 },
+  membersTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.white,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  membersBody: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 32 },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    gap: 12,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.navyLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberAvatarText: { fontSize: 16, fontWeight: "700", color: Colors.white },
+  memberInfo: { flex: 1 },
+  memberName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  memberEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  memberRolePill: {
+    backgroundColor: Colors.greyBg,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  memberRolePillText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
 });

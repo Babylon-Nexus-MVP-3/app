@@ -65,3 +65,11 @@ export const INVITE_ROLES = [
 export type InviteRole = (typeof INVITE_ROLES)[number];
 
 export const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
+
+export type Participant = {
+  participantId: string;
+  name: string | null;
+  email: string;
+  role: string;
+  status: string;
+};

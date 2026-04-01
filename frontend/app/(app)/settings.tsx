@@ -1,9 +1,9 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { displayRole } from "@/components/project/helpers";
 
 export default function Settings() {
   const { user, logout } = useAuth();
@@ -21,38 +21,30 @@ export default function Settings() {
     .slice(0, 2);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+        <SafeAreaView edges={["top"]}>
+          <Text style={styles.screenTitle}>Settings</Text>
+        </SafeAreaView>
+      </LinearGradient>
 
-      {/* Profile card */}
-      <View style={styles.card}>
+      {/* Profile card overlaps the header bottom */}
+      <View style={styles.profileCard}>
         <View style={styles.avatarWrapper}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
-
-        <Text style={styles.name}>{user?.name}</Text>
-
-        <View style={styles.rolePill}>
-          <Text style={styles.rolePillText}>{user ? displayRole(user.role) : ""}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{user?.email}</Text>
+        <View style={styles.profileInfo}>
+          <Text style={styles.name}>{user?.name}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
         </View>
       </View>
 
-      {/* Sign out */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.signOutButton} onPress={handleLogout} activeOpacity={0.85}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -62,84 +54,57 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.offWhite,
   },
   header: {
+    paddingBottom: 48,
+  },
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.white,
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-  },
-  card: {
+  profileCard: {
     marginHorizontal: 20,
+    marginTop: -32,
     backgroundColor: Colors.white,
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 16,
     shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   avatarWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: Colors.navyDeep,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
   },
   avatarText: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: "700",
     color: Colors.white,
   },
+  profileInfo: {
+    flex: 1,
+  },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  rolePill: {
-    backgroundColor: Colors.navyIcon,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 20,
-  },
-  rolePillText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.4,
-  },
-  divider: {
-    width: "100%",
-    height: 1,
-    backgroundColor: Colors.offWhite,
-    marginBottom: 16,
-  },
-  infoRow: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  infoLabel: {
+  email: {
     fontSize: 13,
     color: Colors.textSecondary,
     fontWeight: "500",
-  },
-  infoValue: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: "500",
-    flexShrink: 1,
-    textAlign: "right",
-    marginLeft: 12,
   },
   footer: {
     position: "absolute",

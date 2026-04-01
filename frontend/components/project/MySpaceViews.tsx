@@ -23,6 +23,9 @@ export function InvoiceUploaderView({
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
 }) {
+  const [subTab, setSubTab] = useState<"myInvoices" | "allInvoices">("myInvoices");
+  const [myFilter, setMyFilter] = useState<FilterStatus>("All");
+  const [allFilter, setAllFilter] = useState<FilterStatus>("All");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -48,48 +51,135 @@ export function InvoiceUploaderView({
   }
 
   const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
-  const outstanding = myInvoices.filter(
+  const myOutstanding = myInvoices.filter(
     (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   );
-  const paid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
+  const allActive = invoices.filter((i) => i.status !== "Rejected");
+  const allPending = allActive.filter((i) => i.status === "Pending");
+  const allApproved = allActive.filter((i) => i.status === "Approved");
+  const allPaid = allActive.filter((i) => i.status === "Paid" || i.status === "Received");
+
+  const filteredMyInvoices =
+    myFilter === "All" ? myInvoices : myInvoices.filter((i) => i.status === myFilter);
+  const filteredAllInvoices =
+    allFilter === "All" ? invoices : invoices.filter((i) => i.status === allFilter);
+
+  const SUB_TABS = [
+    { key: "myInvoices" as const, label: "My Invoices" },
+    { key: "allInvoices" as const, label: "All Invoices" },
+  ];
 
   return (
     <>
+      <View style={styles.innerTabBar}>
+        {SUB_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
+            onPress={() => setSubTab(t.key)}
+          >
+            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.statRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>Outstanding</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
-              ${outstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>Paid</Text>
-            <Text style={[styles.statBoxNum, { color: Colors.green }]}>
-              ${paid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.statBoxSub}>
-              {paid.length} invoice{paid.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.sectionLabel}>MY INVOICES</Text>
-        {myInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-        {myInvoices.map((inv) => (
-          <MyInvoiceCard
-            key={inv.id}
-            inv={inv}
-            onReceived={() => openConfirm("received", inv)}
-            onTap={() => onTapInvoice(inv)}
-          />
-        ))}
+        {subTab === "myInvoices" && (
+          <>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Outstanding</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                  ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Paid</Text>
+                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                  ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.statBoxSub}>
+                  {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+            </View>
+            <FilterChips filter={myFilter} onChange={setMyFilter} />
+            {filteredMyInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices yet.</Text>
+            )}
+            {filteredMyInvoices.map((inv) => (
+              <MyInvoiceCard
+                key={inv.id}
+                inv={inv}
+                onReceived={() => openConfirm("received", inv)}
+                onTap={() => onTapInvoice(inv)}
+              />
+            ))}
+          </>
+        )}
+
+        {subTab === "allInvoices" && (
+          <>
+            <AllInvoicesStats
+              allActive={allActive}
+              allPending={allPending}
+              allApproved={allApproved}
+              allPaid={allPaid}
+              canSeeAmounts={false}
+            />
+            <FilterChips filter={allFilter} onChange={setAllFilter} />
+            {filteredAllInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices yet.</Text>
+            )}
+            {filteredAllInvoices.map((inv) => {
+              const calStatus = apiStatusToCalStatus(inv);
+              return (
+                <TouchableOpacity
+                  key={inv.id}
+                  style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
+                  onPress={() => onTapInvoice(inv)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.invoiceRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      {inv.invoiceNumber ? (
+                        <View style={styles.invoiceNumPill}>
+                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
+                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                        {invoiceStatusLabel(inv.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.invoiceRow}>
+                    {inv.submittedByUserId === userId && inv.amount != null && (
+                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                    )}
+                    {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
+                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                        {inv.daysOverdue} days overdue
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
       <ConfirmModal
         visible={confirmAction !== null}
@@ -123,6 +213,8 @@ export function DualRoleMySpace({
   onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "toApprove" | "allInvoices">("myInvoices");
+  const [myFilter, setMyFilter] = useState<FilterStatus>("All");
+  const [allFilter, setAllFilter] = useState<FilterStatus>("All");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -161,15 +253,20 @@ export function DualRoleMySpace({
   );
   // All roles see all project invoices; amounts are gated per canViewAmount.
   const allInvoices = invoices;
-  const allPaid = allInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const allOut = allInvoices.filter(
-    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
+  const allActive = allInvoices.filter((i) => i.status !== "Rejected");
+  const allPending = allActive.filter((i) => i.status === "Pending");
+  const allApproved = allActive.filter((i) => i.status === "Approved");
+  const allPaid = allActive.filter((i) => i.status === "Paid" || i.status === "Received");
 
   // PM sees all amounts; Builder sees amounts on own + approved invoices
   const canSeeAllAmounts = approverRole === "PM";
   // For "To Action" tab: Builder IS the approver for all those invoices → show dollar total
   const canSeeToActionAmounts = true;
+
+  const filteredMyInvoices =
+    myFilter === "All" ? myInvoices : myInvoices.filter((i) => i.status === myFilter);
+  const filteredAllInvoices =
+    allFilter === "All" ? allInvoices : allInvoices.filter((i) => i.status === allFilter);
 
   const SUB_TABS = [
     { key: "myInvoices" as const, label: "My Invoices" },
@@ -220,10 +317,11 @@ export function DualRoleMySpace({
                 </Text>
               </View>
             </View>
-            {myInvoices.length === 0 && (
+            <FilterChips filter={myFilter} onChange={setMyFilter} />
+            {filteredMyInvoices.length === 0 && (
               <Text style={styles.emptyText}>No invoices submitted yet.</Text>
             )}
-            {myInvoices.map((inv) => (
+            {filteredMyInvoices.map((inv) => (
               <MyInvoiceCard
                 key={`my-${inv.id}`}
                 inv={inv}
@@ -281,42 +379,18 @@ export function DualRoleMySpace({
 
         {subTab === "allInvoices" && (
           <>
-            <View style={styles.statRow}>
-              {(
-                [
-                  [
-                    "Total",
-                    allInvoices.length,
-                    allInvoices.reduce((a, i) => a + (i.amount ?? 0), 0),
-                    Colors.textPrimary,
-                  ],
-                  [
-                    "Paid",
-                    allPaid.length,
-                    allPaid.reduce((a, i) => a + (i.amount ?? 0), 0),
-                    Colors.green,
-                  ],
-                  [
-                    "Outstanding",
-                    allOut.length,
-                    allOut.reduce((a, i) => a + (i.amount ?? 0), 0),
-                    Colors.amber,
-                  ],
-                ] as const
-              ).map(([label, count, val, color]) => (
-                <View key={label} style={styles.statBox}>
-                  <Text style={styles.statBoxLabel}>{label}</Text>
-                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>
-                    {canSeeAllAmounts
-                      ? `$${val.toLocaleString()}`
-                      : `${count} invoice${count !== 1 ? "s" : ""}`}
-                  </Text>
-                  {canSeeAllAmounts && <Text style={styles.statBoxSub}>{count} invoices</Text>}
-                </View>
-              ))}
-            </View>
-            {allInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-            {allInvoices.map((inv) => {
+            <AllInvoicesStats
+              allActive={allActive}
+              allPending={allPending}
+              allApproved={allApproved}
+              allPaid={allPaid}
+              canSeeAmounts={canSeeAllAmounts}
+            />
+            <FilterChips filter={allFilter} onChange={setAllFilter} />
+            {filteredAllInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices yet.</Text>
+            )}
+            {filteredAllInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
               const showAmt = canSeeAllAmounts || inv.submittedByUserId === userId;
               return (
@@ -444,6 +518,7 @@ export function OwnerMySpace({
   onTapInvoice: (inv: ApiInvoice) => void;
 }) {
   const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("allInvoices");
+  const [allFilter, setAllFilter] = useState<FilterStatus>("All");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -472,10 +547,12 @@ export function OwnerMySpace({
   const toAction = approvalInvoices
     .filter((i) => i.status === "Pending" || i.status === "Approved")
     .sort((a, b) => new Date(a.dateDue).getTime() - new Date(b.dateDue).getTime());
-  const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const outInvs = invoices.filter(
-    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
+  const ownerActive = invoices.filter((i) => i.status !== "Rejected");
+  const ownerPending = ownerActive.filter((i) => i.status === "Pending");
+  const ownerApproved = ownerActive.filter((i) => i.status === "Approved");
+  const ownerPaid = ownerActive.filter((i) => i.status === "Paid" || i.status === "Received");
+  const filteredAllInvoices =
+    allFilter === "All" ? invoices : invoices.filter((i) => i.status === allFilter);
 
   const OWNER_TABS = [
     { key: "allInvoices" as const, label: "All Invoices" },
@@ -551,38 +628,18 @@ export function OwnerMySpace({
 
         {subTab === "allInvoices" && (
           <>
-            <View style={styles.statRow}>
-              {(
-                [
-                  [
-                    "Total Raised",
-                    invoices.length,
-                    `$${invoices.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.textPrimary,
-                  ],
-                  [
-                    "Paid",
-                    paidInvs.length,
-                    `$${paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.green,
-                  ],
-                  [
-                    "Outstanding",
-                    outInvs.length,
-                    `$${outInvs.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`,
-                    Colors.amber,
-                  ],
-                ] as const
-              ).map(([label, count, val, color]) => (
-                <View key={label} style={styles.statBox}>
-                  <Text style={styles.statBoxLabel}>{label}</Text>
-                  <Text style={[styles.statBoxNum, { color, fontSize: 16 }]}>{val}</Text>
-                  <Text style={styles.statBoxSub}>{count} invoices</Text>
-                </View>
-              ))}
-            </View>
-            {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-            {invoices.map((inv) => {
+            <AllInvoicesStats
+              allActive={ownerActive}
+              allPending={ownerPending}
+              allApproved={ownerApproved}
+              allPaid={ownerPaid}
+              canSeeAmounts={true}
+            />
+            <FilterChips filter={allFilter} onChange={setAllFilter} />
+            {filteredAllInvoices.length === 0 && (
+              <Text style={styles.emptyText}>No invoices yet.</Text>
+            )}
+            {filteredAllInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
               return (
                 <TouchableOpacity
@@ -643,13 +700,13 @@ export function FinancierMySpace({
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
 }) {
-  const paidInvs = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const outInvs = invoices.filter(
-    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
-  const valTotal = invoices.reduce((a, i) => a + (i.amount ?? 0), 0);
-  const valPaid = paidInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
-  const valOut = outInvs.reduce((a, i) => a + (i.amount ?? 0), 0);
+  const [filter, setFilter] = useState<FilterStatus>("All");
+  const finActive = invoices.filter((i) => i.status !== "Rejected");
+  const finPending = finActive.filter((i) => i.status === "Pending");
+  const finApproved = finActive.filter((i) => i.status === "Approved");
+  const finPaid = finActive.filter((i) => i.status === "Paid" || i.status === "Received");
+  const filteredInvoices =
+    filter === "All" ? invoices : invoices.filter((i) => i.status === filter);
 
   return (
     <ScrollView
@@ -657,25 +714,16 @@ export function FinancierMySpace({
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.statRow}>
-        {(
-          [
-            ["Total Raised", invoices.length, `$${valTotal.toLocaleString()}`, Colors.textPrimary],
-            ["Paid", paidInvs.length, `$${valPaid.toLocaleString()}`, Colors.green],
-            ["Outstanding", outInvs.length, `$${valOut.toLocaleString()}`, Colors.amber],
-          ] as const
-        ).map(([label, count, val, color]) => (
-          <View key={label} style={styles.statBox}>
-            <Text style={styles.statBoxLabel}>{label}</Text>
-            <Text style={[styles.statBoxNum, { color, fontSize: 18 }]}>{val}</Text>
-            <Text style={styles.statBoxSub}>{count} invoices</Text>
-          </View>
-        ))}
-      </View>
-
-      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
-      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-      {invoices.map((inv) => {
+      <AllInvoicesStats
+        allActive={finActive}
+        allPending={finPending}
+        allApproved={finApproved}
+        allPaid={finPaid}
+        canSeeAmounts={true}
+      />
+      <FilterChips filter={filter} onChange={setFilter} />
+      {filteredInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {filteredInvoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
           <TouchableOpacity
@@ -724,12 +772,15 @@ export function ObserverMySpace({
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
 }) {
-  const pendingCount = invoices.filter((i) => i.status === "Pending").length;
+  const [filter, setFilter] = useState<FilterStatus>("All");
+  const activeCount = invoices.filter((i) => i.status !== "Rejected").length;
   const overdueCount = invoices.filter(
     (i) =>
       i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   ).length;
   const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
+  const filteredInvoices =
+    filter === "All" ? invoices : invoices.filter((i) => i.status === filter);
 
   return (
     <ScrollView
@@ -740,23 +791,22 @@ export function ObserverMySpace({
       <View style={styles.statRow}>
         {(
           [
-            ["Total", invoices.length, Colors.textPrimary],
+            ["Total", activeCount, Colors.textPrimary],
             ["Overdue", overdueCount, Colors.red],
-            ["Pending", pendingCount, Colors.purple],
             ["Paid", paidCount, Colors.green],
           ] as const
         ).map(([label, count, color]) => (
           <View key={label} style={styles.statBox}>
             <Text style={styles.statBoxLabel}>{label}</Text>
-            <Text style={[styles.statBoxNum, { color, fontSize: 22 }]}>{count}</Text>
+            <Text style={[styles.statBoxNum, { color }]}>{count}</Text>
             <Text style={styles.statBoxSub}>invoices</Text>
           </View>
         ))}
       </View>
 
-      <Text style={styles.sectionLabel}>ALL INVOICES</Text>
-      {invoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
-      {invoices.map((inv) => {
+      <FilterChips filter={filter} onChange={setFilter} />
+      {filteredInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {filteredInvoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
           <TouchableOpacity
@@ -794,5 +844,92 @@ export function ObserverMySpace({
         );
       })}
     </ScrollView>
+  );
+}
+
+/* ─── Shared filter chips ─── */
+type FilterStatus = "All" | "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
+const FILTER_STATUSES: FilterStatus[] = [
+  "All",
+  "Pending",
+  "Approved",
+  "Paid",
+  "Received",
+  "Rejected",
+];
+
+function FilterChips({
+  filter,
+  onChange,
+}: {
+  filter: FilterStatus;
+  onChange: (f: FilterStatus) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.filterScroll}
+      contentContainerStyle={styles.filterRow}
+    >
+      {FILTER_STATUSES.map((f) => (
+        <TouchableOpacity
+          key={f}
+          style={[styles.filterChip, filter === f && styles.filterChipActive]}
+          onPress={() => onChange(f)}
+        >
+          <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+            {f}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+}
+
+/* ─── Shared 3-box stats row for All Invoices views ─── */
+function AllInvoicesStats({
+  allActive,
+  allPending,
+  allApproved,
+  allPaid,
+  canSeeAmounts,
+}: {
+  allActive: ApiInvoice[];
+  allPending: ApiInvoice[];
+  allApproved: ApiInvoice[];
+  allPaid: ApiInvoice[];
+  canSeeAmounts: boolean;
+}) {
+  function amt(arr: ApiInvoice[]) {
+    return arr.reduce((a, i) => a + (i.amount ?? 0), 0);
+  }
+  function val(arr: ApiInvoice[], color: string) {
+    return canSeeAmounts
+      ? { text: `$${amt(arr).toLocaleString()}`, color }
+      : { text: `${arr.length} invoice${arr.length !== 1 ? "s" : ""}`, color };
+  }
+
+  const outstanding = [...allPending, ...allApproved];
+  const rows: [string, ReturnType<typeof val>, number][] = [
+    ["Total", val(allActive, Colors.textPrimary), allActive.length],
+    ["Paid", val(allPaid, Colors.green), allPaid.length],
+    ["Outstanding", val(outstanding, Colors.amber), outstanding.length],
+  ];
+
+  return (
+    <View style={styles.statRow}>
+      {rows.map(([label, v, count]) => (
+        <View key={label} style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>{label}</Text>
+          <Text style={[styles.statBoxNum, { color: v.color, fontSize: 16 }]}>{v.text}</Text>
+          {canSeeAmounts && (
+            <Text style={styles.statBoxSub}>
+              {count} invoice{count !== 1 ? "s" : ""}
+            </Text>
+          )}
+        </View>
+      ))}
+    </View>
   );
 }
