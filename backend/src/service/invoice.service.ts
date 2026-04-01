@@ -376,6 +376,7 @@ export async function getProjectAuditLog(
 
     return {
       invoiceId: invId,
+      invoiceNumber: inv.invoiceNumber,
       description: inv.description,
       amount: inv.amount,
       status: inv.status,
@@ -387,9 +388,10 @@ export async function getProjectAuditLog(
     };
   });
 
-  // Summary stats
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const paidInvoices = invoices.filter(
+  // Summary stats (exclude Rejected from all calculations)
+  const activeInvoices = invoices.filter((inv) => inv.status !== InvoiceStatus.Rejected);
+  const totalAmount = activeInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const paidInvoices = activeInvoices.filter(
     (inv) => inv.status === InvoiceStatus.Paid || inv.status === InvoiceStatus.Received
   );
   const paidAmount = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);

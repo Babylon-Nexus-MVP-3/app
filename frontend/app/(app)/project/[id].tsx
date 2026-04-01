@@ -22,11 +22,13 @@ import {
   InviteRole,
   INVOICE_UPLOADER_ROLES,
   ROLE_API,
+  Participant,
 } from "@/components/project/types";
 import { styles } from "@/components/project/styles";
 import { displayRole } from "@/components/project/helpers";
 import { CalendarTab } from "@/components/project/CalendarTab";
 import { MySpaceTab } from "@/components/project/MySpaceTab";
+import { MembersModal } from "@/components/project/MembersModal";
 
 export default function ProjectDetail() {
   const params = useLocalSearchParams<{ id: string; name: string }>();
@@ -64,6 +66,13 @@ export default function ProjectDetail() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // ── Participants ──
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
+  // ── Kebab + Members state ──
+  const [kebabVisible, setKebabVisible] = useState(false);
+  const [membersVisible, setMembersVisible] = useState(false);
 
   // ── FAB menu state ──
   const [fabMenuVisible, setFabMenuVisible] = useState(false);
@@ -154,6 +163,7 @@ export default function ProjectDetail() {
         setChange(data.monthOnMonthHealthChangePct ?? null);
         setRole(data.userRole ?? "Member");
         setInvoices(data.invoices ?? []);
+        setParticipants(data.participants ?? []);
       }
     } catch {}
   }
@@ -193,15 +203,8 @@ export default function ProjectDetail() {
               <Text style={styles.backArrow}>‹</Text>
               <Text style={styles.backLabel}>All Projects</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.auditLogBtn}
-              onPress={() => {
-                router.push(
-                  `/(app)/project/audit-log/${id}?name=${encodeURIComponent(projectName)}` as any
-                );
-              }}
-            >
-              <Text style={styles.auditLogBtnText}>Audit Log</Text>
+            <TouchableOpacity style={styles.kebabBtn} onPress={() => setKebabVisible(true)}>
+              <Text style={styles.kebabBtnText}>⋯</Text>
             </TouchableOpacity>
           </View>
 
@@ -305,6 +308,46 @@ export default function ProjectDetail() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* ── Kebab menu ── */}
+      <Modal visible={kebabVisible} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.kebabOverlay}
+          activeOpacity={1}
+          onPress={() => setKebabVisible(false)}
+        >
+          <View style={styles.kebabMenu}>
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabVisible(false);
+                setMembersVisible(true);
+              }}
+            >
+              <Text style={styles.kebabMenuItemText}>View Members</Text>
+            </TouchableOpacity>
+            <View style={styles.kebabMenuDivider} />
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabVisible(false);
+                router.push(
+                  `/(app)/project/audit-log/${id}?name=${encodeURIComponent(projectName)}` as any
+                );
+              }}
+            >
+              <Text style={styles.kebabMenuItemText}>Audit Log</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Members modal ── */}
+      <MembersModal
+        visible={membersVisible}
+        participants={participants}
+        onClose={() => setMembersVisible(false)}
+      />
 
       {/* ── Raise Invoice modal ── */}
       <Modal visible={invoiceVisible} animationType="slide" presentationStyle="fullScreen">
