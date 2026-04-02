@@ -4,7 +4,6 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
-import { EventModel } from "../models/eventModel";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -57,10 +56,11 @@ export async function listPendingProjects(): Promise<any[]> {
     projectId: { $in: projectIds },
   }).lean();
 
-  // Fetch creator users in one query
-  const creatorParticipants = allParticipants.filter((p) => p.status === "Accepted" && p.userId);
-  const creatorUserIds = creatorParticipants.map((p) => p.userId);
-  const creatorUsers = await UserModel.find({ _id: { $in: creatorUserIds } })
+  const acceptedUserIds = allParticipants
+    .filter((p) => p.status === "Accepted" && p.userId)
+    .map((p) => p.userId!);
+
+  const creatorUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
     .select("name email")
     .lean();
   const creatorUserMap = Object.fromEntries(creatorUsers.map((u) => [u._id.toString(), u]));
@@ -69,10 +69,10 @@ export async function listPendingProjects(): Promise<any[]> {
     const projectId = p._id.toString();
     const participants = allParticipants.filter((pp) => pp.projectId === projectId);
 
-    const creatorParticipant = participants.find((pp) => pp.status === "Accepted");
+    const creatorParticipant = participants.find((pp) => pp.status === "Accepted" && pp.userId);
     let creator = null;
     if (creatorParticipant) {
-      const user = creatorUserMap[creatorParticipant.userId];
+      const user = creatorUserMap[creatorParticipant.userId!];
       creator = {
         name: user?.name ?? "—",
         email: creatorParticipant.email,
@@ -267,17 +267,20 @@ export async function removeProjectParticipant(
 }
 
 export async function deleteProject(projectId: string) {
-  const project = await ProjectModel.findById(projectId);
+  const project = await ProjectModel.findOne({ _id: projectId }).setOptions({
+    bypassSoftDelete: true,
+  });
+
   if (!project) {
-    throw new ProjectError("Project Does not exist");
+    throw new ProjectError("Project does not exist");
+  }
+  if (project.isDeleted) {
+    throw new ProjectError("Project is already deleted");
   }
 
-  // Delete all events, invoices and participants associated with project
-
-  await EventModel.deleteMany({ aggregateId: projectId });
-  await InvoiceModel.deleteMany({ projectId });
-  await ProjectParticipantModel.deleteMany({ projectId });
-  await project.deleteOne();
+  project.isDeleted = true;
+  project.deletedAt = new Date();
+  await project.save();
 
   return { success: true };
 }
