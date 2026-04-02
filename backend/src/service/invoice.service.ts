@@ -13,6 +13,15 @@ import {
   notifyInvoiceSubmitted,
 } from "./notification.service";
 
+/** Runs notification persistence without letting failures break invoice workflows. */
+async function notifySafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — invoice state is already committed
+  }
+}
+
 export class InvoiceError extends Error {
   statusCode: number;
 
@@ -121,11 +130,8 @@ export async function submitInvoice(
     payload: { submittingParty, submittingCategory, description, amount, projectId },
   });
 
-  await notifyInvoiceSubmitted(
-    invoice._id.toString(),
-    projectId,
-    resolvedApproverRole,
-    submittingParty
+  await notifySafely(() =>
+    notifyInvoiceSubmitted(invoice._id.toString(), projectId, resolvedApproverRole, submittingParty)
   );
 
   return invoice._id.toString();
@@ -175,7 +181,9 @@ export async function approveInvoice(
     payload: { projectId },
   });
 
-  await notifyInvoiceApproved(invoiceId, projectId, invoice.submittedByUserId.toString());
+  await notifySafely(() =>
+    notifyInvoiceApproved(invoiceId, projectId, invoice.submittedByUserId.toString())
+  );
 }
 
 export async function markInvoicePaid(
@@ -205,7 +213,9 @@ export async function markInvoicePaid(
     payload: { projectId },
   });
 
-  await notifyInvoicePaid(invoiceId, projectId, invoice.submittedByUserId.toString());
+  await notifySafely(() =>
+    notifyInvoicePaid(invoiceId, projectId, invoice.submittedByUserId.toString())
+  );
 }
 
 export async function markInvoiceReceived(
@@ -235,7 +245,9 @@ export async function markInvoiceReceived(
     payload: { projectId },
   });
 
-  await notifyInvoiceReceived(invoiceId, projectId, invoice.approverRole as UserRole);
+  await notifySafely(() =>
+    notifyInvoiceReceived(invoiceId, projectId, invoice.approverRole as UserRole)
+  );
 }
 
 export async function rejectInvoice(
@@ -266,11 +278,13 @@ export async function rejectInvoice(
     payload: { projectId, rejectionReason },
   });
 
-  await notifyInvoiceRejected(
-    invoiceId,
-    projectId,
-    invoice.submittedByUserId.toString(),
-    rejectionReason
+  await notifySafely(() =>
+    notifyInvoiceRejected(
+      invoiceId,
+      projectId,
+      invoice.submittedByUserId.toString(),
+      rejectionReason
+    )
   );
 }
 
