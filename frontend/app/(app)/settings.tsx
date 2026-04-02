@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +38,18 @@ export default function Settings() {
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
+      </View>
+
+      <View style={styles.menu}>
+        <TouchableOpacity
+          style={styles.menuRow}
+          onPress={() => router.push("/(app)/change-password" as any)}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.textSecondary} />
+          <Text style={styles.menuRowText}>Change Password</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
@@ -122,5 +135,29 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 15,
     fontWeight: "700",
+  },
+  menu: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  menuRowText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: Colors.textPrimary,
   },
 });
