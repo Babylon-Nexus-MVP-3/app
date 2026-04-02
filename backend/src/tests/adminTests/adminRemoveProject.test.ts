@@ -7,7 +7,6 @@ import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 import { hashPassword } from "../../utils/authHelper";
-import { DeletedProjectModel } from "../../models/deletedProjectModel";
 
 dotenv.config();
 

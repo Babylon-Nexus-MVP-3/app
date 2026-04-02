@@ -56,10 +56,11 @@ export async function listPendingProjects(): Promise<any[]> {
     projectId: { $in: projectIds },
   }).lean();
 
-  // Fetch creator users in one query
-  const creatorParticipants = allParticipants.filter((p) => p.status === "Accepted" && p.userId);
-  const creatorUserIds = creatorParticipants.map((p) => p.userId);
-  const creatorUsers = await UserModel.find({ _id: { $in: creatorUserIds } })
+  const acceptedUserIds = allParticipants
+    .filter((p) => p.status === "Accepted" && p.userId)
+    .map((p) => p.userId!);
+
+  const creatorUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
     .select("name email")
     .lean();
   const creatorUserMap = Object.fromEntries(creatorUsers.map((u) => [u._id.toString(), u]));
@@ -68,10 +69,10 @@ export async function listPendingProjects(): Promise<any[]> {
     const projectId = p._id.toString();
     const participants = allParticipants.filter((pp) => pp.projectId === projectId);
 
-    const creatorParticipant = participants.find((pp) => pp.status === "Accepted");
+    const creatorParticipant = participants.find((pp) => pp.status === "Accepted" && pp.userId);
     let creator = null;
     if (creatorParticipant) {
-      const user = creatorUserMap[creatorParticipant.userId];
+      const user = creatorUserMap[creatorParticipant.userId!];
       creator = {
         name: user?.name ?? "—",
         email: creatorParticipant.email,
@@ -254,9 +255,8 @@ export async function removeProjectParticipant(
 }
 
 export async function deleteProject(projectId: string) {
-  // bypass the soft-delete middleware to find already-deleted projects
   const project = await ProjectModel.findOne({ _id: projectId }).setOptions({
-    skipMiddleware: true,
+    bypassSoftDelete: true,
   });
 
   if (!project) {

@@ -1,4 +1,3 @@
-import { NextFunction } from "express";
 import mongoose, { Schema, Document } from "mongoose";
 
 export type ProjectStatus = "Pending" | "Active" | "Rejected";
@@ -39,9 +38,9 @@ const projectSchema = new Schema<Project>(
 );
 
 // Automatically exclude soft-deleted docs from all queries
-projectSchema.pre(/^find/, function (this: mongoose.Query<any, any>, next: NextFunction) {
+projectSchema.pre(/^find/, function (this: mongoose.Query<any, any>) {
+  if (this.getOptions().bypassSoftDelete) return;
   this.where({ isDeleted: { $ne: true } });
-  next();
 });
 
 export const ProjectModel = mongoose.model<Project>("Project", projectSchema);
