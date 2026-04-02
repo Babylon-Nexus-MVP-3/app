@@ -12,6 +12,7 @@ export const InvoiceStatus = {
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
 export interface Invoice extends Document {
+  invoiceNumber: string;
   projectId: string;
   submittingParty: string;
   submittingCategory: string;
@@ -29,6 +30,7 @@ export interface Invoice extends Document {
 
 const invoiceSchema = new Schema<Invoice>(
   {
+    invoiceNumber: { type: String, required: true, unique: true },
     // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     submittingParty: { type: String, required: true },

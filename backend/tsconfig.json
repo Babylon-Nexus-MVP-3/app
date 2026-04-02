@@ -10,7 +10,7 @@
     "target": "es2022",
     "module": "commonjs",
     "moduleResolution": "Node",
-    "types": ["jest"]
+    "types": ["jest"],
   },
   "include": ["src/**/*"],
   "exclude": [

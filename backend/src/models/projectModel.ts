@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type ProjectStatus = "Pending" | "Active" | "Rejected";
+export type ProjectStatus = "Pending" | "Active" | "Rejected" | "Inactive";
 
 export interface Project extends Document {
   name: string;
@@ -10,6 +10,8 @@ export interface Project extends Document {
   builderId?: string;
   pmId?: string;
   status: ProjectStatus;
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,13 +26,21 @@ const projectSchema = new Schema<Project>(
     pmId: { type: String },
     status: {
       type: String,
-      enum: ["Pending", "Active", "Rejected"],
+      enum: ["Pending", "Active", "Rejected", "Inactive"],
       default: "Pending",
     },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
   },
   {
     timestamps: true,
   }
 );
+
+// Automatically exclude soft-deleted docs from all queries
+projectSchema.pre(/^find/, function (this: mongoose.Query<any, any>) {
+  if (this.getOptions().bypassSoftDelete) return;
+  this.where({ isDeleted: { $ne: true } });
+});
 
 export const ProjectModel = mongoose.model<Project>("Project", projectSchema);

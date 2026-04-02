@@ -57,6 +57,15 @@ export default function AdminLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="archives"
+        options={{
+          title: "Archives",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "archive" : "archive-outline"} size={24} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen name="project/[id]" options={{ href: null }} />
     </Tabs>
   );

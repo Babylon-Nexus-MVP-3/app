@@ -1,28 +1,50 @@
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
-// TODO: Build settings screen
 export default function Settings() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   async function handleLogout() {
     await logout();
     router.replace("/");
   }
 
+  const initials = user?.name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.inner}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Coming soon</Text>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleLogout}>
+    <View style={styles.container}>
+      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+        <SafeAreaView edges={["top"]}>
+          <Text style={styles.screenTitle}>Settings</Text>
+        </SafeAreaView>
+      </LinearGradient>
+
+      {/* Profile card overlaps the header bottom */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatarWrapper}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.name}>{user?.name}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleLogout} activeOpacity={0.85}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -31,31 +53,74 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.offWhite,
   },
-  inner: {
-    flex: 1,
+  header: {
+    paddingBottom: 48,
+  },
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.white,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  profileCard: {
+    marginHorizontal: 20,
+    marginTop: -32,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  avatarWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.navyDeep,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: 22,
+  avatarText: {
+    fontSize: 20,
     fontWeight: "700",
-    color: Colors.navy,
-    marginBottom: 8,
+    color: Colors.white,
   },
-  subtitle: {
-    fontSize: 14,
+  profileInfo: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  email: {
+    fontSize: 13,
     color: Colors.textSecondary,
-    marginBottom: 32,
+    fontWeight: "500",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 32,
+    left: 20,
+    right: 20,
   },
   signOutButton: {
     backgroundColor: Colors.red,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
   },
   signOutText: {
     color: Colors.white,
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

@@ -1,7 +1,7 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
-import { UserRole } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
 
@@ -24,6 +24,7 @@ function isPaidStatus(status: InvoiceStatus): boolean {
 
 export interface ProjectInvoiceListItem {
   id: string;
+  invoiceNumber: string;
   submittingParty: string;
   submittingCategory: string;
   description: string;
@@ -35,6 +36,14 @@ export interface ProjectInvoiceListItem {
   approverRole: string;
   submittedByUserId: string;
   rejectionReason?: string;
+}
+
+export interface ProjectParticipantListItem {
+  participantId: string;
+  name: string | null;
+  email: string;
+  role: string;
+  status: string;
 }
 
 export interface GetProjectDetailsResult {
@@ -49,6 +58,7 @@ export interface GetProjectDetailsResult {
   overdueInvoiceCount: number;
   monthOnMonthHealthChangePct: number | null;
   invoices: ProjectInvoiceListItem[];
+  participants: ProjectParticipantListItem[];
 }
 
 function computeHealthScoreByDueDate(invoices: any[], now: Date): number {
@@ -94,6 +104,19 @@ export async function getProjectDetails(
     throw new AuthError("Forbidden", 403);
   }
 
+  const allParticipants = await ProjectParticipantModel.find({ projectId })
+    .select("_id email role status userId")
+    .sort({ status: 1, role: 1 })
+    .lean();
+
+  const acceptedUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId!);
+  const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
+    .select("name")
+    .lean();
+  const participantUserMap = Object.fromEntries(
+    participantUsers.map((u) => [u._id.toString(), u.name])
+  );
+
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
 
   const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i: any) => {
@@ -105,6 +128,7 @@ export async function getProjectDetails(
 
     return {
       id: i._id.toString(),
+      invoiceNumber: i.invoiceNumber ?? "",
       submittingParty: i.submittingParty,
       submittingCategory: i.submittingCategory,
       description: i.description,
@@ -120,7 +144,7 @@ export async function getProjectDetails(
   });
 
   const overdueInvoiceCount = invoicesRaw.filter((i: any) => {
-    if (isPaidStatus(i.status)) return false;
+    if (isPaidStatus(i.status) || i.status === "Rejected") return false;
     return new Date(i.dateDue).getTime() < now.getTime();
   }).length;
 
@@ -161,5 +185,12 @@ export async function getProjectDetails(
     overdueInvoiceCount,
     monthOnMonthHealthChangePct,
     invoices,
+    participants: allParticipants.map((p) => ({
+      participantId: p._id.toString(),
+      name: p.userId ? (participantUserMap[p.userId] ?? null) : null,
+      email: p.email,
+      role: p.role,
+      status: p.status,
+    })),
   };
 }

@@ -175,7 +175,7 @@ export default function Projects() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{"ACTIVE\nPROJECTS"}</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statNum}>{projects.length}</Text>
+                <Text style={[styles.statNum, { color: Colors.green }]}>{projects.length}</Text>
                 <Text style={styles.statSuffix}> projects</Text>
               </View>
             </View>
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 10,
-    color: Colors.textSecondary,
+    color: "rgba(255,255,255,0.55)",
     fontWeight: "600",
     letterSpacing: 0.5,
     textTransform: "uppercase",
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
   statSuffix: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.6)",
     marginBottom: 2,
   },
 

@@ -4,6 +4,7 @@ import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
 import { UserModel, UserRole } from "../models/userModel";
+import { getNextSequence } from "../models/counterModel";
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -88,7 +89,11 @@ export async function submitInvoice(
   }
 
   const submitDate = Date.now();
+  const seq = await getNextSequence("invoice");
+  const invoiceNumber = `INV-${String(seq).padStart(4, "0")}`;
+
   const invoice = await InvoiceModel.create({
+    invoiceNumber,
     projectId,
     submittingParty,
     submittingCategory,
@@ -371,6 +376,7 @@ export async function getProjectAuditLog(
 
     return {
       invoiceId: invId,
+      invoiceNumber: inv.invoiceNumber,
       description: inv.description,
       amount: inv.amount,
       status: inv.status,
@@ -382,9 +388,10 @@ export async function getProjectAuditLog(
     };
   });
 
-  // Summary stats
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const paidInvoices = invoices.filter(
+  // Summary stats (exclude Rejected from all calculations)
+  const activeInvoices = invoices.filter((inv) => inv.status !== InvoiceStatus.Rejected);
+  const totalAmount = activeInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const paidInvoices = activeInvoices.filter(
     (inv) => inv.status === InvoiceStatus.Paid || inv.status === InvoiceStatus.Received
   );
   const paidAmount = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);

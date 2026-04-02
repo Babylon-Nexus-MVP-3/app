@@ -63,7 +63,7 @@ beforeAll(async () => {
 }, 10000);
 
 describe("Delete /project/:projectId", () => {
-  it("returns 200 and deletes a pending participant by email + role", async () => {
+  it("returns 200 and moves project to Deleted Project", async () => {
     const token = await getAdminToken();
 
     const project = await ProjectModel.create({
@@ -85,13 +85,13 @@ describe("Delete /project/:projectId", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
-    // participants should also be removed
-    const remaining = await ProjectParticipantModel.find({
-      projectId: project._id.toString(),
-      email: "pending@example.com",
-      role: UserRole.Subbie,
-    }).lean();
-    expect(remaining.length).toBe(0);
+    // Use bypassSoftDelete to find the project since the pre-query hook excludes isDeleted docs
+    const deletedProject = await ProjectModel.findById(project._id).setOptions({
+      bypassSoftDelete: true,
+    });
+    expect(deletedProject).not.toBeNull();
+    expect(deletedProject!.isDeleted).toBe(true);
+    expect(deletedProject!.deletedAt).toBeDefined();
   });
 
   it("returns 400 for a non existing project", async () => {
