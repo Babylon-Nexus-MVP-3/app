@@ -156,10 +156,9 @@ export default function AdminProjectDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetchWithAuth(
-                `http://localhost:3229/admin/projects/${id}`,
-                { method: "DELETE" }
-              );
+              const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`, {
+                method: "DELETE",
+              });
               if (!res.ok) {
                 const data = await res.json();
                 Alert.alert("Error", data.error ?? "Failed to delete project.");
@@ -264,7 +263,11 @@ export default function AdminProjectDetail() {
       ) : activeTab === "calendar" ? (
         <CalendarTab invoices={invoices} />
       ) : (
-        <MembersTab participants={participants} onRemove={handleRemove} onDeleteProject={handleDeleteProject} />
+        <MembersTab
+          participants={participants}
+          onRemove={handleRemove}
+          onDeleteProject={handleDeleteProject}
+        />
       )}
 
       {/* Tab bar */}
@@ -452,7 +455,9 @@ function MembersTab({
                   <View
                     style={[
                       styles.statusPill,
-                      { backgroundColor: p.status === "Accepted" ? Colors.greenBg : Colors.amberBg },
+                      {
+                        backgroundColor: p.status === "Accepted" ? Colors.greenBg : Colors.amberBg,
+                      },
                     ]}
                   >
                     <Text
@@ -478,7 +483,11 @@ function MembersTab({
         </View>
       )}
 
-      <TouchableOpacity style={styles.deleteProjectBtn} onPress={onDeleteProject} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.deleteProjectBtn}
+        onPress={onDeleteProject}
+        activeOpacity={0.8}
+      >
         <Ionicons name="trash-outline" size={18} color={Colors.white} />
         <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
       </TouchableOpacity>

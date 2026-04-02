@@ -206,10 +206,12 @@ export async function forgotPassword(email: string) {
   user.resetCodeExpiry = expiry;
   await user.save();
 
-  // TODO: Send code via email when email service is ready. Remove log in production.
-  console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+  if (process.env.NODE_ENV !== "test") {
+    // TODO: Send code via email service
+    console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+  }
 
-  return { success: true, code };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function verifyResetCodeService(resetCode: string) {
@@ -239,10 +241,12 @@ export async function resendResetCodeService(email: string) {
     { $set: { resetCode: code, resetCodeExpiry: expiry } }
   );
 
-  // TODO: Send code via email when email service is ready. Remove log in production.
-  console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+  if (process.env.NODE_ENV !== "test") {
+    // TODO: Send code via email service
+    console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+  }
 
-  return { success: true, code };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function resetPassword(resetCode: string, newPassword: string) {

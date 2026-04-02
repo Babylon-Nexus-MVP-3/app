@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,16 +19,16 @@ export default function ApprovalProjectDetail() {
 
   const creatorObj: Member | null = creator ? JSON.parse(creator) : null;
   const inviteeList: Member[] = invitees ? JSON.parse(invitees) : [];
-  const allMembers: Member[] = [
-    ...(creatorObj ? [creatorObj] : []),
-    ...inviteeList,
-  ];
+  const allMembers: Member[] = [...(creatorObj ? [creatorObj] : []), ...inviteeList];
 
   return (
     <View style={styles.screen}>
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
         <SafeAreaView edges={["top"]}>
-          <TouchableOpacity onPress={() => router.replace("/(admin)/approvals")} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(admin)/approvals")}
+            style={styles.backBtn}
+          >
             <Ionicons name="chevron-back" size={20} color={Colors.gold} />
             <Text style={styles.backLabel}>Approvals</Text>
           </TouchableOpacity>

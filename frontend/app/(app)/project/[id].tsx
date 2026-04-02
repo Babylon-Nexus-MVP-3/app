@@ -158,7 +158,7 @@ export default function ProjectDetail() {
     try {
       const res = await fetchWithAuth(`http://localhost:3229/project/${id}`);
       const data = await res.json();
-      if (data.success) {
+      if (res.ok) {
         setProjectName(data.project?.name ?? nameParam);
         setHealth(data.healthScore ?? 0);
         setOverdue(data.overdueInvoiceCount ?? 0);
