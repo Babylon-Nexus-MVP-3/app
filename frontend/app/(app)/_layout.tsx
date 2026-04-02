@@ -78,9 +78,7 @@ export default function AppLayout() {
         name="notifications"
         options={{
           title: "Notifications",
-          tabBarIcon: ({ color, focused }) => (
-            <NotificationIcon color={color} focused={focused} />
-          ),
+          tabBarIcon: ({ color, focused }) => <NotificationIcon color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -92,7 +90,10 @@ export default function AppLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="change-password" options={{ href: null, tabBarStyle: { display: "none" } }} />
+      <Tabs.Screen
+        name="change-password"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
       <Tabs.Screen name="create-project" options={{ href: null }} />
       <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
       <Tabs.Screen name="project/audit-log/[projectId]" options={{ href: null }} />

@@ -69,13 +69,7 @@ function iconForType(type: NotificationType): { name: IoniconName; color: string
   }
 }
 
-function NotificationCard({
-  item,
-  onPress,
-}: {
-  item: AppNotification;
-  onPress: () => void;
-}) {
+function NotificationCard({ item, onPress }: { item: AppNotification; onPress: () => void }) {
   const icon = iconForType(item.type);
   return (
     <TouchableOpacity
@@ -124,8 +118,15 @@ export default function Notifications() {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchNotifications();
-    }, [])
+      fetchWithAuth("http://localhost:3229/notifications")
+        .then((res) => {
+          if (res.ok) return res.json();
+        })
+        .then((data) => {
+          if (data) setNotifications(data.notifications ?? []);
+        })
+        .finally(() => setLoading(false));
+    }, [fetchWithAuth])
   );
 
   function onRefresh() {

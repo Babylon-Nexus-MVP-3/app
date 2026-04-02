@@ -78,9 +78,15 @@ export default function ChangePassword() {
                 <Ionicons name="checkmark" size={40} color={Colors.white} />
               </View>
               <Text style={styles.successTitle}>Password Updated</Text>
-              <Text style={styles.successSubtitle}>Your password has been changed successfully.</Text>
+              <Text style={styles.successSubtitle}>
+                Your password has been changed successfully.
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => router.back()} style={styles.doneButton} activeOpacity={0.85}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.doneButton}
+              activeOpacity={0.85}
+            >
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           </View>
