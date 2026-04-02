@@ -5,6 +5,22 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { ProjectError } from "./project.service";
 import { UserModel, UserRole } from "../models/userModel";
 import { getNextSequence } from "../models/counterModel";
+import {
+  notifyInvoiceApproved,
+  notifyInvoicePaid,
+  notifyInvoiceReceived,
+  notifyInvoiceRejected,
+  notifyInvoiceSubmitted,
+} from "./notification.service";
+
+/** Runs notification persistence without letting failures break invoice workflows. */
+async function notifySafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — invoice state is already committed
+  }
+}
 
 export class InvoiceError extends Error {
   statusCode: number;
@@ -114,6 +130,10 @@ export async function submitInvoice(
     payload: { submittingParty, submittingCategory, description, amount, projectId },
   });
 
+  await notifySafely(() =>
+    notifyInvoiceSubmitted(invoice._id.toString(), projectId, resolvedApproverRole, submittingParty)
+  );
+
   return invoice._id.toString();
 }
 
@@ -160,6 +180,10 @@ export async function approveInvoice(
     userId,
     payload: { projectId },
   });
+
+  await notifySafely(() =>
+    notifyInvoiceApproved(invoiceId, projectId, invoice.submittedByUserId.toString())
+  );
 }
 
 export async function markInvoicePaid(
@@ -188,6 +212,10 @@ export async function markInvoicePaid(
     userId,
     payload: { projectId },
   });
+
+  await notifySafely(() =>
+    notifyInvoicePaid(invoiceId, projectId, invoice.submittedByUserId.toString())
+  );
 }
 
 export async function markInvoiceReceived(
@@ -216,6 +244,10 @@ export async function markInvoiceReceived(
     userId,
     payload: { projectId },
   });
+
+  await notifySafely(() =>
+    notifyInvoiceReceived(invoiceId, projectId, invoice.approverRole as UserRole)
+  );
 }
 
 export async function rejectInvoice(
@@ -245,6 +277,15 @@ export async function rejectInvoice(
     userId,
     payload: { projectId, rejectionReason },
   });
+
+  await notifySafely(() =>
+    notifyInvoiceRejected(
+      invoiceId,
+      projectId,
+      invoice.submittedByUserId.toString(),
+      rejectionReason
+    )
+  );
 }
 
 /* ─── Audit Log ─── */

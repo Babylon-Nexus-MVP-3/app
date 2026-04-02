@@ -3,6 +3,7 @@ dotenv.config();
 
 import { app } from "./app";
 import mongoose from "mongoose";
+import { startNotificationScheduler } from "./service/notificationScheduler.service";
 
 const PORT: number = parseInt(process.env.PORT || "3229");
 const HOST: string = process.env.host || "0.0.0.0";
@@ -15,7 +16,10 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => console.log("DB Connection Successful"))
+  .then(() => {
+    console.log("DB Connection Successful");
+    startNotificationScheduler();
+  })
   .catch((err) => console.error("DB Connection Error", err));
 
 process.on("SIGINT", () => {
