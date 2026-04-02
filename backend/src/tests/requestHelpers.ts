@@ -50,6 +50,17 @@ export const resetPassword = async (resetCode: string, newPassword: string) => {
   return await request(app).post("/auth/reset-password").send({ resetCode, newPassword });
 };
 
+export const requestChangePassword = async (
+  token: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  return await request(app)
+    .post("/auth/change-password")
+    .send({ currentPassword, newPassword })
+    .set("Authorization", `Bearer ${token}`);
+};
+
 export const requestInvite = async (
   projectId: string,
   token: string,

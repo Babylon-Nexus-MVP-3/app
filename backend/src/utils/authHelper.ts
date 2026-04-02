@@ -2,6 +2,7 @@ import validator from "validator";
 import bcrypt from "bcrypt";
 import { UserModel } from "../models/userModel";
 import crypto from "crypto";
+import { AuthError } from "../service/auth.service";
 
 /*
   Validates a user's name against length and character rules.
@@ -37,15 +38,15 @@ export function checkName(name: string): void {
 */
 export function checkPassword(password: string): void {
   if (typeof password !== "string") {
-    throw new Error("Invalid password format");
+    throw new AuthError("Invalid password format");
   }
 
   if (password.length < 12) {
-    throw new Error("password must be at least 12 characters long");
+    throw new AuthError("password must be at least 12 characters long");
   }
 
   if (password.length > 50) {
-    throw new Error("password is too long cannot exceed 50 characters");
+    throw new AuthError("password is too long cannot exceed 50 characters");
   }
 
   // Check which complexity requirements are met
@@ -57,7 +58,7 @@ export function checkPassword(password: string): void {
   const complexityCount = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
 
   if (complexityCount < 3) {
-    throw new Error(
+    throw new AuthError(
       "Password must contain at least 3 of: uppercase, lowercase, numbers, special characters"
     );
   }

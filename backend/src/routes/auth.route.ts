@@ -6,6 +6,7 @@ import {
   resendVerifLimiter,
   loginLimiter,
   verifyEmailLimiter,
+  requireAuth,
 } from "../middleware";
 
 export const authRouter = express.Router();
@@ -23,3 +24,5 @@ authRouter.post("/reset-password", AuthController.resetPasswd);
 // Email Verification Flow
 authRouter.post("/verify-email", verifyEmailLimiter, AuthController.verifyEmail);
 authRouter.post("/resend-verification", resendVerifLimiter, AuthController.resendVerifyEmail);
+
+authRouter.post("/change-password", requireAuth, AuthController.changePassword);

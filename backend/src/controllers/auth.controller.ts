@@ -7,6 +7,7 @@ import {
   resendResetCodeService,
   resendVerificationCode,
   resetPassword,
+  userChangePassword,
   userVerifyEmail,
   verifyResetCodeService,
 } from "../service/auth.service";
@@ -50,7 +51,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
-export async function refresh(req: Request, res: Response) {
+export async function refresh(req: Request, res: Response, next: NextFunction) {
   const refreshToken = req.body?.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ error: "Authentication Required" });
@@ -60,18 +61,18 @@ export async function refresh(req: Request, res: Response) {
     const { accessToken, refreshToken: newRefreshToken } = await authRefresh(refreshToken);
     res.status(200).json({ accessToken: accessToken, refreshToken: newRefreshToken });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 }
 
-export const forgot = async (req: Request, res: Response) => {
+export const forgot = async (req: Request, res: Response, next: NextFunction) => {
   const { email } = req.body;
 
   try {
     const result = await forgotPassword(email);
     res.status(200).json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 };
 
@@ -127,6 +128,18 @@ export const resendVerifyEmail = async (req: Request, res: Response, next: NextF
 
   try {
     const result = await resendVerificationCode(email);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const result = await userChangePassword(userId, currentPassword, newPassword);
     res.status(200).json(result);
   } catch (err) {
     next(err);
