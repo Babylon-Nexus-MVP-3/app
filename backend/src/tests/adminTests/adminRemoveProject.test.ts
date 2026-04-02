@@ -85,21 +85,13 @@ describe("Delete /project/:projectId", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
-    // original records should be removed
-    const remainingParticipants = await ProjectParticipantModel.find({
-      projectId: project._id.toString(),
-    }).lean();
-    expect(remainingParticipants.length).toBe(0);
-
-    const remainingProject = await ProjectModel.findById(project._id);
-    expect(remainingProject).toBeNull();
-
-    // archived record should exist with all data
-    const archived = await DeletedProjectModel.findOne({
-      "project._id": project._id,
-    }).lean();
-    expect(archived).not.toBeNull();
-    expect(archived?.participants).toHaveLength(1);
+    // Use bypassSoftDelete to find the project since the pre-query hook excludes isDeleted docs
+    const deletedProject = await ProjectModel.findById(project._id).setOptions({
+      bypassSoftDelete: true,
+    });
+    expect(deletedProject).not.toBeNull();
+    expect(deletedProject!.isDeleted).toBe(true);
+    expect(deletedProject!.deletedAt).toBeDefined();
   });
 
   it("returns 400 for a non existing project", async () => {
