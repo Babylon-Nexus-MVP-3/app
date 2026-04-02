@@ -1,8 +1,38 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+
+function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
+  const { fetchWithAuth } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth("http://localhost:3229/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
+        setUnreadCount(count);
+      }
+    } catch {
+      // silently ignore
+    }
+  }, [fetchWithAuth]);
+
+  useEffect(() => {
+    fetchUnread();
+  }, [fetchUnread]);
+
+  return (
+    <View>
+      <Ionicons name={focused ? "flash" : "flash-outline"} size={24} color={color} />
+      {unreadCount > 0 && <View style={styles.badge} />}
+    </View>
+  );
+}
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
@@ -49,7 +79,7 @@ export default function AppLayout() {
         options={{
           title: "Notifications",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "flash" : "flash-outline"} size={24} color={color} />
+            <NotificationIcon color={color} focused={focused} />
           ),
         }}
       />
@@ -62,9 +92,24 @@ export default function AppLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="change-password" options={{ href: null, tabBarStyle: { display: "none" } }} />
       <Tabs.Screen name="create-project" options={{ href: null }} />
       <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
       <Tabs.Screen name="project/audit-log/[projectId]" options={{ href: null }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.red,
+    borderWidth: 1.5,
+    borderColor: Colors.navy,
+  },
+});
