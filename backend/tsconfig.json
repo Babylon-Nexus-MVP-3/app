@@ -9,7 +9,8 @@
     "allowJs": true,
     "target": "es2022",
     "module": "commonjs",
-    "moduleResolution": "Node"
+    "moduleResolution": "Node",
+    "types": ["jest"]
   },
   "include": ["src/**/*"],
   "exclude": [

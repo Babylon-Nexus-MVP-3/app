@@ -266,7 +266,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
   try {
     checkPassword(newPassword);
   } catch (error) {
-    throw new AuthError(error);
+    throw new AuthError(error instanceof Error ? error.message : String(error));
   }
 
   const hashedPassword = await hashPassword(newPassword);
@@ -333,8 +333,12 @@ export async function userChangePassword(
   currentPassword: string,
   newPassword: string
 ) {
+  if (!newPassword || !currentPassword) {
+    throw new AuthError("Missing Fields: New Password, Current Password");
+  }
+
   if (newPassword.length < 12) {
-    throw new AuthError("Password must be at least 8 characters");
+    throw new AuthError("Password must be at least 12 characters");
   }
 
   const user = await UserModel.findById(userId);
@@ -357,7 +361,6 @@ export async function userChangePassword(
   try {
     checkPassword(newPassword);
   } catch (error) {
-    console.log(error);
     throw new AuthError("Invalid password, please follow password rules");
   }
 

@@ -103,7 +103,7 @@ export function requireProjectRole(...allowedRoles: UserRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = req.params.projectId;
-      const userId = req.user.sub;
+      const userId = req.user!.sub;
 
       const project = await ProjectModel.findById(projectId);
       if (!project) throw new ProjectError("Project Does not Exist");
