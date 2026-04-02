@@ -69,6 +69,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
+    accountExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete after 24h if unverified
   });
 
   await newUser.save();
@@ -292,6 +293,7 @@ export async function userVerifyEmail(verificationCode: string) {
 
   user.verificationCode = undefined;
   user.verificationCodeExpiry = undefined;
+  user.accountExpiresAt = null;
   user.emailVerified = true;
   user.status = "Active";
   user.updatedAt = new Date();
@@ -300,9 +302,9 @@ export async function userVerifyEmail(verificationCode: string) {
 
   // Return accessToken and refreshToken so user is immediately logged in by the frontend
   const accessToken = createAccessToken(user);
-  const refreshToken = createRefreshToken(user);
+  const refreshToken = await createRefreshToken(user);
 
-  return { success: true, accessToken, refreshToken };
+  return { success: true, accessToken, refreshToken, user };
 }
 
 export async function resendVerificationCode(email: string) {

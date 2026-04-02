@@ -35,6 +35,7 @@ export interface User extends Document {
   resetCode?: string | null;
   resetCodeExpiry?: Date | null;
   emailVerified: boolean;
+  accountExpiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +72,7 @@ const userSchema = new Schema<User>(
     resetCode: { type: String },
     resetCodeExpiry: { type: Date },
     emailVerified: { type: Boolean, default: false },
+    accountExpiresAt: { type: Date, index: { expireAfterSeconds: 0 } },
   },
   {
     timestamps: true,

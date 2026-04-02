@@ -67,6 +67,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen name="project/[id]" options={{ href: null }} />
+      <Tabs.Screen name="approval/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
