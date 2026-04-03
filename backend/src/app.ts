@@ -43,7 +43,7 @@ app.use("/projects", projectsRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationRouter);
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.redirect("/api-docs");
 });
 
