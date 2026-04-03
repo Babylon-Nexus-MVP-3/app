@@ -277,6 +277,8 @@ export async function deleteProject(projectId: string) {
   }
 
   project.status = "Inactive";
+  project.isDeleted = true;
+  project.deletedAt = new Date();
   await project.save();
 
   return { success: true };
