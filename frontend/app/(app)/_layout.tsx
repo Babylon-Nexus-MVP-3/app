@@ -11,7 +11,7 @@ function NotificationIcon({ color, focused }: { color: string; focused: boolean 
 
   const fetchUnread = useCallback(async () => {
     try {
-      const res = await fetchWithAuth("http://localhost:3229/notifications");
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/notifications");
       if (res.ok) {
         const data = await res.json();
         const count = (data.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;

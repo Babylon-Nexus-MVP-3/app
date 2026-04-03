@@ -108,7 +108,7 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetchWithAuth("http://localhost:3229/project", {
+      const response = await fetchWithAuth("https://app-production-574c.up.railway.app/project", {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),

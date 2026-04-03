@@ -14,6 +14,7 @@ import { clear } from "./clear";
 
 export const app = express();
 
+app.set("trust proxy", 1);
 app.use(json());
 app.use(morgan("dev"));
 app.use(cors());

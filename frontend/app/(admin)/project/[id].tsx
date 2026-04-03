@@ -120,7 +120,7 @@ export default function AdminProjectDetail() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`);
+      const res = await fetchWithAuth(`https://app-production-574c.up.railway.app/admin/projects/${id}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load project.");
@@ -156,7 +156,7 @@ export default function AdminProjectDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`, {
+              const res = await fetchWithAuth(`https://app-production-574c.up.railway.app/admin/projects/${id}`, {
                 method: "DELETE",
               });
               if (!res.ok) {
@@ -186,7 +186,7 @@ export default function AdminProjectDetail() {
           onPress: async () => {
             try {
               const res = await fetchWithAuth(
-                `http://localhost:3229/admin/projects/${id}/participants/remove`,
+                `https://app-production-574c.up.railway.app/admin/projects/${id}/participants/remove`,
                 {
                   method: "DELETE",
                   body: JSON.stringify({ email: participant.email, role: participant.role }),

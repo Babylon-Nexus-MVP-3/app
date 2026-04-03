@@ -23,7 +23,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:3229/auth/forgot-password", {
+      const res = await fetch("https://app-production-574c.up.railway.app/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim() }),

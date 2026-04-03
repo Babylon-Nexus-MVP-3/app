@@ -99,7 +99,7 @@ export default function Notifications() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetchWithAuth("http://localhost:3229/notifications");
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/notifications");
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications ?? []);
@@ -111,14 +111,14 @@ export default function Notifications() {
   }
 
   async function markAllRead() {
-    await fetchWithAuth("http://localhost:3229/notifications/read-all", { method: "PATCH" });
+    await fetchWithAuth("https://app-production-574c.up.railway.app/notifications/read-all", { method: "PATCH" });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchWithAuth("http://localhost:3229/notifications")
+      fetchWithAuth("https://app-production-574c.up.railway.app/notifications")
         .then((res) => {
           if (res.ok) return res.json();
         })

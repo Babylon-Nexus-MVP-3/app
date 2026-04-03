@@ -53,7 +53,7 @@ export default function ChangePassword() {
 
     setLoading(true);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/auth/change-password", {
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),

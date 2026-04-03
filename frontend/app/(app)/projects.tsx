@@ -61,7 +61,7 @@ export default function Projects() {
     setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/projects");
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/projects");
       const data = await res.json();
       if (!res.ok) {
         setProjectsError(data.error ?? "Failed to load projects.");
@@ -107,7 +107,7 @@ export default function Projects() {
     setJoinLoading(true);
     setJoinError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/project/accept", {
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/project/accept", {
         method: "POST",
         body: JSON.stringify({ inviteCode: joinCode.trim() }),
       });

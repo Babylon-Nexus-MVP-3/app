@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedRefreshToken = await getItem("refreshToken");
       if (!storedRefreshToken) return null;
 
-      const res = await fetch("http://localhost:3229/auth/refresh", {
+      const res = await fetch("https://app-production-574c.up.railway.app/auth/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken: storedRefreshToken }),

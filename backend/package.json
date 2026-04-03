@@ -1,6 +1,8 @@
 {
   "scripts": {
     "start": "ts-node -T src/server.ts",
+    "build": "tsc",
+    "start:prod": "node dist/server.js",
     "seed:admin": "ts-node -T scripts/seedAdmin.ts",
     "seed:dev": "ts-node -T scripts/seedDev.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
@@ -46,6 +48,7 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
+    "typescript": "^5.0.0",
     "typescript-eslint": "^8.56.1"
   }
 }

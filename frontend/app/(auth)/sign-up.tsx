@@ -37,7 +37,7 @@ export default function SignUp() {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:3229/auth/register", {
+      const response = await fetch("https://app-production-574c.up.railway.app/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

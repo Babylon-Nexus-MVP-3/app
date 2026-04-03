@@ -37,7 +37,7 @@ export default function AdminApprovals() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("http://localhost:3229/admin/projects/pending");
+      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/admin/projects/pending");
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load pending projects.");
@@ -54,7 +54,7 @@ export default function AdminApprovals() {
   async function handleApprove(projectId: string) {
     setActioningId(projectId);
     try {
-      const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${projectId}/approve`, {
+      const res = await fetchWithAuth(`https://app-production-574c.up.railway.app/admin/projects/${projectId}/approve`, {
         method: "PUT",
       });
       if (res.ok) {
@@ -75,7 +75,7 @@ export default function AdminApprovals() {
           setActioningId(projectId);
           try {
             const res = await fetchWithAuth(
-              `http://localhost:3229/admin/projects/${projectId}/reject`,
+              `https://app-production-574c.up.railway.app/admin/projects/${projectId}/reject`,
               { method: "PUT" }
             );
             if (res.ok) {
