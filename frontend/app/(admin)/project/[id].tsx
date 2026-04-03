@@ -145,6 +145,35 @@ export default function AdminProjectDetail() {
     fetchDetail();
   }, [fetchDetail]);
 
+  async function handleDeleteProject() {
+    Alert.alert(
+      "Archive Project",
+      `Are you sure you want to archive "${projectName}"? It will be moved to the Archives tab.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Archive",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`, {
+                method: "DELETE",
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                Alert.alert("Error", data.error ?? "Failed to delete project.");
+              } else {
+                router.replace("/(admin)/archives");
+              }
+            } catch {
+              Alert.alert("Error", "Network error. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function handleRemove(participant: Participant) {
     Alert.alert(
       "Remove Participant",
@@ -234,7 +263,11 @@ export default function AdminProjectDetail() {
       ) : activeTab === "calendar" ? (
         <CalendarTab invoices={invoices} />
       ) : (
-        <MembersTab participants={participants} onRemove={handleRemove} />
+        <MembersTab
+          participants={participants}
+          onRemove={handleRemove}
+          onDeleteProject={handleDeleteProject}
+        />
       )}
 
       {/* Tab bar */}
@@ -246,7 +279,7 @@ export default function AdminProjectDetail() {
             onPress={() => setActiveTab(t)}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
-              {t === "calendar" ? "📅  Calendar" : "👥  Members"}
+              {t === "calendar" ? "📅  Calendar" : "📋  Project Information"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -388,22 +421,16 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
   );
 }
 
-/* ─── Members tab ─── */
+/* ─── Project Information tab ─── */
 function MembersTab({
   participants,
   onRemove,
+  onDeleteProject,
 }: {
   participants: Participant[];
   onRemove: (p: Participant) => void;
+  onDeleteProject: () => void;
 }) {
-  if (participants.length === 0) {
-    return (
-      <View style={styles.centerBox}>
-        <Text style={styles.emptyText}>No members on this project.</Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView
       style={styles.body}
@@ -411,44 +438,59 @@ function MembersTab({
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.sectionLabel}>MEMBERS</Text>
-      <View style={styles.membersCard}>
-        {participants.map((p, i) => (
-          <View
-            key={p.participantId}
-            style={[styles.memberRow, i < participants.length - 1 && styles.memberRowBorder]}
-          >
-            <View style={styles.memberInfo}>
-              {p.name && <Text style={styles.memberName}>{p.name}</Text>}
-              <Text style={styles.memberEmail}>{p.email}</Text>
-              <View style={styles.memberMeta}>
-                <Text style={styles.memberRole}>{p.role}</Text>
-                <View
-                  style={[
-                    styles.statusPill,
-                    { backgroundColor: p.status === "Accepted" ? Colors.greenBg : Colors.amberBg },
-                  ]}
-                >
-                  <Text
+      {participants.length === 0 ? (
+        <Text style={[styles.emptyText, { marginBottom: 24 }]}>No members on this project.</Text>
+      ) : (
+        <View style={styles.membersCard}>
+          {participants.map((p, i) => (
+            <View
+              key={p.participantId}
+              style={[styles.memberRow, i < participants.length - 1 && styles.memberRowBorder]}
+            >
+              <View style={styles.memberInfo}>
+                {p.name && <Text style={styles.memberName}>{p.name}</Text>}
+                <Text style={styles.memberEmail}>{p.email}</Text>
+                <View style={styles.memberMeta}>
+                  <Text style={styles.memberRole}>{p.role}</Text>
+                  <View
                     style={[
-                      styles.statusPillText,
-                      { color: p.status === "Accepted" ? Colors.green : Colors.amber },
+                      styles.statusPill,
+                      {
+                        backgroundColor: p.status === "Accepted" ? Colors.greenBg : Colors.amberBg,
+                      },
                     ]}
                   >
-                    {p.status}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.statusPillText,
+                        { color: p.status === "Accepted" ? Colors.green : Colors.amber },
+                      ]}
+                    >
+                      {p.status}
+                    </Text>
+                  </View>
                 </View>
               </View>
+              <TouchableOpacity
+                style={styles.removeBtn}
+                onPress={() => onRemove(p)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="remove-circle" size={26} color={Colors.red} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.removeBtn}
-              onPress={() => onRemove(p)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="remove-circle" size={26} color={Colors.red} />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.deleteProjectBtn}
+        onPress={onDeleteProject}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={18} color={Colors.white} />
+        <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -625,4 +667,19 @@ const styles = StyleSheet.create({
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   statusPillText: { fontSize: 11, fontWeight: "700" },
   removeBtn: { padding: 4 },
+  deleteProjectBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.red,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 32,
+  },
+  deleteProjectBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.white,
+  },
 });

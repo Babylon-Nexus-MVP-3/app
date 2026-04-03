@@ -15,29 +15,26 @@ import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
 export default function VerifyEmail() {
-  const { email, password } = useLocalSearchParams<{ email: string; password: string }>();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const { login } = useAuth();
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // TODO: Wire this to POST /auth/verify-email when the endpoint is ready.
-  // The endpoint should accept { code } and activate the user's account.
-  // On success, call login() with the returned tokens instead of calling /auth/login separately.
   async function handleVerify() {
     if (code.length < 6) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:3229/auth/login", {
+      const res = await fetch("http://localhost:3229/auth/verify-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ verificationCode: code }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Login failed. Please sign in manually.");
+        setError(data.error ?? "Invalid code. Please try again.");
         return;
       }
       await login(data.accessToken, data.refreshToken, data.user);

@@ -149,7 +149,7 @@ export default function AdminApprovals() {
                   activeOpacity={0.7}
                   onPress={() =>
                     router.push({
-                      pathname: "/(admin)/project/[id]",
+                      pathname: "/(admin)/approval/[id]",
                       params: {
                         id: project._id,
                         name: project.name,

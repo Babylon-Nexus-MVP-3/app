@@ -69,6 +69,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
+    accountExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete after 24h if unverified
   });
 
   await newUser.save();
@@ -205,10 +206,12 @@ export async function forgotPassword(email: string) {
   user.resetCodeExpiry = expiry;
   await user.save();
 
-  // TODO: Send code via email when email service is ready. Remove log in production.
-  console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+  if (process.env.NODE_ENV !== "test") {
+    // TODO: Send code via email service
+    console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+  }
 
-  return { success: true, code };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function verifyResetCodeService(resetCode: string) {
@@ -238,10 +241,12 @@ export async function resendResetCodeService(email: string) {
     { $set: { resetCode: code, resetCodeExpiry: expiry } }
   );
 
-  // TODO: Send code via email when email service is ready. Remove log in production.
-  console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+  if (process.env.NODE_ENV !== "test") {
+    // TODO: Send code via email service
+    console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+  }
 
-  return { success: true, code };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function resetPassword(resetCode: string, newPassword: string) {
@@ -292,6 +297,7 @@ export async function userVerifyEmail(verificationCode: string) {
 
   user.verificationCode = undefined;
   user.verificationCodeExpiry = undefined;
+  user.accountExpiresAt = null;
   user.emailVerified = true;
   user.status = "Active";
   user.updatedAt = new Date();
@@ -300,9 +306,9 @@ export async function userVerifyEmail(verificationCode: string) {
 
   // Return accessToken and refreshToken so user is immediately logged in by the frontend
   const accessToken = createAccessToken(user);
-  const refreshToken = createRefreshToken(user);
+  const refreshToken = await createRefreshToken(user);
 
-  return { success: true, accessToken, refreshToken };
+  return { success: true, accessToken, refreshToken, user };
 }
 
 export async function resendVerificationCode(email: string) {

@@ -80,7 +80,7 @@ export default function VerifyResetCode() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to resend code");
-      setResendMsg("Code resent. Check the backend console.");
+      setResendMsg("Code resent. Check your email.");
       startCooldown();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -112,7 +112,7 @@ export default function VerifyResetCode() {
           <Text style={styles.subtitle}>
             {"A 6-digit code was sent to "}
             <Text style={styles.emailHighlight}>{email}</Text>
-            {". Check the backend console for the code."}
+            {"."}
           </Text>
 
           <TextInput

@@ -267,17 +267,16 @@ export async function removeProjectParticipant(
 }
 
 export async function deleteProject(projectId: string) {
-  const project = await ProjectModel.findOne({ _id: projectId }).setOptions({
-    bypassSoftDelete: true,
-  });
+  const project = await ProjectModel.findOne({ _id: projectId });
 
   if (!project) {
     throw new ProjectError("Project does not exist");
   }
-  if (project.isDeleted) {
-    throw new ProjectError("Project is already deleted");
+  if (project.status === "Inactive") {
+    throw new ProjectError("Project is already inactive");
   }
 
+  project.status = "Inactive";
   project.isDeleted = true;
   project.deletedAt = new Date();
   await project.save();

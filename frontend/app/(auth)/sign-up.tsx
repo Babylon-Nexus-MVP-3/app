@@ -54,7 +54,7 @@ export default function SignUp() {
       }
       router.replace({
         pathname: "/(auth)/verify-email",
-        params: { email: email.toLowerCase().trim(), password },
+        params: { email: email.toLowerCase().trim() },
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
