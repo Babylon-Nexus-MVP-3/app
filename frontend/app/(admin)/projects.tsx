@@ -34,7 +34,9 @@ export default function AdminProjects() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/admin/projects/active");
+      const res = await fetchWithAuth(
+        "https://app-production-574c.up.railway.app/admin/projects/active"
+      );
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load projects.");

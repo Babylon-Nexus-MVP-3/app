@@ -111,7 +111,9 @@ export default function Notifications() {
   }
 
   async function markAllRead() {
-    await fetchWithAuth("https://app-production-574c.up.railway.app/notifications/read-all", { method: "PATCH" });
+    await fetchWithAuth("https://app-production-574c.up.railway.app/notifications/read-all", {
+      method: "PATCH",
+    });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 

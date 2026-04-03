@@ -120,7 +120,9 @@ export default function AdminProjectDetail() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`https://app-production-574c.up.railway.app/admin/projects/${id}`);
+      const res = await fetchWithAuth(
+        `https://app-production-574c.up.railway.app/admin/projects/${id}`
+      );
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load project.");
@@ -156,9 +158,12 @@ export default function AdminProjectDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetchWithAuth(`https://app-production-574c.up.railway.app/admin/projects/${id}`, {
-                method: "DELETE",
-              });
+              const res = await fetchWithAuth(
+                `https://app-production-574c.up.railway.app/admin/projects/${id}`,
+                {
+                  method: "DELETE",
+                }
+              );
               if (!res.ok) {
                 const data = await res.json();
                 Alert.alert("Error", data.error ?? "Failed to delete project.");
