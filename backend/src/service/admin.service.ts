@@ -138,9 +138,11 @@ export async function approveProject(projectId: string): Promise<void> {
 
   for (const participant of pendingParticipants) {
     if (participant.email && participant.inviteCode) {
-      sendInviteEmail(participant.email, participant.inviteCode, project.location).catch((err) => {
-        console.error(`Failed to send invite email to ${participant.email}:`, err);
-      });
+      await sendInviteEmail(participant.email, participant.inviteCode, project.location).catch(
+        (err) => {
+          console.error(`Failed to send invite email to ${participant.email}:`, err);
+        }
+      );
     }
   }
 }
