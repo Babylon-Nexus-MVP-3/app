@@ -45,7 +45,7 @@ const eventSchema = new Schema<EventDocument>(
       enum: ["User", "Project", "Invoice"],
     },
     aggregateId: { type: String, required: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    userId: { type: String, ref: "User" },
     payload: { type: Schema.Types.Mixed },
   },
   {
