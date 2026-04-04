@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "ts-node -T src/server.ts",
+    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "dev": "cross-env NODE_ENV=development ts-node -T src/server.ts",
     "seed:admin": "ts-node -T scripts/seedAdmin.ts",
     "seed:dev": "ts-node -T scripts/seedDev.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",

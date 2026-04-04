@@ -9,10 +9,11 @@ const PORT: number = parseInt(process.env.PORT || "3229");
 const HOST: string = process.env.host || "0.0.0.0";
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`Server Listening on Port${PORT} and Host${HOST}`);
+  console.log(`Server listening on ${HOST}:${PORT}`);
 });
 
 const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined");
 
 mongoose
   .connect(MONGODB_URI)
@@ -22,9 +23,11 @@ mongoose
   })
   .catch((err) => console.error("DB Connection Error", err));
 
-process.on("SIGINT", () => {
-  server.close(() => {
-    console.log("Server closed Gracefully");
-    process.exit();
+["SIGINT", "SIGTERM"].forEach((signal) => {
+  process.on(signal, () => {
+    server.close(() => {
+      console.log("Server closed Gracefully");
+      process.exit();
+    });
   });
 });

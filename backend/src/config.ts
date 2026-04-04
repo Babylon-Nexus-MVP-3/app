@@ -1,6 +1,6 @@
 export const config = {
-  jwtAccessSecret: process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-me",
-  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret-change-me",
-  accessTokenTtlMinutes: Number(process.env.ACCESS_TOKEN_TTL_MINUTES ?? "10"),
-  refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? "1"),
+  jwtAccessSecret: process.env.JWT_ACCESS_SECRET,
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
+  accessTokenTtlMinutes: Number(process.env.ACCESS_TOKEN_TTL_MINUTES),
+  refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS),
 };
