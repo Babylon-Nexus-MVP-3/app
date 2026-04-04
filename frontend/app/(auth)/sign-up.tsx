@@ -52,10 +52,7 @@ export default function SignUp() {
       if (!response.ok) {
         throw new Error(data.error ?? text ?? "Registration failed. Please try again.");
       }
-      router.replace({
-        pathname: "/(auth)/verify-email",
-        params: { email: email.toLowerCase().trim() },
-      });
+      router.replace("/(auth)/sign-in");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
