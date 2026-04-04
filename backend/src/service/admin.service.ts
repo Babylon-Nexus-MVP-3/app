@@ -325,12 +325,17 @@ export async function getAdminProjectDetail(projectId: string) {
         : 0;
     return {
       id: i._id.toString(),
+      invoiceNumber: i.invoiceNumber,
       submittingParty: i.submittingParty,
+      submittingCategory: i.submittingCategory,
       description: i.description,
       dateSubmitted: i.dateSubmitted,
       dateDue: i.dateDue,
       amount: i.amount,
       status: i.status,
+      approverRole: i.approverRole,
+      submittedByUserId: i.submittedByUserId?.toString(),
+      rejectionReason: i.rejectionReason,
       daysOverdue,
     };
   });

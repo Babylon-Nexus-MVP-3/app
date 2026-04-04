@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,20 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
-
-/* ─── Types ─── */
-type InvoiceStatus = "green" | "amber" | "red" | "purple" | "grey" | "issued";
-
-type ApiInvoice = {
-  id: string;
-  submittingParty: string;
-  description: string;
-  dateSubmitted: string;
-  dateDue: string;
-  amount?: number;
-  status: "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
-  daysOverdue: number;
-};
+import { CalendarTab } from "@/components/project/CalendarTab";
+import { ApiInvoice } from "@/components/project/types";
 
 type Participant = {
   participantId: string;
@@ -39,69 +26,10 @@ type Participant = {
   status: "Pending" | "Accepted";
 };
 
-/* ─── Calendar helpers ─── */
-function statusColor(s: InvoiceStatus): string {
-  const map: Record<InvoiceStatus, string> = {
-    green: Colors.green,
-    amber: Colors.amber,
-    red: Colors.red,
-    purple: Colors.purple,
-    grey: Colors.grey,
-    issued: Colors.navy,
-  };
-  return map[s] ?? Colors.grey;
-}
-
-function statusBg(s: InvoiceStatus): string {
-  const map: Record<InvoiceStatus, string> = {
-    green: Colors.greenBg,
-    amber: Colors.amberBg,
-    red: Colors.redBg,
-    purple: Colors.purpleBg,
-    grey: Colors.greyBg,
-    issued: Colors.issuedBg,
-  };
-  return map[s] ?? Colors.greyBg;
-}
-
-function statusLabel(s: InvoiceStatus): string {
-  const map: Record<InvoiceStatus, string> = {
-    green: "Paid",
-    amber: "Warning",
-    red: "Overdue",
-    purple: "Info Pending",
-    grey: "Buffer",
-    issued: "Issued",
-  };
-  return map[s] ?? "";
-}
-
-function apiStatusToCalStatus(inv: ApiInvoice): InvoiceStatus {
-  if (inv.status === "Paid" || inv.status === "Received") {
-    return inv.daysOverdue > 0 ? "amber" : "green";
-  }
-  if (inv.daysOverdue > 0 || inv.status === "Rejected") return "red";
-  if (inv.status === "Approved") return "grey";
-  return "issued";
-}
-
-const SEVERITY: Record<InvoiceStatus, number> = {
-  red: 5,
-  amber: 4,
-  purple: 3,
-  issued: 2,
-  grey: 1,
-  green: 0,
-};
-
-const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DAY_CELL = Math.min(Math.floor((SCREEN_WIDTH - 40 - 24) / 7), 46);
-
 /* ─── Main screen ─── */
 export default function AdminProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"calendar" | "members">("calendar");
   const [loading, setLoading] = useState(true);
@@ -266,7 +194,12 @@ export default function AdminProjectDetail() {
           </TouchableOpacity>
         </View>
       ) : activeTab === "calendar" ? (
-        <CalendarTab invoices={invoices} />
+        <CalendarTab
+          invoices={invoices}
+          role="Admin"
+          userId={user?.id ?? ""}
+          invoiceAction={async () => null}
+        />
       ) : (
         <MembersTab
           participants={participants}
@@ -290,139 +223,6 @@ export default function AdminProjectDetail() {
         ))}
       </View>
     </View>
-  );
-}
-
-/* ─── Calendar tab ─── */
-function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
-  const [selectedDay, setSelectedDay] = useState<{ day: number; status: InvoiceStatus } | null>(
-    null
-  );
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDow = new Date(year, month, 1).getDay();
-  const emptyBefore = firstDow === 0 ? 6 : firstDow - 1;
-  const monthName = now.toLocaleString("en-AU", { month: "long", year: "numeric" });
-
-  const dayStatusMap = new Map<number, InvoiceStatus>();
-  for (const inv of invoices) {
-    const due = new Date(inv.dateDue);
-    if (due.getFullYear() !== year || due.getMonth() !== month) continue;
-    const day = due.getDate();
-    const calStatus = apiStatusToCalStatus(inv);
-    const existing = dayStatusMap.get(day);
-    if (!existing || SEVERITY[calStatus] > SEVERITY[existing]) {
-      dayStatusMap.set(day, calStatus);
-    }
-  }
-
-  const overdueList = invoices.filter(
-    (i) => i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received"
-  );
-
-  return (
-    <ScrollView
-      style={styles.body}
-      contentContainerStyle={styles.bodyContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.monthRow}>
-        <Text style={styles.monthTitle}>{monthName}</Text>
-      </View>
-
-      <View style={styles.calGrid}>
-        {WEEK_DAYS.map((d, i) => (
-          <View key={`h${i}`} style={{ width: DAY_CELL, alignItems: "center", paddingVertical: 4 }}>
-            <Text style={styles.weekDay}>{d}</Text>
-          </View>
-        ))}
-        {Array(emptyBefore)
-          .fill(null)
-          .map((_, i) => (
-            <View key={`e${i}`} style={{ width: DAY_CELL, height: DAY_CELL }} />
-          ))}
-        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-          const status = dayStatusMap.get(day);
-          const selected = selectedDay?.day === day;
-          return (
-            <TouchableOpacity
-              key={day}
-              style={[
-                styles.dayCell,
-                {
-                  width: DAY_CELL,
-                  height: DAY_CELL,
-                  backgroundColor: status ? statusColor(status) + "25" : "transparent",
-                },
-                selected && styles.dayCellSelected,
-              ]}
-              onPress={() =>
-                status ? setSelectedDay(selected ? null : { day, status }) : undefined
-              }
-              activeOpacity={status ? 0.7 : 1}
-            >
-              <Text style={styles.dayNum}>{day}</Text>
-              {status && <View style={[styles.dayDot, { backgroundColor: statusColor(status) }]} />}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {selectedDay && (
-        <View style={[styles.dayDetail, { borderLeftColor: statusColor(selectedDay.status) }]}>
-          <Text style={styles.dayDetailTitle}>
-            {now.toLocaleString("en-AU", { month: "long" })} {selectedDay.day}
-          </Text>
-          <Text style={[styles.dayDetailStatus, { color: statusColor(selectedDay.status) }]}>
-            {statusLabel(selectedDay.status)}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.legend}>
-        {(["green", "purple", "grey", "amber", "red"] as InvoiceStatus[]).map((s) => (
-          <View key={s} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: statusColor(s) }]} />
-            <Text style={styles.legendLabel}>{statusLabel(s)}</Text>
-          </View>
-        ))}
-      </View>
-
-      {overdueList.length > 0 && (
-        <>
-          <Text style={styles.sectionLabel}>OVERDUE INVOICES</Text>
-          {overdueList.map((inv) => {
-            const calStatus = apiStatusToCalStatus(inv);
-            return (
-              <View
-                key={inv.id}
-                style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}
-              >
-                <View style={styles.invoiceRow}>
-                  <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                    <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                      {statusLabel(calStatus)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.invoiceRow}>
-                  <Text style={styles.invoiceDate}>
-                    Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-                  </Text>
-                  <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
-                    {inv.daysOverdue} days overdue
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </>
-      )}
-    </ScrollView>
   );
 }
 
@@ -587,62 +387,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 12,
   },
-  // Calendar
-  monthRow: { alignItems: "center", marginBottom: 12 },
-  monthTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
-  calGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 2,
-    marginBottom: 16,
-    justifyContent: "center",
-  },
-  weekDay: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
-  dayCell: { borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  dayCellSelected: { borderWidth: 2, borderColor: Colors.navy },
-  dayNum: { fontSize: 12, fontWeight: "600", color: Colors.textPrimary },
-  dayDot: { width: 4, height: 4, borderRadius: 2, marginTop: 2 },
-  dayDetail: {
-    borderLeftWidth: 3,
-    borderRadius: 8,
-    backgroundColor: Colors.white,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  dayDetailTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, marginBottom: 2 },
-  dayDetailStatus: { fontSize: 13, fontWeight: "600" },
-  legend: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendLabel: { fontSize: 11, color: Colors.textSecondary },
-  invoiceCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  invoiceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  invoiceName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
-  invoiceDate: { fontSize: 12, color: Colors.textSecondary },
-  invoiceDays: { fontSize: 12, fontWeight: "600" },
-  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  statusBadgeText: { fontSize: 11, fontWeight: "700" },
   // Members
   membersCard: {
     backgroundColor: Colors.white,
