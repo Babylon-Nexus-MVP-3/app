@@ -1,15 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
+import { UserRole } from "../../backend/src/models/userModel";
 
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  phoneNumber?: string;
-  role: "PM" | "Subbie" | "Owner" | "Builder" | "Consultant" | "Admin";
-  verticalGroup?: string;
-  horizontalAttribute?: string;
-  licenceNumber?: string;
+  role: UserRole;
   status: "Pending" | "Active";
 }
 
