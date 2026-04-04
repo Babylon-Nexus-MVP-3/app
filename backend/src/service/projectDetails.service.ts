@@ -1,6 +1,6 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+import { Invoice, InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
@@ -61,7 +61,7 @@ export interface GetProjectDetailsResult {
   participants: ProjectParticipantListItem[];
 }
 
-function computeHealthScoreByDueDate(invoices: any[], now: Date): number {
+function computeHealthScoreByDueDate(invoices: Invoice[], now: Date): number {
   const paid = invoices.filter((i) => isPaidStatus(i.status));
   if (paid.length === 0) return 100;
 
