@@ -302,6 +302,7 @@ export interface AuditLogEvent {
 
 export interface InvoiceAuditEntry {
   invoiceId: string;
+  invoiceNumber: string;
   description: string;
   amount: number;
   status: InvoiceStatus;
