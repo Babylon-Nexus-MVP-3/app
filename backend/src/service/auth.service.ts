@@ -13,6 +13,7 @@ import {
   generateCode,
   hashPassword,
 } from "../utils/authHelper";
+import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -55,18 +56,30 @@ export async function registerUser(input: RegisterInput): Promise<string> {
         : "Registration failed. Please check your information and try again."
     );
   }
+  const { code, expiry } = generateCode();
   const hashedPassword = await hashPassword(input.password);
+  // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
     name: name,
     email: normalisedEmail,
     password: hashedPassword,
     loginAttempts: 0,
     accountLocked: false,
-    emailVerified: true,
-    status: "Active",
+    verificationCode: code, // TODO: Hash verification code before storing in production
+    verificationCodeExpiry: expiry,
+    emailVerified: false,
+    status: "Pending",
+    accountExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete after 24h if unverified
   });
 
   await newUser.save();
+
+  // Prevent emails being sent during tests
+  if (process.env.NODE_ENV !== "test") {
+    await sendOnboardingEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to send invite email to ${normalisedEmail}:`, err);
+    });
+  }
 
   return newUser._id.toString();
 }
@@ -125,6 +138,10 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
 
   if (!user) {
     throw new AuthError("Invalid credentials", 400);
+  }
+
+  if (user.status !== "Active") {
+    throw new AuthError("User email is not verified", 400);
   }
 
   const passwordMatches = await bcrypt.compare(password, user.password);
@@ -306,6 +323,13 @@ export async function resendVerificationCode(email: string) {
     { _id: user._id },
     { $set: { verificationCode: code, verificationCodeExpiry: expiry } }
   );
+
+  // Prevent emails being sent from tests
+  if (process.env.NODE_ENV !== "test") {
+    await sendResendVerificationEmail(email, code).catch((err) => {
+      console.error(`Failed to send invite email to ${email}:`, err);
+    });
+  }
 
   return { success: true };
 }
