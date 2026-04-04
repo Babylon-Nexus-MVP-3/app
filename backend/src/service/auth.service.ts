@@ -7,7 +7,13 @@ import { User, UserModel, UserRole } from "../models/userModel";
 import { RefreshTokenModel } from "../models/refreshTokenModel";
 import { EventModel } from "../models/eventModel";
 import { checkName, checkEmail, checkPassword, generateCode, hashInfo } from "../utils/authHelper";
-import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
+import {
+  sendForgotPasswordEmail,
+  sendOnboardingEmail,
+  sendResendResetCodeEmail,
+  sendResendVerificationEmail,
+} from "./email.service";
+import { JwtPayload } from "../middleware";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -59,7 +65,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     password: hashedPassword,
     loginAttempts: 0,
     accountLocked: false,
-    verificationCode: hashInfo(code),
+    verificationCode: await hashInfo(code),
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
@@ -104,11 +110,8 @@ function createAccessToken(user: User): string {
     role: user.role,
     email: user.email,
     name: user.name,
-    verticalGroup: user.verticalGroup,
-    horizontalAttribute: user.horizontalAttribute,
-    licenceNumber: user.licenceNumber,
     status: user.status,
-  };
+  } satisfies JwtPayload;
 
   return jwt.sign(payload, config.jwtAccessSecret, {
     expiresIn: `${config.accessTokenTtlMinutes}m`,
@@ -173,7 +176,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
       email: user.email,
       role: user.role,
       status: user.status,
-    },
+    } satisfies SafeUser,
   };
 }
 
@@ -181,26 +184,33 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
 [Auth Refresh - Generate new tokens upon accessToken expiry]
 */
 export async function authRefresh(token: string) {
-  const refreshToken = await RefreshTokenModel.findOne({ token: token });
+  const refreshToken = await RefreshTokenModel.findOne({ token, revokedAt: null });
 
   if (!refreshToken) {
+    // Token not found OR already revoked — possible reuse attack
+    // Revoke all sessions for this user as a precaution
+    const compromised = await RefreshTokenModel.findOne({ token });
+    if (compromised) {
+      await RefreshTokenModel.updateMany(
+        { user: compromised.user },
+        { $set: { revokedAt: new Date() } }
+      );
+    }
     throw new AuthError("Refresh Token is Invalid");
   }
 
   // If refresh Token is expired user must login again
-  if (refreshToken.expiresAt < new Date(Date.now())) {
-    // Remove expired token from db
-    await RefreshTokenModel.deleteOne({ token: token });
+  if (refreshToken.expiresAt < new Date()) {
     throw new AuthError("Refresh Token has expired");
   }
 
-  // Also reissue a new refreshToken and delete curernt one
-  await RefreshTokenModel.deleteOne({ token: token });
+  // Revoke current refreshToken before reissuing a new one.
+  await RefreshTokenModel.findOneAndUpdate({ token }, { $set: { revokedAt: new Date() } });
 
   const user = await UserModel.findById(refreshToken.user);
-  if (!user) {
-    throw new AuthError("Refresh Token has expired");
-  }
+  if (!user) throw new AuthError("User not found", 401);
+  if (user.status !== "Active") throw new AuthError("Account is not active", 401);
+
   const accessToken = createAccessToken(user);
   const newRefreshToken = await createRefreshToken(user);
 
@@ -209,19 +219,23 @@ export async function authRefresh(token: string) {
 
 export async function forgotPassword(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
+  const { code, expiry } = generateCode();
+  const hashedCode = await hashInfo(code);
+
   const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
   if (!user) {
-    throw new AuthError("Email not found");
+    return { success: true };
   }
 
-  const { code, expiry } = generateCode();
-  user.resetCode = await hashInfo(code);
+  user.resetCode = hashedCode;
   user.resetCodeExpiry = expiry;
   await user.save();
 
   if (process.env.NODE_ENV !== "test") {
-    // TODO: Send code via email service
-    console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+    await sendForgotPasswordEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to send password reset email to ${normalisedEmail}:`, err);
+    });
   }
 
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
@@ -243,13 +257,14 @@ export async function verifyResetCodeService(resetCode: string) {
 
 export async function resendResetCodeService(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
-  const user = await UserModel.findOne({ email: normalisedEmail });
-  if (!user) {
-    throw new AuthError("Email not found");
-  }
-
   const { code, expiry } = generateCode();
   const hashedCode = await hashInfo(code);
+
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
+  if (!user) {
+    return { success: true };
+  }
 
   await UserModel.findOneAndUpdate(
     { _id: user._id },
@@ -257,8 +272,9 @@ export async function resendResetCodeService(email: string) {
   );
 
   if (process.env.NODE_ENV !== "test") {
-    // TODO: Send code via email service
-    console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+    await sendResendResetCodeEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to resend reset code email to ${email}:`, err);
+    });
   }
 
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
@@ -298,11 +314,33 @@ export async function resetPassword(resetCode: string, newPassword: string) {
 
   await user.save();
 
-  return { success: true };
+  // Revoke all existing sessions with old password
+  await RefreshTokenModel.updateMany(
+    { user: user._id.toString() },
+    { $set: { revokedAt: new Date() } }
+  );
+
+  // Return accessToken and refreshToken so user is immediately logged in by the frontend
+  const accessToken = createAccessToken(user);
+  const refreshToken = await createRefreshToken(user);
+
+  return {
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 export async function userVerifyEmail(verificationCode: string) {
-  const user = await UserModel.findOne({ verificationCode: verificationCode });
+  const hashedCode = await hashInfo(verificationCode);
+  const user = await UserModel.findOne({ verificationCode: hashedCode });
   if (!user) {
     throw new AuthError("Invalid Verification Code");
   }
@@ -324,20 +362,38 @@ export async function userVerifyEmail(verificationCode: string) {
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
 
-  return { success: true, accessToken, refreshToken, user };
+  return {
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 export async function resendVerificationCode(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
+  const { code, expiry } = generateCode();
+  const hashedCode = await hashInfo(code);
+
   const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
   if (!user) {
-    throw new AuthError("Email not found");
+    return { success: true };
   }
 
-  const { code, expiry } = generateCode();
+  if (user.emailVerified) {
+    throw new AuthError("Email is already verified");
+  }
+
   await UserModel.findOneAndUpdate(
     { _id: user._id },
-    { $set: { verificationCode: code, verificationCodeExpiry: expiry } }
+    { $set: { verificationCode: hashedCode, verificationCodeExpiry: expiry } }
   );
 
   // Prevent emails being sent from tests
@@ -392,5 +448,26 @@ export async function userChangePassword(
 
   await user.save();
 
-  return { success: true };
+  // Revoke all existing sessions with old password
+  await RefreshTokenModel.updateMany(
+    { user: user._id.toString() },
+    { $set: { revokedAt: new Date() } }
+  );
+
+  // Return accessToken and refreshToken so user is immediately logged in by the frontend
+  const accessToken = createAccessToken(user);
+  const refreshToken = await createRefreshToken(user);
+
+  return {
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
