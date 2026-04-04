@@ -63,7 +63,15 @@ jobs:
         working-directory: ./backend
         env: 
           NODE_ENV: test
-          MONGODB_URI: mongodb://localhost:27017/babylon-nexus 
-          PORT: 3229
-          URL: http://127.0.0.1
+          MONGODB_URI: ${{ secrets.MONGODB_URI }} 
+          PORT: ${{ secrets.PORT }}
+          URL: ${{ secrets.URL }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          ACCESS_TOKEN_TTL_MINUTES: ${{ secrets.ACCESS_TOKEN_TTL_MINUTES }}
+          REFRESH_TOKEN_TTL_DAYS: ${{ secrets.REFRESH_TOKEN_TTL_DAYS }}
+          ADMIN_SEED_EMAIL: ${{ secrets.ADMIN_SEED_EMAIL }}
+          ADMIN_SEED_PASSWORD: ${{ secrets.ADMIN_SEED_PASSWORD }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: npm run test
