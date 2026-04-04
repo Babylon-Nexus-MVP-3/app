@@ -12,7 +12,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`Server Listening on Port${PORT} and Host${HOST}`);
 });
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI!;
 
 mongoose
   .connect(MONGODB_URI)
