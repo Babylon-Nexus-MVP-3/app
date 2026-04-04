@@ -110,7 +110,7 @@ export async function listActiveProjects(): Promise<any[]> {
 }
 
 export async function listInactiveProjects(): Promise<any[]> {
-  const projects = await ProjectModel.find({ status: "Inactive" }).sort({ createdAt: -1 }).lean();
+  const projects = await ProjectModel.find({ status: "Inactive" }).setOptions({ bypassSoftDelete: true }).sort({ createdAt: -1 }).lean();
   return projects.map((p) => ({
     _id: p._id.toString(),
     name: p.name,
