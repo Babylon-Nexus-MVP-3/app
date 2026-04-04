@@ -30,7 +30,6 @@ const notificationSchema = new Schema<NotificationDocument>(
     recipientUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
-    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice" },
     type: { type: String, enum: Object.values(NotificationType), required: true },
     message: { type: String, required: true },
