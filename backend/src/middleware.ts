@@ -47,10 +47,11 @@ export const loginLimiter = rateLimit({
 export const resendVerifLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 3,
-  keyGenerator: (req) => req.body.email, // Rate limit per email
-  message: { error: "Too many attempts to resend verification code. Please try again later." },
+  keyGenerator: (req) => req.body.email || req.ip || "",
+  skipFailedRequests: false,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { default: false },
 });
 
 export const verifyEmailLimiter = rateLimit({
@@ -71,21 +72,24 @@ export const refreshLimiter = rateLimit({
 });
 
 export const forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  keyGenerator: (req) => req.body.email, // Rate limit per email, not IP
+  keyGenerator: (req) => req.body.email,
   message: { error: "Too many password reset attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { default: false },
 });
 
 export const resetCodeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  keyGenerator: (req) => req.body.resetCode ?? req.ip, // Per code attempt
+  keyGenerator: (req) => req.body.resetCode || req.ip || "unknown",
   message: { error: "Too many attempts. Please request a new reset code." },
   standardHeaders: true,
   legacyHeaders: false,
+  // This property silences the IPv6 validation warning
+  validate: { default: false },
 });
 
 /**
