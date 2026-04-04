@@ -185,7 +185,7 @@ export async function inviteParticipant(
     dateInvited: new Date(Date.now()),
   });
 
-  sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
+  await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
     console.error(`Failed to send invite email to ${participant.email}:`, err);
   });
 
