@@ -3,6 +3,8 @@ import { EventModel } from "../models/eventModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
+import { sendInviteEmail } from "./email.service";
+import { randomInt } from "crypto";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -129,7 +131,6 @@ export interface InviteSubbieResult {
     projectId: string;
     role: UserRole;
     email: string;
-    inviteCode?: string;
     trade?: string;
     dateInvited?: Date;
     status: "Pending" | "Accepted";
@@ -137,10 +138,9 @@ export interface InviteSubbieResult {
 }
 
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 999999).toString();
 }
 
-// Keep userId to tighten role permissions later
 export async function inviteParticipant(
   input: InviteSubbieInput,
   projectId: string,
@@ -157,6 +157,15 @@ export async function inviteParticipant(
 
   if (project.status !== "Active") {
     throw new ProjectError("Project must be approved by admin before inviting participants", 403);
+  }
+
+  const requester = await ProjectParticipantModel.findOne({
+    projectId,
+    userId,
+    status: "Accepted",
+  });
+  if (!requester) {
+    throw new ProjectError("You are not a participant on this project", 403);
   }
 
   // Since Builder/PM/Owner/Admin dont have a trade only check if the role is subbie or consultant
@@ -176,7 +185,21 @@ export async function inviteParticipant(
     dateInvited: new Date(Date.now()),
   });
 
-  return { participant };
+  sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
+    console.error(`Failed to send invite email to ${participant.email}:`, err);
+  });
+
+  // Send participant without invite code which is only sent via email.
+  return {
+    participant: {
+      projectId: participant.projectId,
+      role: participant.role,
+      email: participant.email,
+      trade: participant.trade,
+      dateInvited: participant.dateInvited,
+      status: participant.status,
+    },
+  };
 }
 
 export async function acceptInviteParticipant(inviteCode: string, userId: string) {
@@ -197,24 +220,27 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new ProjectError("Invite is no longer valid");
   }
 
-  const project = await ProjectModel.findById(participant.projectId);
-  if (!project) {
-    throw new ProjectError("Associated project no longer exists");
-  }
-
-  const updatedParticipant = await ProjectParticipantModel.findByIdAndUpdate(
-    participant._id,
+  const updatedParticipant = await ProjectParticipantModel.findOneAndUpdate(
+    { inviteCode, status: "Pending" },
     {
       userId,
       status: "Accepted",
-      dateAccepted: new Date(Date.now()),
+      dateAccepted: new Date(),
       inviteCode: null,
     },
     { returnDocument: "after" }
   );
 
+  if (!updatedParticipant) {
+    throw new ProjectError("Invalid or expired invite code");
+  }
+
   if (updatedParticipant) {
-    await syncProjectRoleDisplayFields(participant.projectId, userId, updatedParticipant.role);
+    await syncProjectRoleDisplayFields(
+      updatedParticipant.projectId,
+      userId,
+      updatedParticipant.role
+    );
   }
 
   return { participant: updatedParticipant };
