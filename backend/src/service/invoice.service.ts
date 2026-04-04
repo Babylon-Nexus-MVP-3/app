@@ -80,7 +80,8 @@ export async function submitInvoice(
     );
   }
 
-  if (amount <= 0) {
+  // Stricter typechecking
+  if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
     throw new InvoiceError("Invalid amount. Amount must be a positive number");
   }
 
@@ -105,6 +106,7 @@ export async function submitInvoice(
   }
 
   const submitDate = Date.now();
+  const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
   const seq = await getNextSequence("invoice");
   const invoiceNumber = `INV-${String(seq).padStart(4, "0")}`;
 
@@ -117,7 +119,7 @@ export async function submitInvoice(
     description,
     amount,
     dateSubmitted: submitDate,
-    dateDue: submitDate + 2 * 7 * 24 * 60 * 60 * 1000, // 2 weeks from submit date
+    dateDue: submitDate + TWO_WEEKS_MS, // 2 weeks from submit date
     status: InvoiceStatus.Pending,
     approverRole: resolvedApproverRole,
   });
@@ -360,17 +362,19 @@ export async function getProjectAuditLog(
   const isRestricted = RESTRICTED_ROLES.includes(participant.role as UserRole);
   const invoiceQuery = isRestricted ? { projectId, submittedByUserId: userId } : { projectId };
 
-  const invoices = await InvoiceModel.find(invoiceQuery).sort({ dateSubmitted: 1 });
+  const invoices = await InvoiceModel.find(invoiceQuery).sort({ dateSubmitted: 1 }).lean();
 
   // Collect all accepted participants to build actor info map
   const allParticipants = await ProjectParticipantModel.find({
     projectId,
     status: "Accepted",
-  });
+  }).lean();
 
   const participantUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId as string);
 
-  const users = await UserModel.find({ _id: { $in: participantUserIds } }).select("_id name");
+  const users = await UserModel.find({ _id: { $in: participantUserIds } })
+    .select("_id name")
+    .lean();
 
   const userNameMap = new Map<string, string>();
   for (const u of users) {
@@ -387,7 +391,9 @@ export async function getProjectAuditLog(
   const allEvents = await EventModel.find({
     aggregateType: "Invoice",
     aggregateId: { $in: invoiceIds },
-  }).sort({ createdAt: 1 });
+  })
+    .sort({ createdAt: 1 })
+    .lean();
 
   // Group events by invoiceId
   const eventsByInvoice = new Map<string, typeof allEvents>();
@@ -438,12 +444,13 @@ export async function getProjectAuditLog(
   const paidAmount = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const outstandingAmount = totalAmount - paidAmount;
 
-  const viewer = await UserModel.findById(userId).select("name");
+  // Use userNameMap from above query instead of making another query to userModel
+  const viewer = userNameMap.get(userId);
 
   return {
     projectName: project.name,
     generatedAt: new Date(),
-    viewerName: viewer?.name ?? "Unknown",
+    viewerName: viewer ?? "Unknown",
     viewerRole: participant.role,
     summary: {
       totalInvoices: invoices.length,
