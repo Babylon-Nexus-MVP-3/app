@@ -20,7 +20,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
       return;
     }
     const result = await registerUser({ firstName, lastName, password, email });
-    res.status(201).json({ userId: result });
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }
@@ -38,7 +38,6 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
-        role: result.user.role,
         status: result.user.status,
       },
     });
