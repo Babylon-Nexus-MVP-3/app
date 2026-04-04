@@ -3,16 +3,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../config";
-import { User, UserModel } from "../models/userModel";
+import { User, UserModel, UserRole } from "../models/userModel";
 import { RefreshTokenModel } from "../models/refreshTokenModel";
 import { EventModel } from "../models/eventModel";
-import {
-  checkName,
-  checkEmail,
-  checkPassword,
-  generateCode,
-  hashPassword,
-} from "../utils/authHelper";
+import { checkName, checkEmail, checkPassword, generateCode, hashInfo } from "../utils/authHelper";
 import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
 
 export class AuthError extends Error {
@@ -57,7 +51,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     );
   }
   const { code, expiry } = generateCode();
-  const hashedPassword = await hashPassword(input.password);
+  const hashedPassword = await hashInfo(input.password);
   // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
     name: name,
@@ -65,7 +59,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     password: hashedPassword,
     loginAttempts: 0,
     accountLocked: false,
-    verificationCode: code, // TODO: Hash verification code before storing in production
+    verificationCode: hashInfo(code),
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
@@ -89,10 +83,19 @@ interface LoginInput {
   password: string;
 }
 
+// Prevent sending meta fields including codes or account information after login
+interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: string;
+}
+
 interface LoginResult {
   accessToken: string;
   refreshToken: string;
-  user: User;
+  user: SafeUser;
 }
 
 function createAccessToken(user: User): string {
@@ -161,7 +164,17 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     payload: { email: user.email },
   });
 
-  return { accessToken, refreshToken, user };
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    },
+  };
 }
 
 /*
@@ -202,7 +215,7 @@ export async function forgotPassword(email: string) {
   }
 
   const { code, expiry } = generateCode();
-  user.resetCode = code;
+  user.resetCode = await hashInfo(code);
   user.resetCodeExpiry = expiry;
   await user.save();
 
@@ -215,8 +228,9 @@ export async function forgotPassword(email: string) {
 }
 
 export async function verifyResetCodeService(resetCode: string) {
+  const hashedCode = await hashInfo(resetCode);
   const user = await UserModel.findOne({
-    resetCode,
+    resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
   });
 
@@ -235,10 +249,11 @@ export async function resendResetCodeService(email: string) {
   }
 
   const { code, expiry } = generateCode();
+  const hashedCode = await hashInfo(code);
 
   await UserModel.findOneAndUpdate(
     { _id: user._id },
-    { $set: { resetCode: code, resetCodeExpiry: expiry } }
+    { $set: { resetCode: hashedCode, resetCodeExpiry: expiry } }
   );
 
   if (process.env.NODE_ENV !== "test") {
@@ -254,8 +269,9 @@ export async function resetPassword(resetCode: string, newPassword: string) {
     throw new AuthError("Password must be at least 12 characters");
   }
 
+  const hashedCode = await hashInfo(resetCode);
   const user = await UserModel.findOne({
-    resetCode,
+    resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() },
   });
 
@@ -274,7 +290,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
     throw new AuthError(error instanceof Error ? error.message : String(error));
   }
 
-  const hashedPassword = await hashPassword(newPassword);
+  const hashedPassword = await hashInfo(newPassword);
   user.password = hashedPassword;
   user.resetCode = undefined;
   user.resetCodeExpiry = undefined;
@@ -370,7 +386,7 @@ export async function userChangePassword(
     throw new AuthError("Invalid password, please follow password rules");
   }
 
-  const hashedPassword = await hashPassword(newPassword);
+  const hashedPassword = await hashInfo(newPassword);
   user.password = hashedPassword;
   user.updatedAt = new Date();
 
