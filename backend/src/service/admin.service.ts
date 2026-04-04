@@ -2,8 +2,7 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
-import { sendInviteEmail } from "./email.service";
-import { ProjectError } from "./project.service";
+import { ProjectError, syncProjectRoleDisplayFields } from "./project.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -137,11 +136,16 @@ export async function approveProject(projectId: string): Promise<void> {
   });
 
   for (const participant of pendingParticipants) {
-    if (participant.email && participant.inviteCode) {
-      sendInviteEmail(participant.email, participant.inviteCode, project.location).catch((err) => {
-        console.error(`Failed to send invite email to ${participant.email}:`, err);
-      });
-    }
+    if (!participant.email) continue;
+    const user = await UserModel.findOne({ email: participant.email.toLowerCase() });
+    if (!user) continue;
+    await ProjectParticipantModel.findByIdAndUpdate(participant._id, {
+      userId: user._id.toString(),
+      status: "Accepted",
+      dateAccepted: new Date(),
+      inviteCode: null,
+    });
+    await syncProjectRoleDisplayFields(projectId, user._id.toString(), participant.role);
   }
 }
 
