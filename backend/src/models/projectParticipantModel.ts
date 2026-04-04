@@ -30,6 +30,9 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   },
 });
 
+ProjectParticipantSchema.index({ projectId: 1, userId: 1, status: 1 });
+ProjectParticipantSchema.index({ projectId: 1, status: 1 });
+
 export const ProjectParticipantModel = mongoose.model<ProjectParticipant>(
   "ProjectParticipant",
   ProjectParticipantSchema
