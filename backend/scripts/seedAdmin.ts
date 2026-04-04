@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import mongoose from "mongoose";
 import { UserModel } from "../src/models/userModel";
-import { hashInfo } from "../src/utils/authHelper";
+import { hashPassword } from "../src/utils/authHelper";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -38,7 +38,7 @@ async function seedAdmin(): Promise<void> {
       return;
     }
 
-    const hashedPassword = await hashInfo(ADMIN_PASSWORD);
+    const hashedPassword = await hashPassword(ADMIN_PASSWORD);
     await UserModel.create({
       name: "Platform Admin",
       email,

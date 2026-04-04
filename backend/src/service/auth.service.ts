@@ -3,10 +3,17 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../config";
-import { User, UserModel, UserRole } from "../models/userModel";
+import { User, UserModel } from "../models/userModel";
 import { RefreshTokenModel } from "../models/refreshTokenModel";
 import { EventModel } from "../models/eventModel";
-import { checkName, checkEmail, checkPassword, generateCode, hashInfo } from "../utils/authHelper";
+import {
+  checkName,
+  checkEmail,
+  checkPassword,
+  generateCode,
+  hashCode,
+  hashPassword,
+} from "../utils/authHelper";
 import {
   sendForgotPasswordEmail,
   sendOnboardingEmail,
@@ -37,7 +44,12 @@ interface RegisterInput {
   email: string;
 }
 
-export async function registerUser(input: RegisterInput): Promise<string> {
+interface RegisterResponse {
+  userId: string;
+  code?: string;
+}
+
+export async function registerUser(input: RegisterInput): Promise<RegisterResponse> {
   // Trim whitespace and normalise email to lowercase for consistency
   const sanitizedFirstName = input.firstName.trim();
   const sanitizedLastName = input.lastName.trim();
@@ -57,7 +69,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     );
   }
   const { code, expiry } = generateCode();
-  const hashedPassword = await hashInfo(input.password);
+  const hashedPassword = await hashPassword(input.password);
   // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
     name: name,
@@ -65,7 +77,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     password: hashedPassword,
     loginAttempts: 0,
     accountLocked: false,
-    verificationCode: await hashInfo(code),
+    verificationCode: hashCode(code),
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
@@ -81,7 +93,9 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     });
   }
 
-  return newUser._id.toString();
+  return process.env.NODE_ENV === "test"
+    ? { userId: newUser._id.toString(), code }
+    : { userId: newUser._id.toString() };
 }
 
 interface LoginInput {
@@ -94,7 +108,6 @@ interface SafeUser {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
   status: string;
 }
 
@@ -174,7 +187,6 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
@@ -220,7 +232,7 @@ export async function authRefresh(token: string) {
 export async function forgotPassword(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
   const { code, expiry } = generateCode();
-  const hashedCode = await hashInfo(code);
+  const hashedCode = hashCode(code);
 
   const user = await UserModel.findOne({ email: normalisedEmail });
   // Silently return success if user not found — prevents user enumeration
@@ -242,7 +254,7 @@ export async function forgotPassword(email: string) {
 }
 
 export async function verifyResetCodeService(resetCode: string) {
-  const hashedCode = await hashInfo(resetCode);
+  const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
     resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
@@ -258,7 +270,7 @@ export async function verifyResetCodeService(resetCode: string) {
 export async function resendResetCodeService(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
   const { code, expiry } = generateCode();
-  const hashedCode = await hashInfo(code);
+  const hashedCode = hashCode(code);
 
   const user = await UserModel.findOne({ email: normalisedEmail });
   // Silently return success if user not found — prevents user enumeration
@@ -285,7 +297,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
     throw new AuthError("Password must be at least 12 characters");
   }
 
-  const hashedCode = await hashInfo(resetCode);
+  const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
     resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() },
@@ -306,7 +318,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
     throw new AuthError(error instanceof Error ? error.message : String(error));
   }
 
-  const hashedPassword = await hashInfo(newPassword);
+  const hashedPassword = await hashPassword(newPassword);
   user.password = hashedPassword;
   user.resetCode = undefined;
   user.resetCodeExpiry = undefined;
@@ -332,14 +344,13 @@ export async function resetPassword(resetCode: string, newPassword: string) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
 }
 
 export async function userVerifyEmail(verificationCode: string) {
-  const hashedCode = await hashInfo(verificationCode);
+  const hashedCode = hashCode(verificationCode);
   const user = await UserModel.findOne({ verificationCode: hashedCode });
   if (!user) {
     throw new AuthError("Invalid Verification Code");
@@ -370,7 +381,6 @@ export async function userVerifyEmail(verificationCode: string) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
@@ -379,7 +389,7 @@ export async function userVerifyEmail(verificationCode: string) {
 export async function resendVerificationCode(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
   const { code, expiry } = generateCode();
-  const hashedCode = await hashInfo(code);
+  const hashedCode = hashCode(code);
 
   const user = await UserModel.findOne({ email: normalisedEmail });
   // Silently return success if user not found — prevents user enumeration
@@ -403,7 +413,7 @@ export async function resendVerificationCode(email: string) {
     });
   }
 
-  return { success: true };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function userChangePassword(
@@ -442,7 +452,7 @@ export async function userChangePassword(
     throw new AuthError("Invalid password, please follow password rules");
   }
 
-  const hashedPassword = await hashInfo(newPassword);
+  const hashedPassword = await hashPassword(newPassword);
   user.password = hashedPassword;
   user.updatedAt = new Date();
 
@@ -454,20 +464,6 @@ export async function userChangePassword(
     { $set: { revokedAt: new Date() } }
   );
 
-  // Return accessToken and refreshToken so user is immediately logged in by the frontend
-  const accessToken = createAccessToken(user);
-  const refreshToken = await createRefreshToken(user);
-
-  return {
-    success: true,
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  // Make user relogin with new password
+  return { success: true };
 }

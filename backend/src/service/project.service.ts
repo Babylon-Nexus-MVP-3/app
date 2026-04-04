@@ -5,6 +5,7 @@ import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
 import { randomInt } from "crypto";
+import { hashCode } from "../utils/authHelper";
 
 export class ProjectError extends Error {
   statusCode: number;
@@ -135,6 +136,7 @@ export interface InviteSubbieResult {
     dateInvited?: Date;
     status: "Pending" | "Accepted";
   };
+  inviteCode?: string;
 }
 
 function generateOTP(): string {
@@ -175,31 +177,36 @@ export async function inviteParticipant(
   }
 
   const inviteCode = generateOTP();
+  const hashedCode = hashCode(inviteCode);
 
   const participant = await ProjectParticipantModel.create({
     projectId,
     role,
     email,
-    inviteCode,
+    inviteCode: hashedCode,
     trade,
     dateInvited: new Date(Date.now()),
   });
 
-  await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
-    console.error(`Failed to send invite email to ${participant.email}:`, err);
-  });
+  if (process.env.NODE_ENV !== "test") {
+    await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
+      console.error(`Failed to send invite email to ${participant.email}:`, err);
+    });
+  }
 
   // Send participant without invite code which is only sent via email.
-  return {
-    participant: {
-      projectId: participant.projectId,
-      role: participant.role,
-      email: participant.email,
-      trade: participant.trade,
-      dateInvited: participant.dateInvited,
-      status: participant.status,
-    },
+  const safeParticipant = {
+    projectId: participant.projectId,
+    role: participant.role,
+    email: participant.email,
+    trade: participant.trade,
+    dateInvited: participant.dateInvited,
+    status: participant.status,
   };
+
+  return process.env.NODE_ENV === "test"
+    ? { participant: safeParticipant, inviteCode }
+    : { participant: safeParticipant };
 }
 
 export async function acceptInviteParticipant(inviteCode: string, userId: string) {
@@ -212,7 +219,8 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new AuthError("User Does not exist");
   }
 
-  const participant = await ProjectParticipantModel.findOne({ inviteCode });
+  const hashedCode = hashCode(inviteCode);
+  const participant = await ProjectParticipantModel.findOne({ inviteCode: hashedCode });
   if (!participant) {
     throw new ProjectError("Invalid or expired invite code");
   }
@@ -221,7 +229,7 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
   }
 
   const updatedParticipant = await ProjectParticipantModel.findOneAndUpdate(
-    { inviteCode, status: "Pending" },
+    { inviteCode: hashedCode, status: "Pending" },
     {
       userId,
       status: "Accepted",

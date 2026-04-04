@@ -88,11 +88,18 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
   Hashes a plaintext password using bcrypt.
   Uses 14 salt rounds for a strong security/performance balance.
 */
-export async function hashInfo(info: string): Promise<string> {
+export async function hashPassword(info: string): Promise<string> {
   const saltRounds = 14;
   const salt = await bcrypt.genSalt(saltRounds);
   const hash = await bcrypt.hash(info, salt);
   return hash;
+}
+
+/**
+ * Hash any 6 digit code
+ */
+export function hashCode(code: string): string {
+  return crypto.createHash("sha256").update(code).digest("hex");
 }
 
 /*
