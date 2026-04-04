@@ -1,13 +1,10 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { app } from "../../app";
 import { requestDelete, requestAuthRegister, requestAuthLogin } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { hashPassword } from "../../utils/authHelper";
-
-dotenv.config();
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };

@@ -1,7 +1,5 @@
 import { requestDelete, requestAuthRegister } from "../requestHelpers";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
-dotenv.config();
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);

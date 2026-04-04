@@ -1,13 +1,10 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestAuthRegister,
   requestForgotPassword,
   requestVerifyResetCode,
 } from "../requestHelpers";
-
-dotenv.config();
 
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh123456$";

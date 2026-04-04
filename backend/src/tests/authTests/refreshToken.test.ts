@@ -5,9 +5,7 @@ import {
   requestDelete,
 } from "../requestHelpers";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { UserModel } from "../../models/userModel";
-dotenv.config();
 
 let token: string;
 
@@ -39,7 +37,7 @@ afterAll(async () => {
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI!);
   }
 });
 
