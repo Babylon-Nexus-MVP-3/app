@@ -197,9 +197,17 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new ProjectError("Invite is no longer valid");
   }
 
+  if (participant.email.toLowerCase() !== user.email.toLowerCase()) {
+    throw new ProjectError("This invite code was not issued to your account", 403);
+  }
+
   const project = await ProjectModel.findById(participant.projectId);
   if (!project) {
     throw new ProjectError("Associated project no longer exists");
+  }
+
+  if (project.status === "Rejected" || project.status === "Inactive") {
+    throw new ProjectError("This project is no longer active", 403);
   }
 
   const updatedParticipant = await ProjectParticipantModel.findByIdAndUpdate(

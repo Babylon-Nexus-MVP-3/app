@@ -22,6 +22,22 @@ function isPaidStatus(status: InvoiceStatus): boolean {
   return status === "Paid" || status === "Received";
 }
 
+function canViewInvoiceAmount(
+  role: string,
+  invoice: { approverRole: string; submittedByUserId: string },
+  userId: string
+): boolean {
+  if (role === UserRole.Observer) return false;
+  if (
+    role === UserRole.Owner ||
+    role === UserRole.PM ||
+    role === UserRole.Financier ||
+    role === UserRole.VIP
+  )
+    return true;
+  return invoice.submittedByUserId.toString() === userId || invoice.approverRole === role;
+}
+
 export interface ProjectInvoiceListItem {
   id: string;
   invoiceNumber: string;
@@ -134,7 +150,7 @@ export async function getProjectDetails(
       description: i.description,
       dateSubmitted: i.dateSubmitted,
       dateDue: i.dateDue,
-      amount: i.amount,
+      amount: canViewInvoiceAmount(userRole, i, normalizedUserId) ? i.amount : undefined,
       status: i.status,
       daysOverdue: overdue,
       approverRole: i.approverRole,

@@ -90,6 +90,11 @@ export default function ProjectDetail() {
   }
 
   async function handleInvite() {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      setInviteError("Please enter a valid email address.");
+      return;
+    }
     setInviteLoading(true);
     setInviteError(null);
     try {
