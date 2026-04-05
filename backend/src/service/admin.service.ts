@@ -2,7 +2,6 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
-import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
