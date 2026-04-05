@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import { apiStatusToCalStatus, invoiceStatusLabel, statusBg, statusColor } from "./helpers";
@@ -13,6 +13,8 @@ export function InvoiceUploaderView({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -22,6 +24,8 @@ export function InvoiceUploaderView({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "allInvoices">("myInvoices");
   const [myFilter, setMyFilter] = useState<FilterStatus>("All");
@@ -90,6 +94,7 @@ export function InvoiceUploaderView({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
       >
         {subTab === "myInvoices" && (
           <>
@@ -201,6 +206,8 @@ export function DualRoleMySpace({
   approverRole,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -211,6 +218,8 @@ export function DualRoleMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "toApprove" | "allInvoices">("myInvoices");
   const [myFilter, setMyFilter] = useState<FilterStatus>("All");
@@ -294,6 +303,7 @@ export function DualRoleMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
       >
         {subTab === "myInvoices" && (
           <>
@@ -453,6 +463,8 @@ export function BuilderMySpace({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -462,6 +474,8 @@ export function BuilderMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   return (
     <DualRoleMySpace
@@ -470,6 +484,8 @@ export function BuilderMySpace({
       approverRole="Builder"
       invoiceAction={invoiceAction}
       onTapInvoice={onTapInvoice}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }
@@ -480,6 +496,8 @@ export function PMMySpace({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -489,6 +507,8 @@ export function PMMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   return (
     <DualRoleMySpace
@@ -497,6 +517,8 @@ export function PMMySpace({
       approverRole="PM"
       invoiceAction={invoiceAction}
       onTapInvoice={onTapInvoice}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }
@@ -507,6 +529,8 @@ export function OwnerMySpace({
   userId: _userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -516,6 +540,8 @@ export function OwnerMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("allInvoices");
   const [allFilter, setAllFilter] = useState<FilterStatus>("All");
@@ -579,6 +605,7 @@ export function OwnerMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
       >
         {subTab === "toApprove" && (
           <>
@@ -696,9 +723,13 @@ export function OwnerMySpace({
 export function FinancierMySpace({
   invoices,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [filter, setFilter] = useState<FilterStatus>("All");
   const finActive = invoices.filter((i) => i.status !== "Rejected");
@@ -713,6 +744,7 @@ export function FinancierMySpace({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
     >
       <AllInvoicesStats
         allActive={finActive}
@@ -768,9 +800,13 @@ export function FinancierMySpace({
 export function ObserverMySpace({
   invoices,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [filter, setFilter] = useState<FilterStatus>("All");
   const activeCount = invoices.filter((i) => i.status !== "Rejected").length;
@@ -787,6 +823,7 @@ export function ObserverMySpace({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
     >
       <View style={styles.statRow}>
         {(

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { Colors } from "@/constants/colors";
 import { ApiInvoice, InvoiceActionType, InvoiceStatus, SEVERITY } from "./types";
@@ -19,6 +19,8 @@ export function CalendarTab({
   role,
   userId,
   invoiceAction,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   role: string;
@@ -28,6 +30,8 @@ export function CalendarTab({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const _t = new Date();
   const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, "0")}-${String(_t.getDate()).padStart(2, "0")}`;
@@ -101,6 +105,7 @@ export function CalendarTab({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
     >
       <Calendar
         markingType="custom"
