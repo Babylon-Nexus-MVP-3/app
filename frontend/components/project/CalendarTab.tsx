@@ -45,16 +45,41 @@ export function CalendarTab({
     }
   }
 
-  // Build markedDates for react-native-calendars (multi-dot)
+  // Build markedDates — priority: selected > status color > today ring
+  const allMarkedDates = new Set([
+    ...dayStatusMap.keys(),
+    todayStr,
+    ...(selectedDate ? [selectedDate] : []),
+  ]);
+
   const markedDates: Record<string, any> = {};
-  for (const [dateStr, calStatus] of dayStatusMap) {
+  for (const dateStr of allMarkedDates) {
+    const isSelected = selectedDate === dateStr;
+    const isToday = dateStr === todayStr;
+    const calStatus = dayStatusMap.get(dateStr);
+
+    let container: Record<string, any> = { borderRadius: 16 };
+    let textColor: string = Colors.textPrimary;
+
+    if (isSelected) {
+      container = { ...container, backgroundColor: Colors.gold };
+      textColor = Colors.white;
+    } else if (calStatus) {
+      container = { ...container, backgroundColor: statusColor(calStatus) };
+      textColor = Colors.white;
+    } else if (isToday) {
+      container = { ...container, backgroundColor: Colors.offWhite, borderWidth: 2, borderColor: Colors.navy };
+      textColor = Colors.textPrimary;
+    } else {
+      continue; // no marking needed
+    }
+
     markedDates[dateStr] = {
-      dots: [{ key: dateStr, color: statusColor(calStatus) }],
-      ...(selectedDate === dateStr && { selected: true, selectedColor: Colors.navy }),
+      customStyles: {
+        container,
+        text: { color: textColor, fontWeight: "bold" },
+      },
     };
-  }
-  if (selectedDate && !markedDates[selectedDate]) {
-    markedDates[selectedDate] = { selected: true, selectedColor: Colors.navy };
   }
 
   // Invoices due on the selected date
@@ -78,7 +103,7 @@ export function CalendarTab({
       showsVerticalScrollIndicator={false}
     >
       <Calendar
-        markingType="multi-dot"
+        markingType="custom"
         markedDates={markedDates}
         onDayPress={(day) =>
           setSelectedDate(day.dateString === selectedDate ? null : day.dateString)
@@ -87,14 +112,8 @@ export function CalendarTab({
           backgroundColor: Colors.offWhite,
           calendarBackground: Colors.offWhite,
           textSectionTitleColor: Colors.textSecondary,
-          selectedDayBackgroundColor: Colors.navy,
-          selectedDayTextColor: Colors.white,
-          todayTextColor: Colors.white,
-          todayBackgroundColor: Colors.gold,
           dayTextColor: Colors.textPrimary,
           textDisabledColor: "rgba(0,0,0,0.2)",
-          dotColor: Colors.navy,
-          selectedDotColor: Colors.white,
           arrowColor: Colors.navy,
           monthTextColor: Colors.textPrimary,
           textMonthFontWeight: "bold",
