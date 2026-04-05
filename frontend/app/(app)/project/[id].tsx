@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
@@ -157,9 +157,20 @@ export default function ProjectDetail() {
   }
 
   const [dataLoading, setDataLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  async function loadProject() {
+  async function loadProject(clearFirst = false) {
     if (!id) return;
+    if (clearFirst) {
+      setDataLoading(true);
+      setProjectName(nameParam);
+      setHealth(0);
+      setOverdue(0);
+      setChange(null);
+      setRole("Member");
+      setInvoices([]);
+      setParticipants([]);
+    }
     try {
       const res = await fetchWithAuth(`http://localhost:3229/project/${id}`);
       const data = await res.json();
@@ -195,10 +206,17 @@ export default function ProjectDetail() {
     }
   }
 
-  useEffect(() => {
-    loadProject().finally(() => setDataLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      loadProject(true).finally(() => setDataLoading(false));
+    }, [id])
+  );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadProject();
+    setRefreshing(false);
+  }
 
   return (
     <View style={styles.screen}>
@@ -255,12 +273,16 @@ export default function ProjectDetail() {
           </View>
 
           {overdue > 0 && (
-            <View style={styles.overdueAlert}>
+            <TouchableOpacity
+              style={styles.overdueAlert}
+              onPress={() => setActiveTab("myspace")}
+              activeOpacity={0.8}
+            >
               <Text style={styles.overdueAlertText}>
                 {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
               </Text>
               <Text style={styles.overdueAlertArrow}>›</Text>
-            </View>
+            </TouchableOpacity>
           )}
         </SafeAreaView>
       </LinearGradient>
@@ -271,9 +293,18 @@ export default function ProjectDetail() {
           role={role}
           userId={userId}
           invoiceAction={invoiceAction}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       ) : (
-        <MySpaceTab role={role} invoices={invoices} userId={userId} invoiceAction={invoiceAction} />
+        <MySpaceTab
+          role={role}
+          invoices={invoices}
+          userId={userId}
+          invoiceAction={invoiceAction}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+        />
       )}
 
       {/* Bottom tab bar */}

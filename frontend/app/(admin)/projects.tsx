@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,8 +31,8 @@ export default function AdminProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchProjects() {
-    setLoading(true);
+  async function fetchProjects(silent = false) {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetchWithAuth("http://localhost:3229/admin/projects/active");
@@ -48,17 +49,19 @@ export default function AdminProjects() {
     }
   }
 
-  useEffect(() => {
-    if (!authLoading) fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading]);
-
   useFocusEffect(
     useCallback(() => {
       if (!authLoading) fetchProjects();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authLoading])
   );
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchProjects(true);
+    setRefreshing(false);
+  }
 
   const total = projects.length;
 
@@ -89,6 +92,14 @@ export default function AdminProjects() {
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         <Text style={styles.sectionLabel}>ALL PROJECTS</Text>
 
@@ -97,7 +108,7 @@ export default function AdminProjects() {
         ) : error ? (
           <View style={styles.centerBox}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={fetchProjects} style={styles.retryBtn}>
+            <TouchableOpacity onPress={() => fetchProjects()} style={styles.retryBtn}>
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>

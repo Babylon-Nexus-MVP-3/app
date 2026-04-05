@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,7 +12,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import CircularProgress from "@/components/CircularProgress";
@@ -115,35 +116,46 @@ export default function AdminProjectDetail() {
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
 
-  const fetchDetail = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to load project.");
-        return;
+  const fetchDetail = useCallback(
+    async (silent = false) => {
+      if (!id) return;
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchWithAuth(`http://localhost:3229/admin/projects/${id}`);
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error ?? "Failed to load project.");
+          return;
+        }
+        setProjectName(data.project?.name ?? "");
+        setLocation(data.project?.location ?? "");
+        setHealth(data.healthScore ?? 0);
+        setChange(data.monthOnMonthHealthChangePct ?? null);
+        setOverdue(data.overdueInvoiceCount ?? 0);
+        setInvoices(data.invoices ?? []);
+        setParticipants(data.participants ?? []);
+      } catch {
+        setError("Network error. Please try again.");
+      } finally {
+        setLoading(false);
       }
-      setProjectName(data.project?.name ?? "");
-      setLocation(data.project?.location ?? "");
-      setHealth(data.healthScore ?? 0);
-      setChange(data.monthOnMonthHealthChangePct ?? null);
-      setOverdue(data.overdueInvoiceCount ?? 0);
-      setInvoices(data.invoices ?? []);
-      setParticipants(data.participants ?? []);
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    },
+    [id]
+  );
 
-  useEffect(() => {
-    fetchDetail();
-  }, [fetchDetail]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchDetail();
+    }, [fetchDetail])
+  );
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchDetail(true);
+    setRefreshing(false);
+  }
 
   async function handleDeleteProject() {
     Alert.alert(
@@ -256,17 +268,19 @@ export default function AdminProjectDetail() {
       {error ? (
         <View style={styles.centerBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchDetail} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : activeTab === "calendar" ? (
-        <CalendarTab invoices={invoices} />
+        <CalendarTab invoices={invoices} refreshing={refreshing} onRefresh={handleRefresh} />
       ) : (
         <MembersTab
           participants={participants}
           onRemove={handleRemove}
           onDeleteProject={handleDeleteProject}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
 
@@ -289,7 +303,15 @@ export default function AdminProjectDetail() {
 }
 
 /* ─── Calendar tab ─── */
-function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
+function CalendarTab({
+  invoices,
+  refreshing,
+  onRefresh,
+}: {
+  invoices: ApiInvoice[];
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   const [selectedDay, setSelectedDay] = useState<{ day: number; status: InvoiceStatus } | null>(
     null
   );
@@ -323,6 +345,14 @@ function CalendarTab({ invoices }: { invoices: ApiInvoice[] }) {
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <View style={styles.monthRow}>
         <Text style={styles.monthTitle}>{monthName}</Text>
@@ -426,16 +456,28 @@ function MembersTab({
   participants,
   onRemove,
   onDeleteProject,
+  refreshing,
+  onRefresh,
 }: {
   participants: Participant[];
   onRemove: (p: Participant) => void;
   onDeleteProject: () => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   return (
     <ScrollView
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <Text style={styles.sectionLabel}>MEMBERS</Text>
       {participants.length === 0 ? (

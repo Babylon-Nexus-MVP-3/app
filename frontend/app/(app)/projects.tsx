@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
@@ -51,14 +52,16 @@ export default function Projects() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinedRole, setJoinedRole] = useState<string | null>(null);
 
-  async function fetchProjects() {
-    setProjectsLoading(true);
+  async function fetchProjects(silent = false) {
+    if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
       const res = await fetchWithAuth("http://localhost:3229/projects");
@@ -84,10 +87,17 @@ export default function Projects() {
     }
   }
 
-  useEffect(() => {
-    fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProjects();
+    }, [])
+  );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchProjects(true);
+    setRefreshing(false);
+  }
 
   const avgHealth =
     projects.length > 0
@@ -196,6 +206,14 @@ export default function Projects() {
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         <Text style={styles.sectionLabel}>YOUR PROJECTS</Text>
 

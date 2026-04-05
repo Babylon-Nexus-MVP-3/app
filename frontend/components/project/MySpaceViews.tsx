@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import { apiStatusToCalStatus, invoiceStatusLabel, statusBg, statusColor } from "./helpers";
@@ -13,6 +13,8 @@ export function InvoiceUploaderView({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -22,6 +24,8 @@ export function InvoiceUploaderView({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "allInvoices">("myInvoices");
   const [myFilter, setMyFilter] = useState<FilterStatus>("All");
@@ -60,10 +64,8 @@ export function InvoiceUploaderView({
   const allApproved = allActive.filter((i) => i.status === "Approved");
   const allPaid = allActive.filter((i) => i.status === "Paid" || i.status === "Received");
 
-  const filteredMyInvoices =
-    myFilter === "All" ? myInvoices : myInvoices.filter((i) => i.status === myFilter);
-  const filteredAllInvoices =
-    allFilter === "All" ? invoices : invoices.filter((i) => i.status === allFilter);
+  const filteredMyInvoices = applyFilter(myInvoices, myFilter);
+  const filteredAllInvoices = applyFilter(invoices, allFilter);
 
   const SUB_TABS = [
     { key: "myInvoices" as const, label: "My Invoices" },
@@ -90,6 +92,14 @@ export function InvoiceUploaderView({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "myInvoices" && (
           <>
@@ -201,6 +211,8 @@ export function DualRoleMySpace({
   approverRole,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -211,9 +223,12 @@ export function DualRoleMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"myInvoices" | "toApprove" | "allInvoices">("myInvoices");
   const [myFilter, setMyFilter] = useState<FilterStatus>("All");
+  const [toActionFilter, setToActionFilter] = useState<FilterStatus>("All");
   const [allFilter, setAllFilter] = useState<FilterStatus>("All");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
@@ -263,10 +278,9 @@ export function DualRoleMySpace({
   // For "To Action" tab: Builder IS the approver for all those invoices → show dollar total
   const canSeeToActionAmounts = true;
 
-  const filteredMyInvoices =
-    myFilter === "All" ? myInvoices : myInvoices.filter((i) => i.status === myFilter);
-  const filteredAllInvoices =
-    allFilter === "All" ? allInvoices : allInvoices.filter((i) => i.status === allFilter);
+  const filteredMyInvoices = applyFilter(myInvoices, myFilter);
+  const filteredToAction = applyFilter(toAction, toActionFilter);
+  const filteredAllInvoices = applyFilter(allInvoices, allFilter);
 
   const SUB_TABS = [
     { key: "myInvoices" as const, label: "My Invoices" },
@@ -294,6 +308,14 @@ export function DualRoleMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "myInvoices" && (
           <>
@@ -362,8 +384,11 @@ export function DualRoleMySpace({
                 )}
               </View>
             </View>
-            {toAction.length === 0 && <Text style={styles.emptyText}>No invoices to approve.</Text>}
-            {toAction.map((inv) => (
+            <FilterChips filter={toActionFilter} onChange={setToActionFilter} />
+            {filteredToAction.length === 0 && (
+              <Text style={styles.emptyText}>No invoices to approve.</Text>
+            )}
+            {filteredToAction.map((inv) => (
               <ApprovalCard
                 key={`ap-${inv.id}`}
                 inv={inv}
@@ -453,6 +478,8 @@ export function BuilderMySpace({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -462,6 +489,8 @@ export function BuilderMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   return (
     <DualRoleMySpace
@@ -470,6 +499,8 @@ export function BuilderMySpace({
       approverRole="Builder"
       invoiceAction={invoiceAction}
       onTapInvoice={onTapInvoice}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }
@@ -480,6 +511,8 @@ export function PMMySpace({
   userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -489,6 +522,8 @@ export function PMMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   return (
     <DualRoleMySpace
@@ -497,6 +532,8 @@ export function PMMySpace({
       approverRole="PM"
       invoiceAction={invoiceAction}
       onTapInvoice={onTapInvoice}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }
@@ -507,6 +544,8 @@ export function OwnerMySpace({
   userId: _userId,
   invoiceAction,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   userId: string;
@@ -516,8 +555,11 @@ export function OwnerMySpace({
     rejectionReason?: string
   ) => Promise<string | null>;
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<"toApprove" | "allInvoices">("allInvoices");
+  const [toActionFilter, setToActionFilter] = useState<FilterStatus>("All");
   const [allFilter, setAllFilter] = useState<FilterStatus>("All");
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmInvoice, setConfirmInvoice] = useState<ApiInvoice | null>(null);
@@ -551,8 +593,8 @@ export function OwnerMySpace({
   const ownerPending = ownerActive.filter((i) => i.status === "Pending");
   const ownerApproved = ownerActive.filter((i) => i.status === "Approved");
   const ownerPaid = ownerActive.filter((i) => i.status === "Paid" || i.status === "Received");
-  const filteredAllInvoices =
-    allFilter === "All" ? invoices : invoices.filter((i) => i.status === allFilter);
+  const filteredToAction = applyFilter(toAction, toActionFilter);
+  const filteredAllInvoices = applyFilter(invoices, allFilter);
 
   const OWNER_TABS = [
     { key: "allInvoices" as const, label: "All Invoices" },
@@ -579,6 +621,14 @@ export function OwnerMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "toApprove" && (
           <>
@@ -610,10 +660,11 @@ export function OwnerMySpace({
                 </Text>
               </View>
             </View>
-            {toAction.length === 0 && (
+            <FilterChips filter={toActionFilter} onChange={setToActionFilter} />
+            {filteredToAction.length === 0 && (
               <Text style={styles.emptyText}>No invoices awaiting action.</Text>
             )}
-            {toAction.map((inv) => (
+            {filteredToAction.map((inv) => (
               <ApprovalCard
                 key={`ap-${inv.id}`}
                 inv={inv}
@@ -696,23 +747,34 @@ export function OwnerMySpace({
 export function FinancierMySpace({
   invoices,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [filter, setFilter] = useState<FilterStatus>("All");
   const finActive = invoices.filter((i) => i.status !== "Rejected");
   const finPending = finActive.filter((i) => i.status === "Pending");
   const finApproved = finActive.filter((i) => i.status === "Approved");
   const finPaid = finActive.filter((i) => i.status === "Paid" || i.status === "Received");
-  const filteredInvoices =
-    filter === "All" ? invoices : invoices.filter((i) => i.status === filter);
+  const filteredInvoices = applyFilter(invoices, filter);
 
   return (
     <ScrollView
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <AllInvoicesStats
         allActive={finActive}
@@ -768,9 +830,13 @@ export function FinancierMySpace({
 export function ObserverMySpace({
   invoices,
   onTapInvoice,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   onTapInvoice: (inv: ApiInvoice) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [filter, setFilter] = useState<FilterStatus>("All");
   const activeCount = invoices.filter((i) => i.status !== "Rejected").length;
@@ -779,14 +845,21 @@ export function ObserverMySpace({
       i.daysOverdue > 0 && i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
   ).length;
   const paidCount = invoices.filter((i) => i.status === "Paid" || i.status === "Received").length;
-  const filteredInvoices =
-    filter === "All" ? invoices : invoices.filter((i) => i.status === filter);
+  const filteredInvoices = applyFilter(invoices, filter);
 
   return (
     <ScrollView
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <View style={styles.statRow}>
         {(
@@ -848,15 +921,31 @@ export function ObserverMySpace({
 }
 
 /* ─── Shared filter chips ─── */
-type FilterStatus = "All" | "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
+type FilterStatus = "All" | "Overdue" | "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
 const FILTER_STATUSES: FilterStatus[] = [
   "All",
+  "Overdue",
   "Pending",
   "Approved",
   "Paid",
   "Received",
   "Rejected",
 ];
+
+function isOverdue(inv: ApiInvoice): boolean {
+  return (
+    inv.daysOverdue > 0 &&
+    inv.status !== "Paid" &&
+    inv.status !== "Received" &&
+    inv.status !== "Rejected"
+  );
+}
+
+function applyFilter(invoices: ApiInvoice[], filter: FilterStatus): ApiInvoice[] {
+  if (filter === "All") return invoices;
+  if (filter === "Overdue") return invoices.filter(isOverdue);
+  return invoices.filter((i) => i.status === filter);
+}
 
 function FilterChips({
   filter,
