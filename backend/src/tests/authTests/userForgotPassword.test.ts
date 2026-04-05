@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { requestDelete, requestAuthRegister, requestForgotPassword } from "../requestHelpers";
-
-dotenv.config();
 
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh1234$";
@@ -44,11 +41,11 @@ describe("POST /auth/forgot-password", () => {
     expect(res.body).toStrictEqual({ success: true, code: expect.any(String) });
   });
 
-  it("returns 400 when email does not exist", async () => {
+  it("returns 200 when email does not exist but with no code", async () => {
     await requestAuthRegister("Mubashir", "Hussain", PASSWORD, EMAIL);
     const res = await requestForgotPassword("invalid@gmail.com");
 
-    expect(res.statusCode).toStrictEqual(400);
-    expect(res.body).toStrictEqual({ error: expect.any(String) });
+    expect(res.statusCode).toStrictEqual(200);
+    expect(res.body.code).toBeUndefined();
   });
 });

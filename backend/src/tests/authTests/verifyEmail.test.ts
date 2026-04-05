@@ -4,10 +4,7 @@ import {
   requestVerifyEmail,
   verifyEmail,
 } from "../requestHelpers";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
-
-dotenv.config();
 
 beforeEach(async () => {
   await requestDelete();
@@ -20,7 +17,7 @@ afterEach(async () => {
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI!);
   }
 });
 
@@ -30,8 +27,13 @@ afterAll(async () => {
 
 describe("Success", () => {
   test("verifyEmail marks user as verified", async () => {
-    await requestAuthRegister("Mubashir", "Hussain", "Abcdefgh123456$", "example@gmail.com");
-    await verifyEmail("example@gmail.com");
+    const res = await requestAuthRegister(
+      "Mubashir",
+      "Hussain",
+      "Abcdefgh123456$",
+      "example@gmail.com"
+    );
+    await verifyEmail("example@gmail.com", res.body.code);
   });
 });
 

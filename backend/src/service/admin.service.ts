@@ -2,8 +2,10 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
+import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
+import { randomInt } from "crypto";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -12,6 +14,10 @@ export class AdminError extends Error {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+function generateOTP(): string {
+  return randomInt(100000, 999999).toString();
 }
 
 export async function listPendingProjects(): Promise<any[]> {
@@ -103,11 +109,16 @@ export async function approveProject(projectId: string): Promise<void> {
   });
 
   for (const participant of pendingParticipants) {
-    if (participant.email && participant.inviteCode) {
-      sendInviteEmail(participant.email, participant.inviteCode, project.location).catch((err) => {
-        console.error(`Failed to send invite email to ${participant.email}:`, err);
-      });
-    }
+    if (!participant.email) continue;
+
+    const inviteCode = generateOTP();
+    participant.inviteCode = hashCode(inviteCode);
+    participant.dateInvited = new Date();
+    await participant.save();
+
+    await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
+      console.error(`Failed to send invite email to ${participant.email}:`, err);
+    });
   }
 }
 

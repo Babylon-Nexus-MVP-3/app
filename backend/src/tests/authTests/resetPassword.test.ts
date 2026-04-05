@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestAuthRegister,
@@ -7,8 +6,6 @@ import {
   requestVerifyResetCode,
   resetPassword,
 } from "../requestHelpers";
-
-dotenv.config();
 
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh123456$";
@@ -56,7 +53,17 @@ describe("POST /auth/reset-password", () => {
     const res = await resetPassword(resetCode, "NewerPassword1234*");
 
     expect(res.statusCode).toStrictEqual(200);
-    expect(res.body).toStrictEqual({ success: true });
+    expect(res.body).toStrictEqual({
+      success: true,
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+      user: {
+        id: expect.any(String),
+        name: expect.any(String),
+        email: expect.any(String),
+        status: expect.any(String),
+      },
+    });
   });
 
   it("returns 400 when using the same password", async () => {
