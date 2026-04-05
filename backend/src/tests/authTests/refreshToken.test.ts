@@ -9,6 +9,9 @@ import { UserModel } from "../../models/userModel";
 
 let token: string;
 
+// Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
+jest.setTimeout(15000);
+
 beforeEach(async () => {
   await requestDelete();
   const res1 = await requestAuthRegister(
