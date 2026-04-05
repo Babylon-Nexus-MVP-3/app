@@ -60,6 +60,10 @@ export async function submitInvoice(
     throw new ProjectError("Project Does not Exist");
   }
 
+  if (project.status !== "Active") {
+    throw new ProjectError("Project is not Active");
+  }
+
   const participant = await ProjectParticipantModel.findOne({
     projectId,
     userId,
