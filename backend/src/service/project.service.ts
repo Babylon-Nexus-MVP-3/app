@@ -30,6 +30,17 @@ export interface CreateProjectInput {
   invitees?: InviteeInput[];
 }
 
+/**
+ * MongoDB throws error code 11000 for unique index violations. This type guard
+ * lets us catch only that case and rethrow as a clean 400, without swallowing
+ * unrelated errors like network or validation failures.
+ */
+function isDuplicateKeyError(error: unknown): error is { code: number } {
+  return (
+    typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
+  );
+}
+
 /** Sets Project.pmId / ownerId / builderId for frontend display when role is PM / Owner / Builder. */
 export async function syncProjectRoleDisplayFields(
   projectId: string,
@@ -72,6 +83,33 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     throw new ProjectError("Required fields missing: location, council");
   }
 
+  const creatorEmail = user.email.toLowerCase();
+  const participantRole = creatorRole ?? user.role;
+
+  // Normalise and validate invitees before touching the DB
+  const normalizedInvitees = invitees.map((invitee) => ({
+    email: invitee.email.trim().toLowerCase(),
+    role: invitee.role,
+  }));
+
+  // Prevent duplicate invites
+  // Fail before any DB writes — the DB unique index catches this too but only
+  // after the project and creator participant have already been written.
+  const seenInvitees = new Set<string>();
+  for (const invitee of normalizedInvitees) {
+    const key = `${invitee.email}::${invitee.role}`;
+    if (seenInvitees.has(key)) {
+      throw new ProjectError("Duplicate invitees are not allowed");
+    }
+    seenInvitees.add(key);
+  }
+
+  // Reject any invitee that matches the creator's email, regardless of role
+  const creatorAsInvitee = normalizedInvitees.find((i) => i.email === creatorEmail);
+  if (creatorAsInvitee) {
+    throw new ProjectError("Creator cannot be added as an invitee");
+  }
+
   const project = await ProjectModel.create({
     name: name || location,
     location,
@@ -79,33 +117,34 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     status,
   });
 
-  const participantRole = creatorRole ?? user.role;
-
-  // Associate creator with project
+  // Associate creator as an accepted participant
   await ProjectParticipantModel.create({
     projectId: project._id.toString(),
     userId: user._id.toString(),
     role: participantRole,
-    email: user.email,
+    email: creatorEmail,
     status: "Accepted",
   });
 
   await syncProjectRoleDisplayFields(project._id.toString(), user._id.toString(), participantRole);
 
-  // Store invitees as pending participants with OTPs (emails sent on admin approval)
-  for (const invitee of invitees) {
-    const email = invitee.email?.trim();
-    const role = invitee.role;
-    if (email && role) {
+  // DB unique index on { projectId, email, role } prevents duplicates.
+  // Catch the violation and surface it as a clean 400 instead of a 500.
+  try {
+    for (const invitee of normalizedInvitees) {
       await ProjectParticipantModel.create({
         projectId: project._id.toString(),
-        email,
-        role,
-        inviteCode: generateOTP(),
+        email: invitee.email,
+        role: invitee.role,
         dateInvited: new Date(),
         status: "Pending",
       });
     }
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new ProjectError("User is already invited to this project in that role");
+    }
+    throw error;
   }
 
   await EventModel.create({
@@ -125,8 +164,6 @@ export interface InviteSubbieInput {
   trade: string;
 }
 
-// Send Invite Code and Email directly for now
-// Move to sending via email in production
 export interface InviteSubbieResult {
   participant: {
     projectId: string;
@@ -148,13 +185,13 @@ export async function inviteParticipant(
   projectId: string,
   userId: string
 ): Promise<InviteSubbieResult> {
-  const email = input.email.trim();
+  const email = input.email.trim().toLowerCase();
   const trade = input.trade;
   const role = input.role;
 
   const project = await ProjectModel.findById(projectId);
   if (!project) {
-    throw new ProjectError("Project Does not exist");
+    throw new ProjectError("Project does not exist");
   }
 
   if (project.status !== "Active") {
@@ -170,23 +207,27 @@ export async function inviteParticipant(
     throw new ProjectError("You are not a participant on this project", 403);
   }
 
-  // Since Builder/PM/Owner/Admin dont have a trade only check if the role is subbie or consultant
-  const requiresTrade = role === UserRole.Subbie || role === UserRole.Consultant;
-  if (!email || (requiresTrade && !trade) || !role) {
-    throw new ProjectError("Missing Required Fields to add particpant: email, trade, role");
-  }
-
   const inviteCode = generateOTP();
   const hashedCode = hashCode(inviteCode);
 
-  const participant = await ProjectParticipantModel.create({
-    projectId,
-    role,
-    email,
-    inviteCode: hashedCode,
-    trade,
-    dateInvited: new Date(Date.now()),
-  });
+  // DB unique index on { projectId, email, role } prevents duplicates.
+  // Catch the violation and surface it as a clean 400 instead of a 500.
+  let participant;
+  try {
+    participant = await ProjectParticipantModel.create({
+      projectId,
+      role,
+      email,
+      inviteCode: hashedCode,
+      trade,
+      dateInvited: new Date(),
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new ProjectError("User is already invited to this project in that role");
+    }
+    throw error;
+  }
 
   if (process.env.NODE_ENV !== "test") {
     await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
@@ -194,7 +235,6 @@ export async function inviteParticipant(
     });
   }
 
-  // Send participant without invite code which is only sent via email.
   const safeParticipant = {
     projectId: participant.projectId,
     role: participant.role,
@@ -216,7 +256,7 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
 
   const user = await UserModel.findById(userId);
   if (!user) {
-    throw new AuthError("User Does not exist");
+    throw new AuthError("User does not exist");
   }
 
   const hashedCode = hashCode(inviteCode);
@@ -241,13 +281,22 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new ProjectError("This project is no longer active", 403);
   }
 
+  // Guard against the same user accepting a different invite for the same role on this project
+  const alreadyMember = await ProjectParticipantModel.findOne({
+    projectId: participant.projectId,
+    userId,
+    role: participant.role,
+    status: "Accepted",
+  });
+  if (alreadyMember) {
+    throw new ProjectError("You are already a member of this project in that role");
+  }
+
   const updatedParticipant = await ProjectParticipantModel.findOneAndUpdate(
     { inviteCode: hashedCode, status: "Pending" },
     {
-      userId,
-      status: "Accepted",
-      dateAccepted: new Date(),
-      inviteCode: null,
+      $set: { userId, status: "Accepted", dateAccepted: new Date() },
+      $unset: { inviteCode: 1 },
     },
     { returnDocument: "after" }
   );
@@ -256,13 +305,7 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
     throw new ProjectError("Invalid or expired invite code");
   }
 
-  if (updatedParticipant) {
-    await syncProjectRoleDisplayFields(
-      updatedParticipant.projectId,
-      userId,
-      updatedParticipant.role
-    );
-  }
+  await syncProjectRoleDisplayFields(updatedParticipant.projectId, userId, updatedParticipant.role);
 
   return { participant: updatedParticipant };
 }
