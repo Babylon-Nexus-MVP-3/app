@@ -8,9 +8,29 @@ import {
   submitInvoice,
 } from "../service/invoice.service";
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { submittingParty, submittingCategory, description, amount } = req.body;
+    if (
+      !isNonEmptyString(submittingParty) ||
+      !isNonEmptyString(submittingCategory) ||
+      !isNonEmptyString(description) ||
+      amount == null
+    ) {
+      res.status(400).json({
+        error: "Required fields missing: submittingParty, submittingCategory, description, amount",
+      });
+      return;
+    }
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ error: "Invalid amount. Amount must be a positive number" });
+      return;
+    }
+
     const projectId = req.params.projectId as string;
     const userId = req.user!.sub;
 
