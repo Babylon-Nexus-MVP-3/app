@@ -72,7 +72,12 @@ export function CalendarTab({
       container = { ...container, backgroundColor: statusColor(calStatus) };
       textColor = Colors.white;
     } else if (isToday) {
-      container = { ...container, backgroundColor: Colors.offWhite, borderWidth: 2, borderColor: Colors.navy };
+      container = {
+        ...container,
+        backgroundColor: Colors.offWhite,
+        borderWidth: 2,
+        borderColor: Colors.navy,
+      };
       textColor = Colors.textPrimary;
     } else {
       continue; // no marking needed
@@ -105,7 +110,14 @@ export function CalendarTab({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <Calendar
         markingType="custom"

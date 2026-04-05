@@ -273,7 +273,11 @@ export default function ProjectDetail() {
           </View>
 
           {overdue > 0 && (
-            <TouchableOpacity style={styles.overdueAlert} onPress={() => setActiveTab("myspace")} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.overdueAlert}
+              onPress={() => setActiveTab("myspace")}
+              activeOpacity={0.8}
+            >
               <Text style={styles.overdueAlertText}>
                 {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
               </Text>

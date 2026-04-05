@@ -92,7 +92,14 @@ export function InvoiceUploaderView({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "myInvoices" && (
           <>
@@ -301,7 +308,14 @@ export function DualRoleMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "myInvoices" && (
           <>
@@ -371,7 +385,9 @@ export function DualRoleMySpace({
               </View>
             </View>
             <FilterChips filter={toActionFilter} onChange={setToActionFilter} />
-            {filteredToAction.length === 0 && <Text style={styles.emptyText}>No invoices to approve.</Text>}
+            {filteredToAction.length === 0 && (
+              <Text style={styles.emptyText}>No invoices to approve.</Text>
+            )}
             {filteredToAction.map((inv) => (
               <ApprovalCard
                 key={`ap-${inv.id}`}
@@ -605,7 +621,14 @@ export function OwnerMySpace({
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
       >
         {subTab === "toApprove" && (
           <>
@@ -744,7 +767,14 @@ export function FinancierMySpace({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <AllInvoicesStats
         allActive={finActive}
@@ -822,7 +852,14 @@ export function ObserverMySpace({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <View style={styles.statRow}>
         {(
@@ -896,7 +933,12 @@ const FILTER_STATUSES: FilterStatus[] = [
 ];
 
 function isOverdue(inv: ApiInvoice): boolean {
-  return inv.daysOverdue > 0 && inv.status !== "Paid" && inv.status !== "Received" && inv.status !== "Rejected";
+  return (
+    inv.daysOverdue > 0 &&
+    inv.status !== "Paid" &&
+    inv.status !== "Received" &&
+    inv.status !== "Rejected"
+  );
 }
 
 function applyFilter(invoices: ApiInvoice[], filter: FilterStatus): ApiInvoice[] {

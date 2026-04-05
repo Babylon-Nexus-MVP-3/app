@@ -80,9 +80,23 @@ export function MySpaceTab({
       />
     );
   else if (role === "Financier" || role === "VIP")
-    content = <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} refreshing={refreshing} onRefresh={onRefresh} />;
+    content = (
+      <FinancierMySpace
+        invoices={invoices}
+        onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+    );
   else if (role === "Observer")
-    content = <ObserverMySpace invoices={invoices} onTapInvoice={setDetailInvoice} refreshing={refreshing} onRefresh={onRefresh} />;
+    content = (
+      <ObserverMySpace
+        invoices={invoices}
+        onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+    );
   else
     content = (
       <View style={styles.placeholder}>
