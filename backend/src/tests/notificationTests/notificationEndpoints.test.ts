@@ -76,6 +76,7 @@ describe("Notification endpoints", () => {
     expect(Array.isArray(res.body.notifications)).toBe(true);
     expect(res.body.notifications.length).toBe(1);
     expect(res.body.notifications[0].message).toBe("Test notification");
+    expect(res.body.notifications[0].projectName).toBe("Notify Project");
     expect(res.body.notifications[0].read).toBe(false);
   });
 
