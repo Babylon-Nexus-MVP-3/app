@@ -149,12 +149,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
   const email = input.email?.toLowerCase().trim();
   const password = input.password;
 
-  if (!email || !password) {
-    throw new AuthError("Email and password are required", 400);
-  }
-
   const user = await UserModel.findOne({ email });
-
   if (!user) {
     throw new AuthError("Invalid credentials", 400);
   }
@@ -421,10 +416,6 @@ export async function userChangePassword(
   currentPassword: string,
   newPassword: string
 ) {
-  if (!newPassword || !currentPassword) {
-    throw new AuthError("Missing Fields: New Password, Current Password");
-  }
-
   if (newPassword.length < 12) {
     throw new AuthError("Password must be at least 12 characters");
   }
