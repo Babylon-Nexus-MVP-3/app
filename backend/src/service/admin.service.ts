@@ -5,6 +5,7 @@ import { InvoiceModel } from "../models/invoiceModel";
 import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
+import { randomInt } from "crypto";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -13,6 +14,10 @@ export class AdminError extends Error {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+function generateOTP(): string {
+  return randomInt(100000, 999999).toString();
 }
 
 export async function listPendingProjects(): Promise<any[]> {
