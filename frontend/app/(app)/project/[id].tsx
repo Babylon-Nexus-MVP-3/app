@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -206,13 +207,22 @@ export default function ProjectDetail() {
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back to all projects"
+            >
               <Text style={styles.backArrow}>‹</Text>
               <Text style={styles.backLabel}>All Projects</Text>
             </TouchableOpacity>
             <TouchableOpacity
               ref={kebabRef}
               style={styles.kebabBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Project menu"
               onPress={() => {
                 kebabRef.current?.measure((_x, _y, _w, h, _px, py) => {
                   setMenuTop(py + h + 4);
@@ -395,7 +405,13 @@ export default function ProjectDetail() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <TouchableOpacity onPress={() => setInvoiceVisible(false)} style={styles.raiseBack}>
+              <TouchableOpacity
+                onPress={() => setInvoiceVisible(false)}
+                style={styles.raiseBack}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
                 <Text style={styles.raiseBackArrow}>←</Text>
               </TouchableOpacity>
 
@@ -468,6 +484,9 @@ export default function ProjectDetail() {
               <TouchableOpacity
                 onPress={() => setInviteVisible(false)}
                 style={styles.inviteBackBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Close invite"
               >
                 <Text style={styles.inviteBackArrow}>‹</Text>
                 <Text style={styles.inviteBackLabel}>My Space</Text>

@@ -85,7 +85,11 @@ export default function AdminProjects() {
               <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
               <Text style={styles.headerTitle}>All Projects</Text>
             </View>
-            <TouchableOpacity onPress={handleSignOutPress} style={styles.signOutBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={handleSignOutPress}
+              style={styles.signOutBtn}
+              activeOpacity={0.7}
+            >
               <Ionicons name="log-out-outline" size={22} color={Colors.gold} />
             </TouchableOpacity>
           </View>

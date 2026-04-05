@@ -15,6 +15,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 
 /* ─── API types ─── */
@@ -380,6 +381,9 @@ export default function AuditLog() {
               } as any)
             }
             style={styles.backBtn}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back to project"
           >
             <Text style={styles.backArrow}>‹</Text>
             <Text style={styles.backLabel}>Back</Text>
@@ -493,7 +497,18 @@ export default function AuditLog() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.offWhite },
   header: { paddingBottom: 20, paddingHorizontal: 20 },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingTop: 12, marginBottom: 10 },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    minHeight: 44,
+    minWidth: 44,
+    marginBottom: 10,
+    alignSelf: "flex-start",
+    direction: "ltr",
+  },
   backArrow: { fontSize: 28, color: "rgba(255,255,255,0.6)", lineHeight: 30 },
   backLabel: { fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: "500" },
   exportBtns: { flexDirection: "row", gap: 8, marginTop: 14 },

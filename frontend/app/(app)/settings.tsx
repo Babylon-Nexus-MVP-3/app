@@ -62,7 +62,11 @@ export default function Settings() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleLogoutPress} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleLogoutPress}
+          activeOpacity={0.85}
+        >
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>

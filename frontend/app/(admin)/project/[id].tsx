@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
 
@@ -215,8 +216,14 @@ export default function AdminProjectDetail() {
     <View style={styles.screen}>
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
         <SafeAreaView edges={["top"]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={20} color={Colors.gold} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back to all projects"
+          >
+            <Ionicons name="chevron-back" size={22} color={Colors.gold} />
             <Text style={styles.backLabel}>All Projects</Text>
           </TouchableOpacity>
 
@@ -501,10 +508,15 @@ const styles = StyleSheet.create({
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    justifyContent: "flex-start",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 44,
+    minWidth: 44,
     marginBottom: 12,
+    alignSelf: "flex-start",
+    direction: "ltr",
   },
   backLabel: { fontSize: 14, color: Colors.gold, fontWeight: "600" },
   adminBadge: {
