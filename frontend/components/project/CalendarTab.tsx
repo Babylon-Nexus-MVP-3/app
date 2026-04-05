@@ -63,7 +63,7 @@ export function CalendarTab({
     const calStatus = dayStatusMap.get(dateStr);
 
     let container: Record<string, any> = { borderRadius: 16 };
-    let textColor: string = Colors.textPrimary;
+    let textColor: string;
 
     if (isSelected) {
       container = { ...container, backgroundColor: Colors.gold };
