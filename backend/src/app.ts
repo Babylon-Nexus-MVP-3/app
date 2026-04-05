@@ -47,8 +47,8 @@ app.use("/projects", projectsRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationRouter);
 
-app.get("/", (req, res) => {
-  res.redirect("/api-docs");
+app.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({ success: true });
 });
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
