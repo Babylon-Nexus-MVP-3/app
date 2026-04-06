@@ -2,7 +2,7 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 
 export const NotificationType = {
   ProjectPendingApproval: "ProjectPendingApproval",
-  ProjectAccepted: "ProjectAccepted",
+  ProjectApproved: "ProjectApproved",
   ProjectRejected: "ProjectRejected",
   InvoiceSubmitted: "InvoiceSubmitted",
   InvoiceApproved: "InvoiceApproved",
