@@ -355,6 +355,7 @@ export async function getAdminProjectDetail(projectId: string) {
       name: project.name,
       location: project.location,
       council: project.council,
+      status: project.status,
     },
     participants: participants.map((p) => ({
       participantId: p._id.toString(),
