@@ -6,6 +6,7 @@ import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
 import { randomInt } from "crypto";
+import { notifyProjectApproved } from "./notification.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -18,6 +19,14 @@ export class AdminError extends Error {
 
 function generateOTP(): string {
   return randomInt(100000, 999999).toString();
+}
+
+async function notifyAdminSafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — project approval is already committed
+  }
 }
 
 export async function listPendingProjects(): Promise<any[]> {
@@ -107,6 +116,8 @@ export async function approveProject(projectId: string): Promise<void> {
     projectId,
     status: "Pending",
   });
+
+  await notifyAdminSafely(() => notifyProjectApproved(projectId, project.name));
 
   for (const participant of pendingParticipants) {
     if (!participant.email) continue;

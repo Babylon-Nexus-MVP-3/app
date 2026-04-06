@@ -195,6 +195,28 @@ export async function notifyProjectPendingApproval(
   });
 }
 
+export async function notifyProjectApproved(projectId: string, projectName: string): Promise<void> {
+  // Creator can be derived as the first participant of the project.
+  const creatorParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    status: "Accepted",
+    userId: { $exists: true, $ne: null },
+  })
+    .select("userId")
+    .lean();
+
+  if (!creatorParticipant?.userId) {
+    throw new NotificationError("Project creator not found", 404);
+  }
+
+  await createNotification({
+    recipientUserId: creatorParticipant.userId.toString(),
+    projectId,
+    type: NotificationType.ProjectApproved,
+    message: `Project "${projectName}" has been approved by the admin.`,
+  });
+}
+
 function getOverdueMilestones(daysOverdue: number): number[] {
   const milestones = [14, 21, 28];
   return milestones.filter((m) => daysOverdue >= m);
