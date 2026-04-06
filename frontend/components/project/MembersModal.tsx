@@ -28,16 +28,18 @@ export function MembersModal({
       <View style={styles.membersContainer}>
         <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.membersHeader}>
           <SafeAreaView edges={["top"]}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.detailBackBtn}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.detailBackArrow}>‹</Text>
-              <Text style={styles.detailBackLabel}>Back</Text>
-            </TouchableOpacity>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.backBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Text style={styles.backArrow}>‹</Text>
+                <Text style={styles.backLabel}>Back</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.membersTitle}>Project Members</Text>
           </SafeAreaView>
         </LinearGradient>
