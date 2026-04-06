@@ -681,6 +681,12 @@ export const styles = StyleSheet.create({
     textAlign: "right",
     fontWeight: "600",
   },
+  detailSubVal: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: "right",
+    marginTop: 2,
+  },
   detailActionBtn: {
     borderRadius: 10,
     paddingVertical: 12,

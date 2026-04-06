@@ -110,7 +110,12 @@ export function InvoiceDetailModal({
           <View style={styles.detailSection}>
             <View style={styles.detailRow}>
               <Text style={styles.detailKey}>Submitted by</Text>
-              <Text style={styles.detailVal}>{inv.submittingParty}</Text>
+              <View style={{ flex: 2, alignItems: "flex-end" }}>
+                <Text style={[styles.detailVal, { flex: 0 }]}>{inv.submittingParty}</Text>
+                {!!inv.submittedByName && (
+                  <Text style={styles.detailSubVal}>{inv.submittedByName}</Text>
+                )}
+              </View>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailKey}>Category</Text>
@@ -146,7 +151,12 @@ export function InvoiceDetailModal({
             )}
             <View style={styles.detailRow}>
               <Text style={styles.detailKey}>Approver</Text>
-              <Text style={styles.detailVal}>{displayRole(inv.approverRole)}</Text>
+              <View style={{ flex: 2, alignItems: "flex-end" }}>
+                <Text style={[styles.detailVal, { flex: 0 }]}>{displayRole(inv.approverRole)}</Text>
+                {inv.status === "Pending" && inv.approverNames && inv.approverNames.length > 0 && (
+                  <Text style={styles.detailSubVal}>{inv.approverNames.join(", ")}</Text>
+                )}
+              </View>
             </View>
             {inv.daysOverdue > 0 &&
               inv.status !== "Paid" &&

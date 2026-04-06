@@ -68,8 +68,8 @@ export function InvoiceUploaderView({
   const filteredAllInvoices = applyFilter(invoices, allFilter);
 
   const SUB_TABS = [
-    { key: "myInvoices" as const, label: "My Invoices" },
     { key: "allInvoices" as const, label: "All Invoices" },
+    { key: "myInvoices" as const, label: "My Invoices" },
   ];
 
   return (
@@ -283,9 +283,9 @@ export function DualRoleMySpace({
   const filteredAllInvoices = applyFilter(allInvoices, allFilter);
 
   const SUB_TABS = [
+    { key: "allInvoices" as const, label: "All Invoices" },
     { key: "myInvoices" as const, label: "My Invoices" },
     { key: "toApprove" as const, label: "To Action" },
-    { key: "allInvoices" as const, label: "All Invoices" },
   ];
 
   return (
