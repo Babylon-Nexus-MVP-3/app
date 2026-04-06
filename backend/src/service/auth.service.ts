@@ -108,6 +108,7 @@ interface SafeUser {
   id: string;
   name: string;
   email: string;
+  role: string;
   status: string;
 }
 
@@ -182,6 +183,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
@@ -339,6 +341,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
@@ -376,6 +379,7 @@ export async function userVerifyEmail(verificationCode: string) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      role: user.role,
       status: user.status,
     } satisfies SafeUser,
   };
