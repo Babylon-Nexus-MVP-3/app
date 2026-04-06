@@ -261,6 +261,30 @@ export async function notifyProjectDeleted(projectId: string): Promise<void> {
   );
 }
 
+export async function notifyProjectParticipantRemoved(
+  projectId: string,
+  recipientUserIds: string[]
+): Promise<void> {
+  const uniqueRecipientIds = unique(recipientUserIds);
+  if (uniqueRecipientIds.length === 0) return;
+
+  const project = await ProjectModel.findById(projectId).select("name").lean();
+  if (!project) {
+    throw new NotificationError("Project not found", 404);
+  }
+
+  await Promise.all(
+    uniqueRecipientIds.map((recipientUserId) =>
+      createNotification({
+        recipientUserId,
+        projectId,
+        type: NotificationType.ProjectParticipantRemoved,
+        message: `You have been removed from project "${project.name}" by the admin.`,
+      })
+    )
+  );
+}
+
 function getOverdueMilestones(daysOverdue: number): number[] {
   const milestones = [14, 21, 28];
   return milestones.filter((m) => daysOverdue >= m);

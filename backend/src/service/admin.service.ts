@@ -9,6 +9,7 @@ import { randomInt } from "crypto";
 import {
   notifyProjectApproved,
   notifyProjectDeleted,
+  notifyProjectParticipantRemoved,
   notifyProjectRejected,
 } from "./notification.service";
 
@@ -257,6 +258,8 @@ export async function removeProjectParticipant(
   }
 
   await project.save();
+
+  await notifyAdminSafely(() => notifyProjectParticipantRemoved(projectId, deletedAcceptedUserIds));
 
   return { removedCount };
 }
