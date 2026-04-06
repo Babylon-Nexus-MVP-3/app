@@ -60,6 +60,13 @@ export function invoiceStatusLabel(status: ApiInvoice["status"]): string {
 // Observer sees no amounts at all.
 export function canViewAmount(role: string, inv: ApiInvoice, userId: string): boolean {
   if (role === "Observer") return false;
-  if (role === "Admin" || role === "Owner" || role === "PM" || role === "Financier" || role === "VIP") return true;
+  if (
+    role === "Admin" ||
+    role === "Owner" ||
+    role === "PM" ||
+    role === "Financier" ||
+    role === "VIP"
+  )
+    return true;
   return inv.submittedByUserId === userId || inv.approverRole === role;
 }

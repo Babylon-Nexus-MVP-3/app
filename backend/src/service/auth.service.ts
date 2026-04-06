@@ -443,7 +443,7 @@ export async function userChangePassword(
 
   try {
     checkPassword(newPassword);
-  } catch (error) {
+  } catch {
     throw new AuthError("Invalid password, please follow password rules");
   }
 
