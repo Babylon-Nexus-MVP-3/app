@@ -12,7 +12,7 @@ export async function create(req: Request, res: Response, next: NextFunction): P
   try {
     const { submittingParty, submittingCategory, description, amount } = req.body;
     const projectId = req.params.projectId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
 
     const invoiceId = await submitInvoice(
       { submittingParty, submittingCategory, description, amount },
@@ -30,7 +30,7 @@ export async function approve(req: Request, res: Response, next: NextFunction): 
   try {
     const projectId = req.params.projectId as string;
     const invoiceId = req.params.invoiceId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     await approveInvoice(invoiceId, projectId, userId);
     res.status(200).json({ success: true });
   } catch (err) {
@@ -42,7 +42,7 @@ export async function paid(req: Request, res: Response, next: NextFunction): Pro
   try {
     const projectId = req.params.projectId as string;
     const invoiceId = req.params.invoiceId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     await markInvoicePaid(invoiceId, projectId, userId);
     res.status(200).json({ success: true });
   } catch (err) {
@@ -54,7 +54,7 @@ export async function received(req: Request, res: Response, next: NextFunction):
   try {
     const projectId = req.params.projectId as string;
     const invoiceId = req.params.invoiceId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     await markInvoiceReceived(invoiceId, projectId, userId);
     res.status(200).json({ success: true });
   } catch (err) {
@@ -66,7 +66,7 @@ export async function reject(req: Request, res: Response, next: NextFunction): P
   try {
     const projectId = req.params.projectId as string;
     const invoiceId = req.params.invoiceId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     const { rejectionReason } = req.body;
     await rejectInvoice(invoiceId, projectId, userId, rejectionReason);
     res.status(200).json({ success: true });
@@ -78,7 +78,7 @@ export async function reject(req: Request, res: Response, next: NextFunction): P
 export async function auditLog(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const projectId = req.params.projectId as string;
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     const result = await getProjectAuditLog(projectId, userId);
     res.status(200).json(result);
   } catch (err) {
