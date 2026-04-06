@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -65,6 +66,19 @@ export default function AdminProjects() {
 
   const total = projects.length;
 
+  function handleSignOutPress() {
+    Alert.alert("Sign out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: () => {
+          void logout();
+        },
+      },
+    ]);
+  }
+
   return (
     <View style={styles.screen}>
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
@@ -74,7 +88,11 @@ export default function AdminProjects() {
               <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
               <Text style={styles.headerTitle}>All Projects</Text>
             </View>
-            <TouchableOpacity onPress={logout} style={styles.signOutBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={handleSignOutPress}
+              style={styles.signOutBtn}
+              activeOpacity={0.7}
+            >
               <Ionicons name="log-out-outline" size={22} color={Colors.gold} />
             </TouchableOpacity>
           </View>

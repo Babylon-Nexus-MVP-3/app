@@ -3,6 +3,7 @@ import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import {
   apiStatusToCalStatus,
@@ -73,7 +74,13 @@ export function InvoiceDetailModal({
       <View style={styles.detailScreen}>
         <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.detailHeader}>
           <SafeAreaView edges={["top"]}>
-            <TouchableOpacity onPress={onClose} style={styles.detailBackBtn}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.detailBackBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
               <Text style={styles.detailBackArrow}>‹</Text>
               <Text style={styles.detailBackLabel}>My Space</Text>
             </TouchableOpacity>

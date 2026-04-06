@@ -6,7 +6,7 @@
     "seed:dev": "ts-node -T scripts/seedDev.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint-fix": "eslint --fix 'src/**/*.{ts,js}'",
-    "test": "cross-env NODE_ENV=test jest --detectOpenHandles"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

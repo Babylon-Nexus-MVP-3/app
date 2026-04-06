@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
 
@@ -284,6 +285,9 @@ export default function Projects() {
               <TouchableOpacity
                 onPress={() => setJoinModalVisible(false)}
                 style={styles.joinBackBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Close join project"
               >
                 <Text style={styles.joinBackArrow}>‹</Text>
                 <Text style={styles.joinBackLabel}>My Projects</Text>
@@ -596,10 +600,14 @@ const styles = StyleSheet.create({
   joinBackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 20,
-    paddingTop: 52,
+    justifyContent: "flex-start",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 44,
+    minWidth: 44,
     marginBottom: 8,
+    direction: "ltr",
   },
   joinBackArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
   joinBackLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
