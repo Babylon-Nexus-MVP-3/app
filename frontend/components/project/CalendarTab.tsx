@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { Colors } from "@/constants/colors";
 import { ApiInvoice, InvoiceActionType, InvoiceStatus, SEVERITY } from "./types";
@@ -19,6 +19,8 @@ export function CalendarTab({
   role,
   userId,
   invoiceAction,
+  refreshing,
+  onRefresh,
 }: {
   invoices: ApiInvoice[];
   role: string;
@@ -28,6 +30,8 @@ export function CalendarTab({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const _t = new Date();
   const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, "0")}-${String(_t.getDate()).padStart(2, "0")}`;
@@ -45,16 +49,46 @@ export function CalendarTab({
     }
   }
 
-  // Build markedDates for react-native-calendars (multi-dot)
+  // Build markedDates — priority: selected > status color > today ring
+  const allMarkedDates = new Set([
+    ...dayStatusMap.keys(),
+    todayStr,
+    ...(selectedDate ? [selectedDate] : []),
+  ]);
+
   const markedDates: Record<string, any> = {};
-  for (const [dateStr, calStatus] of dayStatusMap) {
+  for (const dateStr of allMarkedDates) {
+    const isSelected = selectedDate === dateStr;
+    const isToday = dateStr === todayStr;
+    const calStatus = dayStatusMap.get(dateStr);
+
+    let container: Record<string, any> = { borderRadius: 16 };
+    let textColor: string;
+
+    if (isSelected) {
+      container = { ...container, backgroundColor: Colors.gold };
+      textColor = Colors.white;
+    } else if (calStatus) {
+      container = { ...container, backgroundColor: statusColor(calStatus) };
+      textColor = Colors.white;
+    } else if (isToday) {
+      container = {
+        ...container,
+        backgroundColor: Colors.offWhite,
+        borderWidth: 2,
+        borderColor: Colors.navy,
+      };
+      textColor = Colors.textPrimary;
+    } else {
+      continue; // no marking needed
+    }
+
     markedDates[dateStr] = {
-      dots: [{ key: dateStr, color: statusColor(calStatus) }],
-      ...(selectedDate === dateStr && { selected: true, selectedColor: Colors.navy }),
+      customStyles: {
+        container,
+        text: { color: textColor, fontWeight: "bold" },
+      },
     };
-  }
-  if (selectedDate && !markedDates[selectedDate]) {
-    markedDates[selectedDate] = { selected: true, selectedColor: Colors.navy };
   }
 
   // Invoices due on the selected date
@@ -76,9 +110,17 @@ export function CalendarTab({
       style={styles.body}
       contentContainerStyle={styles.bodyContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.gold}
+          colors={[Colors.gold]}
+        />
+      }
     >
       <Calendar
-        markingType="multi-dot"
+        markingType="custom"
         markedDates={markedDates}
         onDayPress={(day) =>
           setSelectedDate(day.dateString === selectedDate ? null : day.dateString)
@@ -87,14 +129,8 @@ export function CalendarTab({
           backgroundColor: Colors.offWhite,
           calendarBackground: Colors.offWhite,
           textSectionTitleColor: Colors.textSecondary,
-          selectedDayBackgroundColor: Colors.navy,
-          selectedDayTextColor: Colors.white,
-          todayTextColor: Colors.white,
-          todayBackgroundColor: Colors.gold,
           dayTextColor: Colors.textPrimary,
           textDisabledColor: "rgba(0,0,0,0.2)",
-          dotColor: Colors.navy,
-          selectedDotColor: Colors.white,
           arrowColor: Colors.navy,
           monthTextColor: Colors.textPrimary,
           textMonthFontWeight: "bold",

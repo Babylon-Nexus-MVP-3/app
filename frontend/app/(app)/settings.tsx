@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,9 +9,18 @@ import { useAuth } from "@/context/AuthContext";
 export default function Settings() {
   const { user, logout } = useAuth();
 
-  async function handleLogout() {
-    await logout();
-    router.replace("/");
+  function handleLogoutPress() {
+    Alert.alert("Sign out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/");
+        },
+      },
+    ]);
   }
 
   const initials = user?.name
@@ -53,7 +62,11 @@ export default function Settings() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleLogout} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleLogoutPress}
+          activeOpacity={0.85}
+        >
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>

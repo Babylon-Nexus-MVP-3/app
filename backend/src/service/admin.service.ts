@@ -2,8 +2,10 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
+import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
+import { randomInt } from "crypto";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -14,38 +16,8 @@ export class AdminError extends Error {
   }
 }
 
-export async function listPendingUsers(): Promise<any[]> {
-  const users = await UserModel.find({ status: "Pending" })
-    .select("name email role createdAt")
-    .sort({ createdAt: -1 })
-    .lean();
-  return users.map((u) => ({
-    _id: u._id.toString(),
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    createdAt: u.createdAt,
-  }));
-}
-
-export async function approveUser(userId: string): Promise<void> {
-  const result = await UserModel.updateOne(
-    { _id: userId, status: "Pending" },
-    { $set: { status: "Active", emailVerified: true } }
-  );
-  if (result.matchedCount === 0) {
-    throw new AdminError("User not found or already processed", 404);
-  }
-}
-
-export async function rejectUser(userId: string): Promise<void> {
-  const result = await UserModel.updateOne(
-    { _id: userId, status: "Pending" },
-    { $set: { status: "Rejected" } }
-  );
-  if (result.matchedCount === 0) {
-    throw new AdminError("User not found or already processed", 404);
-  }
+function generateOTP(): string {
+  return randomInt(100000, 999999).toString();
 }
 
 export async function listPendingProjects(): Promise<any[]> {
@@ -137,11 +109,16 @@ export async function approveProject(projectId: string): Promise<void> {
   });
 
   for (const participant of pendingParticipants) {
-    if (participant.email && participant.inviteCode) {
-      sendInviteEmail(participant.email, participant.inviteCode, project.location).catch((err) => {
-        console.error(`Failed to send invite email to ${participant.email}:`, err);
-      });
-    }
+    if (!participant.email) continue;
+
+    const inviteCode = generateOTP();
+    participant.inviteCode = hashCode(inviteCode);
+    participant.dateInvited = new Date();
+    await participant.save();
+
+    await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
+      console.error(`Failed to send invite email to ${participant.email}:`, err);
+    });
   }
 }
 

@@ -1,17 +1,58 @@
 import { Request, Response, NextFunction } from "express";
+import validator from "validator";
 import {
   acceptInviteParticipant,
   createProject,
   inviteParticipant,
 } from "../service/project.service";
 import { getProjectDetails } from "../service/projectDetails.service";
+import { UserRole } from "../models/userModel";
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isValidRole(value: unknown): value is UserRole {
+  return typeof value === "string" && Object.values(UserRole).includes(value as UserRole);
+}
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { name, location, council, creatorRole, invitees } = req.body;
+    if (!isNonEmptyString(location) || !isNonEmptyString(council)) {
+      res.status(400).json({ error: "Location and council are required" });
+      return;
+    }
+    if (name != null && !isNonEmptyString(name)) {
+      res.status(400).json({ error: "Name must be a non-empty string when provided" });
+      return;
+    }
+    if (creatorRole != null && !isValidRole(creatorRole)) {
+      res.status(400).json({ error: "Creator role is invalid" });
+      return;
+    }
+    if (invitees != null) {
+      if (!Array.isArray(invitees)) {
+        res.status(400).json({ error: "Invitees must be an array" });
+        return;
+      }
+
+      const hasInvalidInvitee = invitees.some(
+        (invitee) =>
+          !invitee ||
+          !isNonEmptyString(invitee.email) ||
+          !validator.isEmail(invitee.email) ||
+          !isValidRole(invitee.role)
+      );
+
+      if (hasInvalidInvitee) {
+        res.status(400).json({ error: "Each invitee must include a valid email and role" });
+        return;
+      }
+    }
 
     const projectId = await createProject({
-      creatorId: req.user.sub,
+      creatorId: req.user!.sub,
       name,
       location,
       council,
@@ -30,10 +71,28 @@ Allow Project Manager to invite SubContracters to created project
 export async function invite(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, role, trade } = req.body;
-    const userId = req.user.sub;
+    if (!isNonEmptyString(email) || !validator.isEmail(email)) {
+      res.status(400).json({ error: "A valid email is required" });
+      return;
+    }
+    if (!isValidRole(role)) {
+      res.status(400).json({ error: "Role is invalid" });
+      return;
+    }
+    const requiresTrade = role === UserRole.Subbie || role === UserRole.Consultant;
+    if (requiresTrade && !isNonEmptyString(trade)) {
+      res.status(400).json({ error: "Trade is required for subbies and consultants" });
+      return;
+    }
+    if (trade != null && !isNonEmptyString(trade)) {
+      res.status(400).json({ error: "Trade must be a non-empty string when provided" });
+      return;
+    }
+
+    const userId = req.user!.sub;
     const projectId = req.params.projectId as string;
-    const { participant } = await inviteParticipant({ email, role, trade }, projectId, userId);
-    res.status(200).json({ success: true, participant });
+    const result = await inviteParticipant({ email, role, trade }, projectId, userId);
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
@@ -42,7 +101,12 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
 export async function acceptInvite(req: Request, res: Response, next: NextFunction) {
   try {
     const { inviteCode } = req.body;
-    const userId = req.user.sub;
+    if (!isNonEmptyString(inviteCode)) {
+      res.status(400).json({ error: "Invite code is required" });
+      return;
+    }
+
+    const userId = req.user!.sub;
     const { participant } = await acceptInviteParticipant(inviteCode, userId);
     res.status(200).json({ success: true, participant });
   } catch (err) {
@@ -52,7 +116,6 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
 
 export async function getOne(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // requireAuth already attaches req.user; sub is always present for a valid access token.
     const userId = req.user!.sub;
     const projectId = req.params.projectId as string;
     const details = await getProjectDetails(projectId, userId);

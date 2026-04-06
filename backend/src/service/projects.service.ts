@@ -6,6 +6,11 @@ function isPaidStatus(status: InvoiceStatus): boolean {
   return status === "Paid" || status === "Received";
 }
 
+function isOverdue(invoice: any, now: Date): boolean {
+  if (isPaidStatus(invoice.status) || invoice.status === "Rejected") return false;
+  return new Date(invoice.dateDue).getTime() < now.getTime();
+}
+
 function computeHealthScore(invoices: any[], now: Date): number {
   const paid = invoices.filter((i) => isPaidStatus(i.status));
   if (paid.length === 0) return 100;
@@ -87,9 +92,7 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
 
     const invoices = invoicesByProject.get(projectId) ?? [];
     const healthScore = computeHealthScore(invoices, now);
-    const overdueInvoiceCount = invoices.filter(
-      (i) => !isPaidStatus(i.status) && i.daysOverdue > 0
-    ).length;
+    const overdueInvoiceCount = invoices.filter((i) => isOverdue(i, now)).length;
 
     return { ...p, userRole: inferredRole, healthScore, overdueInvoiceCount };
   });

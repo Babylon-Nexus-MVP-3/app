@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestInvite,
@@ -9,8 +8,6 @@ import {
 } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 import { UserRole } from "../../models/userModel";
-
-dotenv.config();
 
 const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
@@ -57,10 +54,9 @@ describe("POST /project/invite/accept", () => {
   it("returns 200 and accepted participant when subbie accepts a valid invite", async () => {
     const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
     expect(inviteRes.status).toBe(200);
-    const { inviteCode } = inviteRes.body.participant;
 
     const subbieToken = await getToken("Sub", "Contract", SUBBIE_EMAIL, PASSWORD);
-    const acceptRes = await requestAcceptInvite(inviteCode, subbieToken);
+    const acceptRes = await requestAcceptInvite(inviteRes.body.inviteCode, subbieToken);
 
     expect(acceptRes.status).toBe(200);
     expect(acceptRes.body.success).toBe(true);

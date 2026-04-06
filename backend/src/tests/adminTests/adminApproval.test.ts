@@ -1,21 +1,16 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { app } from "../../app";
-import { requestDelete, requestAuthRegister, requestAuthLogin } from "../requestHelpers";
+import { requestDelete, requestAuthLogin } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { hashPassword } from "../../utils/authHelper";
-
-dotenv.config();
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const ADMIN_EMAIL = "admin@admin-approval-test.com";
 const ADMIN_PASSWORD = "SecurePassword123!";
-const PM_EMAIL = "pm@admin-approval-test.com";
-const PM_PASSWORD = "SecurePassword123!";
 
 async function getAdminToken(): Promise<string> {
   const hashed = await hashPassword(ADMIN_PASSWORD);
@@ -52,36 +47,6 @@ afterAll(async () => {
 }, 10000);
 
 describe("Admin endpoints", () => {
-  it("returns 401 for GET /admin/users/pending without auth", async () => {
-    const res = await request(app).get("/admin/users/pending");
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 for GET /admin/users/pending when user is not Admin", async () => {
-    await requestAuthRegister("PM", "User", PM_PASSWORD, PM_EMAIL);
-    await UserModel.updateOne(
-      { email: PM_EMAIL },
-      { $set: { status: "Active", emailVerified: true } }
-    );
-    const login = await requestAuthLogin(PM_EMAIL, PM_PASSWORD);
-    const token = login.body.accessToken;
-
-    const res = await request(app)
-      .get("/admin/users/pending")
-      .set("Authorization", `Bearer ${token}`);
-    expect(res.status).toBe(403);
-  });
-
-  it("returns 200 and empty list for GET /admin/users/pending as Admin", async () => {
-    const token = await getAdminToken();
-    const res = await request(app)
-      .get("/admin/users/pending")
-      .set("Authorization", `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.users)).toBe(true);
-  });
-
   it("returns 200 and empty list for GET /admin/projects/pending as Admin", async () => {
     const token = await getAdminToken();
     const res = await request(app)

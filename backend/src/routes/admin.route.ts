@@ -7,9 +7,6 @@ export const adminRouter = express.Router();
 
 adminRouter.use(requireAuth, requireRole(UserRole.Admin));
 
-adminRouter.get("/users/pending", AdminController.listPendingUsers);
-adminRouter.put("/users/:userId/approve", AdminController.approveUser);
-adminRouter.put("/users/:userId/reject", AdminController.rejectUser);
 adminRouter.get("/projects/pending", AdminController.listPendingProjects);
 adminRouter.get("/projects/active", AdminController.listActiveProjects);
 adminRouter.get("/projects/inactive", AdminController.listInactiveProjects);

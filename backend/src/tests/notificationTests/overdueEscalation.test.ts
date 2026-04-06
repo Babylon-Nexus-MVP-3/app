@@ -1,6 +1,5 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { app } from "../../app";
 import { UserModel, UserRole } from "../../models/userModel";
 import { hashPassword } from "../../utils/authHelper";
@@ -9,8 +8,6 @@ import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../../models/invoiceModel";
 import { runOverdueInvoiceEscalations } from "../../service/notification.service";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
-
-dotenv.config();
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };

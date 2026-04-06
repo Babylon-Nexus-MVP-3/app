@@ -13,7 +13,7 @@ const refreshTokenSchema = new Schema<RefreshToken>(
     // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     token: { type: String, required: true, unique: true },
-    expiresAt: { type: Date, required: true },
+    expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
     revokedAt: { type: Date },
   },
   {
