@@ -4,6 +4,7 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
+import { notifyProjectPendingApproval } from "./notification.service";
 import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
 
@@ -39,6 +40,14 @@ function isDuplicateKeyError(error: unknown): error is { code: number } {
   return (
     typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
   );
+}
+
+async function notifyProjectSafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — project creation is already committed
+  }
 }
 
 /** Sets Project.pmId / ownerId / builderId for frontend display when role is PM / Owner / Builder. */
@@ -154,6 +163,10 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     userId: creatorId,
     payload: { name: name || location, location, council, status },
   });
+
+  await notifyProjectSafely(() =>
+    notifyProjectPendingApproval(project._id.toString(), user._id.toString(), project.name)
+  );
 
   return project._id.toString();
 }

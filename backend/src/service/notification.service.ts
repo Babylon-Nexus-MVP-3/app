@@ -182,6 +182,19 @@ export async function notifyInvoiceReceived(
   );
 }
 
+export async function notifyProjectPendingApproval(
+  projectId: string,
+  recipientUserId: string,
+  projectName: string
+): Promise<void> {
+  await createNotification({
+    recipientUserId,
+    projectId,
+    type: NotificationType.ProjectPendingApproval,
+    message: `Project "${projectName}" is pending admin approval.`,
+  });
+}
+
 function getOverdueMilestones(daysOverdue: number): number[] {
   const milestones = [14, 21, 28];
   return milestones.filter((m) => daysOverdue >= m);
