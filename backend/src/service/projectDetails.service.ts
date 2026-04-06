@@ -51,6 +51,8 @@ export interface ProjectInvoiceListItem {
   daysOverdue: number;
   approverRole: string;
   submittedByUserId: string;
+  submittedByName: string | null;
+  approverNames: string[];
   rejectionReason?: string;
 }
 
@@ -133,6 +135,18 @@ export async function getProjectDetails(
     participantUsers.map((u) => [u._id.toString(), u.name])
   );
 
+  // Build role → user names map for approver name lookup
+  const roleToNames: Record<string, string[]> = {};
+  for (const p of allParticipants) {
+    if (p.userId && p.status === "Accepted") {
+      const name = participantUserMap[p.userId.toString()];
+      if (name) {
+        if (!roleToNames[p.role]) roleToNames[p.role] = [];
+        roleToNames[p.role].push(name);
+      }
+    }
+  }
+
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
 
   const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i: any) => {
@@ -155,6 +169,8 @@ export async function getProjectDetails(
       daysOverdue: overdue,
       approverRole: i.approverRole,
       submittedByUserId: i.submittedByUserId.toString(),
+      submittedByName: participantUserMap[i.submittedByUserId.toString()] ?? null,
+      approverNames: roleToNames[i.approverRole] ?? [],
       rejectionReason: i.rejectionReason,
     };
   });

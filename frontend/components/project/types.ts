@@ -13,6 +13,8 @@ export type ApiInvoice = {
   daysOverdue: number;
   approverRole: string;
   submittedByUserId: string;
+  submittedByName?: string | null;
+  approverNames?: string[];
   rejectionReason?: string;
 };
 
