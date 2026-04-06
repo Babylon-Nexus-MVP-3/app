@@ -8,9 +8,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -18,6 +20,7 @@ export default function SignIn() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,16 +101,25 @@ export default function SignIn() {
 
           {/* Password */}
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, styles.passwordInput]}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleSignIn}
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              secureTextEntry={!showPassword}
+              returnKeyType="done"
+              onSubmitEditing={handleSignIn}
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color="rgba(255,255,255,0.5)"
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Forgot Password */}
           <TouchableOpacity
@@ -189,8 +201,21 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
     color: Colors.white,
   },
-  passwordInput: {
+  inputWrapper: {
     marginBottom: 12,
+  },
+  inputNoMargin: {
+    marginBottom: 0,
+  },
+  inputPadRight: {
+    paddingRight: 48,
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
   forgotWrapper: {
     alignSelf: "flex-end",
