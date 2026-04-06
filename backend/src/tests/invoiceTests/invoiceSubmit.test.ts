@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestInvite,
@@ -10,8 +9,6 @@ import {
 } from "../requestHelpers";
 import { UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
-
-dotenv.config();
 
 const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
@@ -60,7 +57,7 @@ describe("POST /project/:projectId/invoice", () => {
     expect(builderInviteRes.status).toBe(200);
     const builderToken = await getToken("Bob", "Build", BUILDER_EMAIL, PASSWORD);
 
-    await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
+    await requestAcceptInvite(builderInviteRes.body.inviteCode, builderToken);
 
     const submitRes = await requestSubmitInvoice(
       token,
@@ -80,7 +77,7 @@ describe("POST /project/:projectId/invoice", () => {
     const pmInviteRes = await requestInvite(projectId, token, PM_EMAIL, UserRole.PM);
     expect(pmInviteRes.status).toBe(200);
     const pmToken = await getToken("Project", "Manage", PM_EMAIL, PASSWORD);
-    await requestAcceptInvite(pmInviteRes.body.participant.inviteCode, pmToken);
+    await requestAcceptInvite(pmInviteRes.body.inviteCode, pmToken);
 
     const submitRes = await requestSubmitInvoice(
       token,
@@ -160,7 +157,7 @@ describe("POST /project/:projectId/invoice", () => {
         submittingParty,
         submittingCategory,
         description,
-        amount
+        amount as number
       );
       expect(res.status).toBe(400);
       expect(res.body.error).toBe(

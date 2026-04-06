@@ -3,7 +3,7 @@ import { getNotificationsForUser, markAllNotificationsRead } from "../service/no
 
 export async function list(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     const notifications = await getNotificationsForUser(userId);
     res.status(200).json({ success: true, notifications });
   } catch (err) {
@@ -13,7 +13,7 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
 
 export async function readAll(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user!.sub;
     const updatedCount = await markAllNotificationsRead(userId);
     res.status(200).json({ success: true, updatedCount });
   } catch (err) {

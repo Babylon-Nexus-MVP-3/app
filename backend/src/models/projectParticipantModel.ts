@@ -17,7 +17,7 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
   projectId: { type: String, ref: "Project", required: true },
   userId: { type: String, ref: "User" },
   role: { type: String, enum: Object.values(UserRole), required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, lowercase: true, trim: true },
   inviteCode: { type: String },
   trade: { type: String },
   dateInvited: { type: Date },
@@ -29,6 +29,10 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
     default: "Pending",
   },
 });
+
+ProjectParticipantSchema.index({ projectId: 1, email: 1, role: 1 }, { unique: true });
+ProjectParticipantSchema.index({ projectId: 1, userId: 1, status: 1 });
+ProjectParticipantSchema.index({ projectId: 1, status: 1 });
 
 export const ProjectParticipantModel = mongoose.model<ProjectParticipant>(
   "ProjectParticipant",

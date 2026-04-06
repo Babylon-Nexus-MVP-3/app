@@ -13,9 +13,6 @@ export interface JwtPayload {
   role: string;
   email: string;
   name: string;
-  verticalGroup?: string;
-  horizontalAttribute?: string;
-  licenceNumber?: string;
   status: string;
 }
 
@@ -37,7 +34,6 @@ export const registrationLimiter = rateLimit({
   message: { error: "Too many registration attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === "test",
 });
 
 export const loginLimiter = rateLimit({
@@ -51,8 +47,7 @@ export const loginLimiter = rateLimit({
 export const resendVerifLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 3,
-  keyGenerator: (req) => req.body.email, // Rate limit per email
-  message: { error: "Too many attempts to resend verification code. Please try again later." },
+  skipFailedRequests: false,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -60,7 +55,6 @@ export const resendVerifLimiter = rateLimit({
 export const verifyEmailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === "test" ? 1000 : 10,
-  keyGenerator: (req) => req.body.email, // Per email
   message: { error: "Too many verification attempts. Please request a new code." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -70,6 +64,22 @@ export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 10,
   message: { error: "Too many refresh attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  message: { error: "Too many password reset attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const resetCodeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  message: { error: "Too many attempts. Please request a new reset code." },
   standardHeaders: true,
   legacyHeaders: false,
 });

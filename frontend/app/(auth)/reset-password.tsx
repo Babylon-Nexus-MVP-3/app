@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 
 export default function ResetPassword() {
   const { resetCode } = useLocalSearchParams<{ resetCode: string }>();
@@ -61,7 +62,9 @@ export default function ResetPassword() {
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
           >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
@@ -146,7 +149,16 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
-  backButton: { marginBottom: 32 },
+  backButton: {
+    marginBottom: 32,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    direction: "ltr",
+  },
   backArrow: {
     fontSize: 24,
     color: Colors.goldLight,

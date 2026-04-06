@@ -5,11 +5,12 @@ import {
   requestDelete,
 } from "../requestHelpers";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { UserModel } from "../../models/userModel";
-dotenv.config();
 
 let token: string;
+
+// Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
+jest.setTimeout(15000);
 
 beforeEach(async () => {
   await requestDelete();
@@ -39,7 +40,7 @@ afterAll(async () => {
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI!);
   }
 });
 

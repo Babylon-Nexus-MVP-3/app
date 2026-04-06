@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestInvite,
@@ -14,8 +13,6 @@ import {
 } from "../requestHelpers";
 import { UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
-
-dotenv.config();
 
 const SUBBIE_EMAIL = "subbie@invoice-actions-test.com";
 const BUILDER_EMAIL = "builder@invoice-actions-test.com";
@@ -73,7 +70,7 @@ beforeEach(async () => {
   );
   expect(builderInviteRes.status).toBe(200);
   builderToken = await getToken("Bob", "Builder", BUILDER_EMAIL, PASSWORD);
-  await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
+  await requestAcceptInvite(builderInviteRes.body.inviteCode, builderToken);
 });
 
 afterEach(async () => {

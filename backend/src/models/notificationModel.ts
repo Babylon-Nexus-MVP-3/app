@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export const NotificationType = {
   InvoiceSubmitted: "InvoiceSubmitted",
@@ -14,9 +14,9 @@ export const NotificationType = {
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
 export interface NotificationDocument extends Document {
-  recipientUserId: string;
-  projectId: string;
-  invoiceId?: string;
+  recipientUserId: Types.ObjectId;
+  projectId: Types.ObjectId;
+  invoiceId?: Types.ObjectId;
   type: NotificationType;
   message: string;
   read: boolean;
@@ -26,11 +26,8 @@ export interface NotificationDocument extends Document {
 
 const notificationSchema = new Schema<NotificationDocument>(
   {
-    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     recipientUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
-    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice" },
     type: { type: String, enum: Object.values(NotificationType), required: true },
     message: { type: String, required: true },

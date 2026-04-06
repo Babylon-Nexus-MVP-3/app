@@ -13,7 +13,7 @@ export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
 export interface Invoice extends Document {
   invoiceNumber: string;
-  projectId: string;
+  projectId: mongoose.Types.ObjectId;
   submittingParty: string;
   submittingCategory: string;
   submittedByUserId: mongoose.Types.ObjectId;
@@ -32,14 +32,13 @@ export interface Invoice extends Document {
 const invoiceSchema = new Schema<Invoice>(
   {
     invoiceNumber: { type: String, required: true, unique: true },
-    // @ts-expect-error Mongoose ObjectId typing mismatch between runtime and @types
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     submittingParty: { type: String, required: true },
     submittingCategory: { type: String, required: true },
     submittedByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     description: { type: String, required: true },
     amount: { type: Number, required: true },
-    dateSubmitted: { type: Schema.Types.Date, required: true },
+    dateSubmitted: { type: Schema.Types.Date, required: true, default: Date.now },
     dateDue: { type: Schema.Types.Date, required: true },
     datePaid: { type: Schema.Types.Date },
     dateReceived: { type: Schema.Types.Date },
@@ -52,11 +51,16 @@ const invoiceSchema = new Schema<Invoice>(
     approverRole: {
       type: String,
       enum: Object.values(UserRole),
+      required: true,
     },
     rejectionReason: { type: String },
     escalationsSent: { type: [Number], required: true, default: [] },
   },
   { timestamps: true }
 );
+
+invoiceSchema.index({ projectId: 1 });
+invoiceSchema.index({ projectId: 1, status: 1 });
+invoiceSchema.index({ submittedByUserId: 1 });
 
 export const InvoiceModel = mongoose.model<Invoice>("Invoice", invoiceSchema);
