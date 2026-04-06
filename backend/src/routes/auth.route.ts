@@ -28,3 +28,4 @@ authRouter.post("/verify-email", verifyEmailLimiter, AuthController.verifyEmail)
 authRouter.post("/resend-verification", resendVerifLimiter, AuthController.resendVerifyEmail);
 
 authRouter.post("/change-password", requireAuth, AuthController.changePassword);
+authRouter.post("/logout", requireAuth, AuthController.logout);

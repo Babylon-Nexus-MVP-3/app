@@ -8,6 +8,7 @@ import {
   resendVerificationCode,
   resetPassword,
   userChangePassword,
+  userLogout,
   userVerifyEmail,
   verifyResetCodeService,
 } from "../service/auth.service";
@@ -173,5 +174,15 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
     res.status(200).json(result);
   } catch (err) {
     next(err);
+  }
+};
+
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  try {
+    const result = await userLogout(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
   }
 };
