@@ -458,3 +458,17 @@ export async function userChangePassword(
   // Make user relogin with new password
   return { success: true };
 }
+
+export async function userLogout(userId: string) {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new AuthError("User not found");
+  }
+
+  // Inactivate all refresh Tokens
+  // Client side must delete the access token
+  // Access token expires eventually and cannot regenerate as refreshtokens have been revoked
+  await RefreshTokenModel.updateMany({ user: userId }, { $set: { revokedAt: new Date() } });
+
+  return { success: true };
+}

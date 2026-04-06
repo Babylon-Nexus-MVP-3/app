@@ -61,6 +61,10 @@ export const requestChangePassword = async (
     .set("Authorization", `Bearer ${token}`);
 };
 
+export const requestLogout = async (token: string) => {
+  return await request(app).post("/auth/logout").set("Authorization", `Bearer ${token}`);
+};
+
 export const requestInvite = async (
   projectId: string,
   token: string,

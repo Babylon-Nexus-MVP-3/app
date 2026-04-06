@@ -18,6 +18,8 @@ export function MySpaceTab({
   invoices,
   userId,
   invoiceAction,
+  refreshing,
+  onRefresh,
 }: {
   role: string;
   invoices: ApiInvoice[];
@@ -27,6 +29,8 @@ export function MySpaceTab({
     invoiceId: string,
     rejectionReason?: string
   ) => Promise<string | null>;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
 
@@ -38,6 +42,8 @@ export function MySpaceTab({
         userId={userId}
         invoiceAction={invoiceAction}
         onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   else if (role === "PM")
@@ -47,6 +53,8 @@ export function MySpaceTab({
         userId={userId}
         invoiceAction={invoiceAction}
         onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   else if (role === "Subbie" || role === "Consultant")
@@ -56,6 +64,8 @@ export function MySpaceTab({
         userId={userId}
         invoiceAction={invoiceAction}
         onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   else if (role === "Owner")
@@ -65,12 +75,28 @@ export function MySpaceTab({
         userId={userId}
         invoiceAction={invoiceAction}
         onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   else if (role === "Financier" || role === "VIP")
-    content = <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
+    content = (
+      <FinancierMySpace
+        invoices={invoices}
+        onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+    );
   else if (role === "Observer")
-    content = <ObserverMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
+    content = (
+      <ObserverMySpace
+        invoices={invoices}
+        onTapInvoice={setDetailInvoice}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+    );
   else
     content = (
       <View style={styles.placeholder}>
