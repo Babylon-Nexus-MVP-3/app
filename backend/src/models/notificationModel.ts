@@ -4,6 +4,7 @@ export const NotificationType = {
   ProjectPendingApproval: "ProjectPendingApproval",
   ProjectApproved: "ProjectApproved",
   ProjectRejected: "ProjectRejected",
+  ProjectDeleted: "ProjectDeleted",
   InvoiceSubmitted: "InvoiceSubmitted",
   InvoiceApproved: "InvoiceApproved",
   InvoicePaid: "InvoicePaid",

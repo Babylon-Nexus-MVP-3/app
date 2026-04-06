@@ -245,6 +245,22 @@ export async function notifyProjectRejected(projectId: string): Promise<void> {
   });
 }
 
+// Notify All participants that project has been removed
+export async function notifyProjectDeleted(projectId: string): Promise<void> {
+  const participantIds = unique(await getAcceptedProjectUserIds(projectId));
+
+  await Promise.all(
+    participantIds.map((recipientUserId) =>
+      createNotification({
+        recipientUserId,
+        projectId,
+        type: NotificationType.ProjectDeleted,
+        message: "This project has been deleted by the admin.",
+      })
+    )
+  );
+}
+
 function getOverdueMilestones(daysOverdue: number): number[] {
   const milestones = [14, 21, 28];
   return milestones.filter((m) => daysOverdue >= m);

@@ -6,7 +6,11 @@ import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
 import { randomInt } from "crypto";
-import { notifyProjectApproved, notifyProjectRejected } from "./notification.service";
+import {
+  notifyProjectApproved,
+  notifyProjectDeleted,
+  notifyProjectRejected,
+} from "./notification.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -271,6 +275,8 @@ export async function deleteProject(projectId: string) {
   project.isDeleted = true;
   project.deletedAt = new Date();
   await project.save();
+
+  await notifyAdminSafely(() => notifyProjectDeleted(projectId));
 
   return { success: true };
 }
