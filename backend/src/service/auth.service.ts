@@ -11,9 +11,16 @@ import {
   checkEmail,
   checkPassword,
   generateCode,
+  hashCode,
   hashPassword,
 } from "../utils/authHelper";
-import { sendOnboardingEmail, sendResendVerificationEmail } from "./email.service";
+import {
+  sendForgotPasswordEmail,
+  sendOnboardingEmail,
+  sendResendResetCodeEmail,
+  sendResendVerificationEmail,
+} from "./email.service";
+import { JwtPayload } from "../middleware";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -37,7 +44,12 @@ interface RegisterInput {
   email: string;
 }
 
-export async function registerUser(input: RegisterInput): Promise<string> {
+interface RegisterResponse {
+  userId: string;
+  code?: string;
+}
+
+export async function registerUser(input: RegisterInput): Promise<RegisterResponse> {
   // Trim whitespace and normalise email to lowercase for consistency
   const sanitizedFirstName = input.firstName.trim();
   const sanitizedLastName = input.lastName.trim();
@@ -65,7 +77,7 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     password: hashedPassword,
     loginAttempts: 0,
     accountLocked: false,
-    verificationCode: code, // TODO: Hash verification code before storing in production
+    verificationCode: hashCode(code),
     verificationCodeExpiry: expiry,
     emailVerified: false,
     status: "Pending",
@@ -81,7 +93,9 @@ export async function registerUser(input: RegisterInput): Promise<string> {
     });
   }
 
-  return newUser._id.toString();
+  return process.env.NODE_ENV === "test"
+    ? { userId: newUser._id.toString(), code }
+    : { userId: newUser._id.toString() };
 }
 
 interface LoginInput {
@@ -89,10 +103,18 @@ interface LoginInput {
   password: string;
 }
 
+// Prevent sending meta fields including codes or account information after login
+interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+}
+
 interface LoginResult {
   accessToken: string;
   refreshToken: string;
-  user: User;
+  user: SafeUser;
 }
 
 function createAccessToken(user: User): string {
@@ -101,11 +123,8 @@ function createAccessToken(user: User): string {
     role: user.role,
     email: user.email,
     name: user.name,
-    verticalGroup: user.verticalGroup,
-    horizontalAttribute: user.horizontalAttribute,
-    licenceNumber: user.licenceNumber,
     status: user.status,
-  };
+  } satisfies JwtPayload;
 
   return jwt.sign(payload, config.jwtAccessSecret, {
     expiresIn: `${config.accessTokenTtlMinutes}m`,
@@ -130,12 +149,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
   const email = input.email?.toLowerCase().trim();
   const password = input.password;
 
-  if (!email || !password) {
-    throw new AuthError("Email and password are required", 400);
-  }
-
   const user = await UserModel.findOne({ email });
-
   if (!user) {
     throw new AuthError("Invalid credentials", 400);
   }
@@ -161,33 +175,49 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     payload: { email: user.email },
   });
 
-  return { accessToken, refreshToken, user };
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 /*
 [Auth Refresh - Generate new tokens upon accessToken expiry]
 */
 export async function authRefresh(token: string) {
-  const refreshToken = await RefreshTokenModel.findOne({ token: token });
+  const refreshToken = await RefreshTokenModel.findOne({ token, revokedAt: null });
 
   if (!refreshToken) {
+    // Token not found OR already revoked — possible reuse attack
+    // Revoke all sessions for this user as a precaution
+    const compromised = await RefreshTokenModel.findOne({ token });
+    if (compromised) {
+      await RefreshTokenModel.updateMany(
+        { user: compromised.user },
+        { $set: { revokedAt: new Date() } }
+      );
+    }
     throw new AuthError("Refresh Token is Invalid");
   }
 
   // If refresh Token is expired user must login again
-  if (refreshToken.expiresAt < new Date(Date.now())) {
-    // Remove expired token from db
-    await RefreshTokenModel.deleteOne({ token: token });
+  if (refreshToken.expiresAt < new Date()) {
     throw new AuthError("Refresh Token has expired");
   }
 
-  // Also reissue a new refreshToken and delete curernt one
-  await RefreshTokenModel.deleteOne({ token: token });
+  // Revoke current refreshToken before reissuing a new one.
+  await RefreshTokenModel.findOneAndUpdate({ token }, { $set: { revokedAt: new Date() } });
 
   const user = await UserModel.findById(refreshToken.user);
-  if (!user) {
-    throw new AuthError("Refresh Token has expired");
-  }
+  if (!user) throw new AuthError("User not found", 401);
+  if (user.status !== "Active") throw new AuthError("Account is not active", 401);
+
   const accessToken = createAccessToken(user);
   const newRefreshToken = await createRefreshToken(user);
 
@@ -196,27 +226,32 @@ export async function authRefresh(token: string) {
 
 export async function forgotPassword(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
+  const { code, expiry } = generateCode();
+  const hashedCode = hashCode(code);
+
   const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
   if (!user) {
-    throw new AuthError("Email not found");
+    return { success: true };
   }
 
-  const { code, expiry } = generateCode();
-  user.resetCode = code;
+  user.resetCode = hashedCode;
   user.resetCodeExpiry = expiry;
   await user.save();
 
   if (process.env.NODE_ENV !== "test") {
-    // TODO: Send code via email service
-    console.log(`[DEV] Password reset code for ${normalisedEmail}: ${code}`);
+    await sendForgotPasswordEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to send password reset email to ${normalisedEmail}:`, err);
+    });
   }
 
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function verifyResetCodeService(resetCode: string) {
+  const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
-    resetCode,
+    resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
   });
 
@@ -229,21 +264,24 @@ export async function verifyResetCodeService(resetCode: string) {
 
 export async function resendResetCodeService(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
-  const user = await UserModel.findOne({ email: normalisedEmail });
-  if (!user) {
-    throw new AuthError("Email not found");
-  }
-
   const { code, expiry } = generateCode();
+  const hashedCode = hashCode(code);
+
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
+  if (!user) {
+    return { success: true };
+  }
 
   await UserModel.findOneAndUpdate(
     { _id: user._id },
-    { $set: { resetCode: code, resetCodeExpiry: expiry } }
+    { $set: { resetCode: hashedCode, resetCodeExpiry: expiry } }
   );
 
   if (process.env.NODE_ENV !== "test") {
-    // TODO: Send code via email service
-    console.log(`[DEV] Resent password reset code for ${normalisedEmail}: ${code}`);
+    await sendResendResetCodeEmail(normalisedEmail, code).catch((err) => {
+      console.error(`Failed to resend reset code email to ${email}:`, err);
+    });
   }
 
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
@@ -254,8 +292,9 @@ export async function resetPassword(resetCode: string, newPassword: string) {
     throw new AuthError("Password must be at least 12 characters");
   }
 
+  const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
-    resetCode,
+    resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() },
   });
 
@@ -282,11 +321,32 @@ export async function resetPassword(resetCode: string, newPassword: string) {
 
   await user.save();
 
-  return { success: true };
+  // Revoke all existing sessions with old password
+  await RefreshTokenModel.updateMany(
+    { user: user._id.toString() },
+    { $set: { revokedAt: new Date() } }
+  );
+
+  // Return accessToken and refreshToken so user is immediately logged in by the frontend
+  const accessToken = createAccessToken(user);
+  const refreshToken = await createRefreshToken(user);
+
+  return {
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 export async function userVerifyEmail(verificationCode: string) {
-  const user = await UserModel.findOne({ verificationCode: verificationCode });
+  const hashedCode = hashCode(verificationCode);
+  const user = await UserModel.findOne({ verificationCode: hashedCode });
   if (!user) {
     throw new AuthError("Invalid Verification Code");
   }
@@ -308,20 +368,37 @@ export async function userVerifyEmail(verificationCode: string) {
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
 
-  return { success: true, accessToken, refreshToken, user };
+  return {
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 export async function resendVerificationCode(email: string) {
   const normalisedEmail = email.toLowerCase().trim();
+  const { code, expiry } = generateCode();
+  const hashedCode = hashCode(code);
+
   const user = await UserModel.findOne({ email: normalisedEmail });
+  // Silently return success if user not found — prevents user enumeration
   if (!user) {
-    throw new AuthError("Email not found");
+    return { success: true };
   }
 
-  const { code, expiry } = generateCode();
+  if (user.emailVerified) {
+    throw new AuthError("Email is already verified");
+  }
+
   await UserModel.findOneAndUpdate(
     { _id: user._id },
-    { $set: { verificationCode: code, verificationCodeExpiry: expiry } }
+    { $set: { verificationCode: hashedCode, verificationCodeExpiry: expiry } }
   );
 
   // Prevent emails being sent from tests
@@ -331,7 +408,7 @@ export async function resendVerificationCode(email: string) {
     });
   }
 
-  return { success: true };
+  return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
 export async function userChangePassword(
@@ -339,10 +416,6 @@ export async function userChangePassword(
   currentPassword: string,
   newPassword: string
 ) {
-  if (!newPassword || !currentPassword) {
-    throw new AuthError("Missing Fields: New Password, Current Password");
-  }
-
   if (newPassword.length < 12) {
     throw new AuthError("Password must be at least 12 characters");
   }
@@ -375,6 +448,27 @@ export async function userChangePassword(
   user.updatedAt = new Date();
 
   await user.save();
+
+  // Revoke all existing sessions with old password
+  await RefreshTokenModel.updateMany(
+    { user: user._id.toString() },
+    { $set: { revokedAt: new Date() } }
+  );
+
+  // Make user relogin with new password
+  return { success: true };
+}
+
+export async function userLogout(userId: string) {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new AuthError("User not found");
+  }
+
+  // Inactivate all refresh Tokens
+  // Client side must delete the access token
+  // Access token expires eventually and cannot regenerate as refreshtokens have been revoked
+  await RefreshTokenModel.updateMany({ user: userId }, { $set: { revokedAt: new Date() } });
 
   return { success: true };
 }

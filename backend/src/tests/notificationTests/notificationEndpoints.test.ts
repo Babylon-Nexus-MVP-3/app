@@ -1,13 +1,10 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { app } from "../../app";
 import { UserModel } from "../../models/userModel";
 import { hashPassword } from "../../utils/authHelper";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { ProjectModel } from "../../models/projectModel";
-
-dotenv.config();
 
 jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
@@ -79,6 +76,7 @@ describe("Notification endpoints", () => {
     expect(Array.isArray(res.body.notifications)).toBe(true);
     expect(res.body.notifications.length).toBe(1);
     expect(res.body.notifications[0].message).toBe("Test notification");
+    expect(res.body.notifications[0].projectName).toBe("Notify Project");
     expect(res.body.notifications[0].read).toBe(false);
   });
 

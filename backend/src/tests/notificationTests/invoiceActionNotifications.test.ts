@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   getProjectId,
   getToken,
@@ -15,8 +14,6 @@ import {
 import { UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
-
-dotenv.config();
 
 const SUBBIE_EMAIL = "subbie@notification-actions-test.com";
 const BUILDER_EMAIL = "builder@notification-actions-test.com";
@@ -77,7 +74,7 @@ beforeEach(async () => {
   expect(builderInviteRes.status).toBe(200);
 
   builderToken = await getToken("Bob", "Builder", BUILDER_EMAIL, PASSWORD);
-  await requestAcceptInvite(builderInviteRes.body.participant.inviteCode, builderToken);
+  await requestAcceptInvite(builderInviteRes.body.inviteCode, builderToken);
 
   // Decode user ids from access token payload segment
   const subPayload = JSON.parse(Buffer.from(subbieToken.split(".")[1], "base64").toString("utf8"));

@@ -61,6 +61,10 @@ export const requestChangePassword = async (
     .set("Authorization", `Bearer ${token}`);
 };
 
+export const requestLogout = async (token: string) => {
+  return await request(app).post("/auth/logout").set("Authorization", `Bearer ${token}`);
+};
+
 export const requestInvite = async (
   projectId: string,
   token: string,
@@ -142,9 +146,9 @@ export async function getToken(
   password: string
 ): Promise<string> {
   const reg = await requestAuthRegister(firstName, lastName, password, email);
-  expect(reg.status).toBe(201);
 
-  await verifyEmail(email);
+  expect(reg.status).toBe(201);
+  await verifyEmail(email, reg.body.code);
 
   const login = await requestAuthLogin(email, password);
   expect(login.status).toBe(200);
@@ -152,11 +156,7 @@ export async function getToken(
   return login.body.accessToken;
 }
 
-export async function verifyEmail(email: string) {
-  // Get the verification code directly from DB
-  const user = await UserModel.findOne({ email: email });
-  const verificationCode = user?.verificationCode;
-
+export async function verifyEmail(email: string, verificationCode: string) {
   const response = await requestVerifyEmail(verificationCode);
   expect(response.statusCode).toBe(200);
 

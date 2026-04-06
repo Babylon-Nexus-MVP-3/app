@@ -1,5 +1,6 @@
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { NotificationModel, NotificationType } from "../models/notificationModel";
+import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserRole } from "../models/userModel";
 
@@ -38,10 +39,20 @@ export async function getNotificationsForUser(userId: string) {
     .sort({ createdAt: -1 })
     .lean();
 
+  const projectIds = [...new Set(notifications.map((n: any) => n.projectId.toString()))];
+  const projects =
+    projectIds.length > 0
+      ? await ProjectModel.find({ _id: { $in: projectIds } })
+          .select("name")
+          .lean()
+      : [];
+  const projectNameById = new Map(projects.map((p: any) => [p._id.toString(), p.name as string]));
+
   return notifications.map((n: any) => ({
     id: n._id.toString(),
     recipientUserId: n.recipientUserId.toString(),
     projectId: n.projectId.toString(),
+    projectName: projectNameById.get(n.projectId.toString()) ?? "Project",
     invoiceId: n.invoiceId ? n.invoiceId.toString() : null,
     type: n.type,
     message: n.message,

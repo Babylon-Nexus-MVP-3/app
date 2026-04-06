@@ -21,11 +21,7 @@ export interface User extends Document {
   name: string;
   email: string;
   password: string;
-  phoneNumber?: string;
-  verticalGroup?: string;
-  horizontalAttribute?: string;
-  licenceNumber?: string | null;
-  status: "Pending" | "Active";
+  status: "Pending" | "Active" | "Rejected";
   role: UserRole;
   loginAttempts: number;
   lockUntil?: Date;
@@ -50,14 +46,10 @@ const userSchema = new Schema<User>(
       lowercase: true,
     },
     password: { type: String, required: true },
-    phoneNumber: { type: String },
-    verticalGroup: { type: String },
-    horizontalAttribute: { type: String },
-    licenceNumber: { type: String },
     status: {
       type: String,
       required: true,
-      enum: ["Pending", "Active"],
+      enum: ["Pending", "Active", "Rejected"],
       default: "Pending",
     },
     role: {

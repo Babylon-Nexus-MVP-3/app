@@ -16,17 +16,22 @@ export const app = express();
 
 app.set("trust proxy", 1);
 app.use(json());
-app.use(morgan("dev"));
-app.use(cors());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(
+  cors({
+    credentials: true,
+  })
+);
 
 // Render API Documentation
-const swaggerFile = fs.readFileSync(path.join(__dirname, "../swagger.yaml"), "utf8");
-const swaggerDoc = YAML.parse(swaggerFile);
+// Protect API Documentation from being exposed in production.
+if (process.env.NODE_ENV !== "production") {
+  const swaggerFile = fs.readFileSync(path.join(__dirname, "../swagger.yaml"), "utf8");
+  const swaggerDoc = YAML.parse(swaggerFile);
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
-// Utility endpoint for testing — only available in test environment
-if (process.env.NODE_ENV === "test") {
+  // Utility endpoint for testing — only available in test and development environments
   app.delete("/clear", async (_req: Request, res: Response) => {
     try {
       const result = await clear();
@@ -43,8 +48,8 @@ app.use("/projects", projectsRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationRouter);
 
-app.get("/", (_req, res) => {
-  res.redirect("/api-docs");
+app.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({ success: true });
 });
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

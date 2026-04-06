@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { requestDelete, requestInvite, getToken, getProjectId } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 import { UserRole } from "../../models/userModel";
-
-dotenv.config();
 
 const PM_EMAIL = "pm@project-test.com";
 const PM_EMAIL_SECOND = "pm@project2-test.com";
@@ -50,17 +47,15 @@ beforeAll(async () => {
 
 describe("POST /project/:projectId/invite", () => {
   it("returns 200 and participant when PM invites a subbie to a project", async () => {
-    // Then invite a subbie to that project
-
     const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
 
     expect(inviteRes.status).toBe(200);
-    expect(inviteRes.body.success).toBe(true);
     expect(inviteRes.body.participant).toBeDefined();
     expect(inviteRes.body.participant.email).toBe(SUBBIE_EMAIL);
-    expect(inviteRes.body.participant.inviteCode).toBeDefined();
     expect(inviteRes.body.participant.status).toBe("Pending");
     expect(inviteRes.body.participant.trade).toBe("Electrician");
+    // inviteCode is at top level, not nested in participant
+    expect(inviteRes.body.inviteCode).toBeDefined();
   });
 
   it("returns 400 when project does not exist", async () => {
@@ -68,15 +63,15 @@ describe("POST /project/:projectId/invite", () => {
       new mongoose.Types.ObjectId().toString(),
       token,
       SUBBIE_EMAIL,
-      "Electrician",
-      "Subbie"
+      "Subbie",
+      "Electrician"
     );
 
     expect(inviteRes.status).toBe(400);
+    expect(inviteRes.body.error).toBeDefined();
   });
 
-  it("returns 400 when PM is not assigned to project", async () => {
-    // Register another PM
+  it("returns 403 when PM is not assigned to project", async () => {
     const wrongPmToken = await getToken("Project", "Manager", PM_EMAIL_SECOND, PASSWORD);
 
     const inviteRes = await requestInvite(
@@ -87,13 +82,15 @@ describe("POST /project/:projectId/invite", () => {
       "Electrician"
     );
 
-    expect(inviteRes.status).toBe(200);
-    expect(inviteRes.body.success).toBe(true);
+    expect(inviteRes.status).toBe(403);
+    expect(inviteRes.body.error).toBeDefined();
   });
 
   it("returns 403 when project is not approved (status not Active)", async () => {
     await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
-    const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Electrician", "Subbie");
+
+    const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
+
     expect(inviteRes.status).toBe(403);
     expect(inviteRes.body.error).toMatch(/approved|admin/i);
   });

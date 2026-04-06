@@ -28,6 +28,7 @@ type NotificationType =
 interface AppNotification {
   id: string;
   projectId: string;
+  projectName?: string;
   invoiceId?: string | null;
   type: NotificationType;
   message: string;
@@ -82,6 +83,7 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.cardMessage}>{item.message}</Text>
+        {!!item.projectName && <Text style={styles.cardProjectName}>{item.projectName}</Text>}
         <Text style={styles.cardTime}>{timeAgo(item.createdAt)}</Text>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
@@ -260,6 +262,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: Colors.textPrimary,
     lineHeight: 18,
+  },
+  cardProjectName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.navy,
+    marginTop: 2,
   },
   cardTime: {
     fontSize: 11,

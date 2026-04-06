@@ -1,8 +1,5 @@
 import { requestDelete, requestChangePassword, getToken } from "../requestHelpers";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 let token: string;
 const PM_EMAIL = "pm@project-test.com";
@@ -44,7 +41,7 @@ afterEach(async () => {
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI!);
   }
 });
 

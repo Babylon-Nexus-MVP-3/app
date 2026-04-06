@@ -1,11 +1,8 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import { app } from "../../app";
 import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
 import { UserRole } from "../../models/userModel";
-
-dotenv.config();
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);

@@ -1,13 +1,10 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import {
   requestDelete,
   requestAuthRegister,
   requestForgotPassword,
   requestResendResetCode,
 } from "../requestHelpers";
-
-dotenv.config();
 
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh123456$";
@@ -49,11 +46,11 @@ describe("POST /auth/resend-reset-code", () => {
     expect(res.body).toStrictEqual({ success: true, code: expect.any(String) });
   });
 
-  it("returns 400 when email does not exist", async () => {
+  it("returns 200 when email does not exist but no code is sent", async () => {
     await requestAuthRegister("Mubashir", "Hussain", PASSWORD, EMAIL);
     const res = await requestResendResetCode("invalid@gmail.com");
 
-    expect(res.statusCode).toStrictEqual(400);
-    expect(res.body).toStrictEqual({ error: expect.any(String) });
+    expect(res.statusCode).toStrictEqual(200);
+    expect(res.body.code).toBeUndefined();
   });
 });

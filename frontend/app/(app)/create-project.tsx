@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 
 const ROLES = [
@@ -142,7 +143,13 @@ export default function CreateProject() {
     return (
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
         <View style={styles.successContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
 
@@ -176,7 +183,13 @@ export default function CreateProject() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
 
@@ -337,6 +350,12 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginBottom: 24,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    direction: "ltr",
   },
   backArrow: {
     fontSize: 28,

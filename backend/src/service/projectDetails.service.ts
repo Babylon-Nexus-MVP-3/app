@@ -1,6 +1,6 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+import { Invoice, InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
@@ -20,6 +20,22 @@ function daysBetween(a: Date, b: Date): number {
 
 function isPaidStatus(status: InvoiceStatus): boolean {
   return status === "Paid" || status === "Received";
+}
+
+function canViewInvoiceAmount(
+  role: string,
+  invoice: { approverRole: string; submittedByUserId: string },
+  userId: string
+): boolean {
+  if (role === UserRole.Observer) return false;
+  if (
+    role === UserRole.Owner ||
+    role === UserRole.PM ||
+    role === UserRole.Financier ||
+    role === UserRole.VIP
+  )
+    return true;
+  return invoice.submittedByUserId.toString() === userId || invoice.approverRole === role;
 }
 
 export interface ProjectInvoiceListItem {
@@ -61,7 +77,7 @@ export interface GetProjectDetailsResult {
   participants: ProjectParticipantListItem[];
 }
 
-function computeHealthScoreByDueDate(invoices: any[], now: Date): number {
+function computeHealthScoreByDueDate(invoices: Invoice[], now: Date): number {
   const paid = invoices.filter((i) => isPaidStatus(i.status));
   if (paid.length === 0) return 100;
 
@@ -134,7 +150,7 @@ export async function getProjectDetails(
       description: i.description,
       dateSubmitted: i.dateSubmitted,
       dateDue: i.dateDue,
-      amount: i.amount,
+      amount: canViewInvoiceAmount(userRole, i, normalizedUserId) ? i.amount : undefined,
       status: i.status,
       daysOverdue: overdue,
       approverRole: i.approverRole,
