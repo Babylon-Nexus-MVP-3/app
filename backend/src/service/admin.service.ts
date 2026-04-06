@@ -273,7 +273,7 @@ function computeHealthScore(invoices: any[]): number {
 }
 
 export async function getAdminProjectDetail(projectId: string) {
-  const project = await ProjectModel.findById(projectId).lean();
+  const project = await ProjectModel.findById(projectId).setOptions({ bypassSoftDelete: true }).lean();
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
