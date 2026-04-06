@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import { displayRole } from "./helpers";
@@ -20,6 +20,8 @@ export function MySpaceTab({
   invoiceAction,
   refreshing,
   onRefresh,
+  initialInvoice,
+  onInitialInvoiceOpened,
 }: {
   role: string;
   invoices: ApiInvoice[];
@@ -31,8 +33,17 @@ export function MySpaceTab({
   ) => Promise<string | null>;
   refreshing: boolean;
   onRefresh: () => void;
+  initialInvoice?: ApiInvoice | null;
+  onInitialInvoiceOpened?: () => void;
 }) {
   const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
+
+  useEffect(() => {
+    if (initialInvoice) {
+      setDetailInvoice(initialInvoice);
+      onInitialInvoiceOpened?.();
+    }
+  }, [initialInvoice]);
 
   let content: React.ReactNode;
   if (role === "Builder")

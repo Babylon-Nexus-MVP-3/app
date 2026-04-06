@@ -168,7 +168,12 @@ export default function Notifications() {
           renderItem={({ item }) => (
             <NotificationCard
               item={item}
-              onPress={() => router.push(`/(app)/project/${item.projectId}` as any)}
+              onPress={() => {
+                const url = item.invoiceId
+                  ? `/(app)/project/${item.projectId}?openInvoice=${item.invoiceId}`
+                  : `/(app)/project/${item.projectId}`;
+                router.push(url as any);
+              }}
             />
           )}
           ListEmptyComponent={
