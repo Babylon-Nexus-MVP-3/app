@@ -6,7 +6,7 @@ import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
 import { randomInt } from "crypto";
-import { notifyProjectApproved } from "./notification.service";
+import { notifyProjectApproved, notifyProjectRejected } from "./notification.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -138,6 +138,9 @@ export async function rejectProject(projectId: string): Promise<void> {
     { _id: projectId, status: "Pending" },
     { $set: { status: "Rejected" } }
   );
+
+  await notifyAdminSafely(() => notifyProjectRejected(projectId));
+
   if (result.matchedCount === 0) {
     throw new AdminError("Project not found or already processed", 404);
   }

@@ -1,5 +1,6 @@
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { NotificationModel, NotificationType } from "../models/notificationModel";
+import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserRole } from "../models/userModel";
 
@@ -214,6 +215,33 @@ export async function notifyProjectApproved(projectId: string, projectName: stri
     projectId,
     type: NotificationType.ProjectApproved,
     message: `Project "${projectName}" has been approved by the admin.`,
+  });
+}
+
+export async function notifyProjectRejected(projectId: string): Promise<void> {
+  // Creator can be derived as the first participant of the project.
+  const project = await ProjectModel.findById(projectId);
+  if (!project) {
+    throw new NotificationError("Project Doesnt Exist", 404);
+  }
+
+  const creatorParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    status: "Accepted",
+    userId: { $exists: true, $ne: null },
+  })
+    .select("userId")
+    .lean();
+
+  if (!creatorParticipant?.userId) {
+    throw new NotificationError("Project creator not found", 404);
+  }
+
+  await createNotification({
+    recipientUserId: creatorParticipant.userId.toString(),
+    projectId,
+    type: NotificationType.ProjectRejected,
+    message: `Project "${project.name}" has been rejected by the admin.`,
   });
 }
 
