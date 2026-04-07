@@ -193,6 +193,108 @@ export async function notifyInvoiceReceived(
   );
 }
 
+export async function notifyProjectPendingApproval(
+  projectId: string,
+  recipientUserId: string,
+  projectName: string
+): Promise<void> {
+  await createNotification({
+    recipientUserId,
+    projectId,
+    type: NotificationType.ProjectPendingApproval,
+    message: `Project "${projectName}" is pending admin approval.`,
+  });
+}
+
+export async function notifyProjectApproved(projectId: string, projectName: string): Promise<void> {
+  // Creator can be derived as the first participant of the project.
+  const creatorParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    status: "Accepted",
+    userId: { $exists: true, $ne: null },
+  })
+    .select("userId")
+    .lean();
+
+  if (!creatorParticipant?.userId) {
+    throw new NotificationError("Project creator not found", 404);
+  }
+
+  await createNotification({
+    recipientUserId: creatorParticipant.userId.toString(),
+    projectId,
+    type: NotificationType.ProjectApproved,
+    message: `Project "${projectName}" has been approved by the admin.`,
+  });
+}
+
+export async function notifyProjectRejected(projectId: string): Promise<void> {
+  // Creator can be derived as the first participant of the project.
+  const project = await ProjectModel.findById(projectId);
+  if (!project) {
+    throw new NotificationError("Project Doesnt Exist", 404);
+  }
+
+  const creatorParticipant = await ProjectParticipantModel.findOne({
+    projectId,
+    status: "Accepted",
+    userId: { $exists: true, $ne: null },
+  })
+    .select("userId")
+    .lean();
+
+  if (!creatorParticipant?.userId) {
+    throw new NotificationError("Project creator not found", 404);
+  }
+
+  await createNotification({
+    recipientUserId: creatorParticipant.userId.toString(),
+    projectId,
+    type: NotificationType.ProjectRejected,
+    message: `Project "${project.name}" has been rejected by the admin.`,
+  });
+}
+
+// Notify All participants that project has been removed
+export async function notifyProjectDeleted(projectId: string): Promise<void> {
+  const participantIds = unique(await getAcceptedProjectUserIds(projectId));
+
+  await Promise.all(
+    participantIds.map((recipientUserId) =>
+      createNotification({
+        recipientUserId,
+        projectId,
+        type: NotificationType.ProjectDeleted,
+        message: "This project has been deleted by the admin.",
+      })
+    )
+  );
+}
+
+export async function notifyProjectParticipantRemoved(
+  projectId: string,
+  recipientUserIds: string[]
+): Promise<void> {
+  const uniqueRecipientIds = unique(recipientUserIds);
+  if (uniqueRecipientIds.length === 0) return;
+
+  const project = await ProjectModel.findById(projectId).select("name").lean();
+  if (!project) {
+    throw new NotificationError("Project not found", 404);
+  }
+
+  await Promise.all(
+    uniqueRecipientIds.map((recipientUserId) =>
+      createNotification({
+        recipientUserId,
+        projectId,
+        type: NotificationType.ProjectParticipantRemoved,
+        message: `You have been removed from project "${project.name}" by the admin.`,
+      })
+    )
+  );
+}
+
 function getOverdueMilestones(daysOverdue: number): number[] {
   const milestones = [14, 21, 28];
   return milestones.filter((m) => daysOverdue >= m);

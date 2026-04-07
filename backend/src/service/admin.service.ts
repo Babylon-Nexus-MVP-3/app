@@ -6,6 +6,12 @@ import { hashCode } from "../utils/authHelper";
 import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
 import { randomInt } from "crypto";
+import {
+  notifyProjectApproved,
+  notifyProjectDeleted,
+  notifyProjectParticipantRemoved,
+  notifyProjectRejected,
+} from "./notification.service";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -20,6 +26,13 @@ function generateOTP(): string {
   return randomInt(100000, 999999).toString();
 }
 
+async function notifyAdminSafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — project approval is already committed
+  }
+}
 
 export async function listPendingProjects(): Promise<any[]> {
   const projects = await ProjectModel.find({ status: "Pending" }).sort({ createdAt: -1 }).lean();
@@ -112,6 +125,8 @@ export async function approveProject(projectId: string): Promise<void> {
     status: "Pending",
   });
 
+  await notifyAdminSafely(() => notifyProjectApproved(projectId, project.name));
+
   for (const participant of pendingParticipants) {
     if (!participant.email) continue;
 
@@ -131,6 +146,9 @@ export async function rejectProject(projectId: string): Promise<void> {
     { _id: projectId, status: "Pending" },
     { $set: { status: "Rejected" } }
   );
+
+  await notifyAdminSafely(() => notifyProjectRejected(projectId));
+
   if (result.matchedCount === 0) {
     throw new AdminError("Project not found or already processed", 404);
   }
@@ -244,6 +262,8 @@ export async function removeProjectParticipant(
 
   await project.save();
 
+  await notifyAdminSafely(() => notifyProjectParticipantRemoved(projectId, deletedAcceptedUserIds));
+
   return { removedCount };
 }
 
@@ -262,6 +282,8 @@ export async function deleteProject(projectId: string) {
   project.deletedAt = new Date();
   await project.save();
 
+  await notifyAdminSafely(() => notifyProjectDeleted(projectId));
+
   return { success: true };
 }
 
@@ -277,7 +299,9 @@ function computeHealthScore(invoices: any[]): number {
 }
 
 export async function getAdminProjectDetail(projectId: string) {
-  const project = await ProjectModel.findById(projectId).lean();
+  const project = await ProjectModel.findById(projectId)
+    .setOptions({ bypassSoftDelete: true })
+    .lean();
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
@@ -357,6 +381,7 @@ export async function getAdminProjectDetail(projectId: string) {
       name: project.name,
       location: project.location,
       council: project.council,
+      status: project.status,
     },
     participants: participants.map((p) => ({
       participantId: p._id.toString(),

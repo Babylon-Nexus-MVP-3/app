@@ -16,6 +16,11 @@ import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
 type NotificationType =
+  | "ProjectPendingApproval"
+  | "ProjectApproved"
+  | "ProjectRejected"
+  | "ProjectDeleted"
+  | "ProjectParticipantRemoved"
   | "InvoiceSubmitted"
   | "InvoiceApproved"
   | "InvoicePaid"
@@ -53,6 +58,16 @@ type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
 function iconForType(type: NotificationType): { name: IoniconName; color: string } {
   switch (type) {
+    case "ProjectPendingApproval":
+      return { name: "time-outline", color: Colors.amber };
+    case "ProjectApproved":
+      return { name: "checkmark-done-circle-outline", color: Colors.green };
+    case "ProjectRejected":
+      return { name: "close-circle-outline", color: Colors.red };
+    case "ProjectDeleted":
+      return { name: "trash-outline", color: Colors.red };
+    case "ProjectParticipantRemoved":
+      return { name: "person-remove-outline", color: Colors.red };
     case "InvoiceSubmitted":
       return { name: "document-text-outline", color: Colors.navy };
     case "InvoiceApproved":
@@ -170,7 +185,12 @@ export default function Notifications() {
           renderItem={({ item }) => (
             <NotificationCard
               item={item}
-              onPress={() => router.push(`/(app)/project/${item.projectId}` as any)}
+              onPress={() => {
+                const url = item.invoiceId
+                  ? `/(app)/project/${item.projectId}?openInvoice=${item.invoiceId}`
+                  : `/(app)/project/${item.projectId}`;
+                router.push(url as any);
+              }}
             />
           )}
           ListEmptyComponent={

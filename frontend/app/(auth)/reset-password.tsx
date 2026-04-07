@@ -8,9 +8,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 
@@ -19,6 +21,8 @@ export default function ResetPassword() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,27 +73,45 @@ export default function ResetPassword() {
           <Text style={styles.subtitle}>{"Choose a new password for your account."}</Text>
 
           <Text style={styles.label}>New Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Min. 12 characters"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            secureTextEntry
-            returnKeyType="next"
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Min. 12 characters"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              secureTextEntry={!showPassword}
+              returnKeyType="next"
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color="rgba(255,255,255,0.5)"
+              />
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={styles.input}
-            value={confirm}
-            onChangeText={setConfirm}
-            placeholder="Re-enter password"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleReset}
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+              value={confirm}
+              onChangeText={setConfirm}
+              placeholder="Re-enter password"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              secureTextEntry={!showConfirm}
+              returnKeyType="done"
+              onSubmitEditing={handleReset}
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((v) => !v)}>
+              <Ionicons
+                name={showConfirm ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color="rgba(255,255,255,0.5)"
+              />
+            </TouchableOpacity>
+          </View>
 
           {password.length > 0 && password.length < 12 && (
             <Text style={styles.hintText}>Password must be at least 12 characters</Text>
@@ -200,5 +222,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.navy,
     letterSpacing: 0.5,
+  },
+  inputWrapper: {
+    marginBottom: 20,
+  },
+  inputNoMargin: {
+    marginBottom: 0,
+  },
+  inputPadRight: {
+    paddingRight: 48,
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
@@ -32,9 +32,10 @@ import { MySpaceTab } from "@/components/project/MySpaceTab";
 import { MembersModal } from "@/components/project/MembersModal";
 
 export default function ProjectDetail() {
-  const params = useLocalSearchParams<{ id: string; name: string }>();
+  const params = useLocalSearchParams<{ id: string; name: string; openInvoice?: string }>();
   const id = params.id ?? "";
   const nameParam = params.name ?? "Project";
+  const openInvoiceId = params.openInvoice;
 
   const { fetchWithAuth, user } = useAuth();
   const userId = user?.id ?? "";
@@ -46,6 +47,7 @@ export default function ProjectDetail() {
   const [change, setChange] = useState<number | null>(null);
   const [role, setRole] = useState("Member");
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
+  const [pendingInvoice, setPendingInvoice] = useState<ApiInvoice | null>(null);
   const isInvoiceUploader = INVOICE_UPLOADER_ROLES.includes(role);
 
   // ── Raise Invoice state ──
@@ -215,9 +217,20 @@ export default function ProjectDetail() {
 
   useFocusEffect(
     useCallback(() => {
+      setPendingInvoice(null);
       loadProject(true).finally(() => setDataLoading(false));
     }, [id])
   );
+
+  useEffect(() => {
+    if (openInvoiceId && invoices.length > 0 && !dataLoading) {
+      const inv = invoices.find((i) => i.id === openInvoiceId) ?? null;
+      if (inv) {
+        setPendingInvoice(inv);
+        setActiveTab("myspace");
+      }
+    }
+  }, [invoices, openInvoiceId, dataLoading]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -320,6 +333,8 @@ export default function ProjectDetail() {
           invoiceAction={invoiceAction}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          initialInvoice={pendingInvoice}
+          onInitialInvoiceOpened={() => setPendingInvoice(null)}
         />
       )}
 

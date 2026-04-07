@@ -4,6 +4,8 @@ import { app } from "../../app";
 import { requestDelete, requestAuthLogin } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
+import { ProjectParticipantModel } from "../../models/projectParticipantModel";
+import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { hashPassword } from "../../utils/authHelper";
 
 jest.setTimeout(15000);
@@ -76,6 +78,49 @@ describe("Admin endpoints", () => {
     expect(updated?.status).toBe("Active");
   });
 
+  it("returns 200 for approvaing project with notification sent", async () => {
+    const token = await getAdminToken();
+    const hashed = await hashPassword("CreatorPassword123!");
+    const creator = await UserModel.create({
+      name: "Project Creator",
+      email: "creator@project-approval-test.com",
+      password: hashed,
+      role: "PM",
+      status: "Active",
+      emailVerified: true,
+    });
+
+    const project = await ProjectModel.create({
+      name: "Approved Project",
+      location: "L1",
+      council: "C1",
+      status: "Pending",
+    });
+
+    await ProjectParticipantModel.create({
+      projectId: project._id.toString(),
+      userId: creator._id.toString(),
+      email: creator.email,
+      role: "PM",
+      status: "Accepted",
+    });
+
+    const res = await request(app)
+      .put(`/admin/projects/${project._id}/approve`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+
+    const notification = await NotificationModel.findOne({
+      recipientUserId: creator._id.toString(),
+      projectId: project._id.toString(),
+      type: NotificationType.ProjectApproved,
+    }).lean();
+
+    expect(notification).toBeTruthy();
+    expect(notification?.message).toContain("has been approved by the admin");
+    expect(notification?.read).toBe(false);
+  });
+
   it("returns 404 when approving non-existent project", async () => {
     const token = await getAdminToken();
     const fakeId = new mongoose.Types.ObjectId();
@@ -83,5 +128,51 @@ describe("Admin endpoints", () => {
       .put(`/admin/projects/${fakeId}/approve`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(404);
+  });
+
+  it("returns 200 for rejecting project with notification sent", async () => {
+    const token = await getAdminToken();
+    const hashed = await hashPassword("CreatorPassword123!");
+    const creator = await UserModel.create({
+      name: "Rejected Project Creator",
+      email: "creator@project-rejection-test.com",
+      password: hashed,
+      role: "PM",
+      status: "Active",
+      emailVerified: true,
+    });
+
+    const project = await ProjectModel.create({
+      name: "Rejected Project",
+      location: "L1",
+      council: "C1",
+      status: "Pending",
+    });
+
+    await ProjectParticipantModel.create({
+      projectId: project._id.toString(),
+      userId: creator._id.toString(),
+      email: creator.email,
+      role: "PM",
+      status: "Accepted",
+    });
+
+    const res = await request(app)
+      .put(`/admin/projects/${project._id}/reject`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+
+    const updated = await ProjectModel.findById(project._id).lean();
+    expect(updated?.status).toBe("Rejected");
+
+    const notification = await NotificationModel.findOne({
+      recipientUserId: creator._id.toString(),
+      projectId: project._id.toString(),
+      type: NotificationType.ProjectRejected,
+    }).lean();
+
+    expect(notification).toBeTruthy();
+    expect(notification?.message).toContain("has been rejected by the admin");
+    expect(notification?.read).toBe(false);
   });
 });

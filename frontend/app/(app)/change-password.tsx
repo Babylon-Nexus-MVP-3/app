@@ -23,6 +23,9 @@ export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -125,42 +128,69 @@ export default function ChangePassword() {
             <Text style={styles.subtitle}>Your new password must be at least 12 characters.</Text>
 
             <Text style={styles.label}>Current Password</Text>
-            <TextInput
-              style={styles.input}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry
-              returnKeyType="next"
-              onSubmitEditing={() => newPassRef.current?.focus()}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="••••••••••••"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                secureTextEntry={!showCurrent}
+                returnKeyType="next"
+                onSubmitEditing={() => newPassRef.current?.focus()}
+              />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowCurrent((v) => !v)}>
+                <Ionicons
+                  name={showCurrent ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="rgba(255,255,255,0.5)"
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>New Password</Text>
-            <TextInput
-              ref={newPassRef}
-              style={styles.input}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry
-              returnKeyType="next"
-              onSubmitEditing={() => confirmPassRef.current?.focus()}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                ref={newPassRef}
+                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="••••••••••••"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                secureTextEntry={!showNew}
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPassRef.current?.focus()}
+              />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNew((v) => !v)}>
+                <Ionicons
+                  name={showNew ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="rgba(255,255,255,0.5)"
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Confirm New Password</Text>
-            <TextInput
-              ref={confirmPassRef}
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                ref={confirmPassRef}
+                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="••••••••••••"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                secureTextEntry={!showConfirm}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((v) => !v)}>
+                <Ionicons
+                  name={showConfirm ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="rgba(255,255,255,0.5)"
+                />
+              </TouchableOpacity>
+            </View>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -319,5 +349,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "rgba(255,255,255,0.55)",
     textAlign: "center",
+  },
+  inputWrapper: {
+    marginBottom: 20,
+  },
+  inputNoMargin: {
+    marginBottom: 0,
+  },
+  inputPadRight: {
+    paddingRight: 48,
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
 });

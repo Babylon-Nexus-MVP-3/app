@@ -39,6 +39,7 @@ export default function AdminProjectDetail() {
 
   const [projectName, setProjectName] = useState("");
   const [location, setLocation] = useState("");
+  const [projectStatus, setProjectStatus] = useState("");
   const [health, setHealth] = useState(0);
   const [change, setChange] = useState<number | null>(null);
   const [overdue, setOverdue] = useState(0);
@@ -61,6 +62,7 @@ export default function AdminProjectDetail() {
         }
         setProjectName(data.project?.name ?? "");
         setLocation(data.project?.location ?? "");
+        setProjectStatus(data.project?.status ?? "");
         setHealth(data.healthScore ?? 0);
         setChange(data.monthOnMonthHealthChangePct ?? null);
         setOverdue(data.overdueInvoiceCount ?? 0);
@@ -228,6 +230,7 @@ export default function AdminProjectDetail() {
           onDeleteProject={handleDeleteProject}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          isArchived={projectStatus === "Inactive"}
         />
       )}
 
@@ -256,12 +259,14 @@ function MembersTab({
   onDeleteProject,
   refreshing,
   onRefresh,
+  isArchived,
 }: {
   participants: Participant[];
   onRemove: (p: Participant) => void;
   onDeleteProject: () => void;
   refreshing: boolean;
   onRefresh: () => void;
+  isArchived: boolean;
 }) {
   return (
     <ScrollView
@@ -323,14 +328,16 @@ function MembersTab({
         </View>
       )}
 
-      <TouchableOpacity
-        style={styles.deleteProjectBtn}
-        onPress={onDeleteProject}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="trash-outline" size={18} color={Colors.white} />
-        <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
-      </TouchableOpacity>
+      {!isArchived && (
+        <TouchableOpacity
+          style={styles.deleteProjectBtn}
+          onPress={onDeleteProject}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.white} />
+          <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }

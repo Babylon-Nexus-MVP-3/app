@@ -5,6 +5,7 @@ import { requestDelete, requestDeleteProject } from "../requestHelpers";
 import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
+import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { hashPassword } from "../../utils/authHelper";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
@@ -96,5 +97,53 @@ describe("Delete /project/:projectId", () => {
     const res = await requestDeleteProject(token, new mongoose.Types.ObjectId().toString());
     console.log(res.body);
     expect(res.statusCode).toStrictEqual(400);
+  });
+
+  it("creates project deleted notifications for accepted participants", async () => {
+    const token = await getAdminToken();
+    const hashed = await hashPassword("AcceptedPassword123!");
+    const acceptedUser = await UserModel.create({
+      name: "Accepted Participant",
+      email: "accepted@project-delete-test.com",
+      password: hashed,
+      role: UserRole.PM,
+      status: "Active",
+      emailVerified: true,
+    });
+
+    const project = await ProjectModel.create({
+      name: "Project To Delete",
+      location: "L1",
+      council: "C1",
+      status: "Active",
+    });
+
+    await ProjectParticipantModel.create({
+      projectId: project._id.toString(),
+      userId: acceptedUser._id.toString(),
+      email: acceptedUser.email,
+      role: UserRole.PM,
+      status: "Accepted",
+    });
+
+    await ProjectParticipantModel.create({
+      projectId: project._id.toString(),
+      email: "pending@example.com",
+      role: UserRole.Subbie,
+      status: "Pending",
+    });
+
+    const res = await requestDeleteProject(token, project._id.toString());
+    expect(res.status).toBe(200);
+
+    const notifications = await NotificationModel.find({
+      recipientUserId: acceptedUser._id.toString(),
+      projectId: project._id.toString(),
+      type: NotificationType.ProjectDeleted,
+    }).lean();
+
+    expect(notifications.length).toBe(1);
+    expect(notifications[0].message).toContain("deleted by the admin");
+    expect(notifications[0].read).toBe(false);
   });
 });

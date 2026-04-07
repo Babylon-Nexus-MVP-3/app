@@ -12,16 +12,7 @@ import {
   notifyInvoiceRejected,
   notifyInvoiceSubmitted,
 } from "./notification.service";
-
-/** Runs notification persistence without letting failures break invoice workflows. */
-async function notifySafely(run: () => Promise<void>): Promise<void> {
-  try {
-    await run();
-  } catch {
-    // intentionally silent — invoice state is already committed
-  }
-}
-
+import { notifySafely } from "./notificationScheduler.service";
 export class InvoiceError extends Error {
   statusCode: number;
 
