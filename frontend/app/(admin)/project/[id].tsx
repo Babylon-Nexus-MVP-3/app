@@ -18,6 +18,8 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
 import { CalendarTab } from "@/components/project/CalendarTab";
+import { FinancierMySpace } from "@/components/project/MySpaceViews";
+import { InvoiceDetailModal } from "@/components/project/InvoiceDetailModal";
 import { ApiInvoice } from "@/components/project/types";
 
 type Participant = {
@@ -33,7 +35,8 @@ export default function AdminProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { fetchWithAuth, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"calendar" | "members">("calendar");
+  const [activeTab, setActiveTab] = useState<"calendar" | "members" | "invoices">("calendar");
+  const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -218,6 +221,23 @@ export default function AdminProjectDetail() {
           refreshing={refreshing}
           onRefresh={handleRefresh}
         />
+      ) : activeTab === "invoices" ? (
+        <>
+          <FinancierMySpace
+            invoices={invoices}
+            onTapInvoice={setDetailInvoice}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+          />
+          <InvoiceDetailModal
+            visible={detailInvoice !== null}
+            inv={detailInvoice}
+            viewerRole="Admin"
+            userId={user?.id ?? ""}
+            invoiceAction={async () => null}
+            onClose={() => setDetailInvoice(null)}
+          />
+        </>
       ) : (
         <MembersTab
           participants={participants}
@@ -231,14 +251,18 @@ export default function AdminProjectDetail() {
 
       {/* Tab bar */}
       <View style={styles.subTabBar}>
-        {(["calendar", "members"] as const).map((t) => (
+        {(["calendar", "invoices", "members"] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.subTab, activeTab === t && styles.subTabActive]}
             onPress={() => setActiveTab(t)}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
-              {t === "calendar" ? "📅  Calendar" : "📋  Project Information"}
+              {t === "calendar"
+                ? "📅  Calendar"
+                : t === "invoices"
+                ? "🧾  All Invoices"
+                : "📋  Project Information"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -419,7 +443,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: Colors.gold,
   },
-  subTabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  subTabText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
   subTabTextActive: { color: Colors.navy },
   sectionLabel: {
     fontSize: 12,
