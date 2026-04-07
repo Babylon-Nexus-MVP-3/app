@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "build": "tsc",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "dev": "cross-env NODE_ENV=development ts-node -T src/server.ts",
     "seed:admin": "ts-node -T scripts/seedAdmin.ts",
