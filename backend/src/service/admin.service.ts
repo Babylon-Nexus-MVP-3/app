@@ -82,7 +82,10 @@ export async function listActiveProjects(): Promise<any[]> {
 }
 
 export async function listInactiveProjects(): Promise<any[]> {
-  const projects = await ProjectModel.find({ status: "Inactive" }).sort({ createdAt: -1 }).lean();
+  const projects = await ProjectModel.find({ status: "Inactive" })
+    .setOptions({ bypassSoftDelete: true })
+    .sort({ createdAt: -1 })
+    .lean();
   return projects.map((p) => ({
     _id: p._id.toString(),
     name: p.name,
@@ -273,7 +276,9 @@ function computeHealthScore(invoices: any[]): number {
 }
 
 export async function getAdminProjectDetail(projectId: string) {
-  const project = await ProjectModel.findById(projectId).lean();
+  const project = await ProjectModel.findById(projectId)
+    .setOptions({ bypassSoftDelete: true })
+    .lean();
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
@@ -302,12 +307,17 @@ export async function getAdminProjectDetail(projectId: string) {
         : 0;
     return {
       id: i._id.toString(),
+      invoiceNumber: i.invoiceNumber,
       submittingParty: i.submittingParty,
+      submittingCategory: i.submittingCategory,
       description: i.description,
       dateSubmitted: i.dateSubmitted,
       dateDue: i.dateDue,
       amount: i.amount,
       status: i.status,
+      approverRole: i.approverRole,
+      submittedByUserId: i.submittedByUserId?.toString(),
+      rejectionReason: i.rejectionReason,
       daysOverdue,
     };
   });
@@ -348,6 +358,7 @@ export async function getAdminProjectDetail(projectId: string) {
       name: project.name,
       location: project.location,
       council: project.council,
+      status: project.status,
     },
     participants: participants.map((p) => ({
       participantId: p._id.toString(),

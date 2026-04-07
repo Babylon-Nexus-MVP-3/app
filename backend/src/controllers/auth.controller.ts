@@ -55,6 +55,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
+        role: result.user.role,
         status: result.user.status,
       },
     });
