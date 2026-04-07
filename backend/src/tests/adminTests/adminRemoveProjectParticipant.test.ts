@@ -4,6 +4,7 @@ import { app } from "../../app";
 import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
+import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { hashPassword } from "../../utils/authHelper";
 import { UserRole } from "../../models/userModel";
 
@@ -137,6 +138,52 @@ describe("Admin participant removal endpoints", () => {
     expect(updated?.pmId).toBeUndefined();
     expect(updated?.ownerId).toBe("owner_user_1");
     expect(updated?.builderId).toBe("builder_user_1");
+  });
+
+  it("creates a notification when removing an accepted participant", async () => {
+    const token = await getAdminToken();
+    const hashed = await hashPassword("AcceptedPassword123!");
+    const participantUser = await UserModel.create({
+      name: "Accepted Participant",
+      email: "accepted-remove@test.com",
+      password: hashed,
+      role: UserRole.PM,
+      status: "Active",
+      emailVerified: true,
+    });
+
+    const project = await ProjectModel.create({
+      name: "Participant Removal Project",
+      location: "L1",
+      council: "C1",
+      status: "Active",
+      pmId: participantUser._id.toString(),
+    });
+
+    await ProjectParticipantModel.create({
+      projectId: project._id.toString(),
+      userId: participantUser._id.toString(),
+      email: participantUser.email,
+      role: UserRole.PM,
+      status: "Accepted",
+    });
+
+    const res = await request(app)
+      .delete(`/admin/projects/${project._id}/participants/remove`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: participantUser.email, role: UserRole.PM });
+
+    expect(res.status).toBe(200);
+
+    const notification = await NotificationModel.findOne({
+      recipientUserId: participantUser._id.toString(),
+      projectId: project._id.toString(),
+      type: NotificationType.ProjectParticipantRemoved,
+    }).lean();
+
+    expect(notification).toBeTruthy();
+    expect(notification?.message).toContain("removed from project");
+    expect(notification?.read).toBe(false);
   });
 
   it("returns 404 when participant does not exist", async () => {

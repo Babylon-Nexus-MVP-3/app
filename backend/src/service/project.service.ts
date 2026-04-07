@@ -4,9 +4,10 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
+import { notifyProjectPendingApproval } from "./notification.service";
 import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
-
+import { notifySafely } from "./notificationScheduler.service";
 export class ProjectError extends Error {
   statusCode: number;
 
@@ -154,6 +155,10 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     userId: creatorId,
     payload: { name: name || location, location, council, status },
   });
+
+  await notifySafely(() =>
+    notifyProjectPendingApproval(project._id.toString(), user._id.toString(), project.name)
+  );
 
   return project._id.toString();
 }

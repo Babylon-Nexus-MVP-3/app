@@ -31,3 +31,12 @@ export function startNotificationScheduler(): void {
     }
   }, 60 * 1000);
 }
+
+/** Runs notification persistence without letting failures break project or invoice workflows. */
+export async function notifySafely(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch {
+    // intentionally silent — invoice state is already committed
+  }
+}

@@ -2,7 +2,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import { app } from "../../app";
 import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
-import { UserRole } from "../../models/userModel";
+import { NotificationModel, NotificationType } from "../../models/notificationModel";
+import { UserModel, UserRole } from "../../models/userModel";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);
@@ -51,6 +52,30 @@ describe("POST /project", () => {
     expect(res.body.projectId).toBeDefined();
     expect(typeof res.body.projectId).toBe("string");
     expect(res.body.projectId.length).toBeGreaterThan(0);
+  });
+
+  it("returns 200 with notification sent correctly", async () => {
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+
+    const res = await request(app)
+      .post("/project")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...validProjectBody, creatorRole: UserRole.PM });
+
+    expect(res.status).toBe(200);
+
+    const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
+    expect(creator?._id).toBeDefined();
+
+    const notification = await NotificationModel.findOne({
+      recipientUserId: creator!._id.toString(),
+      projectId: res.body.projectId,
+      type: NotificationType.ProjectPendingApproval,
+    }).lean();
+
+    expect(notification).toBeTruthy();
+    expect(notification?.message).toContain("pending admin approval");
+    expect(notification?.read).toBe(false);
   });
 
   it("returns 401 when no Authorization header", async () => {
