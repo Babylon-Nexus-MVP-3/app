@@ -42,6 +42,7 @@ export const loginLimiter = rateLimit({
   message: { error: "Too many login attempts, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
 });
 
 export const resendVerifLimiter = rateLimit({
