@@ -165,7 +165,7 @@ export default function AdminProjectDetail() {
             accessibilityRole="button"
             accessibilityLabel="Back to all projects"
           >
-            <Ionicons name="chevron-back" size={22} color={Colors.gold} />
+            <Text style={styles.backArrow}>‹</Text>
             <Text style={styles.backLabel}>All Projects</Text>
           </TouchableOpacity>
 
@@ -353,6 +353,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     direction: "ltr",
   },
+  backArrow: { fontSize: 24, color: Colors.gold, lineHeight: 26 },
   backLabel: { fontSize: 14, color: Colors.gold, fontWeight: "600" },
   adminBadge: {
     fontSize: 10,
