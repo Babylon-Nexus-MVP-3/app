@@ -82,7 +82,7 @@ export default function SignUp() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>Create account</Text>

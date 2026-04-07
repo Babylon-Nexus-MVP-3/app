@@ -62,7 +62,7 @@ export default function ResetPassword() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>Reset password</Text>

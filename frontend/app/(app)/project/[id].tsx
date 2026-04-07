@@ -443,7 +443,7 @@ export default function ProjectDetail() {
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <Text style={styles.raiseBackArrow}>←</Text>
+                <Text style={styles.raiseBackArrow}>‹</Text>
               </TouchableOpacity>
 
               <Text style={styles.raiseTitle}>Raise Invoice</Text>

@@ -150,7 +150,7 @@ export default function CreateProject() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
 
           <View style={styles.successContent}>
@@ -190,7 +190,7 @@ export default function CreateProject() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>Create New Project</Text>

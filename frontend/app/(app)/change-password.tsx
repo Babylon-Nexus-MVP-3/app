@@ -115,7 +115,7 @@ export default function ChangePassword() {
               accessibilityRole="button"
               accessibilityLabel="Back"
             >
-              <Text style={styles.backArrow}>←</Text>
+              <Text style={styles.backArrow}>‹</Text>
             </TouchableOpacity>
 
             <Text style={styles.title}>Change Password</Text>
