@@ -113,7 +113,7 @@ export default function ProjectDetail() {
       if (!res.ok) {
         setInviteError(data.error ?? "Failed to send invite");
       } else {
-        setInviteCode(data.participant.inviteCode);
+        setInviteCode(data.inviteCode);
       }
     } catch {
       setInviteError("Network error. Please try again.");
@@ -571,7 +571,7 @@ export default function ProjectDetail() {
                   The invitee will use this code to join the project.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch" }]}
+                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 32 }]}
                   onPress={() => setInviteVisible(false)}
                 >
                   <Text style={styles.invitePrimaryBtnText}>Done</Text>
