@@ -2,8 +2,9 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
-  RefreshControl,
+  Platform,\n  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -487,78 +488,86 @@ export default function ProjectDetail() {
               </TouchableOpacity>
             </SafeAreaView>
           ) : (
-            <ScrollView
-              contentContainerStyle={[styles.raiseBody, { paddingTop: insets.top + 20 }]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+              style={[styles.raiseKeyboardView, { paddingTop: insets.top }]}
             >
-              <TouchableOpacity
-                onPress={() => setInvoiceVisible(false)}
-                style={styles.raiseBack}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
+              <ScrollView
+                style={styles.raiseScroll}
+                contentContainerStyle={styles.raiseBody}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
               >
-                <Text style={styles.raiseBackArrow}>‹</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setInvoiceVisible(false)}
+                  style={styles.raiseBack}
+                  hitSlop={HEADER_HIT_SLOP}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                >
+                  <Text style={styles.raiseBackArrow}>←</Text>
+                </TouchableOpacity>
 
-              <Text style={styles.raiseTitle}>Raise Invoice</Text>
-              <Text style={styles.raiseSubtitle}>{projectName}</Text>
+                <Text style={styles.raiseTitle}>Raise Invoice</Text>
+                <Text style={styles.raiseSubtitle}>{projectName}</Text>
 
-              <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
-              <TextInput
-                style={styles.raiseInput}
-                placeholder="e.g. 45000"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={invAmount}
-                onChangeText={setInvAmount}
-                keyboardType="numeric"
-              />
+                <Text style={styles.raiseFieldLabel}>Amount ($)</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. 45000"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invAmount}
+                  onChangeText={setInvAmount}
+                  keyboardType="numeric"
+                />
 
-              <Text style={styles.raiseFieldLabel}>Description</Text>
-              <TextInput
-                style={[styles.raiseInput, styles.raiseMultiline]}
-                placeholder="e.g. Electrical rough-in — Level 3"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={invDesc}
-                onChangeText={setInvDesc}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
+                <Text style={styles.raiseFieldLabel}>Description</Text>
+                <TextInput
+                  style={[styles.raiseInput, styles.raiseMultiline]}
+                  placeholder="e.g. Electrical rough-in — Level 3"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invDesc}
+                  onChangeText={setInvDesc}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
 
-              <Text style={styles.raiseFieldLabel}>Submitting Party</Text>
-              <TextInput
-                style={styles.raiseInput}
-                placeholder="e.g. ABC Electrical"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={invSubmittingParty}
-                onChangeText={setInvSubmittingParty}
-              />
+                <Text style={styles.raiseFieldLabel}>Submitting Party</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. ABC Electrical"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invSubmittingParty}
+                  onChangeText={setInvSubmittingParty}
+                />
 
-              <Text style={styles.raiseFieldLabel}>Category</Text>
-              <TextInput
-                style={styles.raiseInput}
-                placeholder="e.g. Electrical, Plumbing"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={invCategory}
-                onChangeText={setInvCategory}
-              />
+                <Text style={styles.raiseFieldLabel}>Category</Text>
+                <TextInput
+                  style={styles.raiseInput}
+                  placeholder="e.g. Electrical, Plumbing"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={invCategory}
+                  onChangeText={setInvCategory}
+                />
 
-              {invoiceError && <Text style={styles.inviteError}>{invoiceError}</Text>}
+                {invoiceError && <Text style={styles.inviteError}>{invoiceError}</Text>}
 
-              <TouchableOpacity
-                style={styles.raisePrimaryBtn}
-                onPress={handleAddInvoice}
-                disabled={invoiceLoading}
-              >
-                {invoiceLoading ? (
-                  <ActivityIndicator color={Colors.navy} />
-                ) : (
-                  <Text style={styles.raisePrimaryBtnText}>Submit Invoice</Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
+                <TouchableOpacity
+                  style={styles.raisePrimaryBtn}
+                  onPress={handleAddInvoice}
+                  disabled={invoiceLoading}
+                >
+                  {invoiceLoading ? (
+                    <ActivityIndicator color={Colors.navy} />
+                  ) : (
+                    <Text style={styles.raisePrimaryBtnText}>Submit Invoice</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            </KeyboardAvoidingView>
           )}
         </LinearGradient>
       </Modal>

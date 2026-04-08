@@ -433,7 +433,9 @@ export const styles = StyleSheet.create({
   fabText: { fontSize: 28, color: Colors.white, lineHeight: 32, fontWeight: "300" },
 
   // Raise Invoice
-  raiseBody: { paddingHorizontal: 24, paddingBottom: 48 },
+  raiseKeyboardView: { flex: 1 },
+  raiseScroll: { flex: 1 },
+  raiseBody: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 72 },
   raiseBack: {
     alignSelf: "flex-start",
     marginBottom: 24,
