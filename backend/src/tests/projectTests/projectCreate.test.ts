@@ -5,6 +5,7 @@ import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
+import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);
@@ -57,6 +58,14 @@ describe("POST /project", () => {
 
     const project = await ProjectModel.findById(res.body.projectId).lean();
     expect(project?.daNumber).toBe(daNumber);
+
+    const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
+    const participant = await ProjectParticipantModel.findOne({
+      projectId: res.body.projectId,
+      userId: creator?._id.toString(),
+    }).lean();
+    expect(participant?.hasInsurance).toBe(true);
+    expect(participant?.hasLicence).toBe(true);
   });
 
   it("returns 200 with notification sent correctly", async () => {
