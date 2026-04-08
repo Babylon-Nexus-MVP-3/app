@@ -18,8 +18,18 @@ function isValidRole(value: unknown): value is UserRole {
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, location, council, daNumber, hasInsurance, hasLicence, creatorRole, invitees } =
-      req.body;
+    const {
+      name,
+      location,
+      council,
+      daNumber,
+      hasInsurance,
+      hasLicence,
+      creatorRole,
+      creatorHasInsurance,
+      creatorHasLicence,
+      invitees,
+    } = req.body;
     if (!isNonEmptyString(location) || !isNonEmptyString(council)) {
       res.status(400).json({ error: "Location and council are required" });
       return;
@@ -34,6 +44,22 @@ export async function create(req: Request, res: Response, next: NextFunction): P
     }
     if (creatorRole != null && !isValidRole(creatorRole)) {
       res.status(400).json({ error: "Creator role is invalid" });
+      return;
+    }
+    if (creatorHasInsurance != null && typeof creatorHasInsurance !== "boolean") {
+      res.status(400).json({ error: "creatorHasInsurance must be a boolean" });
+      return;
+    }
+    if (creatorHasLicence != null && typeof creatorHasLicence !== "boolean") {
+      res.status(400).json({ error: "creatorHasLicence must be a boolean" });
+      return;
+    }
+    if (hasInsurance != null && typeof hasInsurance !== "boolean") {
+      res.status(400).json({ error: "hasInsurance must be a boolean" });
+      return;
+    }
+    if (hasLicence != null && typeof hasLicence !== "boolean") {
+      res.status(400).json({ error: "hasLicence must be a boolean" });
       return;
     }
     if (invitees != null) {
@@ -61,10 +87,12 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       name,
       location,
       daNumber,
-      hasInsurance: typeof hasInsurance === "boolean" ? hasInsurance : undefined,
-      hasLicence: typeof hasLicence === "boolean" ? hasLicence : undefined,
+      hasInsurance: hasInsurance === undefined ? undefined : hasInsurance,
+      hasLicence: hasLicence === undefined ? undefined : hasLicence,
       council,
       creatorRole,
+      creatorHasInsurance,
+      creatorHasLicence,
       invitees,
     });
     res.status(200).json({ success: true, projectId });
@@ -108,14 +136,25 @@ export async function invite(req: Request, res: Response, next: NextFunction): P
 
 export async function acceptInvite(req: Request, res: Response, next: NextFunction) {
   try {
-    const { inviteCode } = req.body;
+    const { inviteCode, hasInsurance, hasLicence } = req.body;
     if (!isNonEmptyString(inviteCode)) {
       res.status(400).json({ error: "Invite code is required" });
       return;
     }
+    if (hasInsurance != null && typeof hasInsurance !== "boolean") {
+      res.status(400).json({ error: "hasInsurance must be a boolean" });
+      return;
+    }
+    if (hasLicence != null && typeof hasLicence !== "boolean") {
+      res.status(400).json({ error: "hasLicence must be a boolean" });
+      return;
+    }
 
     const userId = req.user!.sub;
-    const { participant } = await acceptInviteParticipant(inviteCode, userId);
+    const { participant } = await acceptInviteParticipant(inviteCode, userId, {
+      hasInsurance,
+      hasLicence,
+    });
     res.status(200).json({ success: true, participant });
   } catch (err) {
     next(err);

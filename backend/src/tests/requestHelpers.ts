@@ -112,11 +112,17 @@ export async function requestRejectInvoice(
     .send(rejectionReason ? { rejectionReason } : {});
 }
 
-export async function requestAcceptInvite(inviteCode: string, token: string) {
+export async function requestAcceptInvite(
+  inviteCode: string,
+  token: string,
+  input?: { hasInsurance?: boolean | null; hasLicence?: boolean | null }
+) {
+  const hasInsurance = input?.hasInsurance === undefined ? false : input.hasInsurance;
+  const hasLicence = input?.hasLicence === undefined ? false : input.hasLicence;
   return request(app)
     .post(`/project/accept`)
     .set("Authorization", `Bearer ${token}`)
-    .send({ inviteCode });
+    .send({ inviteCode, hasInsurance, hasLicence });
 }
 
 export async function requestSubmitInvoice(
@@ -171,6 +177,8 @@ export const validProjectBody = {
   location: "2-4 Mintaro Ave, Strathfield 2135 (Lot 1, DP: 954705)",
   council: "Strathfield",
   status: "90% Complete",
+  creatorHasInsurance: true,
+  creatorHasLicence: true,
 };
 
 export async function getProjectId(token: string, creatorRole: UserRole): Promise<string> {
