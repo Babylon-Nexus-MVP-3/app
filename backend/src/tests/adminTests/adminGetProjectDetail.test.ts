@@ -106,6 +106,7 @@ describe("GET /admin/projects/:projectId", () => {
       name: "Empty Project",
       location: "Melbourne",
       council: "CBD",
+      daNumber: "DA-ADMIN-001",
       status: "Active",
     });
 
@@ -117,6 +118,7 @@ describe("GET /admin/projects/:projectId", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.project.name).toBe("Empty Project");
     expect(res.body.project.location).toBe("Melbourne");
+    expect(res.body.project.daNumber).toBe("DA-ADMIN-001");
     expect(res.body.participants).toEqual([]);
     expect(res.body.invoices).toEqual([]);
     expect(res.body.healthScore).toBe(100);
@@ -135,9 +137,30 @@ describe("GET /admin/projects/:projectId", () => {
     const projectId = project._id.toString();
 
     await ProjectParticipantModel.create([
-      { projectId, email: "builder@test.com", role: UserRole.Builder, status: "Accepted" },
-      { projectId, email: "subbie@test.com", role: UserRole.Subbie, status: "Pending" },
-      { projectId, email: "owner@test.com", role: UserRole.Owner, status: "Accepted" },
+      {
+        projectId,
+        email: "builder@test.com",
+        role: UserRole.Builder,
+        status: "Accepted",
+        hasInsurance: true,
+        hasLicence: true,
+      },
+      {
+        projectId,
+        email: "subbie@test.com",
+        role: UserRole.Subbie,
+        status: "Pending",
+        hasInsurance: false,
+        hasLicence: true,
+      },
+      {
+        projectId,
+        email: "owner@test.com",
+        role: UserRole.Owner,
+        status: "Accepted",
+        hasInsurance: true,
+        hasLicence: false,
+      },
     ]);
 
     const res = await request(app)
@@ -161,6 +184,8 @@ describe("GET /admin/projects/:projectId", () => {
     expect(builder.status).toBe("Accepted");
     expect(builder.role).toBe(UserRole.Builder);
     expect(builder.participantId).toBeDefined();
+    expect(builder.hasInsurance).toBe(true);
+    expect(builder.hasLicence).toBe(true);
   });
 
   it("resolves participant name from UserModel for accepted participants", async () => {

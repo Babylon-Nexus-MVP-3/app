@@ -4,6 +4,7 @@ import { app } from "../../app";
 import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { UserModel, UserRole } from "../../models/userModel";
+import { ProjectModel } from "../../models/projectModel";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 jest.setTimeout(15000);
@@ -41,17 +42,21 @@ beforeAll(async () => {
 describe("POST /project", () => {
   it("returns 200 and projectId when authenticated user creates project", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    const daNumber = "DA-2026-1001";
 
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
-      .send({ ...validProjectBody, creatorRole: UserRole.PM });
+      .send({ ...validProjectBody, daNumber, creatorRole: UserRole.PM });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.projectId).toBeDefined();
     expect(typeof res.body.projectId).toBe("string");
     expect(res.body.projectId.length).toBeGreaterThan(0);
+
+    const project = await ProjectModel.findById(res.body.projectId).lean();
+    expect(project?.daNumber).toBe(daNumber);
   });
 
   it("returns 200 with notification sent correctly", async () => {

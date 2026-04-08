@@ -62,6 +62,8 @@ export interface ProjectParticipantListItem {
   email: string;
   role: string;
   status: string;
+  hasInsurance?: boolean;
+  hasLicence?: boolean;
 }
 
 export interface GetProjectDetailsResult {
@@ -70,6 +72,7 @@ export interface GetProjectDetailsResult {
     name?: string;
     location: string;
     council: string;
+    daNumber?: string;
   };
   userRole: UserRole;
   healthScore: number; // 0-100
@@ -123,7 +126,7 @@ export async function getProjectDetails(
   }
 
   const allParticipants = await ProjectParticipantModel.find({ projectId })
-    .select("_id email role status userId")
+    .select("_id email role status userId hasInsurance hasLicence")
     .sort({ status: 1, role: 1 })
     .lean();
 
@@ -148,6 +151,9 @@ export async function getProjectDetails(
   }
 
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
+  const canViewParticipantComplianceFields = invoicesRaw.some((i: any) =>
+    canViewInvoiceAmount(userRole, i, normalizedUserId)
+  );
 
   const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i: any) => {
     const due = new Date(i.dateDue);
@@ -211,6 +217,7 @@ export async function getProjectDetails(
       name: project.name,
       location: project.location,
       council: project.council,
+      daNumber: project.daNumber,
     },
     userRole,
     healthScore,
@@ -223,6 +230,8 @@ export async function getProjectDetails(
       email: p.email,
       role: p.role,
       status: p.status,
+      hasInsurance: canViewParticipantComplianceFields ? p.hasInsurance : undefined,
+      hasLicence: canViewParticipantComplianceFields ? p.hasLicence : undefined,
     })),
   };
 }

@@ -49,14 +49,23 @@ afterAll(async () => {
 }, 10000);
 
 describe("Admin endpoints", () => {
-  it("returns 200 and empty list for GET /admin/projects/pending as Admin", async () => {
+  it("returns pending projects with daNumber for GET /admin/projects/pending as Admin", async () => {
     const token = await getAdminToken();
+    await ProjectModel.create({
+      name: "Pending DA Project",
+      location: "L1",
+      council: "C1",
+      daNumber: "DA-PENDING-001",
+      status: "Pending",
+    });
+
     const res = await request(app)
       .get("/admin/projects/pending")
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.projects)).toBe(true);
+    expect(res.body.projects[0]?.daNumber).toBe("DA-PENDING-001");
   });
 
   it("approves project and returns 200", async () => {

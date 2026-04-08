@@ -18,13 +18,17 @@ function isValidRole(value: unknown): value is UserRole {
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, location, council, creatorRole, invitees } = req.body;
+    const { name, location, council, daNumber, creatorRole, invitees } = req.body;
     if (!isNonEmptyString(location) || !isNonEmptyString(council)) {
       res.status(400).json({ error: "Location and council are required" });
       return;
     }
     if (name != null && !isNonEmptyString(name)) {
       res.status(400).json({ error: "Name must be a non-empty string when provided" });
+      return;
+    }
+    if (daNumber != null && !isNonEmptyString(daNumber)) {
+      res.status(400).json({ error: "DA Number must be a non-empty string when provided" });
       return;
     }
     if (creatorRole != null && !isValidRole(creatorRole)) {
@@ -55,6 +59,7 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       creatorId: req.user!.sub,
       name,
       location,
+      daNumber,
       council,
       creatorRole,
       invitees,

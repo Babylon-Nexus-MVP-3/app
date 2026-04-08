@@ -6,6 +6,7 @@ export interface Project extends Document {
   name: string;
   location: string;
   council: string;
+  daNumber?: string;
   ownerId?: string;
   builderId?: string;
   pmId?: string;
@@ -21,6 +22,7 @@ const projectSchema = new Schema<Project>(
     name: { type: String, required: true },
     location: { type: String, required: true },
     council: { type: String, required: true },
+    daNumber: { type: String },
     ownerId: { type: String },
     builderId: { type: String },
     pmId: { type: String },
