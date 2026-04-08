@@ -62,6 +62,8 @@ export default function Projects() {
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinedRole, setJoinedRole] = useState<string | null>(null);
+  const [joinHasLicence, setJoinHasLicence] = useState<boolean | null>(null);
+  const [joinHasInsurance, setJoinHasInsurance] = useState<boolean | null>(null);
 
   async function fetchProjects(silent = false) {
     if (!silent) setProjectsLoading(true);
@@ -113,6 +115,8 @@ export default function Projects() {
     setJoinCode("");
     setJoinError(null);
     setJoinedRole(null);
+    setJoinHasLicence(null);
+    setJoinHasInsurance(null);
     setJoinModalVisible(true);
   }
 
@@ -123,7 +127,11 @@ export default function Projects() {
     try {
       const res = await fetchWithAuth("https://app-production-574c.up.railway.app/project/accept", {
         method: "POST",
-        body: JSON.stringify({ inviteCode: joinCode.trim() }),
+        body: JSON.stringify({
+          inviteCode: joinCode.trim(),
+          hasLicence: joinHasLicence,
+          hasInsurance: joinHasInsurance,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -342,6 +350,56 @@ export default function Projects() {
                   autoFocus
                 />
                 <Text style={styles.joinHint}>Enter the 6-digit code from your invite.</Text>
+
+                <Text style={[styles.joinFieldLabel, { marginTop: 24 }]}>
+                  Do you hold a current licence?
+                </Text>
+                <View style={styles.inviteRoleRow}>
+                  {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+                    <TouchableOpacity
+                      key={label}
+                      style={[
+                        styles.inviteRoleChip,
+                        joinHasLicence === val && styles.inviteRoleChipActive,
+                      ]}
+                      onPress={() => setJoinHasLicence(val)}
+                    >
+                      <Text
+                        style={[
+                          styles.inviteRoleChipText,
+                          joinHasLicence === val && styles.inviteRoleChipTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.joinFieldLabel}>
+                  Do you hold public liability insurance?
+                </Text>
+                <View style={styles.inviteRoleRow}>
+                  {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+                    <TouchableOpacity
+                      key={label}
+                      style={[
+                        styles.inviteRoleChip,
+                        joinHasInsurance === val && styles.inviteRoleChipActive,
+                      ]}
+                      onPress={() => setJoinHasInsurance(val)}
+                    >
+                      <Text
+                        style={[
+                          styles.inviteRoleChipText,
+                          joinHasInsurance === val && styles.inviteRoleChipTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 {joinError && <Text style={styles.joinError}>{joinError}</Text>}
 
@@ -718,4 +776,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingHorizontal: 16,
   },
+  inviteRoleRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  inviteRoleChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  inviteRoleChipActive: { borderColor: Colors.gold, backgroundColor: Colors.gold + "26" },
+  inviteRoleChipText: { fontSize: 14, fontWeight: "500" as const, color: "rgba(255,255,255,0.7)" },
+  inviteRoleChipTextActive: { color: Colors.gold, fontWeight: "700" as const },
 });

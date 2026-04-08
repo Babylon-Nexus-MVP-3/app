@@ -46,6 +46,9 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
 
   const [projectName, setProjectName] = useState(nameParam);
+  const [projectLocation, setProjectLocation] = useState("");
+  const [projectCouncil, setProjectCouncil] = useState("");
+  const [projectDaNumber, setProjectDaNumber] = useState<string | undefined>(undefined);
   const [health, setHealth] = useState(0);
   const [overdue, setOverdue] = useState(0);
   const [change, setChange] = useState<number | null>(null);
@@ -192,6 +195,9 @@ export default function ProjectDetail() {
       const data = await res.json();
       if (res.ok) {
         setProjectName(data.project?.name ?? nameParam);
+        setProjectLocation(data.project?.location ?? "");
+        setProjectCouncil(data.project?.council ?? "");
+        setProjectDaNumber(data.project?.daNumber);
         setHealth(data.healthScore ?? 0);
         setOverdue(data.overdueInvoiceCount ?? 0);
         setChange(data.monthOnMonthHealthChangePct ?? null);
@@ -457,7 +463,7 @@ export default function ProjectDetail() {
                 setMembersVisible(true);
               }}
             >
-              <Text style={styles.kebabMenuItemText}>View Members</Text>
+              <Text style={styles.kebabMenuItemText}>Project Information</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -467,6 +473,7 @@ export default function ProjectDetail() {
       <MembersModal
         visible={membersVisible}
         participants={participants}
+        projectInfo={{ name: projectName, location: projectLocation, council: projectCouncil, daNumber: projectDaNumber }}
         onClose={() => setMembersVisible(false)}
       />
 
