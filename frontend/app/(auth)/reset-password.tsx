@@ -33,7 +33,7 @@ export default function ResetPassword() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:3229/auth/reset-password", {
+      const res = await fetch("https://app-production-574c.up.railway.app/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resetCode, newPassword: password }),

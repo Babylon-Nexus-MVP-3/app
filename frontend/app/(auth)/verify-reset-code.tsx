@@ -38,7 +38,7 @@ export default function VerifyResetCode() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:3229/auth/verify-reset-code", {
+      const res = await fetch("https://app-production-574c.up.railway.app/auth/verify-reset-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resetCode: code }),
@@ -74,7 +74,7 @@ export default function VerifyResetCode() {
     setError(null);
     setResendMsg(null);
     try {
-      const res = await fetch("http://localhost:3229/auth/resend-reset-code", {
+      const res = await fetch("https://app-production-574c.up.railway.app/auth/resend-reset-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
