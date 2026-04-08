@@ -60,7 +60,7 @@ export default function ForgotPassword() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>Forgot password?</Text>

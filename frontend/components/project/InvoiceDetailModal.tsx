@@ -74,16 +74,18 @@ export function InvoiceDetailModal({
       <View style={styles.detailScreen}>
         <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.detailHeader}>
           <SafeAreaView edges={["top"]}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.detailBackBtn}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.detailBackArrow}>‹</Text>
-              <Text style={styles.detailBackLabel}>My Space</Text>
-            </TouchableOpacity>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.backBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Text style={styles.backArrow}>‹</Text>
+                <Text style={styles.backLabel}>My Space</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.detailTitleRow}>
               <Text style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</Text>
               <View
