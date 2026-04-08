@@ -29,6 +29,8 @@ export interface CreateProjectInput {
   council: string;
   daNumber?: string;
   creatorRole?: UserRole;
+  creatorHasInsurance: boolean;
+  creatorHasLicence: boolean;
   invitees?: InviteeInput[];
 }
 
@@ -129,6 +131,8 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     projectId: project._id.toString(),
     userId: user._id.toString(),
     role: participantRole,
+    hasLicence: input.creatorHasLicence,
+    hasInsurance: input.creatorHasInsurance,
     email: creatorEmail,
     status: "Accepted",
   });
@@ -258,7 +262,16 @@ export async function inviteParticipant(
   return { participant: safeParticipant, inviteCode };
 }
 
-export async function acceptInviteParticipant(inviteCode: string, userId: string) {
+export interface AcceptInviteInput {
+  hasInsurance: boolean;
+  hasLicence: boolean;
+}
+
+export async function acceptInviteParticipant(
+  inviteCode: string,
+  userId: string,
+  input: AcceptInviteInput
+) {
   if (!inviteCode) {
     throw new ProjectError("Invite code is required");
   }
@@ -304,7 +317,13 @@ export async function acceptInviteParticipant(inviteCode: string, userId: string
   const updatedParticipant = await ProjectParticipantModel.findOneAndUpdate(
     { inviteCode: hashedCode, status: "Pending" },
     {
-      $set: { userId, status: "Accepted", dateAccepted: new Date() },
+      $set: {
+        userId,
+        status: "Accepted",
+        dateAccepted: new Date(),
+        hasInsurance: input.hasInsurance,
+        hasLicence: input.hasLicence,
+      },
       $unset: { inviteCode: 1 },
     },
     { returnDocument: "after" }
