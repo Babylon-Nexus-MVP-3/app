@@ -74,4 +74,6 @@ export type Participant = {
   email: string;
   role: string;
   status: string;
+  hasLicence?: boolean | null;
+  hasInsurance?: boolean | null;
 };
