@@ -11,8 +11,8 @@ export interface ProjectParticipant extends Document {
   dateInvited?: Date;
   dateAccepted?: Date;
   status: "Pending" | "Accepted";
-  hasLicence: boolean;
-  hasInsurance: boolean;
+  hasLicence: boolean | null;
+  hasInsurance: boolean | null;
 }
 
 export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
@@ -30,8 +30,8 @@ export const ProjectParticipantSchema = new Schema<ProjectParticipant>({
     required: true,
     default: "Pending",
   },
-  hasLicence: { type: Boolean },
-  hasInsurance: { type: Boolean },
+  hasLicence: { type: Boolean, default: null },
+  hasInsurance: { type: Boolean, default: null },
 });
 
 ProjectParticipantSchema.index({ projectId: 1, email: 1, role: 1 }, { unique: true });

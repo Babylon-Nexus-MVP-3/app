@@ -44,11 +44,11 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       res.status(400).json({ error: "Creator role is invalid" });
       return;
     }
-    if (typeof creatorHasInsurance !== "boolean") {
+    if (creatorHasInsurance != null && typeof creatorHasInsurance !== "boolean") {
       res.status(400).json({ error: "creatorHasInsurance must be a boolean" });
       return;
     }
-    if (typeof creatorHasLicence !== "boolean") {
+    if (creatorHasLicence != null && typeof creatorHasLicence !== "boolean") {
       res.status(400).json({ error: "creatorHasLicence must be a boolean" });
       return;
     }
@@ -129,11 +129,11 @@ export async function acceptInvite(req: Request, res: Response, next: NextFuncti
       res.status(400).json({ error: "Invite code is required" });
       return;
     }
-    if (typeof hasInsurance !== "boolean") {
+    if (hasInsurance != null && typeof hasInsurance !== "boolean") {
       res.status(400).json({ error: "hasInsurance must be a boolean" });
       return;
     }
-    if (typeof hasLicence !== "boolean") {
+    if (hasLicence != null && typeof hasLicence !== "boolean") {
       res.status(400).json({ error: "hasLicence must be a boolean" });
       return;
     }

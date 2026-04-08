@@ -29,8 +29,8 @@ export interface CreateProjectInput {
   council: string;
   daNumber?: string;
   creatorRole?: UserRole;
-  creatorHasInsurance: boolean;
-  creatorHasLicence: boolean;
+  creatorHasInsurance: boolean | null;
+  creatorHasLicence: boolean | null;
   invitees?: InviteeInput[];
 }
 
@@ -263,8 +263,8 @@ export async function inviteParticipant(
 }
 
 export interface AcceptInviteInput {
-  hasInsurance: boolean;
-  hasLicence: boolean;
+  hasInsurance: boolean | null;
+  hasLicence: boolean | null;
 }
 
 export async function acceptInviteParticipant(
