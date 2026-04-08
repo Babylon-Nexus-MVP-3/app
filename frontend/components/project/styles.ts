@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.offWhite },
 
   // Header
-  header: { paddingBottom: 20 },
+  header: { paddingBottom: 12 },
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -20,12 +20,12 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingVertical: 6,
+    minHeight: 36,
     minWidth: 44,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   auditLogBtn: {
     marginTop: 4,
@@ -75,17 +75,17 @@ export const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.greyBg,
   },
-  backArrow: { fontSize: 20, color: "rgba(255,255,255,0.5)" },
-  backLabel: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500" },
+  backArrow: { fontSize: 18, color: "rgba(255,255,255,0.5)" },
+  backLabel: { fontSize: 13, color: Colors.gold, fontWeight: "600" },
   headerProjectName: {
     fontSize: 16,
     color: Colors.white,
     fontWeight: "700",
     letterSpacing: 0.3,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  headerRolePillWrap: { alignItems: "center", marginBottom: 12 },
+  headerRolePillWrap: { alignItems: "center", marginBottom: 6 },
   headerRolePill: {
     backgroundColor: "rgba(201,168,76,0.15)",
     borderRadius: 20,
@@ -100,21 +100,43 @@ export const styles = StyleSheet.create({
     color: Colors.goldLight,
     letterSpacing: 0.5,
   },
-  healthWrap: { alignItems: "center", marginBottom: 12 },
-  healthTrend: { fontSize: 13, fontWeight: "600", marginTop: 8 },
+  healthWrap: { alignItems: "center", marginBottom: 6 },
+
+  // Compact header (collapsed state)
+  compactHeaderRow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  compactHeaderInfo: { flex: 1 },
+  compactHeaderName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.white,
+    marginBottom: 2,
+  },
+  compactHeaderTrend: { fontSize: 11, fontWeight: "600" },
+  compactHeaderOverdue: { fontSize: 11, fontWeight: "600", color: Colors.red, marginTop: 2 },
+  healthTrend: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   overdueAlert: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
     marginTop: 4,
-    marginHorizontal: 24,
+    marginHorizontal: 32,
     backgroundColor: "rgba(231,76,60,0.15)",
-    borderRadius: 10,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
   },
-  overdueAlertText: { fontSize: 13, color: Colors.red, fontWeight: "600" },
-  overdueAlertArrow: { fontSize: 16, color: Colors.red },
+  overdueAlertText: { fontSize: 11, color: Colors.red, fontWeight: "600" },
+  overdueAlertArrow: { fontSize: 14, color: Colors.red },
 
   // Sub-tab bar
   subTabBar: { flexDirection: "row", backgroundColor: Colors.navy, paddingBottom: 24 },
@@ -131,7 +153,12 @@ export const styles = StyleSheet.create({
 
   // Body
   body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 },
+  bodyContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 32,
+    backgroundColor: Colors.offWhite,
+  },
 
   // Calendar
   calendarWidget: {
@@ -370,12 +397,12 @@ export const styles = StyleSheet.create({
   // FAB wrap + menu
   fabWrap: { position: "absolute", bottom: 80, right: 20, alignItems: "flex-end" },
   fabMenu: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.navy,
     borderRadius: 12,
     marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 6,
     overflow: "hidden",
@@ -384,9 +411,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  fabMenuText: { fontSize: 15, fontWeight: "600", color: Colors.navy },
+  fabMenuText: { fontSize: 15, fontWeight: "600", color: Colors.gold },
   fabActive: { backgroundColor: Colors.navy },
 
   // Floating action button
@@ -408,7 +435,7 @@ export const styles = StyleSheet.create({
   // Raise Invoice
   raiseKeyboardView: { flex: 1 },
   raiseScroll: { flex: 1 },
-  raiseBody: { flexGrow: 1, paddingTop: 70, paddingHorizontal: 24, paddingBottom: 72 },
+  raiseBody: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 72 },
   raiseBack: {
     alignSelf: "flex-start",
     marginBottom: 24,

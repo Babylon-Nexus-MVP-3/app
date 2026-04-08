@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -12,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
@@ -40,6 +41,7 @@ export default function ProjectDetail() {
   const openInvoiceId = params.openInvoice;
 
   const { fetchWithAuth, user } = useAuth();
+  const insets = useSafeAreaInsets();
   const userId = user?.id ?? "";
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
 
@@ -83,6 +85,9 @@ export default function ProjectDetail() {
 
   // ── FAB menu state ──
   const [fabMenuVisible, setFabMenuVisible] = useState(false);
+
+  // ── Scroll ref (for resetting position on tab switch) ──
+  const scrollRef = useRef<ScrollView>(null);
 
   function openInvite() {
     setInviteEmail("");
@@ -221,6 +226,7 @@ export default function ProjectDetail() {
     useCallback(() => {
       setPendingInvoice(null);
       loadProject(true).finally(() => setDataLoading(false));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id])
   );
 
@@ -242,8 +248,8 @@ export default function ProjectDetail() {
 
   return (
     <View style={styles.screen}>
-      {/* Header */}
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      {/* Fixed top nav bar */}
+      <View style={{ backgroundColor: Colors.navy }}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity
@@ -272,81 +278,116 @@ export default function ProjectDetail() {
               <Text style={styles.kebabBtnText}>⋮</Text>
             </TouchableOpacity>
           </View>
-
-          <Text style={styles.headerProjectName}>{projectName}</Text>
-
-          {role !== "Member" && (
-            <View style={styles.headerRolePillWrap}>
-              <View style={styles.headerRolePill}>
-                <Text style={styles.headerRolePillText}>{displayRole(role)}</Text>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.healthWrap}>
-            {dataLoading ? (
-              <ActivityIndicator color={Colors.gold} style={{ height: 120 }} />
-            ) : (
-              <CircularProgress
-                value={health}
-                size={120}
-                label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
-              />
-            )}
-            {change !== null && (
-              <Text
-                style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
-              >
-                {change >= 0 ? "+" : ""}
-                {change}% vs last month
-              </Text>
-            )}
-          </View>
-
-          {overdue > 0 && (
-            <TouchableOpacity
-              style={styles.overdueAlert}
-              onPress={() => setActiveTab("myspace")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.overdueAlertText}>
-                {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
-              </Text>
-              <Text style={styles.overdueAlertArrow}>›</Text>
-            </TouchableOpacity>
-          )}
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
-      {activeTab === "calendar" ? (
-        <CalendarTab
-          invoices={invoices}
-          role={role}
-          userId={userId}
-          invoiceAction={invoiceAction}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
+      {/* Scrollable content: header body + tab content */}
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: "50%",
+            backgroundColor: Colors.navy,
+          }}
         />
-      ) : (
-        <MySpaceTab
-          role={role}
-          invoices={invoices}
-          userId={userId}
-          invoiceAction={invoiceAction}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          initialInvoice={pendingInvoice}
-          onInitialInvoiceOpened={() => setPendingInvoice(null)}
+        <View
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: Colors.offWhite,
+          }}
         />
-      )}
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1, backgroundColor: "transparent" }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.gold}
+              colors={[Colors.gold]}
+            />
+          }
+        >
+          {/* Header body — scrolls away */}
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+            <Text style={styles.headerProjectName}>{projectName}</Text>
 
-      {/* Bottom tab bar */}
+            {role !== "Member" && (
+              <View style={styles.headerRolePillWrap}>
+                <View style={styles.headerRolePill}>
+                  <Text style={styles.headerRolePillText}>{displayRole(role)}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.healthWrap}>
+              {dataLoading ? (
+                <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
+              ) : (
+                <CircularProgress
+                  value={health}
+                  size={100}
+                  textScale={0.72}
+                  label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
+                />
+              )}
+              {change !== null && (
+                <Text
+                  style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
+                >
+                  {change >= 0 ? "+" : ""}
+                  {change}% vs last month
+                </Text>
+              )}
+            </View>
+
+            {overdue > 0 && (
+              <View style={styles.overdueAlert}>
+                <Text style={styles.overdueAlertText}>
+                  {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
+                </Text>
+              </View>
+            )}
+          </LinearGradient>
+
+          {activeTab === "calendar" ? (
+            <CalendarTab
+              invoices={invoices}
+              role={role}
+              userId={userId}
+              invoiceAction={invoiceAction}
+            />
+          ) : (
+            <MySpaceTab
+              role={role}
+              invoices={invoices}
+              userId={userId}
+              invoiceAction={invoiceAction}
+              initialInvoice={pendingInvoice}
+              onInitialInvoiceOpened={() => setPendingInvoice(null)}
+            />
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Fixed bottom tab bar */}
       <View style={styles.subTabBar}>
         {(["calendar", "myspace"] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.subTab, activeTab === t && styles.subTabActive]}
-            onPress={() => setActiveTab(t)}
+            onPress={() => {
+              setActiveTab(t);
+              scrollRef.current?.scrollTo({ y: 0, animated: false });
+            }}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
               {t === "calendar" ? "📅  Calendar" : "👤  My Space"}
@@ -457,7 +498,7 @@ export default function ProjectDetail() {
             <KeyboardAvoidingView
               behavior={Platform.OS === "ios" ? "padding" : "height"}
               keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
-              style={styles.raiseKeyboardView}
+              style={[styles.raiseKeyboardView, { paddingTop: insets.top }]}
             >
               <ScrollView
                 style={styles.raiseScroll}
@@ -541,22 +582,23 @@ export default function ProjectDetail() {
       {/* ── Invite modal ── */}
       <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={styles.inviteScreen}>
-          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.inviteHeader}>
-            <SafeAreaView edges={["top"]}>
-              <TouchableOpacity
-                onPress={() => setInviteVisible(false)}
-                style={styles.inviteBackBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Close invite"
-              >
-                <Text style={styles.inviteBackArrow}>‹</Text>
-                <Text style={styles.inviteBackLabel}>My Space</Text>
-              </TouchableOpacity>
-              <Text style={styles.inviteTitle}>
-                {inviteCode ? "Invite Sent" : "Invite Team Member"}
-              </Text>
-            </SafeAreaView>
+          <LinearGradient
+            colors={[Colors.navy, Colors.navyLight]}
+            style={[styles.inviteHeader, { paddingTop: insets.top }]}
+          >
+            <TouchableOpacity
+              onPress={() => setInviteVisible(false)}
+              style={styles.inviteBackBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Close invite"
+            >
+              <Text style={styles.inviteBackArrow}>‹</Text>
+              <Text style={styles.inviteBackLabel}>My Space</Text>
+            </TouchableOpacity>
+            <Text style={styles.inviteTitle}>
+              {inviteCode ? "Invite Sent" : "Invite Team Member"}
+            </Text>
           </LinearGradient>
           <ScrollView
             style={styles.inviteBody}

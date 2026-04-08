@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -47,6 +47,7 @@ type ApiProject = {
 
 export default function Projects() {
   const { user, fetchWithAuth } = useAuth();
+  const insets = useSafeAreaInsets();
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -91,6 +92,7 @@ export default function Projects() {
   useFocusEffect(
     useCallback(() => {
       fetchProjects();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -280,20 +282,21 @@ export default function Projects() {
       {/* ── Join a Project modal ── */}
       <Modal visible={joinModalVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={styles.joinScreen}>
-          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.joinHeader}>
-            <SafeAreaView edges={["top"]}>
-              <TouchableOpacity
-                onPress={() => setJoinModalVisible(false)}
-                style={styles.joinBackBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Close join project"
-              >
-                <Text style={styles.joinBackArrow}>‹</Text>
-                <Text style={styles.joinBackLabel}>My Projects</Text>
-              </TouchableOpacity>
-              <Text style={styles.joinTitle}>{joinedRole ? "You're In!" : "Join a Project"}</Text>
-            </SafeAreaView>
+          <LinearGradient
+            colors={[Colors.navy, Colors.navyLight]}
+            style={[styles.joinHeader, { paddingTop: insets.top }]}
+          >
+            <TouchableOpacity
+              onPress={() => setJoinModalVisible(false)}
+              style={styles.joinBackBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Close join project"
+            >
+              <Text style={styles.joinBackArrow}>‹</Text>
+              <Text style={styles.joinBackLabel}>My Projects</Text>
+            </TouchableOpacity>
+            <Text style={styles.joinTitle}>{joinedRole ? "You're In!" : "Join a Project"}</Text>
           </LinearGradient>
 
           <ScrollView
@@ -487,10 +490,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   statNum: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: Colors.white,
-    lineHeight: 32,
+    lineHeight: 26,
   },
   statSuffix: {
     fontSize: 12,

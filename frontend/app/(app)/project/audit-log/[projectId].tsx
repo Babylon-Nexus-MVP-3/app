@@ -11,7 +11,6 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { Colors } from "@/constants/colors";
@@ -62,9 +61,6 @@ interface AuditLogData {
 }
 
 /* ─── Helpers ─── */
-type FilterStatus = "All" | "Paid" | "Received" | "Approved" | "Pending" | "Rejected";
-const FILTERS: FilterStatus[] = ["All", "Paid", "Received", "Approved", "Pending", "Rejected"];
-
 const EVENT_LABEL: Record<AuditEventType, string> = {
   InvoiceSubmitted: "Submitted",
   InvoiceApproved: "Approved",
@@ -182,36 +178,6 @@ function buildHtml(data: AuditLogData): string {
 </html>`;
 }
 
-function buildPlainText(data: AuditLogData): string {
-  const lines: string[] = [
-    "PAYMENT AUDIT LOG",
-    `Project: ${data.projectName}`,
-    `Generated: ${formatDateTime(data.generatedAt)}`,
-    `Viewed by: ${data.viewerName} (${data.viewerRole})`,
-    "",
-    `Invoices: ${data.summary.totalInvoices}  |  Total: ${formatCurrency(data.summary.totalAmount)}  |  Paid: ${formatCurrency(data.summary.paidAmount)}  |  Outstanding: ${formatCurrency(data.summary.outstandingAmount)}`,
-    "",
-    "─".repeat(60),
-  ];
-
-  for (const entry of data.entries) {
-    lines.push(
-      `\n${entry.description} — ${formatCurrency(entry.amount)} (${entry.submittingParty})`
-    );
-    for (const ev of entry.events) {
-      const rejection = ev.rejectionReason ? ` — "${ev.rejectionReason}"` : "";
-      lines.push(
-        `  ${EVENT_LABEL[ev.type].padEnd(10)} ${ev.actorName} (${ev.actorRole})  ${formatDateTime(ev.timestamp)}${rejection}`
-      );
-    }
-  }
-
-  lines.push("\n" + "─".repeat(60));
-  lines.push("This record is generated from an immutable event log.");
-  lines.push("Entries cannot be modified or deleted.");
-  return lines.join("\n");
-}
-
 /* ─── Sub-components ─── */
 function StatCard({
   label,
@@ -314,8 +280,6 @@ export default function AuditLog() {
   const [data, setData] = useState<AuditLogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterStatus>("All");
-  const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -341,16 +305,6 @@ export default function AuditLog() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const filteredEntries =
-    data?.entries.filter((e) => filter === "All" || e.status === filter) ?? [];
-
-  async function handleCopy() {
-    if (!data) return;
-    await Clipboard.setStringAsync(buildPlainText(data));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   async function handleExportPdf() {
     if (!data) return;
@@ -398,9 +352,6 @@ export default function AuditLog() {
             </View>
           )}
           <View style={styles.exportBtns}>
-            <TouchableOpacity style={styles.exportBtn} onPress={handleCopy}>
-              <Text style={styles.exportBtnText}>{copied ? "✓ Copied" : "⎘  Copy"}</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
               onPress={handleExportPdf}
@@ -456,31 +407,12 @@ export default function AuditLog() {
             </View>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScroll}
-            contentContainerStyle={styles.filterRow}
-          >
-            {FILTERS.map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                onPress={() => setFilter(f)}
-              >
-                <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-                  {f}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {filteredEntries.length === 0 ? (
+          {data.entries.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No invoices match this filter.</Text>
+              <Text style={styles.emptyText}>No invoices on this project yet.</Text>
             </View>
           ) : (
-            filteredEntries.map((entry) => <InvoiceCard key={entry.invoiceId} entry={entry} />)
+            data.entries.map((entry) => <InvoiceCard key={entry.invoiceId} entry={entry} />)
           )}
 
           <View style={styles.notice}>
@@ -587,19 +519,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   statValue: { fontSize: 13, fontWeight: "800", color: Colors.textPrimary, textAlign: "center" },
-  filterScroll: { flexGrow: 0 },
-  filterRow: { flexDirection: "row", gap: 8, paddingVertical: 4 },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: "rgba(201,168,76,0.35)",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    backgroundColor: Colors.white,
-  },
-  filterChipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  filterChipText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  filterChipTextActive: { color: Colors.white },
   invoiceCard: {
     backgroundColor: Colors.white,
     borderRadius: 12,
