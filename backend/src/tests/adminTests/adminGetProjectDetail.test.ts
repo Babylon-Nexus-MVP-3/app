@@ -106,6 +106,7 @@ describe("GET /admin/projects/:projectId", () => {
       name: "Empty Project",
       location: "Melbourne",
       council: "CBD",
+      daNumber: "DA-ADMIN-001",
       status: "Active",
     });
 
@@ -117,6 +118,7 @@ describe("GET /admin/projects/:projectId", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.project.name).toBe("Empty Project");
     expect(res.body.project.location).toBe("Melbourne");
+    expect(res.body.project.daNumber).toBe("DA-ADMIN-001");
     expect(res.body.participants).toEqual([]);
     expect(res.body.invoices).toEqual([]);
     expect(res.body.healthScore).toBe(100);

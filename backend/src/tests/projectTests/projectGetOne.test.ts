@@ -57,6 +57,7 @@ describe("GET /project/:projectId", () => {
       name: "Test Project",
       location: "123 St",
       council: "C1",
+      daNumber: "DA-GET-001",
       status: "Active",
     });
 
@@ -125,6 +126,7 @@ describe("GET /project/:projectId", () => {
       name: "Test Project",
       location: "123 St",
       council: "C1",
+      daNumber: "DA-GET-001",
     });
     expect(res.body.userRole).toBe("PM");
 
