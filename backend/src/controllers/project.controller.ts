@@ -18,7 +18,8 @@ function isValidRole(value: unknown): value is UserRole {
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, location, council, daNumber, hasInsurance, hasLicence, creatorRole, invitees } = req.body;
+    const { name, location, council, daNumber, hasInsurance, hasLicence, creatorRole, invitees } =
+      req.body;
     if (!isNonEmptyString(location) || !isNonEmptyString(council)) {
       res.status(400).json({ error: "Location and council are required" });
       return;
