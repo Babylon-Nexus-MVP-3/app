@@ -3,6 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import {
   ActivityIndicator,
   Modal,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -81,6 +82,9 @@ export default function ProjectDetail() {
 
   // ── FAB menu state ──
   const [fabMenuVisible, setFabMenuVisible] = useState(false);
+
+  // ── Scroll ref (for resetting position on tab switch) ──
+  const scrollRef = useRef<ScrollView>(null);
 
   function openInvite() {
     setInviteEmail("");
@@ -234,8 +238,8 @@ export default function ProjectDetail() {
 
   return (
     <View style={styles.screen}>
-      {/* Header */}
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      {/* Fixed top nav bar */}
+      <View style={{ backgroundColor: Colors.navy }}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity
@@ -264,7 +268,25 @@ export default function ProjectDetail() {
               <Text style={styles.kebabBtnText}>⋮</Text>
             </TouchableOpacity>
           </View>
+        </SafeAreaView>
+      </View>
 
+      {/* Scrollable content: header body + tab content */}
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1, backgroundColor: Colors.navy }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.gold}
+            colors={[Colors.gold]}
+          />
+        }
+      >
+        {/* Header body — scrolls away */}
+        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
           <Text style={styles.headerProjectName}>{projectName}</Text>
 
           {role !== "Member" && (
@@ -277,11 +299,12 @@ export default function ProjectDetail() {
 
           <View style={styles.healthWrap}>
             {dataLoading ? (
-              <ActivityIndicator color={Colors.gold} style={{ height: 120 }} />
+              <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
             ) : (
               <CircularProgress
                 value={health}
-                size={120}
+                size={100}
+                textScale={0.72}
                 label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
               />
             )}
@@ -296,49 +319,40 @@ export default function ProjectDetail() {
           </View>
 
           {overdue > 0 && (
-            <TouchableOpacity
-              style={styles.overdueAlert}
-              onPress={() => setActiveTab("myspace")}
-              activeOpacity={0.8}
-            >
+            <View style={styles.overdueAlert}>
               <Text style={styles.overdueAlertText}>
                 {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
               </Text>
-              <Text style={styles.overdueAlertArrow}>›</Text>
-            </TouchableOpacity>
+            </View>
           )}
-        </SafeAreaView>
-      </LinearGradient>
+        </LinearGradient>
 
-      {activeTab === "calendar" ? (
-        <CalendarTab
-          invoices={invoices}
-          role={role}
-          userId={userId}
-          invoiceAction={invoiceAction}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-        />
-      ) : (
-        <MySpaceTab
-          role={role}
-          invoices={invoices}
-          userId={userId}
-          invoiceAction={invoiceAction}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          initialInvoice={pendingInvoice}
-          onInitialInvoiceOpened={() => setPendingInvoice(null)}
-        />
-      )}
+        {activeTab === "calendar" ? (
+          <CalendarTab
+            invoices={invoices}
+            role={role}
+            userId={userId}
+            invoiceAction={invoiceAction}
+          />
+        ) : (
+          <MySpaceTab
+            role={role}
+            invoices={invoices}
+            userId={userId}
+            invoiceAction={invoiceAction}
+            initialInvoice={pendingInvoice}
+            onInitialInvoiceOpened={() => setPendingInvoice(null)}
+          />
+        )}
+      </ScrollView>
 
-      {/* Bottom tab bar */}
+      {/* Fixed bottom tab bar */}
       <View style={styles.subTabBar}>
         {(["calendar", "myspace"] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.subTab, activeTab === t && styles.subTabActive]}
-            onPress={() => setActiveTab(t)}
+            onPress={() => { setActiveTab(t); scrollRef.current?.scrollTo({ y: 0, animated: false }); }}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
               {t === "calendar" ? "📅  Calendar" : "👤  My Space"}
