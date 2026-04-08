@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
 import { UserRole } from "../../backend/src/models/userModel";
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedRefreshToken = await getItem("refreshToken");
       if (!storedRefreshToken) return null;
 
-      const res = await fetch("https://app-production-574c.up.railway.app/auth/refresh", {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken: storedRefreshToken }),

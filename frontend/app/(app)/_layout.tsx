@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Tabs, router } from "expo-router";
@@ -11,7 +12,7 @@ function NotificationIcon({ color, focused }: { color: string; focused: boolean 
 
   const fetchUnread = useCallback(async () => {
     try {
-      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/notifications");
+      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
       if (res.ok) {
         const data = await res.json();
         const count = (data.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;

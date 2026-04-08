@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -38,7 +39,7 @@ export default function AdminApprovals() {
     setError(null);
     try {
       const res = await fetchWithAuth(
-        "https://app-production-574c.up.railway.app/admin/projects/pending"
+        `${API_BASE_URL}/admin/projects/pending`
       );
       const data = await res.json();
       if (!res.ok) {
@@ -57,7 +58,7 @@ export default function AdminApprovals() {
     setActioningId(projectId);
     try {
       const res = await fetchWithAuth(
-        `https://app-production-574c.up.railway.app/admin/projects/${projectId}/approve`,
+        `${API_BASE_URL}/admin/projects/${projectId}/approve`,
         {
           method: "PUT",
         }
@@ -80,7 +81,7 @@ export default function AdminApprovals() {
           setActioningId(projectId);
           try {
             const res = await fetchWithAuth(
-              `https://app-production-574c.up.railway.app/admin/projects/${projectId}/reject`,
+              `${API_BASE_URL}/admin/projects/${projectId}/reject`,
               { method: "PUT" }
             );
             if (res.ok) {

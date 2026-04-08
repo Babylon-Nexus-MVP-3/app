@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -116,7 +117,7 @@ export default function Notifications() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/notifications");
+      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications ?? []);
@@ -128,7 +129,7 @@ export default function Notifications() {
   }
 
   async function markAllRead() {
-    await fetchWithAuth("https://app-production-574c.up.railway.app/notifications/read-all", {
+    await fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, {
       method: "PATCH",
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -137,7 +138,7 @@ export default function Notifications() {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchWithAuth("https://app-production-574c.up.railway.app/notifications")
+      fetchWithAuth(`${API_BASE_URL}/notifications`)
         .then((res) => {
           if (res.ok) return res.json();
         })

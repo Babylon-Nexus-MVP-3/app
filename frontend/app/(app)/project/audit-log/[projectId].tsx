@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -287,7 +288,7 @@ export default function AuditLog() {
     setError(null);
     try {
       const res = await fetchWithAuth(
-        `https://app-production-574c.up.railway.app/project/${projectId}/audit-log`
+        `${API_BASE_URL}/project/${projectId}/audit-log`
       );
       const json = await res.json();
       if (!res.ok) {

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,7 +38,7 @@ export default function AdminProjects() {
     setError(null);
     try {
       const res = await fetchWithAuth(
-        "https://app-production-574c.up.railway.app/admin/projects/active"
+        `${API_BASE_URL}/admin/projects/active`
       );
       const data = await res.json();
       if (!res.ok) {

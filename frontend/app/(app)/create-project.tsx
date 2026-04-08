@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -119,7 +120,7 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetchWithAuth("https://app-production-574c.up.railway.app/project", {
+      const response = await fetchWithAuth(`${API_BASE_URL}/project`, {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),

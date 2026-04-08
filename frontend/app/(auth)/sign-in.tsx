@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -35,7 +36,7 @@ export default function SignIn() {
     setError(null);
 
     try {
-      const response = await fetch("https://app-production-574c.up.railway.app/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim(), password }),

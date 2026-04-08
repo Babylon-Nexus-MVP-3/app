@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,7 +36,7 @@ export default function AdminArchives() {
     setError(null);
     try {
       const res = await fetchWithAuth(
-        "https://app-production-574c.up.railway.app/admin/projects/inactive"
+        `${API_BASE_URL}/admin/projects/inactive`
       );
       const data = await res.json();
       if (!res.ok) {

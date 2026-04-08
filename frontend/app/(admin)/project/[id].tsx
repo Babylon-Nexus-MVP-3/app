@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -56,7 +57,7 @@ export default function AdminProjectDetail() {
       setError(null);
       try {
         const res = await fetchWithAuth(
-          `https://app-production-574c.up.railway.app/admin/projects/${id}`
+          `${API_BASE_URL}/admin/projects/${id}`
         );
         const data = await res.json();
         if (!res.ok) {
@@ -107,7 +108,7 @@ export default function AdminProjectDetail() {
           onPress: async () => {
             try {
               const res = await fetchWithAuth(
-                `https://app-production-574c.up.railway.app/admin/projects/${id}`,
+                `${API_BASE_URL}/admin/projects/${id}`,
                 {
                   method: "DELETE",
                 }
@@ -139,7 +140,7 @@ export default function AdminProjectDetail() {
           onPress: async () => {
             try {
               const res = await fetchWithAuth(
-                `https://app-production-574c.up.railway.app/admin/projects/${id}/participants/remove`,
+                `${API_BASE_URL}/admin/projects/${id}/participants/remove`,
                 {
                   method: "DELETE",
                   body: JSON.stringify({ email: participant.email, role: participant.role }),
