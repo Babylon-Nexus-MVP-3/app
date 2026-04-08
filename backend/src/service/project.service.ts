@@ -28,8 +28,8 @@ export interface CreateProjectInput {
   location: string;
   council: string;
   daNumber?: string;
-  hasInsurance?: boolean;
-  hasLicence?: boolean;
+  hasInsurance?: boolean | null;
+  hasLicence?: boolean | null;
   creatorRole?: UserRole;
   creatorHasInsurance: boolean | null;
   creatorHasLicence: boolean | null;

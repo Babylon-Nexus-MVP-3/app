@@ -23,6 +23,8 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       location,
       council,
       daNumber,
+      hasInsurance,
+      hasLicence,
       creatorRole,
       creatorHasInsurance,
       creatorHasLicence,
@@ -52,6 +54,14 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       res.status(400).json({ error: "creatorHasLicence must be a boolean" });
       return;
     }
+    if (hasInsurance != null && typeof hasInsurance !== "boolean") {
+      res.status(400).json({ error: "hasInsurance must be a boolean" });
+      return;
+    }
+    if (hasLicence != null && typeof hasLicence !== "boolean") {
+      res.status(400).json({ error: "hasLicence must be a boolean" });
+      return;
+    }
     if (invitees != null) {
       if (!Array.isArray(invitees)) {
         res.status(400).json({ error: "Invitees must be an array" });
@@ -77,8 +87,8 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       name,
       location,
       daNumber,
-      hasInsurance: typeof hasInsurance === "boolean" ? hasInsurance : undefined,
-      hasLicence: typeof hasLicence === "boolean" ? hasLicence : undefined,
+      hasInsurance: hasInsurance === undefined ? undefined : hasInsurance,
+      hasLicence: hasLicence === undefined ? undefined : hasLicence,
       council,
       creatorRole,
       creatorHasInsurance,
