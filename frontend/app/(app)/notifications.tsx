@@ -186,6 +186,13 @@ export default function Notifications() {
             <NotificationCard
               item={item}
               onPress={() => {
+                const nonNavigable: NotificationType[] = [
+                  "ProjectPendingApproval",
+                  "ProjectRejected",
+                  "ProjectDeleted",
+                  "ProjectParticipantRemoved",
+                ];
+                if (nonNavigable.includes(item.type)) return;
                 const url = item.invoiceId
                   ? `/(app)/project/${item.projectId}?openInvoice=${item.invoiceId}`
                   : `/(app)/project/${item.projectId}`;
