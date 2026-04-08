@@ -180,14 +180,7 @@ export default function Projects() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{"PORTFOLIO\nHEALTH"}</Text>
               <View style={styles.statValueRow}>
-                <Text
-                  style={[styles.statNum, { color: Colors.gold }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
-                >
-                  {avgHealth}%
-                </Text>
+                <Text style={[styles.statNum, { color: Colors.gold }]}>{avgHealth}%</Text>
                 <Text style={[styles.statSuffix, { color: Colors.goldLight }]}> avg</Text>
               </View>
             </View>
@@ -195,14 +188,7 @@ export default function Projects() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{"ACTIVE\nPROJECTS"}</Text>
               <View style={styles.statValueRow}>
-                <Text
-                  style={[styles.statNum, { color: Colors.green }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
-                >
-                  {projects.length}
-                </Text>
+                <Text style={[styles.statNum, { color: Colors.green }]}>{projects.length}</Text>
                 <Text style={styles.statSuffix}> projects</Text>
               </View>
             </View>
@@ -210,14 +196,7 @@ export default function Projects() {
             <View style={[styles.statCard, styles.statCardOverdue]}>
               <Text style={[styles.statLabel, { color: Colors.red }]}>OVERDUE</Text>
               <View style={styles.statValueRow}>
-                <Text
-                  style={[styles.statNum, { color: Colors.red }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
-                >
-                  {totalOverdue}
-                </Text>
+                <Text style={[styles.statNum, { color: Colors.red }]}>{totalOverdue}</Text>
                 <Text style={[styles.statSuffix, { color: Colors.red }]}> invoices</Text>
               </View>
             </View>
