@@ -1,5 +1,5 @@
-import { FontAwesome } from "@expo/vector-icons";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import BabylonLogo from "@/components/BabylonLogo";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -19,20 +19,11 @@ export default function Index() {
 
         {/* Main content */}
         <View style={styles.content}>
-          {/* Logo icon */}
-          <View style={styles.iconWrapper}>
-            <FontAwesome name="university" size={40} color={Colors.goldLight} />
-          </View>
-
-          {/* App name */}
-          <Text style={styles.appName}>BABYLON</Text>
-          <Text style={styles.appSubtitle}>NEXUS</Text>
-          <View style={styles.divider} />
+          {/* Logo */}
+          <BabylonLogo width={250} height={350} />
 
           {/* Tagline */}
-          <Text style={styles.tagline}>
-            See the health of your project.{"\n"}Payment transparency for construction.
-          </Text>
+          <Text style={styles.tagline}>Payment Transparency App</Text>
         </View>
 
         {/* Buttons */}
@@ -94,42 +85,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 32,
   },
-  iconWrapper: {
-    width: 88,
-    height: 88,
-    borderRadius: 20,
-    backgroundColor: Colors.navyIcon,
-    borderWidth: 1.5,
-    borderColor: Colors.gold,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 28,
-  },
-  appName: {
-    fontSize: 34,
-    fontWeight: "800",
-    color: Colors.white,
-    letterSpacing: 4,
-    marginBottom: 6,
-  },
-  appSubtitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.goldLight,
-    letterSpacing: 6,
-    marginBottom: 10,
-  },
-  divider: {
-    width: 40,
-    height: 2,
-    backgroundColor: Colors.gold,
-    marginBottom: 24,
-  },
   tagline: {
-    fontSize: 14,
+    fontSize: 20,
     color: "rgba(255,255,255,0.5)",
     textAlign: "center",
     lineHeight: 22,
+    marginTop: 16,
   },
   buttonContainer: {
     paddingHorizontal: 32,
