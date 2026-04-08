@@ -70,6 +70,7 @@ export interface GetProjectDetailsResult {
     name?: string;
     location: string;
     council: string;
+    daNumber?: string;
   };
   userRole: UserRole;
   healthScore: number; // 0-100
@@ -211,6 +212,7 @@ export async function getProjectDetails(
       name: project.name,
       location: project.location,
       council: project.council,
+      daNumber: project.daNumber,
     },
     userRole,
     healthScore,

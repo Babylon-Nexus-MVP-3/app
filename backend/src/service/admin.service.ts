@@ -75,6 +75,7 @@ export async function listPendingProjects(): Promise<any[]> {
       name: p.name,
       location: p.location,
       council: p.council,
+      daNumber: p.daNumber,
       status: p.status,
       createdAt: p.createdAt,
       creator,
@@ -90,6 +91,7 @@ export async function listActiveProjects(): Promise<any[]> {
     name: p.name,
     location: p.location,
     council: p.council,
+    daNumber: p.daNumber,
     status: p.status,
     createdAt: p.createdAt,
   }));
@@ -105,6 +107,7 @@ export async function listInactiveProjects(): Promise<any[]> {
     name: p.name,
     location: p.location,
     council: p.council,
+    daNumber: p.daNumber,
     status: p.status,
     createdAt: p.createdAt,
   }));
@@ -381,6 +384,7 @@ export async function getAdminProjectDetail(projectId: string) {
       name: project.name,
       location: project.location,
       council: project.council,
+      daNumber: project.daNumber,
       status: project.status,
     },
     participants: participants.map((p) => ({

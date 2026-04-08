@@ -27,6 +27,7 @@ export interface CreateProjectInput {
   name?: string;
   location: string;
   council: string;
+  daNumber?: string;
   creatorRole?: UserRole;
   invitees?: InviteeInput[];
 }
@@ -68,6 +69,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const location = input.location?.trim();
   const council = input.council?.trim();
   const creatorRole = input.creatorRole;
+  const daNumber = input.daNumber?.trim();
   const invitees = input.invitees ?? [];
   const status = "Pending";
 
@@ -115,6 +117,10 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     name: name || location,
     location,
     council,
+    daNumber,
+    ownerId: creatorRole === UserRole.Owner ? creatorId : undefined,
+    builderId: creatorRole === UserRole.Builder ? creatorId : undefined,
+    pmId: creatorRole === UserRole.PM ? creatorId : undefined,
     status,
   });
 
@@ -153,7 +159,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     aggregateType: "Project",
     aggregateId: project._id.toString(),
     userId: creatorId,
-    payload: { name: name || location, location, council, status },
+    payload: { name: name || location, location, council, daNumber, status },
   });
 
   await notifySafely(() =>
