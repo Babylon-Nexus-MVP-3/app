@@ -927,7 +927,9 @@ function AllInvoicesStats({
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={[styles.statBox, { flex: 1 }]}>
           <Text style={styles.statBoxLabel}>Paid</Text>
-          <Text style={[styles.statBoxNum, { color: paidVal.color, fontSize: 16 }]}>{paidVal.text}</Text>
+          <Text style={[styles.statBoxNum, { color: paidVal.color, fontSize: 16 }]}>
+            {paidVal.text}
+          </Text>
           {canSeeAmounts && (
             <Text style={styles.statBoxSub}>
               {allPaid.length} invoice{allPaid.length !== 1 ? "s" : ""}
@@ -936,7 +938,9 @@ function AllInvoicesStats({
         </View>
         <View style={[styles.statBox, { flex: 1 }]}>
           <Text style={styles.statBoxLabel}>Outstanding</Text>
-          <Text style={[styles.statBoxNum, { color: outstandingVal.color, fontSize: 16 }]}>{outstandingVal.text}</Text>
+          <Text style={[styles.statBoxNum, { color: outstandingVal.color, fontSize: 16 }]}>
+            {outstandingVal.text}
+          </Text>
           {canSeeAmounts && (
             <Text style={styles.statBoxSub}>
               {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
