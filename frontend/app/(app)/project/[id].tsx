@@ -473,7 +473,12 @@ export default function ProjectDetail() {
       <MembersModal
         visible={membersVisible}
         participants={participants}
-        projectInfo={{ name: projectName, location: projectLocation, council: projectCouncil, daNumber: projectDaNumber }}
+        projectInfo={{
+          name: projectName,
+          location: projectLocation,
+          council: projectCouncil,
+          daNumber: projectDaNumber,
+        }}
         onClose={() => setMembersVisible(false)}
       />
 

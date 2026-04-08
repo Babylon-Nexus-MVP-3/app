@@ -141,7 +141,11 @@ function MemberRow({ participant: p }: { participant: Participant }) {
               <ComplianceBadge value={p.hasLicence} trueLabel="Licenced" falseLabel="No Licence" />
             )}
             {p.hasInsurance != null && (
-              <ComplianceBadge value={p.hasInsurance} trueLabel="Insured" falseLabel="Not Insured" />
+              <ComplianceBadge
+                value={p.hasInsurance}
+                trueLabel="Insured"
+                falseLabel="Not Insured"
+              />
             )}
           </View>
         )}

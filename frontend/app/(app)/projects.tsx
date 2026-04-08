@@ -355,7 +355,13 @@ export default function Projects() {
                   Do you hold a current licence?
                 </Text>
                 <View style={styles.inviteRoleRow}>
-                  {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+                  {(
+                    [
+                      ["Yes", true],
+                      ["No", false],
+                      ["N/A", null],
+                    ] as const
+                  ).map(([label, val]) => (
                     <TouchableOpacity
                       key={label}
                       style={[
@@ -376,11 +382,15 @@ export default function Projects() {
                   ))}
                 </View>
 
-                <Text style={styles.joinFieldLabel}>
-                  Do you hold public liability insurance?
-                </Text>
+                <Text style={styles.joinFieldLabel}>Do you hold public liability insurance?</Text>
                 <View style={styles.inviteRoleRow}>
-                  {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+                  {(
+                    [
+                      ["Yes", true],
+                      ["No", false],
+                      ["N/A", null],
+                    ] as const
+                  ).map(([label, val]) => (
                     <TouchableOpacity
                       key={label}
                       style={[
