@@ -66,6 +66,8 @@ describe("GET /project/:projectId", () => {
       userId,
       role: "PM",
       email: PM_EMAIL,
+      hasInsurance: true,
+      hasLicence: false,
       status: "Accepted",
     });
 
@@ -142,5 +144,9 @@ describe("GET /project/:projectId", () => {
     expect(overdue).toBeDefined();
     expect(overdue.amount).toBe(3000);
     expect(overdue.daysOverdue).toBeGreaterThan(0);
+
+    const participant = res.body.participants.find((p: any) => p.email === PM_EMAIL);
+    expect(participant.hasInsurance).toBe(true);
+    expect(participant.hasLicence).toBe(false);
   });
 });
