@@ -308,7 +308,7 @@ export async function getAdminProjectDetail(projectId: string) {
   if (!project) throw new AdminError("Project not found", 404);
 
   const participants = await ProjectParticipantModel.find({ projectId })
-    .select("_id email role status userId")
+    .select("_id email role status userId hasInsurance hasLicence")
     .sort({ status: 1, role: 1 })
     .lean();
 
@@ -393,6 +393,8 @@ export async function getAdminProjectDetail(projectId: string) {
       email: p.email,
       role: p.role,
       status: p.status,
+      hasInsurance: p.hasInsurance,
+      hasLicence: p.hasLicence,
     })),
     healthScore,
     overdueInvoiceCount,
