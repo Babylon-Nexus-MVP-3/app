@@ -115,10 +115,10 @@ export async function requestRejectInvoice(
 export async function requestAcceptInvite(
   inviteCode: string,
   token: string,
-  input?: { hasInsurance?: boolean; hasLicence?: boolean }
+  input?: { hasInsurance?: boolean | null; hasLicence?: boolean | null }
 ) {
-  const hasInsurance = input?.hasInsurance ?? false;
-  const hasLicence = input?.hasLicence ?? false;
+  const hasInsurance = input?.hasInsurance === undefined ? false : input.hasInsurance;
+  const hasLicence = input?.hasLicence === undefined ? false : input.hasLicence;
   return request(app)
     .post(`/project/accept`)
     .set("Authorization", `Bearer ${token}`)

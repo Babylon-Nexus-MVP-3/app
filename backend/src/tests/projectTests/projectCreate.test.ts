@@ -68,6 +68,32 @@ describe("POST /project", () => {
     expect(participant?.hasLicence).toBe(true);
   });
 
+  it("stores null when creator marks insurance and licence as N/A", async () => {
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    const daNumber = "DA-2026-1002";
+
+    const res = await request(app)
+      .post("/project")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        ...validProjectBody,
+        daNumber,
+        creatorRole: UserRole.PM,
+        creatorHasInsurance: null,
+        creatorHasLicence: null,
+      });
+
+    expect(res.status).toBe(200);
+
+    const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
+    const participant = await ProjectParticipantModel.findOne({
+      projectId: res.body.projectId,
+      userId: creator?._id.toString(),
+    }).lean();
+    expect(participant?.hasInsurance).toBeNull();
+    expect(participant?.hasLicence).toBeNull();
+  });
+
   it("returns 200 with notification sent correctly", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
 
