@@ -18,6 +18,7 @@ import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import CircularProgress from "@/components/CircularProgress";
+import BabylonIcon from "@/components/BabylonIcon";
 
 const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
 function displayRole(role: string): string {
@@ -146,7 +147,7 @@ export default function Projects() {
           <View style={styles.topRow}>
             <View style={styles.brandBlock}>
               <View style={styles.logoBox}>
-                <Text style={styles.logoEmoji}>🏛</Text>
+                <BabylonIcon width={34} height={30} />
               </View>
               <View>
                 <Text style={styles.brandLabel}>BABYLON NEXUS</Text>
@@ -405,10 +406,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoEmoji: {
-    fontSize: 24,
-  },
-  brandLabel: {
+brandLabel: {
     fontSize: 10,
     color: Colors.goldLight,
     fontWeight: "600",
