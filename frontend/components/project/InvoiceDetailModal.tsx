@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { ApiInvoice, InvoiceActionType } from "./types";
@@ -35,6 +35,7 @@ export function InvoiceDetailModal({
   ) => Promise<string | null>;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -72,34 +73,32 @@ export function InvoiceDetailModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.detailScreen}>
-        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.detailHeader}>
-          <SafeAreaView edges={["top"]}>
-            <View style={styles.headerTopRow}>
-              <TouchableOpacity
-                onPress={onClose}
-                style={styles.backBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Text style={styles.backArrow}>‹</Text>
-                <Text style={styles.backLabel}>My Space</Text>
-              </TouchableOpacity>
+        <LinearGradient
+          colors={[Colors.navy, Colors.navyLight]}
+          style={[styles.detailHeader, { paddingTop: insets.top }]}
+        >
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.backBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.backArrow}>‹</Text>
+              <Text style={styles.backLabel}>My Space</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.detailTitleRow}>
+            <Text style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</Text>
+            <View
+              style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginLeft: 10 }]}
+            >
+              <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                {invoiceStatusLabel(inv.status)}
+              </Text>
             </View>
-            <View style={styles.detailTitleRow}>
-              <Text style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: statusBg(calStatus), marginLeft: 10 },
-                ]}
-              >
-                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                  {invoiceStatusLabel(inv.status)}
-                </Text>
-              </View>
-            </View>
-          </SafeAreaView>
+          </View>
         </LinearGradient>
 
         <ScrollView

@@ -75,6 +75,7 @@ export default function AdminProjectDetail() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [id]
   );
 
@@ -177,91 +178,110 @@ export default function AdminProjectDetail() {
       </View>
 
       {/* Scrollable content: header body + tab content */}
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1, backgroundColor: Colors.navy }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.gold}
-            colors={[Colors.gold]}
-          />
-        }
-      >
-        {/* Header body — scrolls away */}
-        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
-          <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
-          <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
-          {!!location && <Text style={styles.headerSub}>{location}</Text>}
-
-          <View style={styles.healthWrap}>
-            {loading ? (
-              <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
-            ) : (
-              <CircularProgress
-                value={health}
-                size={100}
-                textScale={0.72}
-                label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
-              />
-            )}
-            {change !== null && (
-              <Text
-                style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
-              >
-                {change >= 0 ? "+" : ""}
-                {change}% vs last month
-              </Text>
-            )}
-          </View>
-
-          {overdue > 0 && (
-            <View style={styles.overdueAlert}>
-              <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
-            </View>
-          )}
-        </LinearGradient>
-
-        {error ? (
-          <View style={styles.centerBox}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
-              <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : activeTab === "calendar" ? (
-          <CalendarTab
-            invoices={invoices}
-            role="Admin"
-            userId={user?.id ?? ""}
-            invoiceAction={async () => null}
-          />
-        ) : activeTab === "invoices" ? (
-          <>
-            <FinancierMySpace
-              invoices={invoices}
-              onTapInvoice={setDetailInvoice}
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: "50%",
+            backgroundColor: Colors.navy,
+          }}
+        />
+        <View
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: Colors.offWhite,
+          }}
+        />
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1, backgroundColor: "transparent" }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.gold}
+              colors={[Colors.gold]}
             />
-            <InvoiceDetailModal
-              visible={detailInvoice !== null}
-              inv={detailInvoice}
-              viewerRole="Admin"
+          }
+        >
+          {/* Header body — scrolls away */}
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+            <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
+            <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
+            {!!location && <Text style={styles.headerSub}>{location}</Text>}
+
+            <View style={styles.healthWrap}>
+              {loading ? (
+                <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
+              ) : (
+                <CircularProgress
+                  value={health}
+                  size={100}
+                  textScale={0.72}
+                  label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
+                />
+              )}
+              {change !== null && (
+                <Text
+                  style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
+                >
+                  {change >= 0 ? "+" : ""}
+                  {change}% vs last month
+                </Text>
+              )}
+            </View>
+
+            {overdue > 0 && (
+              <View style={styles.overdueAlert}>
+                <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
+              </View>
+            )}
+          </LinearGradient>
+
+          {error ? (
+            <View style={styles.centerBox}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : activeTab === "calendar" ? (
+            <CalendarTab
+              invoices={invoices}
+              role="Admin"
               userId={user?.id ?? ""}
               invoiceAction={async () => null}
-              onClose={() => setDetailInvoice(null)}
             />
-          </>
-        ) : (
-          <MembersTab
-            participants={participants}
-            onRemove={handleRemove}
-            onDeleteProject={handleDeleteProject}
-            isArchived={projectStatus === "Inactive"}
-          />
-        )}
-      </ScrollView>
+          ) : activeTab === "invoices" ? (
+            <>
+              <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />
+              <InvoiceDetailModal
+                visible={detailInvoice !== null}
+                inv={detailInvoice}
+                viewerRole="Admin"
+                userId={user?.id ?? ""}
+                invoiceAction={async () => null}
+                onClose={() => setDetailInvoice(null)}
+              />
+            </>
+          ) : (
+            <MembersTab
+              participants={participants}
+              onRemove={handleRemove}
+              onDeleteProject={handleDeleteProject}
+              isArchived={projectStatus === "Inactive"}
+            />
+          )}
+        </ScrollView>
+      </View>
 
       {/* Fixed tab bar */}
       <View style={styles.subTabBar}>
@@ -269,14 +289,17 @@ export default function AdminProjectDetail() {
           <TouchableOpacity
             key={t}
             style={[styles.subTab, activeTab === t && styles.subTabActive]}
-            onPress={() => { setActiveTab(t); scrollRef.current?.scrollTo({ y: 0, animated: false }); }}
+            onPress={() => {
+              setActiveTab(t);
+              scrollRef.current?.scrollTo({ y: 0, animated: false });
+            }}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
               {t === "calendar"
                 ? "📅  Calendar"
                 : t === "invoices"
-                ? "🧾  All Invoices"
-                : "📋  Project Information"}
+                  ? "🧾  All Invoices"
+                  : "📋  Project Information"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -430,7 +453,12 @@ const styles = StyleSheet.create({
   overdueAlertText: { fontSize: 11, color: Colors.red, fontWeight: "600" },
   overdueAlertArrow: { fontSize: 14, color: Colors.red },
   body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40, backgroundColor: Colors.offWhite },
+  bodyContent: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 40,
+    backgroundColor: Colors.offWhite,
+  },
   centerBox: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   errorText: { fontSize: 14, color: Colors.red, textAlign: "center", marginBottom: 12 },
   retryBtn: {

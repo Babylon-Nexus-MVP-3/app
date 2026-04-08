@@ -153,7 +153,12 @@ export const styles = StyleSheet.create({
 
   // Body
   body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32, backgroundColor: Colors.offWhite },
+  bodyContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 32,
+    backgroundColor: Colors.offWhite,
+  },
 
   // Calendar
   calendarWidget: {
@@ -392,12 +397,12 @@ export const styles = StyleSheet.create({
   // FAB wrap + menu
   fabWrap: { position: "absolute", bottom: 80, right: 20, alignItems: "flex-end" },
   fabMenu: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.navy,
     borderRadius: 12,
     marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 6,
     overflow: "hidden",
@@ -406,9 +411,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  fabMenuText: { fontSize: 15, fontWeight: "600", color: Colors.navy },
+  fabMenuText: { fontSize: 15, fontWeight: "600", color: Colors.gold },
   fabActive: { backgroundColor: Colors.navy },
 
   // Floating action button
@@ -428,7 +433,7 @@ export const styles = StyleSheet.create({
   fabText: { fontSize: 28, color: Colors.white, lineHeight: 32, fontWeight: "300" },
 
   // Raise Invoice
-  raiseBody: { paddingTop: 70, paddingHorizontal: 24, paddingBottom: 48 },
+  raiseBody: { paddingHorizontal: 24, paddingBottom: 48 },
   raiseBack: {
     alignSelf: "flex-start",
     marginBottom: 24,

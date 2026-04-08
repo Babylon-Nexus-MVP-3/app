@@ -39,6 +39,7 @@ export function MySpaceTab({
       setDetailInvoice(initialInvoice);
       onInitialInvoiceOpened?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialInvoice]);
 
   let content: React.ReactNode;
@@ -79,19 +80,9 @@ export function MySpaceTab({
       />
     );
   else if (role === "Financier" || role === "VIP")
-    content = (
-      <FinancierMySpace
-        invoices={invoices}
-        onTapInvoice={setDetailInvoice}
-      />
-    );
+    content = <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
   else if (role === "Observer")
-    content = (
-      <ObserverMySpace
-        invoices={invoices}
-        onTapInvoice={setDetailInvoice}
-      />
-    );
+    content = <ObserverMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />;
   else
     content = (
       <View style={styles.placeholder}>

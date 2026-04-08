@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
@@ -41,6 +42,7 @@ type RoleTarget = "creator" | number;
 
 export default function CreateProject() {
   const { user, fetchWithAuth } = useAuth();
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(
     useCallback(() => {
@@ -142,7 +144,7 @@ export default function CreateProject() {
   if (submitted) {
     return (
       <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
-        <View style={styles.successContainer}>
+        <View style={[styles.successContainer, { paddingTop: insets.top }]}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
@@ -179,7 +181,7 @@ export default function CreateProject() {
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.inner}
+          contentContainerStyle={[styles.inner, { paddingTop: insets.top + 16 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -343,7 +345,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inner: {
-    paddingTop: 70,
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
@@ -504,7 +505,6 @@ const styles = StyleSheet.create({
   // Success screen
   successContainer: {
     flex: 1,
-    paddingTop: 70,
     paddingHorizontal: 24,
   },
   successContent: {
