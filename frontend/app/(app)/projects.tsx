@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-brandLabel: {
+  brandLabel: {
     fontSize: 10,
     color: Colors.goldLight,
     fontWeight: "600",
