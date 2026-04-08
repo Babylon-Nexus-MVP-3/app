@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,8 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
 import { CalendarTab } from "@/components/project/CalendarTab";
+import { FinancierMySpace } from "@/components/project/MySpaceViews";
+import { InvoiceDetailModal } from "@/components/project/InvoiceDetailModal";
 import { ApiInvoice } from "@/components/project/types";
 
 type Participant = {
@@ -33,7 +35,8 @@ export default function AdminProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { fetchWithAuth, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"calendar" | "members">("calendar");
+  const [activeTab, setActiveTab] = useState<"calendar" | "members" | "invoices">("calendar");
+  const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +75,7 @@ export default function AdminProjectDetail() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [id]
   );
 
@@ -81,6 +85,7 @@ export default function AdminProjectDetail() {
     }, [fetchDetail])
   );
 
+  const scrollRef = useRef<ScrollView>(null);
   const [refreshing, setRefreshing] = useState(false);
   async function handleRefresh() {
     setRefreshing(true);
@@ -156,7 +161,8 @@ export default function AdminProjectDetail() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      {/* Fixed top nav bar */}
+      <View style={{ backgroundColor: Colors.navy }}>
         <SafeAreaView edges={["top"]}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -165,80 +171,135 @@ export default function AdminProjectDetail() {
             accessibilityRole="button"
             accessibilityLabel="Back to all projects"
           >
-            <Text style={styles.backArrow}>‹</Text>
+            <Ionicons name="chevron-back" size={20} color={Colors.gold} />
             <Text style={styles.backLabel}>All Projects</Text>
           </TouchableOpacity>
-
-          <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
-          <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
-          {!!location && <Text style={styles.headerSub}>{location}</Text>}
-
-          <View style={styles.healthWrap}>
-            {loading ? (
-              <ActivityIndicator color={Colors.gold} style={{ height: 120 }} />
-            ) : (
-              <CircularProgress
-                value={health}
-                size={120}
-                label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
-              />
-            )}
-            {change !== null && (
-              <Text
-                style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
-              >
-                {change >= 0 ? "+" : ""}
-                {change}% vs last month
-              </Text>
-            )}
-          </View>
-
-          {overdue > 0 && (
-            <View style={styles.overdueAlert}>
-              <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
-              <Text style={styles.overdueAlertArrow}>›</Text>
-            </View>
-          )}
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
-      {error ? (
-        <View style={styles.centerBox}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : activeTab === "calendar" ? (
-        <CalendarTab
-          invoices={invoices}
-          role="Admin"
-          userId={user?.id ?? ""}
-          invoiceAction={async () => null}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
+      {/* Scrollable content: header body + tab content */}
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: "50%",
+            backgroundColor: Colors.navy,
+          }}
         />
-      ) : (
-        <MembersTab
-          participants={participants}
-          onRemove={handleRemove}
-          onDeleteProject={handleDeleteProject}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          isArchived={projectStatus === "Inactive"}
+        <View
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: Colors.offWhite,
+          }}
         />
-      )}
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1, backgroundColor: "transparent" }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.gold}
+              colors={[Colors.gold]}
+            />
+          }
+        >
+          {/* Header body — scrolls away */}
+          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+            <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
+            <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
+            {!!location && <Text style={styles.headerSub}>{location}</Text>}
 
-      {/* Tab bar */}
+            <View style={styles.healthWrap}>
+              {loading ? (
+                <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
+              ) : (
+                <CircularProgress
+                  value={health}
+                  size={100}
+                  textScale={0.72}
+                  label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
+                />
+              )}
+              {change !== null && (
+                <Text
+                  style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
+                >
+                  {change >= 0 ? "+" : ""}
+                  {change}% vs last month
+                </Text>
+              )}
+            </View>
+
+            {overdue > 0 && (
+              <View style={styles.overdueAlert}>
+                <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
+              </View>
+            )}
+          </LinearGradient>
+
+          {error ? (
+            <View style={styles.centerBox}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : activeTab === "calendar" ? (
+            <CalendarTab
+              invoices={invoices}
+              role="Admin"
+              userId={user?.id ?? ""}
+              invoiceAction={async () => null}
+            />
+          ) : activeTab === "invoices" ? (
+            <>
+              <FinancierMySpace invoices={invoices} onTapInvoice={setDetailInvoice} />
+              <InvoiceDetailModal
+                visible={detailInvoice !== null}
+                inv={detailInvoice}
+                viewerRole="Admin"
+                userId={user?.id ?? ""}
+                invoiceAction={async () => null}
+                onClose={() => setDetailInvoice(null)}
+              />
+            </>
+          ) : (
+            <MembersTab
+              participants={participants}
+              onRemove={handleRemove}
+              onDeleteProject={handleDeleteProject}
+              isArchived={projectStatus === "Inactive"}
+            />
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Fixed tab bar */}
       <View style={styles.subTabBar}>
-        {(["calendar", "members"] as const).map((t) => (
+        {(["calendar", "invoices", "members"] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.subTab, activeTab === t && styles.subTabActive]}
-            onPress={() => setActiveTab(t)}
+            onPress={() => {
+              setActiveTab(t);
+              scrollRef.current?.scrollTo({ y: 0, animated: false });
+            }}
           >
             <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
-              {t === "calendar" ? "📅  Calendar" : "📋  Project Information"}
+              {t === "calendar"
+                ? "📅  Calendar"
+                : t === "invoices"
+                  ? "🧾  All Invoices"
+                  : "📋  Project Information"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -252,31 +313,15 @@ function MembersTab({
   participants,
   onRemove,
   onDeleteProject,
-  refreshing,
-  onRefresh,
   isArchived,
 }: {
   participants: Participant[];
   onRemove: (p: Participant) => void;
   onDeleteProject: () => void;
-  refreshing: boolean;
-  onRefresh: () => void;
   isArchived: boolean;
 }) {
   return (
-    <ScrollView
-      style={styles.body}
-      contentContainerStyle={styles.bodyContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.gold}
-          colors={[Colors.gold]}
-        />
-      }
-    >
+    <View style={styles.bodyContent}>
       <Text style={styles.sectionLabel}>MEMBERS</Text>
       {participants.length === 0 ? (
         <Text style={[styles.emptyText, { marginBottom: 24 }]}>No members on this project.</Text>
@@ -333,67 +378,87 @@ function MembersTab({
           <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
         </TouchableOpacity>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.offWhite },
-  header: { paddingBottom: 20 },
+  header: { paddingBottom: 12 },
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingVertical: 6,
+    minHeight: 36,
     minWidth: 44,
-    marginBottom: 12,
+    marginBottom: 4,
     alignSelf: "flex-start",
     direction: "ltr",
   },
-  backArrow: { fontSize: 24, color: Colors.gold, lineHeight: 26 },
-  backLabel: { fontSize: 14, color: Colors.gold, fontWeight: "600" },
+  backLabel: { fontSize: 13, color: Colors.gold, fontWeight: "600" },
   adminBadge: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.goldLight,
     fontWeight: "600",
     letterSpacing: 1.5,
     textTransform: "uppercase",
     paddingHorizontal: 20,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
     color: Colors.white,
     paddingHorizontal: 20,
-    marginBottom: 2,
+    marginBottom: 0,
   },
   headerSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: "rgba(255,255,255,0.5)",
     paddingHorizontal: 20,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  healthWrap: { alignItems: "center", paddingVertical: 16 },
-  healthTrend: { fontSize: 13, fontWeight: "600", marginTop: 6 },
+  healthWrap: { alignItems: "center", paddingVertical: 8 },
+  compactHeaderRow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  compactHeaderInfo: { flex: 1 },
+  compactHeaderName: { fontSize: 15, fontWeight: "800", color: Colors.white, marginBottom: 2 },
+  compactHeaderSub: { fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 2 },
+  compactHeaderTrend: { fontSize: 11, fontWeight: "600" },
+  compactHeaderOverdue: { fontSize: 11, fontWeight: "600", color: Colors.red, marginTop: 2 },
+  healthTrend: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   overdueAlert: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginHorizontal: 20,
-    marginBottom: 8,
+    justifyContent: "center",
+    marginHorizontal: 32,
+    marginBottom: 6,
     backgroundColor: Colors.redBg,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
-  overdueAlertText: { fontSize: 13, color: Colors.red, fontWeight: "600" },
-  overdueAlertArrow: { fontSize: 16, color: Colors.red },
+  overdueAlertText: { fontSize: 11, color: Colors.red, fontWeight: "600" },
+  overdueAlertArrow: { fontSize: 14, color: Colors.red },
   body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 },
+  bodyContent: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 40,
+    backgroundColor: Colors.offWhite,
+  },
   centerBox: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   errorText: { fontSize: 14, color: Colors.red, textAlign: "center", marginBottom: 12 },
   retryBtn: {
@@ -420,7 +485,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: Colors.gold,
   },
-  subTabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  subTabText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
   subTabTextActive: { color: Colors.navy },
   sectionLabel: {
     fontSize: 12,

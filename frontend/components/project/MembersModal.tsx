@@ -1,7 +1,7 @@
 import React from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { Participant } from "./types";
@@ -17,6 +17,7 @@ export function MembersModal({
   participants: Participant[];
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const accepted = participants.filter((p) => p.status === "Accepted");
   const acceptedEmails = new Set(accepted.map((p) => p.email));
   const pending = participants.filter(
@@ -26,22 +27,23 @@ export function MembersModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.membersContainer}>
-        <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.membersHeader}>
-          <SafeAreaView edges={["top"]}>
-            <View style={styles.headerTopRow}>
-              <TouchableOpacity
-                onPress={onClose}
-                style={styles.backBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Text style={styles.backArrow}>‹</Text>
-                <Text style={styles.backLabel}>Back</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.membersTitle}>Project Members</Text>
-          </SafeAreaView>
+        <LinearGradient
+          colors={[Colors.navy, Colors.navyLight]}
+          style={[styles.membersHeader, { paddingTop: insets.top }]}
+        >
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.backBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.backArrow}>‹</Text>
+              <Text style={styles.backLabel}>Back</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.membersTitle}>Project Members</Text>
         </LinearGradient>
 
         <ScrollView contentContainerStyle={styles.membersBody} showsVerticalScrollIndicator={false}>
