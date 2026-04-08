@@ -50,8 +50,12 @@ export default function CreateProject() {
       setName("");
       setAddress("");
       setCouncil("");
+      setDaNumber("");
+      setDaApproved(null);
       setRole("");
       setInvitees([]);
+      setHasInsurance(null);
+      setHasLicence(null);
       setError(null);
     }, [])
   );
@@ -62,6 +66,10 @@ export default function CreateProject() {
   const [role, setRole] = useState("");
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [rolePickerTarget, setRolePickerTarget] = useState<RoleTarget | null>(null);
+  const [hasInsurance, setHasInsurance] = useState<"yes" | "no" | "na" | null>(null);
+  const [hasLicence, setHasLicence] = useState<"yes" | "no" | "na" | null>(null);
+  const [daApproved, setDaApproved] = useState<"yes" | "no" | null>(null);
+  const [daNumber, setDaNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -111,7 +119,7 @@ export default function CreateProject() {
     setError(null);
 
     try {
-      const response = await fetchWithAuth("http://localhost:3229/project", {
+      const response = await fetchWithAuth("https://app-production-574c.up.railway.app/project", {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),
@@ -121,6 +129,11 @@ export default function CreateProject() {
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
           ...((ROLE_MAP[role] ?? role) === "PM" && { pmId: user?.id }),
+          ...(hasInsurance === "yes" && { hasInsurance: true }),
+          ...(hasInsurance === "no" && { hasInsurance: false }),
+          ...(hasLicence === "yes" && { hasLicence: true }),
+          ...(hasLicence === "no" && { hasLicence: false }),
+          ...(daApproved === "yes" && daNumber.trim() && { daNumber: daNumber.trim() }),
           invitees: invitees.map((inv) => ({
             email: inv.email.trim(),
             role: ROLE_MAP[inv.role] ?? inv.role,
@@ -229,6 +242,43 @@ export default function CreateProject() {
             returnKeyType="next"
           />
 
+          <Text style={styles.label}>Is this project DA approved?</Text>
+          <View style={styles.optionRow}>
+            {(["yes", "no"] as const).map((val) => (
+              <TouchableOpacity
+                key={val}
+                style={[styles.optionBtn, daApproved === val && styles.optionBtnActive]}
+                onPress={() => {
+                  setDaApproved(val);
+                  if (val === "no") setDaNumber("");
+                }}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[styles.optionBtnText, daApproved === val && styles.optionBtnTextActive]}
+                >
+                  {val === "yes" ? "Yes" : "No"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {daApproved === "yes" && (
+            <>
+              <Text style={styles.label}>
+                DA Number <Text style={styles.optionalLabel}>(optional)</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={daNumber}
+                onChangeText={setDaNumber}
+                placeholder="e.g. DA-2026-1001"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                returnKeyType="next"
+              />
+            </>
+          )}
+
           <Text style={styles.label}>Your Role on This Project</Text>
           <TouchableOpacity
             style={styles.input}
@@ -285,6 +335,46 @@ export default function CreateProject() {
             <Ionicons name="add-circle-outline" size={18} color={Colors.gold} />
             <Text style={styles.addInviteeBtnText}>Add Team Member</Text>
           </TouchableOpacity>
+
+          {/* ── Compliance ── */}
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Compliance</Text>
+
+          <Text style={styles.label}>Do you hold public liability insurance?</Text>
+          <View style={styles.optionRow}>
+            {(["yes", "no", "na"] as const).map((val) => (
+              <TouchableOpacity
+                key={val}
+                style={[styles.optionBtn, hasInsurance === val && styles.optionBtnActive]}
+                onPress={() => setHasInsurance(val)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[styles.optionBtnText, hasInsurance === val && styles.optionBtnTextActive]}
+                >
+                  {val === "yes" ? "Yes" : val === "no" ? "No" : "N/A"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>{"Do you hold a contractor's licence?"}</Text>
+          <View style={styles.optionRow}>
+            {(["yes", "no", "na"] as const).map((val) => (
+              <TouchableOpacity
+                key={val}
+                style={[styles.optionBtn, hasLicence === val && styles.optionBtnActive]}
+                onPress={() => setHasLicence(val)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[styles.optionBtnText, hasLicence === val && styles.optionBtnTextActive]}
+                >
+                  {val === "yes" ? "Yes" : val === "no" ? "No" : "N/A"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -479,6 +569,40 @@ const styles = StyleSheet.create({
     color: Colors.gold,
   },
 
+  optionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  optionBtn: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1.5,
+    borderColor: "rgba(201,168,76,0.25)",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  optionBtnActive: {
+    borderColor: Colors.gold,
+    backgroundColor: "rgba(201,168,76,0.15)",
+  },
+  optionBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.4)",
+  },
+  optionBtnTextActive: {
+    color: Colors.gold,
+  },
+  optionalLabel: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: "rgba(255,255,255,0.35)",
+    textTransform: "none",
+    letterSpacing: 0,
+  },
   errorText: {
     fontSize: 13,
     color: Colors.red,

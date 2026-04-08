@@ -236,9 +236,15 @@ export const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
-  statBoxLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: "600", marginBottom: 4 },
-  statBoxNum: { fontSize: 22, fontWeight: "800", marginBottom: 2 },
-  statBoxSub: { fontSize: 12, color: Colors.textSecondary },
+  statBoxLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  statBoxNum: { fontSize: 22, fontWeight: "800", marginBottom: 2, textAlign: "center" },
+  statBoxSub: { fontSize: 12, color: Colors.textSecondary, textAlign: "center" },
 
   // Subcontractor
   confirmedText: { fontSize: 12, color: Colors.green, fontWeight: "600" },

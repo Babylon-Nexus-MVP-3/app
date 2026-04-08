@@ -28,6 +28,8 @@ export interface CreateProjectInput {
   location: string;
   council: string;
   daNumber?: string;
+  hasInsurance?: boolean;
+  hasLicence?: boolean;
   creatorRole?: UserRole;
   creatorHasInsurance: boolean | null;
   creatorHasLicence: boolean | null;
@@ -72,6 +74,8 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const council = input.council?.trim();
   const creatorRole = input.creatorRole;
   const daNumber = input.daNumber?.trim();
+  const hasInsurance = input.hasInsurance;
+  const hasLicence = input.hasLicence;
   const invitees = input.invitees ?? [];
   const status = "Pending";
 
@@ -135,6 +139,8 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     hasInsurance: input.creatorHasInsurance,
     email: creatorEmail,
     status: "Accepted",
+    ...(hasInsurance !== undefined && { hasInsurance }),
+    ...(hasLicence !== undefined && { hasLicence }),
   });
 
   await syncProjectRoleDisplayFields(project._id.toString(), user._id.toString(), participantRole);

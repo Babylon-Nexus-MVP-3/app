@@ -77,6 +77,8 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       name,
       location,
       daNumber,
+      hasInsurance: typeof hasInsurance === "boolean" ? hasInsurance : undefined,
+      hasLicence: typeof hasLicence === "boolean" ? hasLicence : undefined,
       council,
       creatorRole,
       creatorHasInsurance,
