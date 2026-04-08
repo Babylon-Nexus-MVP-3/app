@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 
@@ -33,7 +32,7 @@ export default function ApprovalProjectDetail() {
             accessibilityRole="button"
             accessibilityLabel="Back to approvals"
           >
-            <Ionicons name="chevron-back" size={22} color={Colors.gold} />
+            <Text style={styles.backArrow}>‹</Text>
             <Text style={styles.backLabel}>Approvals</Text>
           </TouchableOpacity>
 
@@ -102,6 +101,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     direction: "ltr",
   },
+  backArrow: { fontSize: 24, color: Colors.gold, lineHeight: 26 },
   backLabel: { fontSize: 14, color: Colors.gold, fontWeight: "600" },
   adminBadge: {
     fontSize: 10,

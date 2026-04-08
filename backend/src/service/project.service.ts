@@ -249,9 +249,7 @@ export async function inviteParticipant(
     status: participant.status,
   };
 
-  return process.env.NODE_ENV === "test"
-    ? { participant: safeParticipant, inviteCode }
-    : { participant: safeParticipant };
+  return { participant: safeParticipant, inviteCode };
 }
 
 export async function acceptInviteParticipant(inviteCode: string, userId: string) {
