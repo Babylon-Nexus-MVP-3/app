@@ -52,7 +52,8 @@ jobs:
         working-directory: ./backend
         env: 
           NODE_ENV: test
-          MONGODB_URI: ${{ secrets.MONGODB_TEST_URI }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_TEST_URI: ${{ secrets.MONGODB_TEST_URI }}
           PORT: ${{ secrets.PORT }}
           URL: ${{ secrets.URL }}
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
