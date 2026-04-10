@@ -151,8 +151,8 @@ export async function getProjectDetails(
   }
 
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
-  const canViewParticipantComplianceFields = invoicesRaw.some((i: any) =>
-    canViewInvoiceAmount(userRole, i, normalizedUserId)
+  const canViewParticipantComplianceFields = ["Owner", "PM", "Financier", "VIP", "Admin"].includes(
+    userRole
   );
 
   const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i: any) => {
