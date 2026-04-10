@@ -4,7 +4,7 @@
     "slug": "babylonnexus",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./frontend/assets/appIcon.png",
+    "icon": "./assets/appIcon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
