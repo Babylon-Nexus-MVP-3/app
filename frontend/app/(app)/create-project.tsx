@@ -129,10 +129,8 @@ export default function CreateProject() {
           ...(role === "Owner" && { ownerId: user?.id }),
           ...(role === "Builder" && { builderId: user?.id }),
           ...((ROLE_MAP[role] ?? role) === "PM" && { pmId: user?.id }),
-          ...(hasInsurance === "yes" && { hasInsurance: true }),
-          ...(hasInsurance === "no" && { hasInsurance: false }),
-          ...(hasLicence === "yes" && { hasLicence: true }),
-          ...(hasLicence === "no" && { hasLicence: false }),
+          creatorHasInsurance: hasInsurance === "yes" ? true : hasInsurance === "no" ? false : null,
+          creatorHasLicence: hasLicence === "yes" ? true : hasLicence === "no" ? false : null,
           ...(daApproved === "yes" && daNumber.trim() && { daNumber: daNumber.trim() }),
           invitees: invitees.map((inv) => ({
             email: inv.email.trim(),

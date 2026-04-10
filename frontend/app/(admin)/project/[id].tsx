@@ -28,6 +28,8 @@ type Participant = {
   email: string;
   role: string;
   status: "Pending" | "Accepted";
+  hasLicence?: boolean | null;
+  hasInsurance?: boolean | null;
 };
 
 /* ─── Main screen ─── */
@@ -42,6 +44,8 @@ export default function AdminProjectDetail() {
 
   const [projectName, setProjectName] = useState("");
   const [location, setLocation] = useState("");
+  const [council, setCouncil] = useState("");
+  const [daNumber, setDaNumber] = useState<string | undefined>(undefined);
   const [projectStatus, setProjectStatus] = useState("");
   const [health, setHealth] = useState(0);
   const [change, setChange] = useState<number | null>(null);
@@ -65,6 +69,8 @@ export default function AdminProjectDetail() {
         }
         setProjectName(data.project?.name ?? "");
         setLocation(data.project?.location ?? "");
+        setCouncil(data.project?.council ?? "");
+        setDaNumber(data.project?.daNumber);
         setProjectStatus(data.project?.status ?? "");
         setHealth(data.healthScore ?? 0);
         setChange(data.monthOnMonthHealthChangePct ?? null);
@@ -222,6 +228,8 @@ export default function AdminProjectDetail() {
             <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
             <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
             {!!location && <Text style={styles.headerSub}>{location}</Text>}
+            {!!council && <Text style={styles.headerSub}>{council}</Text>}
+            {!!daNumber && <Text style={styles.headerSub}>DA: {daNumber}</Text>}
 
             <View style={styles.healthWrap}>
               {loading ? (
@@ -280,6 +288,9 @@ export default function AdminProjectDetail() {
           ) : (
             <MembersTab
               participants={participants}
+              location={location}
+              council={council}
+              daNumber={daNumber}
               onRemove={handleRemove}
               onDeleteProject={handleDeleteProject}
               isArchived={projectStatus === "Inactive"}
@@ -316,17 +327,30 @@ export default function AdminProjectDetail() {
 /* ─── Project Information tab ─── */
 function MembersTab({
   participants,
+  location,
+  council,
+  daNumber,
   onRemove,
   onDeleteProject,
   isArchived,
 }: {
   participants: Participant[];
+  location: string;
+  council: string;
+  daNumber?: string;
   onRemove: (p: Participant) => void;
   onDeleteProject: () => void;
   isArchived: boolean;
 }) {
   return (
     <View style={styles.bodyContent}>
+      <Text style={styles.sectionLabel}>PROJECT DETAILS</Text>
+      <View style={[styles.membersCard, { marginBottom: 24 }]}>
+        <InfoRow label="Location" value={location} />
+        <InfoRow label="Council" value={council} last={!daNumber} />
+        {!!daNumber && <InfoRow label="DA Number" value={daNumber} last />}
+      </View>
+
       <Text style={styles.sectionLabel}>MEMBERS</Text>
       {participants.length === 0 ? (
         <Text style={[styles.emptyText, { marginBottom: 24 }]}>No members on this project.</Text>
@@ -360,6 +384,24 @@ function MembersTab({
                     </Text>
                   </View>
                 </View>
+                {(p.hasLicence != null || p.hasInsurance != null) && (
+                  <View style={styles.complianceRow}>
+                    {p.hasLicence != null && (
+                      <View style={p.hasLicence ? styles.badgeGreen : styles.badgeRed}>
+                        <Text style={p.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
+                          {p.hasLicence ? "✓ Licenced" : "✗ No Licence"}
+                        </Text>
+                      </View>
+                    )}
+                    {p.hasInsurance != null && (
+                      <View style={p.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
+                        <Text style={p.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}>
+                          {p.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.removeBtn}
@@ -383,6 +425,15 @@ function MembersTab({
           <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
         </TouchableOpacity>
       )}
+    </View>
+  );
+}
+
+function InfoRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.infoRow, last && styles.infoRowLast]}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -529,6 +580,40 @@ const styles = StyleSheet.create({
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   statusPillText: { fontSize: 11, fontWeight: "700" },
   removeBtn: { padding: 4 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  infoRowLast: { borderBottomWidth: 0 },
+  infoLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  infoValue: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    fontWeight: "600",
+    textAlign: "right",
+    flex: 1,
+    marginLeft: 16,
+  },
+  complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
+  badgeGreen: {
+    backgroundColor: Colors.greenBg,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeGreenText: { fontSize: 10, fontWeight: "700", color: Colors.green },
+  badgeRed: {
+    backgroundColor: Colors.redBg,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeRedText: { fontSize: 10, fontWeight: "700", color: Colors.red },
   deleteProjectBtn: {
     flexDirection: "row",
     alignItems: "center",
