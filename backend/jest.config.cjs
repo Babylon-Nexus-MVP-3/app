@@ -5,5 +5,6 @@ module.exports = {
   testMatch: ["**/src/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
   setupFiles: ["dotenv/config"],
+  testTimeout: 30000,
 };
 

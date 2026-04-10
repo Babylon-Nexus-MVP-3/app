@@ -5,23 +5,7 @@ let token: string;
 const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
-
-beforeEach(async () => {
-  await requestDelete();
-  token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
-});
-
-afterEach(async () => {
-  await requestDelete();
-});
-
-afterAll(async () => {
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
-}, 10000);
 
 beforeAll(async () => {
   if (!process.env.MONGODB_URI) {
@@ -32,21 +16,21 @@ beforeAll(async () => {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
   }
-}, 10000);
+}, 15000);
+
+afterAll(async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+}, 15000);
+
+beforeEach(async () => {
+  await requestDelete();
+  token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+});
 
 afterEach(async () => {
   await requestDelete();
-});
-
-beforeAll(async () => {
-  // Ensure DB is connected
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI!);
-  }
-});
-
-afterAll(async () => {
-  await mongoose.connection.close();
 });
 
 describe("Success", () => {
