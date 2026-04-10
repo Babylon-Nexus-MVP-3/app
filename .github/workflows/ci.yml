@@ -48,6 +48,18 @@ jobs:
         working-directory: ./backend
         run: npm install
 
+      - name: Get Runner IP
+        id: ip
+        run: echo "ipv4=$(curl -s https://ifconfig.me)" >> $GITHUB_OUTPUT
+
+      - name: Add IP to Atlas
+        run: |
+          npm install -g mongodb-atlas-cli
+          atlas accessList create ${{ steps.ip.outputs.ipv4 }} --type ipAddress --projectId ${{ secrets.ATLAS_PROJECT_ID }} --comment "Temp GH Runner"
+        env:
+          MONGODB_ATLAS_PUBLIC_KEY: ${{ secrets.ATLAS_PUBLIC_KEY }}
+          MONGODB_ATLAS_PRIVATE_KEY: ${{ secrets.ATLAS_PRIVATE_KEY }}
+
       - name: Run tests with server
         working-directory: ./backend
         env: 
