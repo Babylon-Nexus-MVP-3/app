@@ -5,7 +5,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    ignores: ["node_modules/**", "dist/**", "jest.config.cjs"],
+    ignores: ["node_modules/**", "dist/**", "jest.config.cjs", "jest.env.setup.cjs"],
   },
 
   {
