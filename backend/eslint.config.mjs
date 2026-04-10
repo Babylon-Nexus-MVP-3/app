@@ -8,6 +8,16 @@ export default [
     ignores: ["node_modules/**", "dist/**", "jest.config.cjs"],
   },
 
+  {
+    files: ["ecosystem.config.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: {
+        module: "readonly",
+      },
+    },
+  },
+
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettierConfig,

@@ -58,14 +58,11 @@ export default function ChangePassword() {
 
     setLoading(true);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/auth/change-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ currentPassword, newPassword }),
-        }
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to change password.");
       setSuccess(true);

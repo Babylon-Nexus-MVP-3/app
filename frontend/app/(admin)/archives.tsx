@@ -35,9 +35,7 @@ export default function AdminArchives() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/admin/projects/inactive`
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/inactive`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load archived projects.");

@@ -109,17 +109,14 @@ export default function ProjectDetail() {
     setInviteLoading(true);
     setInviteError(null);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/project/${id}/invite`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            email: inviteEmail.trim(),
-            role: ROLE_API[inviteRole] ?? inviteRole,
-            trade: inviteTrade.trim(),
-          }),
-        }
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/project/${id}/invite`, {
+        method: "POST",
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: ROLE_API[inviteRole] ?? inviteRole,
+          trade: inviteTrade.trim(),
+        }),
+      });
       const data = await res.json();
       if (!res.ok) {
         setInviteError(data.error ?? "Failed to send invite");
@@ -147,18 +144,15 @@ export default function ProjectDetail() {
     setInvoiceLoading(true);
     setInvoiceError(null);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/project/${id}/invoice`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            submittingParty: invSubmittingParty.trim(),
-            submittingCategory: invCategory.trim(),
-            description: invDesc.trim(),
-            amount: parseFloat(invAmount),
-          }),
-        }
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/project/${id}/invoice`, {
+        method: "POST",
+        body: JSON.stringify({
+          submittingParty: invSubmittingParty.trim(),
+          submittingCategory: invCategory.trim(),
+          description: invDesc.trim(),
+          amount: parseFloat(invAmount),
+        }),
+      });
       const data = await res.json();
       if (!res.ok) {
         setInvoiceError(data.error ?? "Failed to submit invoice");

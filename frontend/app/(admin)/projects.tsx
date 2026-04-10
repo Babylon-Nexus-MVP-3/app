@@ -37,9 +37,7 @@ export default function AdminProjects() {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/admin/projects/active`
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/active`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load projects.");
