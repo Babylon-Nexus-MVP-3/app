@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -286,9 +287,7 @@ export default function AuditLog() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        `https://app-production-574c.up.railway.app/project/${projectId}/audit-log`
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/project/${projectId}/audit-log`);
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Failed to load audit log");

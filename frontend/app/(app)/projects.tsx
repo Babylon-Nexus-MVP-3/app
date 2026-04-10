@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -69,7 +70,7 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/projects");
+      const res = await fetchWithAuth(`${API_BASE_URL}/projects`);
       const data = await res.json();
       if (!res.ok) {
         setProjectsError(data.error ?? "Failed to load projects.");
@@ -125,7 +126,7 @@ export default function Projects() {
     setJoinLoading(true);
     setJoinError(null);
     try {
-      const res = await fetchWithAuth("https://app-production-574c.up.railway.app/project/accept", {
+      const res = await fetchWithAuth(`${API_BASE_URL}/project/accept`, {
         method: "POST",
         body: JSON.stringify({
           inviteCode: joinCode.trim(),

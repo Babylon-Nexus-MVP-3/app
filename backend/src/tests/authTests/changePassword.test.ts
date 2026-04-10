@@ -5,8 +5,24 @@ let token: string;
 const PM_EMAIL = "pm@project-test.com";
 const PASSWORD = "SecurePassword123!";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
+
+beforeAll(async () => {
+  if (!process.env.MONGODB_TEST_URI) {
+    throw new Error(
+      "MONGODB_TEST_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+    );
+  }
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(process.env.MONGODB_TEST_URI, MONGO_OPTIONS);
+  }
+}, 15000);
+
+afterAll(async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+}, 15000);
 
 beforeEach(async () => {
   await requestDelete();
@@ -15,38 +31,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await requestDelete();
-});
-
-afterAll(async () => {
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
-}, 10000);
-
-beforeAll(async () => {
-  if (!process.env.MONGODB_URI) {
-    throw new Error(
-      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
-    );
-  }
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
-  }
-}, 10000);
-
-afterEach(async () => {
-  await requestDelete();
-});
-
-beforeAll(async () => {
-  // Ensure DB is connected
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI!);
-  }
-});
-
-afterAll(async () => {
-  await mongoose.connection.close();
 });
 
 describe("Success", () => {

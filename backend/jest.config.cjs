@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: "node",
   testMatch: ["**/src/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
-  setupFiles: ["dotenv/config"],
+  setupFiles: ["./jest.env.setup.cjs"],
+  testTimeout: 30000,
 };
 

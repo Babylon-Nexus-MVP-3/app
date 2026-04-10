@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -28,7 +29,7 @@ export default function VerifyEmail() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://app-production-574c.up.railway.app/auth/verify-email", {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ verificationCode: code }),

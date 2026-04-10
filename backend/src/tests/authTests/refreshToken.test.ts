@@ -9,8 +9,7 @@ import { UserModel } from "../../models/userModel";
 
 let token: string;
 
-// Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
-jest.setTimeout(15000);
+const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 beforeEach(async () => {
   await requestDelete();
@@ -35,14 +34,14 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close();
-});
+}, 15000);
 
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI!);
+    await mongoose.connect(process.env.MONGODB_TEST_URI!, MONGO_OPTIONS);
   }
-});
+}, 15000);
 
 describe("Success Cases", () => {
   test("Success", async () => {

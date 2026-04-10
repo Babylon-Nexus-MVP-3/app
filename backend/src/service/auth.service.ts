@@ -10,6 +10,7 @@ import {
   checkName,
   checkEmail,
   checkPassword,
+  validateEmailFormat,
   generateCode,
   hashCode,
   hashPassword,
@@ -147,7 +148,7 @@ async function createRefreshToken(user: User): Promise<string> {
 }
 
 export async function loginUser(input: LoginInput): Promise<LoginResult> {
-  const email = input.email?.toLowerCase().trim();
+  const email = validateEmailFormat(input.email);
   const password = input.password;
 
   const user = await UserModel.findOne({ email });
@@ -227,7 +228,7 @@ export async function authRefresh(token: string) {
 }
 
 export async function forgotPassword(email: string) {
-  const normalisedEmail = email.toLowerCase().trim();
+  const normalisedEmail = validateEmailFormat(email);
   const { code, expiry } = generateCode();
   const hashedCode = hashCode(code);
 
@@ -265,7 +266,7 @@ export async function verifyResetCodeService(resetCode: string) {
 }
 
 export async function resendResetCodeService(email: string) {
-  const normalisedEmail = email.toLowerCase().trim();
+  const normalisedEmail = validateEmailFormat(email);
   const { code, expiry } = generateCode();
   const hashedCode = hashCode(code);
 
@@ -386,7 +387,7 @@ export async function userVerifyEmail(verificationCode: string) {
 }
 
 export async function resendVerificationCode(email: string) {
-  const normalisedEmail = email.toLowerCase().trim();
+  const normalisedEmail = validateEmailFormat(email);
   const { code, expiry } = generateCode();
   const hashedCode = hashCode(code);
 

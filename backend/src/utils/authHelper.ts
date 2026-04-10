@@ -65,11 +65,43 @@ export function checkPassword(password: string): void {
 }
 
 /*
+  Validates email format only — no DB lookup.
+  Strips CRLF characters to guard against SMTP injection (nodemailer CVE).
+  Enforces RFC 5321 max length of 254 characters.
+  Used in login, forgot-password, and resend flows.
+*/
+export function validateEmailFormat(email: string): string {
+  if (typeof email !== "string") {
+    throw new AuthError("invalid email format", 400);
+  }
+
+  // Strip CRLF to prevent SMTP command injection
+  const sanitised = email
+    .replace(/[\r\n]/g, "")
+    .toLowerCase()
+    .trim();
+
+  if (sanitised.length > 254) {
+    throw new AuthError("invalid email format", 400);
+  }
+
+  if (!validator.isEmail(sanitised)) {
+    throw new AuthError("invalid email format", 400);
+  }
+
+  return sanitised;
+}
+
+/*
   Validates email format and checks it isn't already registered.
   Uses a generic error message on duplicate to avoid exposing whether an email exists.
 */
 export async function checkEmail(normalisedEmail: string): Promise<void> {
   if (typeof normalisedEmail !== "string") {
+    throw new Error("invalid email format");
+  }
+
+  if (normalisedEmail.length > 254) {
     throw new Error("invalid email format");
   }
 

@@ -14,7 +14,6 @@ const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
-jest.setTimeout(15000);
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
@@ -40,13 +39,13 @@ afterAll(async () => {
 }, 10000);
 
 beforeAll(async () => {
-  if (!process.env.MONGODB_URI) {
+  if (!process.env.MONGODB_TEST_URI) {
     throw new Error(
-      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+      "MONGODB_TEST_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
     );
   }
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
+    await mongoose.connect(process.env.MONGODB_TEST_URI, MONGO_OPTIONS);
   }
 }, 10000);
 

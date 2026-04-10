@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,9 +38,7 @@ export default function AdminApprovals() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        "https://app-production-574c.up.railway.app/admin/projects/pending"
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/pending`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to load pending projects.");
@@ -56,12 +55,9 @@ export default function AdminApprovals() {
   async function handleApprove(projectId: string) {
     setActioningId(projectId);
     try {
-      const res = await fetchWithAuth(
-        `https://app-production-574c.up.railway.app/admin/projects/${projectId}/approve`,
-        {
-          method: "PUT",
-        }
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${projectId}/approve`, {
+        method: "PUT",
+      });
       if (res.ok) {
         setProjects((prev) => prev.filter((p) => p._id !== projectId));
       }
@@ -79,10 +75,9 @@ export default function AdminApprovals() {
         onPress: async () => {
           setActioningId(projectId);
           try {
-            const res = await fetchWithAuth(
-              `https://app-production-574c.up.railway.app/admin/projects/${projectId}/reject`,
-              { method: "PUT" }
-            );
+            const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${projectId}/reject`, {
+              method: "PUT",
+            });
             if (res.ok) {
               setProjects((prev) => prev.filter((p) => p._id !== projectId));
             }

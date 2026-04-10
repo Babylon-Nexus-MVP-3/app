@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -33,7 +34,7 @@ export default function ResetPassword() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://app-production-574c.up.railway.app/auth/reset-password", {
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resetCode, newPassword: password }),

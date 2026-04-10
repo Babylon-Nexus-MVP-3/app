@@ -6,6 +6,8 @@ import {
 } from "../requestHelpers";
 import mongoose from "mongoose";
 
+const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
+
 beforeEach(async () => {
   await requestDelete();
 });
@@ -17,13 +19,13 @@ afterEach(async () => {
 beforeAll(async () => {
   // Ensure DB is connected
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI!);
+    await mongoose.connect(process.env.MONGODB_TEST_URI!, MONGO_OPTIONS);
   }
-});
+}, 15000);
 
 afterAll(async () => {
   await mongoose.connection.close();
-});
+}, 15000);
 
 describe("Success", () => {
   test("verifyEmail marks user as verified", async () => {
