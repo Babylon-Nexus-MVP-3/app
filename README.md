@@ -7,7 +7,7 @@ This project uses Swagger UI for API documentation.
 
 To view the API docs, start the server and visit:
 ```
-http://localhost:3229/api-docs
+https://api.babylon-nexus.com/api-docs
 ```
 
 ## Setup
