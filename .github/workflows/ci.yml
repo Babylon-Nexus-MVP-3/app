@@ -69,6 +69,8 @@ jobs:
             echo "Failed to whitelist IP, HTTP status: $STATUS"
             exit 1
           fi
+          echo "Waiting for Atlas firewall to propagate..."
+          sleep 30
 
       - name: Run tests with server
         working-directory: ./backend
