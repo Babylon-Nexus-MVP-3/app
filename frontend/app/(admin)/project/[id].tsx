@@ -228,8 +228,6 @@ export default function AdminProjectDetail() {
             <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
             <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
             {!!location && <Text style={styles.headerSub}>{location}</Text>}
-            {!!council && <Text style={styles.headerSub}>{council}</Text>}
-            {!!daNumber && <Text style={styles.headerSub}>DA: {daNumber}</Text>}
 
             <View style={styles.healthWrap}>
               {loading ? (
