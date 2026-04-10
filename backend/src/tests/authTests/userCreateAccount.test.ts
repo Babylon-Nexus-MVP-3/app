@@ -2,7 +2,6 @@ import { requestDelete, requestAuthRegister } from "../requestHelpers";
 import mongoose from "mongoose";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
-jest.setTimeout(15000);
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 

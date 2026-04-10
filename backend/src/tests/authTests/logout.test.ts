@@ -13,7 +13,6 @@ import {
 const EMAIL = "logout@example.com";
 const PASSWORD = "Abcdefgh123456$";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 let accessToken: string;

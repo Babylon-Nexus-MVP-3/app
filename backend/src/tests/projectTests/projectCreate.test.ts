@@ -7,7 +7,6 @@ import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
-jest.setTimeout(15000);
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 const PM_EMAIL = "pm@project-test.com";

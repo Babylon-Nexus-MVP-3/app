@@ -4,7 +4,6 @@ import { requestDelete, requestAuthRegister, requestForgotPassword } from "../re
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh1234$";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 beforeEach(async () => {

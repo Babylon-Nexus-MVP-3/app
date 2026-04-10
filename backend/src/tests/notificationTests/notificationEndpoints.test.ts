@@ -6,7 +6,6 @@ import { hashPassword } from "../../utils/authHelper";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { ProjectModel } from "../../models/projectModel";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const USER_EMAIL = "notify-user@test.com";

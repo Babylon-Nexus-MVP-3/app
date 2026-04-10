@@ -181,5 +181,7 @@ export async function getProjectId(token: string, creatorRole: UserRole): Promis
     .set("Authorization", `Bearer ${token}`)
     .send(body);
 
+  expect(projectRes.status).toBe(200);
+  expect(projectRes.body.projectId).toBeDefined();
   return projectRes.body.projectId as string;
 }

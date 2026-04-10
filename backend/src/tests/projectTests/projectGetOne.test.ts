@@ -7,7 +7,6 @@ import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 import { InvoiceModel } from "../../models/invoiceModel";
 import { UserModel, UserRole } from "../../models/userModel";
 
-jest.setTimeout(30000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const PM_EMAIL = "pm@get-one-test.com";

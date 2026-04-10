@@ -18,7 +18,6 @@ const SUBBIE_EMAIL = "subbie@invoice-actions-test.com";
 const BUILDER_EMAIL = "builder@invoice-actions-test.com";
 const PASSWORD = "SecurePassword123!";
 
-jest.setTimeout(20000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 let subbieToken: string;

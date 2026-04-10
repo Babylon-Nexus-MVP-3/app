@@ -6,7 +6,6 @@ import { UserModel } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const PASSWORD = "SecurePassword123!";

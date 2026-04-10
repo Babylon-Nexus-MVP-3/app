@@ -8,7 +8,6 @@ import { ProjectParticipantModel } from "../../models/projectParticipantModel";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { hashPassword } from "../../utils/authHelper";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 const ADMIN_EMAIL = "admin@admin-approval-test.com";

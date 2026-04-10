@@ -14,7 +14,6 @@ const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
-jest.setTimeout(15000);
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 

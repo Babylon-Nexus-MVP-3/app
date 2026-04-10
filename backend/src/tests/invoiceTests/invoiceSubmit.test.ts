@@ -15,7 +15,6 @@ const PASSWORD = "SecurePassword123!";
 const SUBBIE_EMAIL = "subbie@project-test.com";
 const BUILDER_EMAIL = "builder@project-test.com";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 let projectId: string;

@@ -9,7 +9,6 @@ import { InvoiceModel, InvoiceStatus } from "../../models/invoiceModel";
 import { runOverdueInvoiceEscalations } from "../../service/notification.service";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 beforeAll(async () => {

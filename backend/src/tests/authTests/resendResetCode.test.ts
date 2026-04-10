@@ -9,7 +9,6 @@ import {
 const EMAIL = "example@gmail.com";
 const PASSWORD = "Abcdefgh123456$";
 
-jest.setTimeout(15000);
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
 beforeEach(async () => {
