@@ -48,35 +48,6 @@ jobs:
         working-directory: ./backend
         run: npm install
 
-      - name: Get Runner IP
-        id: ip
-        run: echo "ipv4=$(curl -s https://ifconfig.me)" >> $GITHUB_OUTPUT
-
-      - name: Add IP to Atlas
-        env:
-          RUNNER_IP: ${{ steps.ip.outputs.ipv4 }}
-          ATLAS_PUBLIC_KEY: ${{ secrets.ATLAS_PUBLIC_KEY }}
-          ATLAS_PRIVATE_KEY: ${{ secrets.ATLAS_PRIVATE_KEY }}
-          ATLAS_PROJECT_ID: ${{ secrets.ATLAS_PROJECT_ID }}
-        run: |
-          echo "Runner IP: $RUNNER_IP"
-          STATUS=$(curl -s -o /tmp/atlas_response.json -w "%{http_code}" \
-            -u "$ATLAS_PUBLIC_KEY:$ATLAS_PRIVATE_KEY" \
-            --digest \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/vnd.atlas.2023-01-01+json" \
-            -X POST \
-            "https://cloud.mongodb.com/api/atlas/v2/groups/$ATLAS_PROJECT_ID/accessList" \
-            -d "[{\"ipAddress\": \"$RUNNER_IP\", \"comment\": \"Temp GH Runner\"}]")
-          cat /tmp/atlas_response.json
-          echo "HTTP Status: $STATUS"
-          if [ "$STATUS" != "201" ] && [ "$STATUS" != "200" ]; then
-            echo "Failed to whitelist IP"
-            exit 1
-          fi
-          echo "Waiting for Atlas firewall to propagate..."
-          sleep 30
-
       - name: Run tests with server
         working-directory: ./backend
         env: 
