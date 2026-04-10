@@ -29,11 +29,11 @@ async function getAdminToken(): Promise<string> {
 }
 
 beforeAll(async () => {
-  if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set.");
+  if (!process.env.MONGODB_TEST_URI) {
+    throw new Error("MONGODB_TEST_URI is not set.");
   }
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
+    await mongoose.connect(process.env.MONGODB_TEST_URI, MONGO_OPTIONS);
   }
 }, 10000);
 

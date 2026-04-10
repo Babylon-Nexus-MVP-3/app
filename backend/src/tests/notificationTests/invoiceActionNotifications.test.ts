@@ -41,13 +41,13 @@ async function submitTestInvoice(token: string, pId: string): Promise<string> {
 }
 
 beforeAll(async () => {
-  if (!process.env.MONGODB_URI) {
+  if (!process.env.MONGODB_TEST_URI) {
     throw new Error(
-      "MONGODB_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
+      "MONGODB_TEST_URI is not set. Copy backend/.env.example to backend/.env and set MONGODB_URI."
     );
   }
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
+    await mongoose.connect(process.env.MONGODB_TEST_URI, MONGO_OPTIONS);
   }
 }, 10000);
 
