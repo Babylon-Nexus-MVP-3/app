@@ -21,6 +21,7 @@
     "android": {
       "package": "com.babylonnexus",
       "versionCode": 4,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -36,6 +37,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#0A1E3D",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-splash-screen",
         {

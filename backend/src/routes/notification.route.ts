@@ -6,3 +6,4 @@ export const notificationRouter = express.Router();
 
 notificationRouter.get("/", requireAuth, NotificationController.list);
 notificationRouter.patch("/read-all", requireAuth, NotificationController.readAll);
+notificationRouter.patch("/push-token", requireAuth, NotificationController.registerPushToken);

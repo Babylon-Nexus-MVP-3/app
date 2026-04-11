@@ -1,8 +1,11 @@
+import Expo from "expo-server-sdk";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { NotificationModel, NotificationType } from "../models/notificationModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { UserRole } from "../models/userModel";
+import { UserModel, UserRole } from "../models/userModel";
+
+const expo = new Expo();
 
 export class NotificationError extends Error {
   statusCode: number;
@@ -30,6 +33,28 @@ export async function createNotification(input: CreateNotificationInput): Promis
     message: input.message,
     read: false,
   });
+
+  // Best-effort push — never throws, DB notification is source of truth
+  try {
+    const user = await UserModel.findById(input.recipientUserId).select("pushToken").lean();
+    const token = user?.pushToken;
+    if (token && Expo.isExpoPushToken(token)) {
+      await expo.sendPushNotificationsAsync([
+        {
+          to: token,
+          title: "Babylon Nexus",
+          body: input.message,
+          data: {
+            type: input.type,
+            projectId: input.projectId,
+            ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+          },
+        },
+      ]);
+    }
+  } catch {
+    // Push failure is non-fatal
+  }
 }
 
 export async function getNotificationsForUser(userId: string) {
