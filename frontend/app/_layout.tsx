@@ -26,10 +26,23 @@ export default function RootLayout() {
     // Fired when the user taps a notification (foreground or background)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, string>;
-      if (data?.projectId) {
-        router.push(`/(app)/project/${data.projectId}` as any);
-      } else {
+      if (!data?.projectId) {
         router.push("/(app)/notifications" as any);
+        return;
+      }
+
+      const nonNavigableTypes = [
+        "ProjectPendingApproval",
+        "ProjectRejected",
+        "ProjectDeleted",
+        "ProjectParticipantRemoved",
+      ];
+      if (data.type && nonNavigableTypes.includes(data.type)) return;
+
+      if (data.invoiceId) {
+        router.push(`/(app)/project/${data.projectId}?openInvoice=${data.invoiceId}` as any);
+      } else {
+        router.push(`/(app)/project/${data.projectId}` as any);
       }
     });
 
