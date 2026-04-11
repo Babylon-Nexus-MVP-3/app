@@ -5,9 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user, logout, fetchWithAuth } = useAuth();
 
   function handleLogoutPress() {
     Alert.alert("Sign out", "Are you sure you want to log out?", [
@@ -21,6 +22,40 @@ export default function Settings() {
         },
       },
     ]);
+  }
+
+  function handleDeleteAccountPress() {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all associated data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/auth/delete-account`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        Alert.alert("Error", data.error ?? "Failed to delete account. Please try again.");
+        return;
+      }
+
+      await logout();
+      router.replace("/");
+    } catch {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    }
   }
 
   const initials = user?.name
@@ -68,6 +103,14 @@ export default function Settings() {
           activeOpacity={0.85}
         >
           <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={handleDeleteAccountPress}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="trash-outline" size={15} color={Colors.red} />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -137,6 +180,7 @@ const styles = StyleSheet.create({
     bottom: 32,
     left: 20,
     right: 20,
+    gap: 12,
   },
   signOutButton: {
     backgroundColor: Colors.red,
@@ -148,6 +192,21 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 15,
     fontWeight: "700",
+  },
+  deleteAccountButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.red,
+  },
+  deleteAccountText: {
+    color: Colors.red,
+    fontSize: 14,
+    fontWeight: "600",
   },
   menu: {
     marginHorizontal: 20,

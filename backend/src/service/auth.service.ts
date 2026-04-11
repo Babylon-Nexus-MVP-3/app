@@ -477,3 +477,18 @@ export async function userLogout(userId: string) {
 
   return { success: true };
 }
+
+export async function deleteAccount(userId: string) {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new AuthError("User not found", 404);
+  }
+
+  // Revoke all refresh tokens so no further API calls can be made with them
+  await RefreshTokenModel.deleteMany({ user: userId });
+
+  // Permanently delete the user record
+  await UserModel.findByIdAndDelete(userId);
+
+  return { success: true };
+}
