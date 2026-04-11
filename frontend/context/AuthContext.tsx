@@ -2,6 +2,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
 import { UserRole } from "../../backend/src/models/userModel";
+import { registerForPushNotifications } from "@/lib/notifications";
 
 export interface AuthUser {
   id: string;
@@ -56,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveItem("user", JSON.stringify(newUser));
     setAccessToken(newAccessToken);
     setUser(newUser);
+
+    // Register device for push notifications — failure must not block login
+    registerForPushNotifications(fetchWithAuth).catch((err) => {
+      console.error("Failed to register for push notifications:", err);
+    });
   }
 
   async function logout() {

@@ -8,6 +8,7 @@ import {
   resendResetCodeService,
   resendVerificationCode,
   resetPassword,
+  savePushToken,
   userChangePassword,
   userLogout,
   userVerifyEmail,
@@ -193,6 +194,21 @@ export const deleteUserAccount = async (req: Request, res: Response, next: NextF
   const userId = req.user!.sub;
   try {
     const result = await deleteAccount(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePushToken = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  const { pushToken } = req.body;
+  if (!isNonEmptyString(pushToken)) {
+    return res.status(400).json({ error: "Push token is required" });
+  }
+
+  try {
+    const result = await savePushToken(userId, pushToken);
     res.status(200).json(result);
   } catch (error) {
     next(error);
