@@ -15,6 +15,7 @@ export const authRouter = express.Router();
 
 authRouter.post("/register", registrationLimiter, AuthController.register);
 authRouter.post("/login", loginLimiter, AuthController.login);
+authRouter.post("/reactivate", loginLimiter, AuthController.reactivate);
 authRouter.post("/refresh", refreshLimiter, AuthController.refresh);
 
 // Forgot Password Flow

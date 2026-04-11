@@ -27,11 +27,11 @@ export default function Settings() {
   function handleDeleteAccountPress() {
     Alert.alert(
       "Delete Account",
-      "This will permanently delete your account and all associated data. This action cannot be undone.",
+      "Your account will be deactivated immediately and permanently deleted after 30 days. You can reactivate it any time within that period by signing back in.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete Account",
+          text: "Deactivate",
           style: "destructive",
           onPress: confirmDeleteAccount,
         },
