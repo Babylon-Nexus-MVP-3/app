@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import {
   authRefresh,
+  deleteAccount,
   forgotPassword,
   loginUser,
   registerUser,
@@ -182,6 +183,16 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
   const userId = req.user!.sub;
   try {
     const result = await userLogout(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUserAccount = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  try {
+    const result = await deleteAccount(userId);
     res.status(200).json(result);
   } catch (error) {
     next(error);

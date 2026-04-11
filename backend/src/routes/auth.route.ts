@@ -29,3 +29,4 @@ authRouter.post("/resend-verification", resendVerifLimiter, AuthController.resen
 
 authRouter.post("/change-password", requireAuth, AuthController.changePassword);
 authRouter.post("/logout", requireAuth, AuthController.logout);
+authRouter.delete("/delete-account", requireAuth, AuthController.deleteUserAccount);
