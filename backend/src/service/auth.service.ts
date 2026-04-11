@@ -492,3 +492,15 @@ export async function deleteAccount(userId: string) {
 
   return { success: true };
 }
+
+export async function savePushToken(userId: string, pushToken: string) {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new AuthError("User not found", 404);
+  }
+
+  user.pushToken = pushToken;
+  await user.save();
+
+  return { success: true };
+}

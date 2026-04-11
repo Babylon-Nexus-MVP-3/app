@@ -5,6 +5,7 @@ import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
   const { fetchWithAuth } = useAuth();
@@ -36,7 +37,8 @@ function NotificationIcon({ color, focused }: { color: string; focused: boolean 
 }
 
 export default function AppLayout() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, fetchWithAuth } = useAuth();
+  usePushNotifications(fetchWithAuth);
 
   useEffect(() => {
     if (isLoading) return;
