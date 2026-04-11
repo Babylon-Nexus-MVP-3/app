@@ -4,6 +4,7 @@ import {
   deleteAccount,
   forgotPassword,
   loginUser,
+  reactivateAccount,
   registerUser,
   resendResetCodeService,
   resendVerificationCode,
@@ -49,6 +50,40 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     }
 
     const result = await loginUser({ email, password });
+
+    res.status(200).json({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role,
+        status: result.user.status,
+      },
+    });
+  } catch (err: any) {
+    if (err?.code === "ACCOUNT_DEACTIVATED") {
+      res.status(403).json({
+        error: err.message,
+        code: "ACCOUNT_DEACTIVATED",
+        daysRemaining: err.daysRemaining,
+      });
+      return;
+    }
+    next(err);
+  }
+}
+
+export async function reactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, password } = req.body;
+    if (!isNonEmptyString(email) || !validator.isEmail(email) || !isNonEmptyString(password)) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
+
+    const result = await reactivateAccount(email, password);
 
     res.status(200).json({
       accessToken: result.accessToken,

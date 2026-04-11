@@ -156,6 +156,16 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     throw new AuthError("Invalid credentials", 400);
   }
 
+  if (user.deletedAt) {
+    const daysRemaining = Math.ceil(
+      (user.deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    const err = new AuthError("Account is deactivated", 403) as any;
+    err.code = "ACCOUNT_DEACTIVATED";
+    err.daysRemaining = Math.max(daysRemaining, 0);
+    throw err;
+  }
+
   if (user.status !== "Active") {
     throw new AuthError("User email is not verified", 400);
   }
@@ -484,13 +494,56 @@ export async function deleteAccount(userId: string) {
     throw new AuthError("User not found", 404);
   }
 
-  // Revoke all refresh tokens so no further API calls can be made with them
+  // Revoke all refresh tokens so no further API calls can be made
   await RefreshTokenModel.deleteMany({ user: userId });
 
-  // Permanently delete the user record
-  await UserModel.findByIdAndDelete(userId);
+  // Soft-delete: mark the account as deactivated.
+  // MongoDB TTL index will permanently purge the record after 30 days.
+  user.deletedAt = new Date();
+  await user.save();
 
   return { success: true };
+}
+
+export async function reactivateAccount(email: string, password: string) {
+  const normalisedEmail = validateEmailFormat(email);
+
+  const user = await UserModel.findOne({ email: normalisedEmail });
+  if (!user || !user.deletedAt) {
+    throw new AuthError("Invalid credentials", 400);
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.password);
+  if (!passwordMatches) {
+    throw new AuthError("Invalid credentials", 400);
+  }
+
+  // Restore the account
+  user.deletedAt = null;
+  await user.save();
+
+  const accessToken = createAccessToken(user);
+  const refreshToken = await createRefreshToken(user);
+
+  await EventModel.create({
+    type: "UserReactivated",
+    aggregateType: "User",
+    aggregateId: user.id,
+    userId: user._id.toString(),
+    payload: { email: user.email },
+  });
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    } satisfies SafeUser,
+  };
 }
 
 export async function savePushToken(userId: string, pushToken: string) {

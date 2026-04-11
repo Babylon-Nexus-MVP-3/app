@@ -2,6 +2,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -48,7 +49,56 @@ export default function SignIn() {
       } catch {
         /* plain text response */
       }
+
+      if (response.status === 403 && data.code === "ACCOUNT_DEACTIVATED") {
+        const days = data.daysRemaining ?? 30;
+        Alert.alert(
+          "Account Deactivated",
+          `Your account has been deactivated. You have ${days} day${days !== 1 ? "s" : ""} left to reactivate it before it is permanently deleted.\n\nWould you like to reactivate your account now?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Reactivate",
+              onPress: () => handleReactivate(),
+            },
+          ]
+        );
+        return;
+      }
+
       if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
+
+      await login(data.accessToken, data.refreshToken, data.user);
+      if (data.user?.role === "Admin") {
+        router.replace("/(admin)/projects");
+      } else {
+        router.replace("/(app)/projects");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleReactivate() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reactivate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
+      });
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        /* plain text response */
+      }
+      if (!response.ok) throw new Error(data.error ?? text ?? "Reactivation failed");
 
       await login(data.accessToken, data.refreshToken, data.user);
       if (data.user?.role === "Admin") {
