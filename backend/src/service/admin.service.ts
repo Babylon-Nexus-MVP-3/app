@@ -63,6 +63,8 @@ export async function listPendingProjects(): Promise<any[]> {
         name: user?.name ?? "—",
         email: creatorParticipant.email,
         role: creatorParticipant.role,
+        hasLicence: creatorParticipant.hasLicence,
+        hasInsurance: creatorParticipant.hasInsurance,
       };
     }
 

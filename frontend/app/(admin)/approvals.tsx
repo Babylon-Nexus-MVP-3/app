@@ -21,8 +21,15 @@ type PendingProject = {
   name: string;
   location: string;
   council: string;
+  daNumber?: string;
   createdAt: string;
-  creator: { name: string; email: string; role: string } | null;
+  creator: {
+    name: string;
+    email: string;
+    role: string;
+    hasLicence?: boolean | null;
+    hasInsurance?: boolean | null;
+  } | null;
   invitees: { email: string; role: string }[];
 };
 
@@ -154,6 +161,8 @@ export default function AdminApprovals() {
                         id: project._id,
                         name: project.name,
                         location: project.location,
+                        council: project.council,
+                        daNumber: project.daNumber ?? "",
                         createdAt: project.createdAt,
                         creator: JSON.stringify(project.creator),
                         invitees: JSON.stringify(project.invitees),

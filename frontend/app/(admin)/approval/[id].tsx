@@ -6,12 +6,20 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 
-type Member = { name?: string; email: string; role: string };
+type Member = {
+  name?: string;
+  email: string;
+  role: string;
+  hasLicence?: boolean | null;
+  hasInsurance?: boolean | null;
+};
 
 export default function ApprovalProjectDetail() {
-  const { name, location, createdAt, creator, invitees } = useLocalSearchParams<{
+  const { name, location, council, daNumber, createdAt, creator, invitees } = useLocalSearchParams<{
     name: string;
     location: string;
+    council: string;
+    daNumber: string;
     createdAt: string;
     creator: string;
     invitees: string;
@@ -52,6 +60,13 @@ export default function ApprovalProjectDetail() {
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.sectionLabel}>PROJECT DETAILS</Text>
+        <View style={[styles.membersCard, { marginBottom: 24 }]}>
+          <InfoRow label="Location" value={location ?? ""} />
+          <InfoRow label="Council" value={council ?? ""} last={!daNumber} />
+          {!!daNumber && <InfoRow label="DA Number" value={daNumber} last />}
+        </View>
+
         <Text style={styles.sectionLabel}>MEMBERS</Text>
         <View style={styles.membersCard}>
           {allMembers.length === 0 ? (
@@ -75,12 +90,41 @@ export default function ApprovalProjectDetail() {
                       </View>
                     )}
                   </View>
+                  {(m.hasLicence != null || m.hasInsurance != null) && (
+                    <View style={styles.complianceRow}>
+                      {m.hasLicence != null && (
+                        <View style={m.hasLicence ? styles.badgeGreen : styles.badgeRed}>
+                          <Text style={m.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
+                            {m.hasLicence ? "✓ Licenced" : "✗ No Licence"}
+                          </Text>
+                        </View>
+                      )}
+                      {m.hasInsurance != null && (
+                        <View style={m.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
+                          <Text
+                            style={m.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}
+                          >
+                            {m.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               </View>
             ))
           )}
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function InfoRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.infoRow, last && styles.infoRowLast]}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -151,14 +195,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  memberRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  memberRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
-  },
+  memberRow: { paddingHorizontal: 16, paddingVertical: 14 },
+  memberRowBorder: { borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.05)" },
   memberInfo: { flex: 1 },
   memberName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 2 },
   memberEmail: { fontSize: 12, color: Colors.textSecondary, marginBottom: 6 },
@@ -177,5 +215,39 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   creatorPillText: { fontSize: 11, fontWeight: "700", color: Colors.navy },
+  complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
+  badgeGreen: {
+    backgroundColor: Colors.greenBg,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeGreenText: { fontSize: 10, fontWeight: "700", color: Colors.green },
+  badgeRed: {
+    backgroundColor: Colors.redBg,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeRedText: { fontSize: 10, fontWeight: "700", color: Colors.red },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  infoRowLast: { borderBottomWidth: 0 },
+  infoLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  infoValue: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    fontWeight: "600",
+    textAlign: "right",
+    flex: 1,
+    marginLeft: 16,
+  },
   emptyText: { fontSize: 14, color: Colors.textSecondary, padding: 16 },
 });
