@@ -1,6 +1,10 @@
 name: CI Tests
 
 on:
+  workflow_dispatch:  # manual trigger from GitHub UI
+  push:
+    branches:
+      - main          # runs automatically on every push to main
   pull_request:
     branches:
       - main
