@@ -34,6 +34,10 @@ export const requestRefreshToken = async (token: string) => {
   return await request(app).post("/auth/refresh").send({ refreshToken: token });
 };
 
+export async function requestReactivateAccount(email: string, password: string) {
+  return request(app).post("/auth/reactivate").send({ email, password });
+}
+
 export const requestForgotPassword = async (email: string) => {
   return await request(app).post("/auth/forgot-password").send({ email });
 };
@@ -63,6 +67,10 @@ export const requestChangePassword = async (
 
 export const requestLogout = async (token: string) => {
   return await request(app).post("/auth/logout").set("Authorization", `Bearer ${token}`);
+};
+
+export const requestDeleteAccount = async (token: string) => {
+  return await request(app).delete("/auth/delete-account").set("Authorization", `Bearer ${token}`);
 };
 
 export const requestInvite = async (

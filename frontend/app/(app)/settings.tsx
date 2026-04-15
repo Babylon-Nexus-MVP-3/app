@@ -46,8 +46,18 @@ export default function Settings() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        Alert.alert("Error", data.error ?? "Failed to delete account. Please try again.");
+        const text = await res.text();
+        let data: { error?: string } = {};
+
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = {};
+          }
+        }
+
+        Alert.alert("Error", data.error ?? text ?? "Failed to delete account. Please try again.");
         return;
       }
 

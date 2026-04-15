@@ -6,6 +6,7 @@ export type EventType =
   | "UserRegistered"
   | "UserLoggedIn"
   | "UserEmailVerified"
+  | "UserReactivated"
   | "InvoiceSubmitted"
   | "InvoiceApproved"
   | "InvoicePaid"
@@ -31,6 +32,7 @@ const eventSchema = new Schema<EventDocument>(
         "UserRegistered",
         "UserLoggedIn",
         "UserEmailVerified",
+        "UserReactivated",
         "InvoiceSubmitted",
         "InvoiceApproved",
         "InvoicePaid",
