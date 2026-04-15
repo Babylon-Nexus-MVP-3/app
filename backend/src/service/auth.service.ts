@@ -492,7 +492,7 @@ export async function deleteAccount(userId: string) {
   // Soft-delete: mark the account as deactivated.
   // MongoDB TTL index will permanently purge the record after 30 days.
   const result = await UserModel.updateOne(
-    { _id: userId },
+    { _id: userId, deletedAt: null },
     {
       $set: {
         deletedAt: new Date(),
