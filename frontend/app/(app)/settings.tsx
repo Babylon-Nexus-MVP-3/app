@@ -57,7 +57,7 @@ export default function Settings() {
           }
         }
 
-        Alert.alert("Error", data.error ?? text ?? "Failed to delete account. Please try again.");
+        Alert.alert("Error", data.error ?? "Failed to delete account. Please try again.");
         return;
       }
 
