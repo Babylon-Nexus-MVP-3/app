@@ -5,6 +5,7 @@ import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
   const { fetchWithAuth } = useAuth();
@@ -37,6 +38,7 @@ function NotificationIcon({ color, focused }: { color: string; focused: boolean 
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
+  const { bottom } = useSafeAreaInsets();
 
   useEffect(() => {
     if (isLoading) return;
@@ -57,6 +59,8 @@ export default function AppLayout() {
           backgroundColor: Colors.navy,
           borderTopWidth: 0,
           paddingTop: 8,
+          paddingBottom: bottom,
+          height: 60 + bottom,
         },
         tabBarActiveTintColor: Colors.gold,
         tabBarInactiveTintColor: Colors.textSecondary,

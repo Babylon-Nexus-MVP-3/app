@@ -8,18 +8,18 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://54.253.17.228"
+        "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://54.253.17.228"
+        "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://54.253.17.228"
+        "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
     }
   },
