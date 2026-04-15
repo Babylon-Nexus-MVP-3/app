@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "@/constants/api";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
-import { UserRole } from "../../backend/src/models/userModel";
+import { UserRole } from "@/types/roles";
 import { registerForPushNotifications } from "@/lib/notifications";
 
 export interface AuthUser {

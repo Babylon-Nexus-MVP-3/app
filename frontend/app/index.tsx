@@ -6,7 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { UserRole } from "../../backend/src/models/userModel";
+import { UserRole } from "@/types/roles";
 
 export default function Index() {
   const { user, isLoading } = useAuth();
