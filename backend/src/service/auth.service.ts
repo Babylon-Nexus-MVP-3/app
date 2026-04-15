@@ -485,6 +485,9 @@ export async function userLogout(userId: string) {
   // Access token expires eventually and cannot regenerate as refreshtokens have been revoked
   await RefreshTokenModel.updateMany({ user: userId }, { $set: { revokedAt: new Date() } });
 
+  // Clear push token so this device no longer receives notifications for this user
+  await UserModel.updateOne({ _id: userId }, { $set: { pushToken: null } });
+
   return { success: true };
 }
 

@@ -70,6 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
+    // Best-effort — clear the push token on the backend before revoking local tokens
+    fetchWithAuth(`${API_BASE_URL}/auth/logout`, { method: "POST" }).catch(() => {});
+
     await deleteItem("accessToken");
     await deleteItem("refreshToken");
     await deleteItem("user");

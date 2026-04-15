@@ -6,6 +6,7 @@ import { NotificationModel, NotificationType } from "../../models/notificationMo
 import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
+import { hashPassword } from "../../utils/authHelper";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 
@@ -93,8 +94,20 @@ describe("POST /project", () => {
     expect(participant?.hasLicence).toBeNull();
   });
 
-  it("returns 200 with notification sent correctly", async () => {
+  it("returns 200 with notification sent to creator and admins on project creation", async () => {
+    // Create an admin so we can assert they also receive the notification
+    const hashed = await hashPassword(PASSWORD);
+    const admin = await UserModel.create({
+      name: "Admin User",
+      email: "admin@project-test.com",
+      password: hashed,
+      status: "Active",
+      emailVerified: true,
+      role: UserRole.Admin,
+    });
+
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
 
     const res = await request(app)
       .post("/project")
@@ -103,18 +116,18 @@ describe("POST /project", () => {
 
     expect(res.status).toBe(200);
 
-    const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
-    expect(creator?._id).toBeDefined();
+    // Both creator and admin should receive the pending-approval notification
+    for (const recipientId of [creator!._id.toString(), admin._id.toString()]) {
+      const notification = await NotificationModel.findOne({
+        recipientUserId: recipientId,
+        projectId: res.body.projectId,
+        type: NotificationType.ProjectPendingApproval,
+      }).lean();
 
-    const notification = await NotificationModel.findOne({
-      recipientUserId: creator!._id.toString(),
-      projectId: res.body.projectId,
-      type: NotificationType.ProjectPendingApproval,
-    }).lean();
-
-    expect(notification).toBeTruthy();
-    expect(notification?.message).toContain("pending admin approval");
-    expect(notification?.read).toBe(false);
+      expect(notification).toBeTruthy();
+      expect(notification?.message).toContain("pending admin approval");
+      expect(notification?.read).toBe(false);
+    }
   });
 
   it("returns 401 when no Authorization header", async () => {
