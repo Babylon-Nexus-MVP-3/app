@@ -65,6 +65,10 @@ export const requestLogout = async (token: string) => {
   return await request(app).post("/auth/logout").set("Authorization", `Bearer ${token}`);
 };
 
+export const requestDeleteAccount = async (token: string) => {
+  return await request(app).delete("/auth/delete-account").set("Authorization", `Bearer ${token}`);
+};
+
 export const requestInvite = async (
   projectId: string,
   token: string,

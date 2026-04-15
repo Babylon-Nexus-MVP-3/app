@@ -489,18 +489,23 @@ export async function userLogout(userId: string) {
 }
 
 export async function deleteAccount(userId: string) {
-  const user = await UserModel.findById(userId);
-  if (!user) {
+  // Soft-delete: mark the account as deactivated.
+  // MongoDB TTL index will permanently purge the record after 30 days.
+  const result = await UserModel.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        deletedAt: new Date(),
+      },
+    }
+  );
+
+  if (result.matchedCount === 0) {
     throw new AuthError("User not found", 404);
   }
 
   // Revoke all refresh tokens so no further API calls can be made
   await RefreshTokenModel.deleteMany({ user: userId });
-
-  // Soft-delete: mark the account as deactivated.
-  // MongoDB TTL index will permanently purge the record after 30 days.
-  user.deletedAt = new Date();
-  await user.save();
 
   return { success: true };
 }
