@@ -190,9 +190,7 @@ describe("Push notifications", () => {
   });
 
   it("PATCH /auth/push-token returns 401 when called without authentication", async () => {
-    const res = await request(app)
-      .patch("/auth/push-token")
-      .send({ pushToken: VALID_PUSH_TOKEN });
+    const res = await request(app).patch("/auth/push-token").send({ pushToken: VALID_PUSH_TOKEN });
 
     expect(res.status).toBe(401);
   });

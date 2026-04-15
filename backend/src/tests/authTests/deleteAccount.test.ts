@@ -139,7 +139,7 @@ describe("DELETE /auth/delete-account", () => {
     });
 
     it("returns 401 when a structurally valid but tampered token is provided", async () => {
-      const [header, payload, _sig] = accessToken.split(".");
+      const [header, payload] = accessToken.split(".");
       const tamperedToken = `${header}.${payload}.invalidsignature`;
 
       const res = await requestDeleteAccount(tamperedToken);
