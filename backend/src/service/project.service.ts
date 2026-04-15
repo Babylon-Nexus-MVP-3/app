@@ -173,10 +173,14 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   });
 
   const admins = await UserModel.find({ role: UserRole.Admin }).select("_id").lean();
+  const pendingApprovalRecipients = [
+    user._id.toString(),
+    ...admins.map((admin) => admin._id.toString()),
+  ];
   await Promise.all(
-    admins.map((admin) =>
+    pendingApprovalRecipients.map((recipientUserId) =>
       notifySafely(() =>
-        notifyProjectPendingApproval(project._id.toString(), admin._id.toString(), project.name)
+        notifyProjectPendingApproval(project._id.toString(), recipientUserId, project.name)
       )
     )
   );
