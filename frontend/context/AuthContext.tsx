@@ -39,8 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedToken = await getItem("accessToken");
         const storedUser = await getItem("user");
         if (storedToken && storedUser) {
+          accessTokenRef.current = storedToken;
           setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
+          registerForPushNotifications(fetchWithAuth).catch((err) => {
+            console.error("Failed to register for push notifications:", err);
+          });
         }
       } catch {
         // Corrupted storage. Start fresh
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveItem("accessToken", newAccessToken);
     await saveItem("refreshToken", refreshToken);
     await saveItem("user", JSON.stringify(newUser));
+    accessTokenRef.current = newAccessToken;
     setAccessToken(newAccessToken);
     setUser(newUser);
 

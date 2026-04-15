@@ -3,9 +3,11 @@ import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AdminLayout() {
   const { user, isLoading } = useAuth();
+  const { bottom } = useSafeAreaInsets();
 
   useEffect(() => {
     if (isLoading) return;
@@ -26,6 +28,8 @@ export default function AdminLayout() {
           backgroundColor: Colors.navy,
           borderTopWidth: 0,
           paddingTop: 8,
+          paddingBottom: bottom,
+          height: 60 + bottom,
         },
         tabBarActiveTintColor: Colors.gold,
         tabBarInactiveTintColor: Colors.textSecondary,

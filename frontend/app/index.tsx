@@ -1,11 +1,23 @@
+import { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import BabylonLogo from "@/components/BabylonLogo";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import { UserRole } from "../../backend/src/models/userModel";
 
 export default function Index() {
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (user) {
+      router.replace(user.role === UserRole.Admin ? "/(admin)/projects" : "/(app)/projects");
+    }
+  }, [isLoading, user]);
+
   return (
     <LinearGradient
       colors={[Colors.navy, Colors.navyLight, Colors.navyDeep]}
