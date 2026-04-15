@@ -172,8 +172,13 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     payload: { name: name || location, location, council, daNumber, status },
   });
 
-  await notifySafely(() =>
-    notifyProjectPendingApproval(project._id.toString(), user._id.toString(), project.name)
+  const admins = await UserModel.find({ role: UserRole.Admin }).select("_id").lean();
+  await Promise.all(
+    admins.map((admin) =>
+      notifySafely(() =>
+        notifyProjectPendingApproval(project._id.toString(), admin._id.toString(), project.name)
+      )
+    )
   );
 
   return project._id.toString();

@@ -37,7 +37,10 @@ export default function RootLayout() {
         "ProjectDeleted",
         "ProjectParticipantRemoved",
       ];
-      if (data.type && nonNavigableTypes.includes(data.type)) return;
+      if (data.type && nonNavigableTypes.includes(data.type)) {
+        router.push("/(app)/notifications" as any);
+        return;
+      }
 
       if (data.invoiceId) {
         router.push(`/(app)/project/${data.projectId}?openInvoice=${data.invoiceId}` as any);
