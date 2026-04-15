@@ -7,17 +7,26 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
     },
     "production": {
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.babylon-nexus.com"
       }
