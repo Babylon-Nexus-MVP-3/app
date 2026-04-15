@@ -73,7 +73,9 @@ describe("DELETE /auth/delete-account", () => {
   });
 
   it("keeps deletedAt on a 30 day TTL instead of hard deleting immediately", () => {
-    const indexes = UserModel.schema.indexes() as Array<[Record<string, number>, Record<string, number>]>;
+    const indexes = UserModel.schema.indexes() as Array<
+      [Record<string, number>, Record<string, number>]
+    >;
     const deletedAtIndex = indexes.find(([fields]) => fields.deletedAt === 1)?.[1];
 
     expect(deletedAtIndex).toMatchObject({
