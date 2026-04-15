@@ -36,7 +36,7 @@ module.exports = {
       [
         "expo-notifications",
         {
-          icon: "./assets/appIcon.png",
+          icon: "./assets/babylon_notification.png",
           color: "#1A1A2E",
           defaultChannel: "default",
         },
