@@ -1,10 +1,11 @@
 import request from "supertest";
 import { app } from "../app";
+import { clear } from "../clear";
 import { UserModel, UserRole } from "../models/userModel";
 
 // Clear
 export const requestDelete = async () => {
-  return await request(app).delete("/clear");
+  return await clear();
 };
 
 // Auth

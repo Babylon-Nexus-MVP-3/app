@@ -32,6 +32,21 @@ export class AuthError extends Error {
   }
 }
 
+function isMongoDuplicateKeyError(error: unknown): error is { code: number } {
+  return (
+    typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
+  );
+}
+
+function isDocumentNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "DocumentNotFoundError"
+  );
+}
+
 /*
   [1] - Register User
   Creates a new user account after validating and sanitizing inputs.
@@ -528,7 +543,14 @@ export async function reactivateAccount(email: string, password: string) {
 
   // Restore the account
   user.deletedAt = null;
-  await user.save();
+  try {
+    await user.save();
+  } catch (err) {
+    if (isDocumentNotFoundError(err)) {
+      throw new AuthError("Invalid credentials", 400);
+    }
+    throw err;
+  }
 
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
