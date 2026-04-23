@@ -9,13 +9,17 @@ Notifications.setNotificationHandler({
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
   }),
 });
 
 export default function RootLayout() {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(0);
+  }, []);
 
   useEffect(() => {
     // Fired when a notification is received while the app is open

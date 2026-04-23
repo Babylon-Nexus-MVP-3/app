@@ -32,6 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const accessTokenRef = useRef<string | null>(null);
   accessTokenRef.current = accessToken;
 
+  // Deduplicate concurrent refresh calls — prevents refresh token reuse detection on iOS cold start
+  const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
+
   // Restore session from storage on app start
   useEffect(() => {
     async function loadSession() {
@@ -42,9 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           accessTokenRef.current = storedToken;
           setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
-          registerForPushNotifications(fetchWithAuth).catch((err) => {
-            console.error("Failed to register for push notifications:", err);
-          });
         }
       } catch {
         // Corrupted storage. Start fresh
@@ -81,30 +81,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function refreshAccessToken(): Promise<string | null> {
-    try {
-      const storedRefreshToken = await getItem("refreshToken");
-      if (!storedRefreshToken) return null;
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: storedRefreshToken }),
-      });
+    refreshPromiseRef.current = (async () => {
+      try {
+        const storedRefreshToken = await getItem("refreshToken");
+        if (!storedRefreshToken) return null;
 
-      if (!res.ok) {
+        const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
+        });
+
+        if (!res.ok) {
+          await logout();
+          return null;
+        }
+
+        const data = await res.json();
+        await saveItem("accessToken", data.accessToken);
+        await saveItem("refreshToken", data.refreshToken);
+        setAccessToken(data.accessToken);
+        return data.accessToken;
+      } catch {
         await logout();
         return null;
+      } finally {
+        refreshPromiseRef.current = null;
       }
+    })();
 
-      const data = await res.json();
-      await saveItem("accessToken", data.accessToken);
-      await saveItem("refreshToken", data.refreshToken);
-      setAccessToken(data.accessToken);
-      return data.accessToken;
-    } catch {
-      await logout();
-      return null;
-    }
+    return refreshPromiseRef.current;
   }
 
   async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
