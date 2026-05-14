@@ -5,15 +5,16 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { appStyles } from "@/constants/appStyles";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 
 type NotificationType =
@@ -62,7 +63,7 @@ function iconForType(type: NotificationType): { name: IoniconName; color: string
     case "ProjectPendingApproval":
       return { name: "time-outline", color: Colors.amber };
     case "ProjectApproved":
-      return { name: "checkmark-done-circle-outline", color: Colors.green };
+      return { name: "checkmark-done-circle-outline", color: Colors.vouchGreen };
     case "ProjectRejected":
       return { name: "close-circle-outline", color: Colors.red };
     case "ProjectDeleted":
@@ -70,11 +71,11 @@ function iconForType(type: NotificationType): { name: IoniconName; color: string
     case "ProjectParticipantRemoved":
       return { name: "person-remove-outline", color: Colors.red };
     case "InvoiceSubmitted":
-      return { name: "document-text-outline", color: Colors.navy };
+      return { name: "document-text-outline", color: Colors.vouchGreen };
     case "InvoiceApproved":
-      return { name: "checkmark-circle-outline", color: Colors.green };
+      return { name: "checkmark-circle-outline", color: Colors.vouchGreen };
     case "InvoicePaid":
-      return { name: "cash-outline", color: Colors.green };
+      return { name: "cash-outline", color: Colors.vouchGreen };
     case "InvoiceRejected":
       return { name: "close-circle-outline", color: Colors.red };
     case "InvoiceReceived":
@@ -98,9 +99,9 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
         <Ionicons name={icon.name} size={22} color={icon.color} />
       </View>
       <View style={styles.cardBody}>
-        <Text style={styles.cardMessage}>{item.message}</Text>
-        {!!item.projectName && <Text style={styles.cardProjectName}>{item.projectName}</Text>}
-        <Text style={styles.cardTime}>{timeAgo(item.createdAt)}</Text>
+        <AppText style={styles.cardMessage}>{item.message}</AppText>
+        {!!item.projectName && <AppText style={styles.cardProject}>{item.projectName}</AppText>}
+        <AppText style={styles.cardTime}>{timeAgo(item.createdAt)}</AppText>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
     </TouchableOpacity>
@@ -115,33 +116,11 @@ export default function Notifications() {
 
   const hasUnread = notifications.some((n) => !n.read);
 
-  async function fetchNotifications() {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications ?? []);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
-
-  async function markAllRead() {
-    await fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, {
-      method: "PATCH",
-    });
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }
-
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
       fetchWithAuth(`${API_BASE_URL}/notifications`)
-        .then((res) => {
-          if (res.ok) return res.json();
-        })
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) setNotifications(data.notifications ?? []);
         })
@@ -149,29 +128,53 @@ export default function Notifications() {
     }, [fetchWithAuth])
   );
 
-  function onRefresh() {
+  async function onRefresh() {
     setRefreshing(true);
-    fetchNotifications();
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications ?? []);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function markAllRead() {
+    await fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, { method: "PATCH" });
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+    <View style={appStyles.screen}>
+      <View style={appStyles.header}>
         <SafeAreaView edges={["top"]}>
-          <View style={styles.headerRow}>
-            <Text style={styles.screenTitle}>Notifications</Text>
-            {hasUnread && (
+          <View style={appStyles.headerInner}>
+            <TouchableOpacity
+              onPress={() => router.push("/(app)/projects" as any)}
+              activeOpacity={0.75}
+              style={styles.backBtn}
+            >
+              <Ionicons name="chevron-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+            <AppText style={[appStyles.headerTitle, styles.headerTitleCentered]}>
+              Notifications
+            </AppText>
+            {hasUnread ? (
               <TouchableOpacity onPress={markAllRead} activeOpacity={0.75}>
-                <Text style={styles.markAllText}>Mark all read</Text>
+                <AppText style={styles.markAllText}>Mark all read</AppText>
               </TouchableOpacity>
+            ) : (
+              <View style={styles.backBtn} />
             )}
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={Colors.navy} />
+        <View style={appStyles.centered}>
+          <ActivityIndicator color={Colors.vouchGreen} />
         </View>
       ) : (
         <FlatList
@@ -181,7 +184,11 @@ export default function Notifications() {
             notifications.length === 0 ? styles.emptyContent : styles.listContent
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.navy} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.vouchGreen}
+            />
           }
           renderItem={({ item }) => (
             <NotificationCard
@@ -202,9 +209,9 @@ export default function Notifications() {
             />
           )}
           ListEmptyComponent={
-            <View style={styles.centered}>
-              <Ionicons name="notifications-off-outline" size={48} color={Colors.textSecondary} />
-              <Text style={styles.emptyText}>No notifications yet</Text>
+            <View style={appStyles.centered}>
+              <Ionicons name="notifications-off-outline" size={48} color={Colors.grey300} />
+              <AppText style={appStyles.emptyText}>No notifications yet</AppText>
             </View>
           }
         />
@@ -214,30 +221,17 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backBtn: {
+    width: 32,
+  },
+  headerTitleCentered: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
-  },
-  header: {
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: Colors.white,
+    textAlign: "center",
   },
   markAllText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
+    fontFamily: Fonts.semiBold,
+    color: "rgba(255,255,255,0.85)",
   },
   listContent: {
     padding: 16,
@@ -246,17 +240,6 @@ const styles = StyleSheet.create({
   emptyContent: {
     flex: 1,
   },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 14,
@@ -264,15 +247,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: Colors.navy,
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
   cardUnread: {
     borderLeftWidth: 3,
-    borderLeftColor: Colors.gold,
+    borderLeftColor: Colors.vouchGreen,
   },
   iconWrap: {
     width: 42,
@@ -283,29 +266,29 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     flex: 1,
-    gap: 4,
+    gap: 3,
   },
   cardMessage: {
     fontSize: 13,
-    fontWeight: "500",
-    color: Colors.textPrimary,
+    fontFamily: Fonts.medium,
+    color: Colors.black,
     lineHeight: 18,
   },
-  cardProjectName: {
+  cardProject: {
     fontSize: 12,
-    fontWeight: "600",
-    color: Colors.navy,
-    marginTop: 2,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+    marginTop: 1,
   },
   cardTime: {
     fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
+    color: Colors.grey500,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.vouchGreen,
   },
 });

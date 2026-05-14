@@ -1,8 +1,10 @@
 import { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole } from "@/types/roles";
 
@@ -17,44 +19,46 @@ export default function Index() {
   }, [isLoading, user]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>VOUCHPAY</Text>
-        <Text style={styles.logoSub}>TRUST PLATFORM · CONSTRUCTION</Text>
+        <AppText style={styles.wordmark}>VOUCHPAY</AppText>
+        <AppText style={styles.tagline}>TRUST PLATFORM · CONSTRUCTION</AppText>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsSection}>
+      <View style={styles.body}>
+        <AppText style={styles.heading}>{"Sign up so it\ndoesn't happen\nto you."}</AppText>
+
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>3,490</Text>
-          <Text style={styles.statLabel}>collapses</Text>
-          <Text style={styles.statSub}>Australian construction · FY24</Text>
+          <AppText style={styles.statNumber}>3,490</AppText>
+          <AppText style={styles.statLabel}>collapses</AppText>
+          <AppText style={styles.statSub}>Australian construction · FY24</AppText>
         </View>
+
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>A$3B+</Text>
-          <Text style={styles.statLabel}>lost</Text>
-          <Text style={styles.statSub}>by subbies, every year</Text>
+          <AppText style={styles.statNumber}>A$3B+</AppText>
+          <AppText style={styles.statLabel}>lost</AppText>
+          <AppText style={styles.statSub}>by subbies, every year</AppText>
         </View>
       </View>
 
-      {/* Tagline */}
-      <View style={styles.taglineSection}>
-        <Text style={styles.tagline}>{"Sign up so it\ndoesn't happen to you."}</Text>
-      </View>
-
-      {/* Buttons */}
-      <View style={styles.buttonSection}>
+      <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={styles.signUpButton}
           onPress={() => router.push("/(auth)/sign-up")}
           activeOpacity={0.85}
         >
-          <Text style={styles.primaryButtonText}>Sign up — free</Text>
+          <AppText style={styles.signUpText}>Sign up — free</AppText>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/(auth)/sign-in")} activeOpacity={0.7}>
-          <Text style={styles.signInLink}>Already on Vouch? Sign in</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/sign-in")}
+          style={styles.signInWrapper}
+          activeOpacity={0.7}
+        >
+          <AppText style={styles.signInText}>
+            {"Already on Vouch? "}
+            <AppText style={styles.signInLink}>Sign in</AppText>
+          </AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -65,82 +69,87 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
-    paddingHorizontal: 24,
-    justifyContent: "space-between",
-    paddingBottom: 16,
   },
   header: {
-    alignItems: "center",
-    paddingTop: 32,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
-  logo: {
-    fontSize: 28,
-    fontWeight: "800",
+  wordmark: {
+    fontSize: 20,
+    fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
-    letterSpacing: 2,
-  },
-  logoSub: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: Colors.grey500,
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  statsSection: {
-    gap: 12,
-  },
-  statCard: {
-    backgroundColor: "#FDF0EE",
-    borderRadius: 16,
-    padding: 20,
-  },
-  statNumber: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#C0392B",
-    lineHeight: 40,
-  },
-  statLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#C0392B",
-  },
-  statSub: {
-    fontSize: 13,
-    color: "#C0392B",
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  taglineSection: {
-    alignItems: "center",
+    letterSpacing: 1,
   },
   tagline: {
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: "center",
+    gap: 12,
+  },
+  heading: {
+    fontSize: 32,
+    fontFamily: Fonts.extraBold,
     color: Colors.black,
-    textAlign: "center",
-    lineHeight: 34,
+    lineHeight: 40,
+    marginBottom: 20,
   },
-  buttonSection: {
+  statCard: {
+    backgroundColor: Colors.redBg,
+    borderRadius: 12,
+    padding: 16,
+  },
+  statNumber: {
+    fontSize: 28,
+    fontFamily: Fonts.extraBold,
+    color: Colors.red,
+    lineHeight: 32,
+  },
+  statLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.red,
+  },
+  statSub: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 2,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
     gap: 16,
-    alignItems: "center",
   },
-  primaryButton: {
-    width: "100%",
+  signUpButton: {
     height: 54,
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: {
-    color: Colors.white,
+  signUpText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+  },
+  signInWrapper: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  signInText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
   },
   signInLink: {
-    fontSize: 15,
     color: Colors.vouchGreen,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 });

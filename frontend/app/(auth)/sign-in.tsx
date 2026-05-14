@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -14,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 
 export default function SignIn() {
   const [mobile, setMobile] = useState("");
@@ -61,17 +62,14 @@ export default function SignIn() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.inner}>
-          {/* Back */}
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>Welcome back.</Text>
-          <Text style={styles.subtitle}>Enter your mobile to sign in.</Text>
+          <AppText style={styles.title}>Welcome back.</AppText>
+          <AppText style={styles.subtitle}>Enter your mobile to sign in.</AppText>
 
-          {/* MOBILE */}
-          <Text style={styles.label}>MOBILE</Text>
+          <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
             style={styles.input}
             value={mobile}
@@ -84,7 +82,7 @@ export default function SignIn() {
             autoFocus
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
           <TouchableOpacity
             style={[styles.primaryButton, (!canSubmit || loading) && styles.primaryButtonDisabled]}
@@ -95,15 +93,14 @@ export default function SignIn() {
             {loading ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.primaryButtonText}>Send me the code</Text>
+              <AppText style={styles.primaryButtonText}>Send me the code</AppText>
             )}
           </TouchableOpacity>
 
-          {/* Sign up link */}
           <View style={styles.signUpRow}>
-            <Text style={styles.signUpBase}>New to VouchPay? </Text>
+            <AppText style={styles.signUpBase}>New to VouchPay? </AppText>
             <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")} hitSlop={8}>
-              <Text style={styles.signUpLink}>Sign up →</Text>
+              <AppText style={styles.signUpLink}>Sign up →</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -130,18 +127,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.black,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginBottom: 36,
   },
   label: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -154,12 +152,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
     marginBottom: 20,
   },
   errorText: {
     fontSize: 13,
+    fontFamily: Fonts.semiBold,
     color: Colors.red,
     textAlign: "center",
     marginBottom: 16,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: Colors.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   signUpRow: {
     flexDirection: "row",
@@ -188,11 +188,12 @@ const styles = StyleSheet.create({
   },
   signUpBase: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   signUpLink: {
     fontSize: 14,
+    fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
-    fontWeight: "600",
   },
 });
