@@ -10,6 +10,8 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   status: "Pending" | "Active";
+  mobile?: string;
+  abn?: string;
 }
 
 interface AuthState {
