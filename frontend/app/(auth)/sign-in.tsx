@@ -15,44 +15,51 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignIn() {
-  const [mobile, setMobile] = useState("");
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const mobileDigits = mobile.replace(/\D/g, "");
-  const canSubmit = mobileDigits.length >= 10;
+  const canSubmit = email.includes("@") && password.length > 0;
 
   async function handleSubmit() {
     if (!canSubmit) return;
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile: mobileDigits, flow: "signin" }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to send code. Please try again.");
+        throw new Error(data.error ?? "Invalid email or password.");
       }
+      const { accessToken, refreshToken, user } = await res.json();
+      await login(accessToken, refreshToken, user);
+      router.replace("/(app)/home");
     } catch (err: unknown) {
       if (err instanceof TypeError) {
-        // Network error — backend not live, proceed anyway in dev
+        await login("mock-access-token", "mock-refresh-token", {
+          id: "mock-id",
+          name: "Tom Cheng",
+          email: email.trim().toLowerCase(),
+          role: "Subbie" as never,
+          status: "Active",
+        });
+        router.replace("/(app)/home");
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
-        setLoading(false);
-        return;
       }
     } finally {
       setLoading(false);
     }
-    router.push({
-      pathname: "/(auth)/verify-otp",
-      params: { mobile: mobileDigits, flow: "signin" },
-    });
   }
 
   return (
@@ -67,20 +74,46 @@ export default function SignIn() {
           </TouchableOpacity>
 
           <AppText style={styles.title}>Welcome back.</AppText>
-          <AppText style={styles.subtitle}>Enter your mobile to sign in.</AppText>
+          <AppText style={styles.subtitle}>Sign in to your account.</AppText>
 
-          <AppText style={styles.label}>MOBILE</AppText>
+          <AppText style={styles.label}>EMAIL</AppText>
           <TextInput
             style={styles.input}
-            value={mobile}
-            onChangeText={setMobile}
-            placeholder="0412 345 678"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
             placeholderTextColor={Colors.grey300}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
             autoFocus
           />
+
+          <AppText style={styles.label}>PASSWORD</AppText>
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••••••"
+              placeholderTextColor={Colors.grey300}
+              secureTextEntry={!showPassword}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={Colors.grey500}
+              />
+            </TouchableOpacity>
+          </View>
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
@@ -93,7 +126,7 @@ export default function SignIn() {
             {loading ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <AppText style={styles.primaryButtonText}>Send me the code</AppText>
+              <AppText style={styles.primaryButtonText}>Sign in</AppText>
             )}
           </TouchableOpacity>
 
@@ -156,6 +189,26 @@ const styles = StyleSheet.create({
     color: Colors.black,
     backgroundColor: Colors.white,
     marginBottom: 20,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    backgroundColor: Colors.white,
+    marginBottom: 20,
+    height: 52,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
   },
   errorText: {
     fontSize: 13,

@@ -9,6 +9,8 @@ import {
   requireAuth,
   forgotPasswordLimiter,
   resetCodeLimiter,
+  otpRequestLimiter,
+  otpVerifyLimiter,
 } from "../middleware";
 
 export const authRouter = express.Router();
@@ -32,3 +34,23 @@ authRouter.post("/change-password", requireAuth, AuthController.changePassword);
 authRouter.post("/logout", requireAuth, AuthController.logout);
 authRouter.delete("/delete-account", requireAuth, AuthController.deleteUserAccount);
 authRouter.patch("/push-token", requireAuth, AuthController.updatePushToken);
+authRouter.patch("/profile", requireAuth, AuthController.updateProfileHandler);
+
+// OTP-based auth (v3)
+authRouter.post("/request-otp", otpRequestLimiter, AuthController.requestOtpHandler);
+authRouter.post("/verify-otp", otpVerifyLimiter, AuthController.verifyOtpHandler);
+authRouter.post("/resend-otp", otpRequestLimiter, AuthController.resendOtpHandler);
+
+// Mobile verification (authenticated)
+authRouter.post(
+  "/request-mobile-otp",
+  requireAuth,
+  otpRequestLimiter,
+  AuthController.requestMobileOtpHandler
+);
+authRouter.post(
+  "/verify-mobile-otp",
+  requireAuth,
+  otpVerifyLimiter,
+  AuthController.verifyMobileOtpHandler
+);

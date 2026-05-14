@@ -14,10 +14,10 @@ must remain functional throughout the migration.
 Use this to mark work done. Update as you complete each item.
 
 ### Backend
-- [ ] Add `mobile`, `abn`, `businessName`, `businessTrade`, `businessState` to `userModel`
-- [ ] Create `otpModel` for SMS OTP storage
-- [ ] `POST /auth/request-otp` — send OTP to mobile via Twilio
-- [ ] `POST /auth/verify-otp` — verify OTP, return JWT
+- [x] Add `mobile`, `abn`, `businessName`, `businessTrade`, `businessState` to `userModel`
+- [x] Create `otpModel` for SMS OTP storage
+- [x] `POST /auth/request-otp` — send OTP to mobile via Twilio
+- [x] `POST /auth/verify-otp` — verify OTP, return JWT
 - [ ] `GET /abr/lookup?abn=...` — proxy ABR lookup (keep `ABR_GUID` server-side)
 - [ ] Create `vouchProfileModel`
 - [ ] Create `vouchModel`
@@ -30,8 +30,8 @@ Use this to mark work done. Update as you complete each item.
 - [ ] `POST /vouch/request/:id/accept`
 - [ ] `POST /vouch/request/:id/decline`
 - [ ] `GET /vouch/business/:abn` — public profile (vouch count + attributes only)
-- [ ] Modify `POST /auth/register` — add mobile/ABN fields, remove password requirement
-- [ ] Modify `POST /auth/login` — change to OTP-based flow
+- [ ] Modify `POST /auth/register` — add mobile/ABN fields, remove password requirement (v2 flow kept, v3 uses request-otp)
+- [ ] Modify `POST /auth/login` — change to OTP-based flow (v2 flow kept, v3 uses request-otp)
 
 ### Frontend
 - [ ] Update `constants/colors.ts` to v3 design tokens

@@ -11,7 +11,9 @@ export interface AuthUser {
   role: UserRole;
   status: "Pending" | "Active";
   mobile?: string;
+  mobileVerified?: boolean;
   abn?: string;
+  businessName?: string;
 }
 
 interface AuthState {
@@ -20,6 +22,7 @@ interface AuthState {
   isLoading: boolean;
   login: (accessToken: string, refreshToken: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (patch: Partial<AuthUser>) => Promise<void>;
   fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
@@ -68,6 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Register device for push notifications — failure must not block login
     registerForPushNotifications(fetchWithAuth).catch((err) => {
       console.error("Failed to register for push notifications:", err);
+    });
+  }
+
+  async function updateUser(patch: Partial<AuthUser>) {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      saveItem("user", JSON.stringify(updated)).catch(() => {});
+      return updated;
     });
   }
 
@@ -139,7 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, isLoading, login, logout, fetchWithAuth }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, isLoading, login, logout, updateUser, fetchWithAuth }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -85,6 +85,22 @@ export const resetCodeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const otpRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  message: { error: "Too many OTP requests. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
+  message: { error: "Too many verification attempts. Please request a new code." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /**
  * Verifies JWT from Authorization: Bearer <token> and attaches decoded payload to req.user.
  * Responds with 401 if missing or invalid.
