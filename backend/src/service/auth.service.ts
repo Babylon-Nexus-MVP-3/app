@@ -375,23 +375,32 @@ export async function resetPassword(resetCode: string, newPassword: string) {
 
 export async function userVerifyEmail(verificationCode: string) {
   const hashedCode = hashCode(verificationCode);
-  const user = await UserModel.findOne({ verificationCode: hashedCode });
-  if (!user) {
+
+  // Read the user first so we can validate the expiry before committing the update.
+  const existing = await UserModel.findOne({ verificationCode: hashedCode });
+  if (!existing) {
     throw new AuthError("Invalid Verification Code");
   }
 
-  if (user.verificationCodeExpiry && user.verificationCodeExpiry < new Date()) {
+  if (existing.verificationCodeExpiry && existing.verificationCodeExpiry < new Date()) {
     throw new AuthError("Verification code has expired");
   }
 
-  user.verificationCode = undefined;
-  user.verificationCodeExpiry = undefined;
-  user.accountExpiresAt = null;
-  user.emailVerified = true;
-  user.status = "Active";
-  user.updatedAt = new Date();
+  // Single atomic update — eliminates the find→mutate→save race window that caused
+  // DocumentNotFoundError when a concurrent deleteMany (e.g. parallel CI runs) removed
+  // the document between findOne and save().
+  const user = await UserModel.findOneAndUpdate(
+    { verificationCode: hashedCode },
+    {
+      $set: { emailVerified: true, status: "Active", accountExpiresAt: null, updatedAt: new Date() },
+      $unset: { verificationCode: 1, verificationCodeExpiry: 1 },
+    },
+    { new: true }
+  );
 
-  await user.save();
+  if (!user) {
+    throw new AuthError("Invalid Verification Code");
+  }
 
   // Return accessToken and refreshToken so user is immediately logged in by the frontend
   const accessToken = createAccessToken(user);

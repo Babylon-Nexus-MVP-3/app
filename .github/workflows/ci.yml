@@ -9,6 +9,13 @@ on:
     branches:
       - main
 
+# Serialise all runs that touch the shared Atlas test database.
+# A new run cancels the in-progress one for the same branch; runs on
+# different branches queue rather than run in parallel.
+concurrency:
+  group: ci-test-db
+  cancel-in-progress: false
+
 jobs:
   lint:
     runs-on: ubuntu-latest
