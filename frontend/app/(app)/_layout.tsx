@@ -1,40 +1,9 @@
-import { API_BASE_URL } from "@/constants/api";
-import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect } from "react";
 import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
-  const { fetchWithAuth } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const fetchUnread = useCallback(async () => {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
-      if (res.ok) {
-        const data = await res.json();
-        const count = (data.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
-        setUnreadCount(count);
-      }
-    } catch {
-      // silently ignore
-    }
-  }, [fetchWithAuth]);
-
-  useEffect(() => {
-    fetchUnread();
-  }, [fetchUnread]);
-
-  return (
-    <View>
-      <Ionicons name={focused ? "flash" : "flash-outline"} size={24} color={color} />
-      {unreadCount > 0 && <View style={styles.badge} />}
-    </View>
-  );
-}
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
@@ -56,14 +25,15 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.navy,
-          borderTopWidth: 0,
+          backgroundColor: Colors.white,
+          borderTopWidth: 1,
+          borderTopColor: Colors.grey300,
           paddingTop: 8,
           paddingBottom: bottom,
           height: 60 + bottom,
         },
-        tabBarActiveTintColor: Colors.gold,
-        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarActiveTintColor: Colors.vouchGreen,
+        tabBarInactiveTintColor: Colors.grey500,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
@@ -71,51 +41,59 @@ export default function AppLayout() {
       }}
     >
       <Tabs.Screen
-        name="projects"
+        name="home"
         options={{
-          title: "Projects",
+          title: "Home",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="notifications"
+        name="vouches"
         options={{
-          title: "Notifications",
-          tabBarIcon: ({ color, focused }) => <NotificationIcon color={color} focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
+          title: "Vouches",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
+            <Ionicons
+              name={focused ? "shield-checkmark" : "shield-checkmark-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
-        name="change-password"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
+        name="projects"
+        options={{
+          title: "Project",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "sync-circle" : "sync-circle-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
       />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: "Me",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
+          ),
+        }}
+      />
+
+      {/* Hidden screens — not in tab bar */}
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="change-password" options={{ href: null }} />
       <Tabs.Screen name="create-project" options={{ href: null }} />
       <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
       <Tabs.Screen name="project/audit-log/[projectId]" options={{ href: null }} />
+      <Tabs.Screen name="get-vouched" options={{ href: null, tabBarStyle: { display: "none" } }} />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  badge: {
-    position: "absolute",
-    top: 0,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.red,
-    borderWidth: 1.5,
-    borderColor: Colors.navy,
-  },
-});
