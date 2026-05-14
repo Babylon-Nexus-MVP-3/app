@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import BabylonLogo from "@/components/BabylonLogo";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
@@ -14,125 +12,138 @@ export default function Index() {
   useEffect(() => {
     if (isLoading) return;
     if (user) {
-      router.replace(user.role === UserRole.Admin ? "/(admin)/projects" : "/(app)/projects");
+      router.replace(user.role === UserRole.Admin ? "/(admin)/projects" : "/(app)/home");
     }
   }, [isLoading, user]);
 
   return (
-    <LinearGradient
-      colors={[Colors.navy, Colors.navyLight, Colors.navyDeep]}
-      locations={[0, 0.6, 1]}
-      style={styles.gradient}
-    >
-      <SafeAreaView style={styles.container}>
-        {/* Background decorative circles */}
-        <View style={styles.circleTopRight} />
-        <View style={styles.circleTopRightInner} />
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.logo}>VOUCHPAY</Text>
+        <Text style={styles.logoSub}>TRUST PLATFORM · CONSTRUCTION</Text>
+      </View>
 
-        {/* Main content */}
-        <View style={styles.content}>
-          {/* Logo */}
-          <BabylonLogo width={250} height={350} />
-
-          {/* Tagline */}
-          <Text style={styles.tagline}>Payment Transparency App</Text>
+      {/* Stats */}
+      <View style={styles.statsSection}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>3,490</Text>
+          <Text style={styles.statLabel}>collapses</Text>
+          <Text style={styles.statSub}>Australian construction · FY24</Text>
         </View>
-
-        {/* Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.signInButton}
-            onPress={() => router.push("/(auth)/sign-in")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.signInText}>Sign In</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.createAccountButton}
-            onPress={() => router.push("/(auth)/sign-up")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.createAccountText}>Create Account</Text>
-          </TouchableOpacity>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>A$3B+</Text>
+          <Text style={styles.statLabel}>lost</Text>
+          <Text style={styles.statSub}>by subbies, every year</Text>
         </View>
-      </SafeAreaView>
-    </LinearGradient>
+      </View>
+
+      {/* Tagline */}
+      <View style={styles.taglineSection}>
+        <Text style={styles.tagline}>Sign up so it{"\n"}doesn't happen to you.</Text>
+      </View>
+
+      {/* Buttons */}
+      <View style={styles.buttonSection}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.push("/(auth)/sign-up")}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryButtonText}>Sign up — free</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/sign-in")}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.signInLink}>Already on Vouch? Sign in</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: Colors.white,
+    paddingHorizontal: 24,
     justifyContent: "space-between",
-    paddingBottom: 40,
+    paddingBottom: 16,
   },
-  circleTopRight: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: Colors.navyLight,
-    top: -100,
-    right: -80,
-    opacity: 0.6,
-  },
-  circleTopRightInner: {
-    position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: Colors.navyLight,
-    top: -40,
-    right: 20,
-    opacity: 0.5,
-  },
-  content: {
-    flex: 1,
+  header: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
+    paddingTop: 32,
+  },
+  logo: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: Colors.vouchGreen,
+    letterSpacing: 2,
+  },
+  logoSub: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.grey500,
+    letterSpacing: 2,
+    marginTop: 4,
+  },
+  statsSection: {
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: "#FDF0EE",
+    borderRadius: 16,
+    padding: 20,
+  },
+  statNumber: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#C0392B",
+    lineHeight: 40,
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#C0392B",
+  },
+  statSub: {
+    fontSize: 13,
+    color: "#C0392B",
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  taglineSection: {
+    alignItems: "center",
   },
   tagline: {
-    fontSize: 20,
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 26,
+    fontWeight: "700",
+    color: Colors.black,
     textAlign: "center",
-    lineHeight: 22,
-    marginTop: 16,
+    lineHeight: 34,
   },
-  buttonContainer: {
-    paddingHorizontal: 32,
-    gap: 14,
+  buttonSection: {
+    gap: 16,
+    alignItems: "center",
   },
-  signInButton: {
+  primaryButton: {
+    width: "100%",
     height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  signInText: {
-    color: Colors.navy,
-    fontWeight: "700",
+  primaryButtonText: {
+    color: Colors.white,
     fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  createAccountButton: {
-    height: 54,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: Colors.gold,
-  },
-  createAccountText: {
-    color: Colors.goldLight,
     fontWeight: "700",
-    fontSize: 16,
-    letterSpacing: 0.5,
+  },
+  signInLink: {
+    fontSize: 15,
+    color: Colors.vouchGreen,
+    fontWeight: "600",
   },
 });
