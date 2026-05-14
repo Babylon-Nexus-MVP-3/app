@@ -1,28 +1,67 @@
 import { API_BASE_URL } from "@/constants/api";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
+import { authStyles } from "@/constants/authStyles";
+import { AppText } from "@/components/AppText";
 
 export default function VerifyEmail() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const { login } = useAuth();
-
-  const [code, setCode] = useState("");
+  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const code = digits.join("");
+
+  function handleDigitChange(index: number, value: string) {
+    const sanitized = value.replace(/\D/g, "");
+
+    if (sanitized.length > 1) {
+      const newDigits = [...digits];
+      sanitized
+        .slice(0, 6)
+        .split("")
+        .forEach((char, i) => {
+          if (index + i < 6) newDigits[index + i] = char;
+        });
+      setDigits(newDigits);
+      inputRefs.current[Math.min(index + sanitized.length - 1, 5)]?.focus();
+      return;
+    }
+
+    const newDigits = [...digits];
+    newDigits[index] = sanitized;
+    setDigits(newDigits);
+    if (sanitized && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleKeyPress(index: number, key: string) {
+    if (key === "Backspace" && !digits[index] && index > 0) {
+      const newDigits = [...digits];
+      newDigits[index - 1] = "";
+      setDigits(newDigits);
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
 
   async function handleVerify() {
     if (code.length < 6) return;
@@ -40,7 +79,7 @@ export default function VerifyEmail() {
         return;
       }
       await login(data.accessToken, data.refreshToken, data.user);
-      router.replace("/(app)/home");
+      router.replace("/(app)/home" as any);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -49,148 +88,129 @@ export default function VerifyEmail() {
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <SafeAreaView style={authStyles.safeArea} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={authStyles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.inner}
+          contentContainerStyle={authStyles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={authStyles.backButton}
             hitSlop={HEADER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backArrow}>‹</Text>
+            <Ionicons name="arrow-back" size={22} color={Colors.black} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Verify your email</Text>
-          <Text style={styles.subtitle}>
-            {"Enter the 6-digit code sent to "}
-            <Text style={styles.emailHighlight}>{email}</Text>
-          </Text>
+          <View style={styles.iconCircle}>
+            <Ionicons name="chatbubble-ellipses-outline" size={28} color={Colors.vouchGreen} />
+          </View>
 
-          <TextInput
-            style={styles.codeInput}
-            value={code}
-            onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
-            placeholder="000000"
-            placeholderTextColor="rgba(255,255,255,0.2)"
-            keyboardType="number-pad"
-            maxLength={6}
-            autoFocus
-          />
+          <AppText style={[authStyles.screenTitle, styles.centeredTitle]}>Enter the code</AppText>
+          <AppText style={[authStyles.screenSubtitle, styles.centeredSubtitle]}>
+            {"Sent to "}
+            <AppText style={styles.emailHighlight}>{email}</AppText>
+          </AppText>
 
-          <Text style={styles.hint}>{"Didn't receive a code? Check your spam folder."}</Text>
+          <View style={styles.boxRow}>
+            {digits.map((digit, i) => (
+              <TextInput
+                key={i}
+                ref={(ref) => {
+                  inputRefs.current[i] = ref;
+                }}
+                style={[styles.digitBox, digit ? styles.digitBoxFilled : null]}
+                value={digit}
+                onChangeText={(v) => handleDigitChange(i, v)}
+                onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
+                keyboardType="number-pad"
+                maxLength={2}
+                selectTextOnFocus
+                autoFocus={i === 0}
+              />
+            ))}
+          </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          <AppText style={styles.hint}>{"Didn't receive a code? Check your spam folder."}</AppText>
+
+          {error && <AppText style={authStyles.errorText}>{error}</AppText>}
 
           <TouchableOpacity
             style={[
-              styles.primaryButton,
-              (code.length < 6 || loading) && styles.primaryButtonDisabled,
+              authStyles.primaryButton,
+              (code.length < 6 || loading) && authStyles.primaryButtonDisabled,
             ]}
             onPress={handleVerify}
             disabled={code.length < 6 || loading}
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.primaryButtonText}>Verify & Continue</Text>
+              <AppText style={authStyles.primaryButtonText}>Verify</AppText>
             )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  keyboardView: { flex: 1 },
-  inner: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  backButton: {
-    marginBottom: 32,
-    alignSelf: "flex-start",
-    minHeight: 44,
-    minWidth: 44,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.vouchGreenLight,
+    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
+    alignSelf: "center",
+    marginBottom: 24,
   },
-  backArrow: {
-    fontSize: 24,
-    color: Colors.goldLight,
+  centeredTitle: {
+    textAlign: "center",
+    marginBottom: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.white,
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
-    lineHeight: 22,
-    marginBottom: 36,
+  centeredSubtitle: {
+    textAlign: "center",
   },
   emailHighlight: {
-    color: Colors.goldLight,
-    fontWeight: "600",
+    color: Colors.vouchGreen,
+    fontFamily: Fonts.semiBold,
   },
-  codeInput: {
-    height: 72,
+  boxRow: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  digitBox: {
+    width: 48,
+    height: 56,
     borderWidth: 1.5,
-    borderColor: Colors.gold + "40",
-    borderRadius: 14,
-    paddingHorizontal: 24,
-    fontSize: 36,
-    fontWeight: "800",
-    letterSpacing: 10,
-    marginBottom: 12,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    color: Colors.gold,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    fontSize: 24,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
     textAlign: "center",
+    backgroundColor: Colors.white,
+  },
+  digitBoxFilled: {
+    borderColor: Colors.vouchGreen,
   },
   hint: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.35)",
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
     textAlign: "center",
     marginBottom: 32,
-  },
-  errorText: {
-    fontSize: 13,
-    color: Colors.red,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  primaryButton: {
-    height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonDisabled: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.navy,
-    letterSpacing: 0.5,
   },
 });

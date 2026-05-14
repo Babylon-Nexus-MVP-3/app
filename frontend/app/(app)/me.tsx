@@ -1,8 +1,10 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -43,22 +45,18 @@ export default function MeScreen() {
 
   async function confirmDeleteAccount() {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/auth/delete-account`, {
-        method: "DELETE",
-      });
-
+      const res = await fetchWithAuth(`${API_BASE_URL}/auth/delete-account`, { method: "DELETE" });
       if (!res.ok) {
         const text = await res.text();
         let data: { error?: string } = {};
         try {
-          data = JSON.parse(text);
+          data = text ? JSON.parse(text) : {};
         } catch {
-          /* plain text */
+          data = {};
         }
         Alert.alert("Error", data.error ?? text ?? "Failed to delete account. Please try again.");
         return;
       }
-
       await logout();
       router.replace("/");
     } catch {
@@ -68,26 +66,35 @@ export default function MeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>VOUCHPAY</Text>
+        <AppText style={styles.logo}>VOUCHPAY</AppText>
       </View>
 
-      {/* Profile card */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+          <AppText style={styles.avatarText}>{initials}</AppText>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.name}>{user?.name}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
+          <AppText style={styles.name}>{user?.name}</AppText>
+          <AppText style={styles.email}>{user?.email}</AppText>
         </View>
       </View>
 
-      {/* Footer actions */}
+      <View style={styles.menu}>
+        <TouchableOpacity
+          style={styles.menuRow}
+          onPress={() => router.push("/(app)/change-password" as any)}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.grey500} />
+          <AppText style={styles.menuRowText}>Change Password</AppText>
+          <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.footer}>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.85}>
-          <Text style={styles.signOutText}>Sign Out</Text>
+          <AppText style={styles.signOutText}>Sign Out</AppText>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteButton}
@@ -95,7 +102,7 @@ export default function MeScreen() {
           activeOpacity={0.75}
         >
           <Ionicons name="trash-outline" size={15} color={Colors.red} />
-          <Text style={styles.deleteText}>Delete Account</Text>
+          <AppText style={styles.deleteText}>Delete Account</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 20,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
     letterSpacing: 1,
   },
@@ -139,7 +146,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
   profileInfo: {
@@ -147,13 +154,35 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 4,
   },
   email: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
+  },
+  menu: {
+    marginHorizontal: 24,
+    marginTop: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  menuRowText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.black,
   },
   footer: {
     position: "absolute",
@@ -171,7 +200,7 @@ const styles = StyleSheet.create({
   signOutText: {
     color: Colors.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   deleteButton: {
     flexDirection: "row",
@@ -186,6 +215,6 @@ const styles = StyleSheet.create({
   deleteText: {
     color: Colors.red,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 });

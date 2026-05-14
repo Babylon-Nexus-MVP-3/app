@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -15,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 
 type AbrResult = {
   entityName: string;
@@ -140,17 +141,14 @@ export default function SignUp() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Back */}
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>Quick setup.</Text>
-          <Text style={styles.subtitle}>No password. Just your mobile, ABN, and email.</Text>
+          <AppText style={styles.title}>Quick setup.</AppText>
+          <AppText style={styles.subtitle}>No password. Just your mobile, ABN, and email.</AppText>
 
-          {/* MOBILE */}
-          <Text style={styles.label}>MOBILE</Text>
+          <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
             style={styles.input}
             value={mobile}
@@ -161,8 +159,7 @@ export default function SignUp() {
             returnKeyType="next"
           />
 
-          {/* ABN */}
-          <Text style={styles.label}>ABN</Text>
+          <AppText style={styles.label}>ABN</AppText>
           <TextInput
             style={[styles.input, abrError ? styles.inputError : null]}
             value={abn}
@@ -173,17 +170,16 @@ export default function SignUp() {
             returnKeyType="next"
           />
 
-          {/* ABR result / loading / error */}
           {abrLoading && (
             <View style={styles.abrLoading}>
               <ActivityIndicator size="small" color={Colors.vouchGreen} />
-              <Text style={styles.abrLoadingText}>Looking up ABN…</Text>
+              <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
             </View>
           )}
           {abrResult && !abrLoading && (
             <View style={styles.abrConfirmed}>
               <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
-              <Text style={styles.abrConfirmedText}>
+              <AppText style={styles.abrConfirmedText}>
                 {abrResult.tradingName || abrResult.entityName}
                 {"  ·  "}
                 {abrResult.businessType}
@@ -191,13 +187,12 @@ export default function SignUp() {
                 {abrResult.state}
                 {"  ·  active "}
                 {abrResult.activeYears} yrs
-              </Text>
+              </AppText>
             </View>
           )}
-          {abrError && !abrLoading && <Text style={styles.fieldError}>{abrError}</Text>}
+          {abrError && !abrLoading && <AppText style={styles.fieldError}>{abrError}</AppText>}
 
-          {/* EMAIL */}
-          <Text style={styles.label}>EMAIL</Text>
+          <AppText style={styles.label}>EMAIL</AppText>
           <TextInput
             style={styles.input}
             value={email}
@@ -210,8 +205,7 @@ export default function SignUp() {
             returnKeyType="next"
           />
 
-          {/* YOUR NAME */}
-          <Text style={styles.label}>YOUR NAME</Text>
+          <AppText style={styles.label}>YOUR NAME</AppText>
           <TextInput
             style={styles.input}
             value={name}
@@ -223,7 +217,7 @@ export default function SignUp() {
             onSubmitEditing={handleSubmit}
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
           <TouchableOpacity
             style={[styles.primaryButton, (!canSubmit || loading) && styles.primaryButtonDisabled]}
@@ -234,7 +228,7 @@ export default function SignUp() {
             {loading ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.primaryButtonText}>Send me the code</Text>
+              <AppText style={styles.primaryButtonText}>Send me the code</AppText>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -260,19 +254,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.black,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginBottom: 32,
     lineHeight: 22,
   },
   label: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -285,6 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
     marginBottom: 20,
@@ -301,6 +297,7 @@ const styles = StyleSheet.create({
   },
   abrLoadingText: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   abrConfirmed: {
@@ -316,18 +313,20 @@ const styles = StyleSheet.create({
   abrConfirmedText: {
     flex: 1,
     fontSize: 13,
+    fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
-    fontWeight: "500",
     lineHeight: 18,
   },
   fieldError: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.red,
     marginTop: -14,
     marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
+    fontFamily: Fonts.semiBold,
     color: Colors.red,
     textAlign: "center",
     marginBottom: 16,
@@ -346,6 +345,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: Colors.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 });

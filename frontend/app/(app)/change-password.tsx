@@ -6,18 +6,19 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
+import { authStyles } from "@/constants/authStyles";
+import { AppText } from "@/components/AppText";
 
 export default function ChangePassword() {
   const { fetchWithAuth } = useAuth();
@@ -46,7 +47,6 @@ export default function ChangePassword() {
 
   async function handleSubmit() {
     setError(null);
-
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError("All fields are required.");
       return;
@@ -55,7 +55,6 @@ export default function ChangePassword() {
       setError("New passwords do not match.");
       return;
     }
-
     setLoading(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/auth/change-password`, {
@@ -75,247 +74,147 @@ export default function ChangePassword() {
 
   if (success) {
     return (
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-          <View style={styles.successScreen}>
-            <View style={styles.successCenter}>
-              <View style={styles.successIconWrap}>
-                <Ionicons name="checkmark" size={40} color={Colors.white} />
-              </View>
-              <Text style={styles.successTitle}>Password Updated</Text>
-              <Text style={styles.successSubtitle}>
-                Your password has been changed successfully.
-              </Text>
+      <SafeAreaView style={authStyles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.successScreen}>
+          <View style={styles.successCenter}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark" size={40} color={Colors.white} />
             </View>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.doneButton}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.doneText}>Done</Text>
-            </TouchableOpacity>
+            <AppText style={styles.successTitle}>Password Updated</AppText>
+            <AppText style={styles.successSubtitle}>
+              Your password has been changed successfully.
+            </AppText>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={authStyles.primaryButton}
+            activeOpacity={0.85}
+          >
+            <AppText style={authStyles.primaryButtonText}>Done</AppText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardView}
+    <SafeAreaView style={authStyles.safeArea} edges={["top"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={authStyles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={authStyles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.inner}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={authStyles.backButton}
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
           >
+            <Ionicons name="arrow-back" size={22} color={Colors.black} />
+          </TouchableOpacity>
+
+          <AppText style={authStyles.screenTitle}>Change Password</AppText>
+          <AppText style={authStyles.screenSubtitle}>
+            Your new password must be at least 12 characters.
+          </AppText>
+
+          <AppText style={authStyles.fieldLabel}>CURRENT PASSWORD</AppText>
+          <View style={authStyles.inputWrapper}>
+            <TextInput
+              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="••••••••••••"
+              placeholderTextColor={Colors.grey300}
+              secureTextEntry={!showCurrent}
+              returnKeyType="next"
+              onSubmitEditing={() => newPassRef.current?.focus()}
+            />
             <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
+              style={authStyles.eyeButton}
+              onPress={() => setShowCurrent((v) => !v)}
             >
-              <Text style={styles.backArrow}>‹</Text>
+              <Ionicons
+                name={showCurrent ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={Colors.grey500}
+              />
             </TouchableOpacity>
+          </View>
 
-            <Text style={styles.title}>Change Password</Text>
-            <Text style={styles.subtitle}>Your new password must be at least 12 characters.</Text>
-
-            <Text style={styles.label}>Current Password</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="••••••••••••"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                secureTextEntry={!showCurrent}
-                returnKeyType="next"
-                onSubmitEditing={() => newPassRef.current?.focus()}
+          <AppText style={authStyles.fieldLabel}>NEW PASSWORD</AppText>
+          <View style={authStyles.inputWrapper}>
+            <TextInput
+              ref={newPassRef}
+              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="••••••••••••"
+              placeholderTextColor={Colors.grey300}
+              secureTextEntry={!showNew}
+              returnKeyType="next"
+              onSubmitEditing={() => confirmPassRef.current?.focus()}
+            />
+            <TouchableOpacity style={authStyles.eyeButton} onPress={() => setShowNew((v) => !v)}>
+              <Ionicons
+                name={showNew ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={Colors.grey500}
               />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowCurrent((v) => !v)}>
-                <Ionicons
-                  name={showCurrent ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color="rgba(255,255,255,0.5)"
-                />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
 
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                ref={newPassRef}
-                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="••••••••••••"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                secureTextEntry={!showNew}
-                returnKeyType="next"
-                onSubmitEditing={() => confirmPassRef.current?.focus()}
-              />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNew((v) => !v)}>
-                <Ionicons
-                  name={showNew ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color="rgba(255,255,255,0.5)"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.label}>Confirm New Password</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                ref={confirmPassRef}
-                style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="••••••••••••"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                secureTextEntry={!showConfirm}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-              />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((v) => !v)}>
-                <Ionicons
-                  name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color="rgba(255,255,255,0.5)"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
+          <AppText style={authStyles.fieldLabel}>CONFIRM NEW PASSWORD</AppText>
+          <View style={authStyles.inputWrapper}>
+            <TextInput
+              ref={confirmPassRef}
+              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="••••••••••••"
+              placeholderTextColor={Colors.grey300}
+              secureTextEntry={!showConfirm}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-              activeOpacity={0.85}
+              style={authStyles.eyeButton}
+              onPress={() => setShowConfirm((v) => !v)}
             >
-              {loading ? (
-                <ActivityIndicator color={Colors.navy} />
-              ) : (
-                <Text style={styles.submitText}>Update Password</Text>
-              )}
+              <Ionicons
+                name={showConfirm ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={Colors.grey500}
+              />
             </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+          </View>
+
+          {error && <AppText style={authStyles.errorText}>{error}</AppText>}
+
+          <TouchableOpacity
+            style={[authStyles.primaryButton, loading && authStyles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <AppText style={authStyles.primaryButtonText}>Update Password</AppText>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  inner: {
-    paddingTop: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 24,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 28,
-    color: Colors.gold,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.white,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 40,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  input: {
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: Colors.white,
-  },
-  errorText: {
-    fontSize: 13,
-    color: Colors.red,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  submitButton: {
-    height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  submitText: {
-    color: Colors.navy,
-    fontWeight: "700",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  successBox: {
-    marginTop: 16,
-    gap: 24,
-  },
-  successText: {
-    fontSize: 16,
-    color: Colors.green,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  doneButton: {
-    height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  doneText: {
-    color: Colors.navy,
-    fontWeight: "700",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
   successScreen: {
     flex: 1,
     paddingHorizontal: 24,
@@ -332,36 +231,21 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.green,
+    backgroundColor: Colors.vouchGreen,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
   successTitle: {
     fontSize: 26,
-    fontWeight: "800",
-    color: Colors.white,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
     textAlign: "center",
   },
   successSubtitle: {
     fontSize: 15,
-    color: "rgba(255,255,255,0.55)",
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
     textAlign: "center",
-  },
-  inputWrapper: {
-    marginBottom: 20,
-  },
-  inputNoMargin: {
-    marginBottom: 0,
-  },
-  inputPadRight: {
-    paddingRight: 48,
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
   },
 });

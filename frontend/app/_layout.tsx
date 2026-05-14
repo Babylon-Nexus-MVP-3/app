@@ -1,9 +1,19 @@
 import { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
+import * as SplashScreen from "expo-splash-screen";
+import {
+  useFonts,
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+  DMSans_800ExtraBold,
+} from "@expo-google-fonts/dm-sans";
 import { AuthProvider } from "@/context/AuthContext";
 
-// Handle notifications while app is in the foreground
+SplashScreen.preventAutoHideAsync();
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -14,27 +24,34 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    DMSans_800ExtraBold,
+  });
+
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
   useEffect(() => {
     Notifications.setBadgeCountAsync(0);
   }, []);
 
   useEffect(() => {
-    // Fired when a notification is received while the app is open
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
-      // In-app notification handling — the notifications tab will reflect new items on next load
-    });
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
 
-    // Fired when the user taps a notification (foreground or background)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, string>;
       if (!data?.projectId) {
         router.push("/(app)/notifications" as any);
         return;
       }
-
       const nonNavigableTypes = [
         "ProjectPendingApproval",
         "ProjectRejected",
@@ -45,7 +62,6 @@ export default function RootLayout() {
         router.push("/(app)/notifications" as any);
         return;
       }
-
       if (data.invoiceId) {
         router.push(`/(app)/project/${data.projectId}?openInvoice=${data.invoiceId}` as any);
       } else {
@@ -58,6 +74,8 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, []);
+
+  if (!fontsLoaded) return null;
 
   return (
     <AuthProvider>
