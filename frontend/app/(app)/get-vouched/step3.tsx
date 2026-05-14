@@ -340,7 +340,9 @@ export default function Step3() {
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.heading}>Your two references</Text>
-          <Text style={styles.subtitle}>{"They'll get a quick request. Most respond in 24 hrs."}</Text>
+          <Text style={styles.subtitle}>
+            {"They'll get a quick request. Most respond in 24 hrs."}
+          </Text>
 
           {/* Reference 1 */}
           {collapsed[0] ? (
