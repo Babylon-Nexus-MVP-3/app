@@ -153,45 +153,65 @@ function isRefComplete(ref: Reference) {
   );
 }
 
-function RefSummaryCard({
+// Collapsed card — shown for refs that are not currently active
+function RefCollapsedCard({
   ref: r,
   label,
-  onEdit,
+  onTap,
+  onDelete,
 }: {
   ref: Reference;
   label: string;
-  onEdit: () => void;
+  onTap: () => void;
+  onDelete?: () => void;
 }) {
+  const hasData = r.name.trim();
   return (
-    <View style={styles.summaryCard}>
-      <View style={styles.summaryCardContent}>
-        <Text style={styles.summaryRefLabel}>{label}</Text>
-        <Text style={styles.summaryName}>
-          {r.name} · {r.company}
-        </Text>
-        <Text style={styles.summaryMeta}>
-          {r.relationship} · {r.project}
-        </Text>
+    <TouchableOpacity style={styles.collapsedCard} onPress={onTap} activeOpacity={0.7}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={styles.collapsedLabel}>{label}</Text>
+        {hasData ? (
+          <>
+            <Text style={styles.collapsedName}>
+              {r.name} · {r.company}
+            </Text>
+            {r.relationship || r.project ? (
+              <Text style={styles.collapsedMeta}>
+                {[r.relationship, r.project].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={styles.collapsedEmpty}>Tap to fill in details</Text>
+        )}
       </View>
-      <TouchableOpacity onPress={onEdit} hitSlop={8}>
-        <Ionicons name="create-outline" size={20} color={Colors.grey500} />
-      </TouchableOpacity>
-    </View>
+      <View style={styles.collapsedActions}>
+        {onDelete && (
+          <TouchableOpacity onPress={onDelete} hitSlop={8}>
+            <Ionicons name="trash-outline" size={18} color={Colors.red} />
+          </TouchableOpacity>
+        )}
+        <Ionicons name="create-outline" size={18} color={Colors.grey500} />
+      </View>
+    </TouchableOpacity>
   );
 }
 
+// Expanded form — shown for the active ref
 function RefForm({
   label,
   value,
   onChange,
   projectOptions,
   onDone,
+  onDelete,
 }: {
   label: string;
   value: Reference;
   onChange: (r: Reference) => void;
   projectOptions: string[];
   onDone: () => void;
+  onDelete?: () => void;
 }) {
   function update(key: keyof Reference, v: string) {
     onChange({ ...value, [key]: v });
@@ -201,7 +221,14 @@ function RefForm({
 
   return (
     <View style={styles.refCard}>
-      <Text style={styles.refLabel}>{label}</Text>
+      <View style={styles.refCardHeader}>
+        <Text style={styles.refLabel}>{label}</Text>
+        {onDelete && (
+          <TouchableOpacity onPress={onDelete} hitSlop={8}>
+            <Ionicons name="trash-outline" size={18} color={Colors.red} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <TextInput
         style={styles.refInput}
@@ -272,7 +299,8 @@ export default function Step3() {
   const [refs, setRefs] = useState<Reference[]>(
     references.length >= 2 ? references : [emptyRef(), emptyRef()]
   );
-  const [collapsed, setCollapsed] = useState<boolean[]>([false, false, false]);
+  // Which card is currently expanded (-1 = none)
+  const [activeIndex, setActiveIndex] = useState(0);
   const [showThird, setShowThird] = useState(refs.length > 2);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -285,21 +313,28 @@ export default function Step3() {
     setRefs(next);
   }
 
-  function collapseRef(index: number) {
-    const next = [...collapsed];
-    next[index] = true;
-    setCollapsed(next);
-  }
-
-  function expandRef(index: number) {
-    const next = [...collapsed];
-    next[index] = false;
-    setCollapsed(next);
+  function handleDone(index: number) {
+    // Move to the next unfilled ref, or collapse if all done
+    const nextEmpty = refs.findIndex((r, i) => i !== index && !isRefComplete(r));
+    if (nextEmpty !== -1) {
+      setActiveIndex(nextEmpty);
+    } else {
+      setActiveIndex(-1);
+    }
   }
 
   function addThird() {
-    if (refs.length < 3) setRefs((r) => [...r, emptyRef()]);
+    if (refs.length < 3) {
+      setRefs((r) => [...r, emptyRef()]);
+      setActiveIndex(2);
+    }
     setShowThird(true);
+  }
+
+  function deleteThird() {
+    setRefs((r) => r.slice(0, 2));
+    setShowThird(false);
+    setActiveIndex((prev) => (prev === 2 ? 0 : prev));
   }
 
   const canSubmit = isRefComplete(refs[0]) && isRefComplete(refs[1]);
@@ -323,6 +358,8 @@ export default function Step3() {
     router.push("/(app)/get-vouched/success");
   }
 
+  const refLabels = ["REFERENCE 1", "REFERENCE 2", "REFERENCE 3"];
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -344,46 +381,34 @@ export default function Step3() {
             {"They'll get a quick request. Most respond in 24 hrs."}
           </Text>
 
-          {/* Reference 1 */}
-          {collapsed[0] ? (
-            <RefSummaryCard ref={refs[0]} label="REFERENCE 1" onEdit={() => expandRef(0)} />
-          ) : (
-            <RefForm
-              label="REFERENCE 1"
-              value={refs[0]}
-              onChange={(r) => updateRef(0, r)}
-              projectOptions={projectOptions}
-              onDone={() => collapseRef(0)}
-            />
-          )}
-
-          {/* Reference 2 */}
-          {collapsed[1] ? (
-            <RefSummaryCard ref={refs[1]} label="REFERENCE 2" onEdit={() => expandRef(1)} />
-          ) : (
-            <RefForm
-              label="REFERENCE 2"
-              value={refs[1]}
-              onChange={(r) => updateRef(1, r)}
-              projectOptions={projectOptions}
-              onDone={() => collapseRef(1)}
-            />
-          )}
-
-          {/* Optional third reference */}
-          {showThird ? (
-            collapsed[2] ? (
-              <RefSummaryCard ref={refs[2]} label="REFERENCE 3" onEdit={() => expandRef(2)} />
-            ) : (
-              <RefForm
-                label="REFERENCE 3"
-                value={refs[2] ?? emptyRef()}
-                onChange={(r) => updateRef(2, r)}
-                projectOptions={projectOptions}
-                onDone={() => collapseRef(2)}
+          {refs.map((ref, i) => {
+            if (!showThird && i === 2) return null;
+            const isOptional = i === 2;
+            if (i === activeIndex) {
+              return (
+                <RefForm
+                  key={i}
+                  label={refLabels[i]}
+                  value={ref}
+                  onChange={(r) => updateRef(i, r)}
+                  projectOptions={projectOptions}
+                  onDone={() => handleDone(i)}
+                  onDelete={isOptional ? deleteThird : undefined}
+                />
+              );
+            }
+            return (
+              <RefCollapsedCard
+                key={i}
+                ref={ref}
+                label={refLabels[i]}
+                onTap={() => setActiveIndex(i)}
+                onDelete={isOptional ? deleteThird : undefined}
               />
-            )
-          ) : (
+            );
+          })}
+
+          {!showThird && (
             <TouchableOpacity style={styles.addThirdBtn} onPress={addThird}>
               <Ionicons name="add" size={16} color={Colors.grey500} />
               <Text style={styles.addThirdText}>Add a 3rd (optional)</Text>
@@ -427,7 +452,13 @@ const styles = StyleSheet.create({
   heading: { fontSize: 26, fontWeight: "700", color: Colors.black },
   subtitle: { fontSize: 14, color: Colors.grey500, lineHeight: 20, marginTop: 6 },
 
-  // Reference form card
+  refCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  // Active (expanded) reference card — green border
   refCard: {
     borderWidth: 1.5,
     borderColor: Colors.vouchGreen,
@@ -475,26 +506,28 @@ const styles = StyleSheet.create({
   },
   doneBtnText: { fontSize: 13, fontWeight: "600", color: Colors.vouchGreen },
 
-  // Collapsed summary card
-  summaryCard: {
+  // Collapsed (inactive) reference card — solid grey border
+  collapsedCard: {
     borderWidth: 1,
     borderColor: Colors.grey300,
     borderRadius: 14,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
     backgroundColor: Colors.white,
   },
-  summaryCardContent: { flex: 1, gap: 4 },
-  summaryRefLabel: {
+  collapsedLabel: {
     fontSize: 11,
     fontWeight: "700",
     color: Colors.vouchGreen,
     letterSpacing: 0.8,
+    marginBottom: 2,
   },
-  summaryName: { fontSize: 15, fontWeight: "600", color: Colors.black },
-  summaryMeta: { fontSize: 13, color: Colors.grey500 },
+  collapsedName: { fontSize: 15, fontWeight: "600", color: Colors.black },
+  collapsedMeta: { fontSize: 13, color: Colors.grey500 },
+  collapsedEmpty: { fontSize: 14, color: Colors.grey300 },
+  collapsedActions: { flexDirection: "row", alignItems: "center", gap: 14 },
 
   // Add third
   addThirdBtn: {

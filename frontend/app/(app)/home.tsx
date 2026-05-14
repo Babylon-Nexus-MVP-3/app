@@ -46,7 +46,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Give a Vouch */}
-          <TouchableOpacity style={[styles.card, styles.cardDefault]} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.card, styles.cardDefault]}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/vouches")}
+          >
             <View style={styles.cardIcon}>
               <Ionicons name="person-outline" size={24} color={Colors.black} />
             </View>

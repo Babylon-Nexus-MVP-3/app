@@ -76,6 +76,13 @@ export default function Step1() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function formatExpiry(raw: string) {
+    // Strip everything except digits
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length <= 2) return digits;
+    return digits.slice(0, 2) + "/" + digits.slice(2, 6);
+  }
+
   function onContinue() {
     setStep1(form);
     router.back();
@@ -173,7 +180,7 @@ export default function Step1() {
             <Field
               label="EXPIRY DATE"
               value={form.idExpiry}
-              onChangeText={(v) => update("idExpiry", v)}
+              onChangeText={(v) => update("idExpiry", formatExpiry(v))}
               placeholder="MM/YYYY"
               keyboardType="numeric"
             />
