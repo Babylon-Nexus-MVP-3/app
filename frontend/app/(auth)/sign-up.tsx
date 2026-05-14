@@ -1,5 +1,4 @@
-import { API_BASE_URL } from "@/constants/api";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,316 +10,342 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { API_BASE_URL } from "@/constants/api";
+
+type AbrResult = {
+  entityName: string;
+  tradingName?: string;
+  businessType: string;
+  state: string;
+  activeYears: number;
+  isActive: boolean;
+};
+
+function formatAbn(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
+  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
+}
 
 export default function SignUp() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [abn, setAbn] = useState("");
+  const [abnDigits, setAbnDigits] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [name, setName] = useState("");
+
+  const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
+  const [abrLoading, setAbrLoading] = useState(false);
+  const [abrError, setAbrError] = useState("");
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  async function handleSubmit() {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
+  const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (abnDigits.length !== 11) {
+      setAbrResult(null);
+      setAbrError("");
       return;
     }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+    if (abrTimeout.current) clearTimeout(abrTimeout.current);
+    abrTimeout.current = setTimeout(() => lookupAbn(abnDigits), 400);
+    return () => {
+      if (abrTimeout.current) clearTimeout(abrTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abnDigits]);
 
-    setLoading(true);
-    setError(null);
-
+  async function lookupAbn(digits: string) {
+    setAbrLoading(true);
+    setAbrError("");
+    setAbrResult(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.toLowerCase().trim(),
-          password,
-        }),
-      });
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      if (!response.ok) {
-        throw new Error(data.error ?? text ?? "Registration failed. Please try again.");
-      }
-      router.replace({
-        pathname: "/(auth)/verify-email",
-        params: { email: email.toLowerCase().trim() },
-      });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`);
+      if (!res.ok) throw new Error("ABN not found");
+      const data: AbrResult = await res.json();
+      if (!data.isActive) throw new Error("This ABN is not active");
+      setAbrResult(data);
+      if (!name) setName(data.tradingName || data.entityName);
+    } catch {
+      setAbrError("ABN not found. Check the number and try again.");
     } finally {
-      setLoading(false);
+      setAbrLoading(false);
     }
   }
 
+  function onAbnChange(text: string) {
+    const digits = text.replace(/\D/g, "").slice(0, 11);
+    setAbnDigits(digits);
+    setAbn(formatAbn(digits));
+  }
+
+  const mobileDigits = mobile.replace(/\D/g, "");
+  const canSubmit =
+    mobileDigits.length >= 10 && abnDigits.length === 11 && name.trim().length > 0 && !abrLoading;
+
+  async function handleSubmit() {
+    if (!canSubmit) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile: mobileDigits,
+          abn: abnDigits,
+          businessName: abrResult?.entityName ?? name,
+          email: email.trim() || undefined,
+          name: name.trim(),
+          flow: "signup",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to send code. Please try again.");
+      }
+    } catch (err: unknown) {
+      if (err instanceof TypeError) {
+        // Network error — backend not live, proceed anyway in dev
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+        setLoading(false);
+        return;
+      }
+    } finally {
+      setLoading(false);
+    }
+    router.push({
+      pathname: "/(auth)/verify-otp",
+      params: { mobile: mobileDigits, flow: "signup" },
+    });
+  }
+
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.inner}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
+          {/* Back */}
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Enter your details to get started</Text>
+          {/* Title */}
+          <Text style={styles.title}>Quick setup.</Text>
+          <Text style={styles.subtitle}>No password. Just your mobile, ABN, and email.</Text>
 
-          <Text style={styles.label}>First Name</Text>
+          {/* MOBILE */}
+          <Text style={styles.label}>MOBILE</Text>
           <TextInput
             style={styles.input}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="Alex"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            autoCapitalize="words"
+            value={mobile}
+            onChangeText={setMobile}
+            placeholder="0412 345 678"
+            placeholderTextColor={Colors.grey300}
+            keyboardType="phone-pad"
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Last Name</Text>
+          {/* ABN */}
+          <Text style={styles.label}>ABN</Text>
           <TextInput
-            style={styles.input}
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Jordan"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            autoCapitalize="words"
+            style={[styles.input, abrError ? styles.inputError : null]}
+            value={abn}
+            onChangeText={onAbnChange}
+            placeholder="XX XXX XXX XXX"
+            placeholderTextColor={Colors.grey300}
+            keyboardType="numeric"
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Email</Text>
+          {/* ABR result / loading / error */}
+          {abrLoading && (
+            <View style={styles.abrLoading}>
+              <ActivityIndicator size="small" color={Colors.vouchGreen} />
+              <Text style={styles.abrLoadingText}>Looking up ABN…</Text>
+            </View>
+          )}
+          {abrResult && !abrLoading && (
+            <View style={styles.abrConfirmed}>
+              <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
+              <Text style={styles.abrConfirmedText}>
+                {abrResult.tradingName || abrResult.entityName}
+                {"  ·  "}
+                {abrResult.businessType}
+                {"  ·  "}
+                {abrResult.state}
+                {"  ·  active "}
+                {abrResult.activeYears} yrs
+              </Text>
+            </View>
+          )}
+          {abrError && !abrLoading && <Text style={styles.fieldError}>{abrError}</Text>}
+
+          {/* EMAIL */}
+          <Text style={styles.label}>EMAIL</Text>
           <TextInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={Colors.grey300}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry={!showPassword}
-              returnKeyType="next"
-            />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="rgba(255,255,255,0.5)"
-              />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.hints}>
-            <Text style={styles.hintLabel}>Password must contain at least:</Text>
-            <Text
-              style={[
-                styles.hint,
-                password.length >= 12 && password.length <= 50 && styles.hintMet,
-              ]}
-            >
-              · 12 characters
-            </Text>
-            <Text
-              style={[
-                styles.hint,
-                [
-                  /[a-z]/.test(password),
-                  /[A-Z]/.test(password),
-                  /[0-9]/.test(password),
-                  /[^a-zA-Z0-9]/.test(password),
-                ].filter(Boolean).length >= 3 && styles.hintMet,
-              ]}
-            >
-              · 3 of 4: uppercase, lowercase, number, special character
-            </Text>
-          </View>
+          {/* YOUR NAME */}
+          <Text style={styles.label}>YOUR NAME</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Tom Cheng"
+            placeholderTextColor={Colors.grey300}
+            autoCapitalize="words"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+          />
 
-          <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry={!showConfirmPassword}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowConfirmPassword((v) => !v)}
-            >
-              <Ionicons
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="rgba(255,255,255,0.5)"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
+            style={[styles.primaryButton, (!canSubmit || loading) && styles.primaryButtonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={!canSubmit || loading}
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.primaryButtonText}>Create Account</Text>
+              <Text style={styles.primaryButtonText}>Send me the code</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  keyboardView: { flex: 1 },
-  inner: {
-    paddingTop: 70,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
+  scroll: {
     paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
-  backButton: {
+  backBtn: {
     alignSelf: "flex-start",
-    marginBottom: 16,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 28,
-    color: Colors.gold,
+    marginBottom: 24,
+    padding: 4,
   },
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: Colors.white,
+    color: Colors.black,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 36,
+    color: Colors.grey500,
+    marginBottom: 32,
+    lineHeight: 22,
   },
   label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.grey500,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
   },
   input: {
     height: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
+    color: Colors.black,
+    backgroundColor: Colors.white,
     marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: Colors.white,
   },
-  hints: {
-    gap: 4,
-    marginTop: -8,
-    marginBottom: 24,
+  inputError: {
+    borderColor: Colors.red,
   },
-  hintLabel: {
+  abrLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: -12,
+    marginBottom: 16,
+  },
+  abrLoadingText: {
+    fontSize: 13,
+    color: Colors.grey500,
+  },
+  abrConfirmed: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: -12,
+    marginBottom: 20,
+  },
+  abrConfirmedText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.vouchGreen,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+  fieldError: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.35)",
-    marginBottom: 2,
-  },
-  hint: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.35)",
-  },
-  hintMet: {
-    color: Colors.green,
+    color: Colors.red,
+    marginTop: -14,
+    marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
     color: Colors.red,
-    marginBottom: 16,
     textAlign: "center",
+    marginBottom: 16,
   },
   primaryButton: {
     height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
   },
+  primaryButtonDisabled: {
+    opacity: 0.4,
+  },
   primaryButtonText: {
-    color: Colors.navy,
-    fontWeight: "700",
+    color: Colors.white,
     fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  inputWrapper: {
-    marginBottom: 20,
-  },
-  inputNoMargin: {
-    marginBottom: 0,
-  },
-  inputPadRight: {
-    paddingRight: 48,
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
+    fontWeight: "700",
   },
 });

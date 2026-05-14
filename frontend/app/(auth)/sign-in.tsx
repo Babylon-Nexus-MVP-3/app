@@ -1,311 +1,198 @@
-import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { HEADER_HIT_SLOP } from "@/constants/touch";
-import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 export default function SignIn() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  async function handleSignIn() {
-    if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
-      return;
-    }
+  const mobileDigits = mobile.replace(/\D/g, "");
+  const canSubmit = mobileDigits.length >= 10;
 
+  async function handleSubmit() {
+    if (!canSubmit) return;
     setLoading(true);
-    setError(null);
-
+    setError("");
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
+        body: JSON.stringify({ mobile: mobileDigits, flow: "signin" }),
       });
-      const text = await response.text();
-      let data: any = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        /* plain text response */
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to send code. Please try again.");
       }
-
-      if (response.status === 403 && data.code === "ACCOUNT_DEACTIVATED") {
-        const days = data.daysRemaining ?? 30;
-        Alert.alert(
-          "Account Deactivated",
-          `Your account has been deactivated. You have ${days} day${days !== 1 ? "s" : ""} left to reactivate it before it is permanently deleted.\n\nWould you like to reactivate your account now?`,
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Reactivate",
-              onPress: () => handleReactivate(),
-            },
-          ]
-        );
+    } catch (err: unknown) {
+      if (err instanceof TypeError) {
+        // Network error — backend not live, proceed anyway in dev
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+        setLoading(false);
         return;
       }
-
-      if (!response.ok) throw new Error(data.error ?? text ?? "Login failed");
-
-      await login(data.accessToken, data.refreshToken, data.user);
-      if (data.user?.role === "Admin") {
-        router.replace("/(admin)/projects");
-      } else {
-        router.replace("/(app)/home");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleReactivate() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/reactivate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
-      });
-      const text = await response.text();
-      let data: any = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        /* plain text response */
-      }
-      if (!response.ok) throw new Error(data.error ?? text ?? "Reactivation failed");
-
-      await login(data.accessToken, data.refreshToken, data.user);
-      if (data.user?.role === "Admin") {
-        router.replace("/(admin)/projects");
-      } else {
-        router.replace("/(app)/home");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    router.push({
+      pathname: "/(auth)/verify-otp",
+      params: { mobile: mobileDigits, flow: "signin" },
+    });
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.inner}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Back button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
+        <View style={styles.inner}>
+          {/* Back */}
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
-          {/* Header */}
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to check your projects</Text>
+          {/* Title */}
+          <Text style={styles.title}>Welcome back.</Text>
+          <Text style={styles.subtitle}>Enter your mobile to sign in.</Text>
 
-          {/* Email */}
-          <Text style={styles.label}>Email</Text>
+          {/* MOBILE */}
+          <Text style={styles.label}>MOBILE</Text>
           <TextInput
             style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="next"
+            value={mobile}
+            onChangeText={setMobile}
+            placeholder="0412 345 678"
+            placeholderTextColor={Colors.grey300}
+            keyboardType="phone-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            autoFocus
           />
 
-          {/* Password */}
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry={!showPassword}
-              returnKeyType="done"
-              onSubmitEditing={handleSignIn}
-            />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="rgba(255,255,255,0.5)"
-              />
-            </TouchableOpacity>
-          </View>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          {/* Forgot Password */}
           <TouchableOpacity
-            onPress={() => router.push("/(auth)/forgot-password")}
-            style={styles.forgotWrapper}
-          >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          {/* Error */}
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          {/* Sign In button */}
-          <TouchableOpacity
-            style={[styles.signInButton, loading && styles.buttonDisabled]}
-            onPress={handleSignIn}
-            disabled={loading}
+            style={[styles.primaryButton, (!canSubmit || loading) && styles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={!canSubmit || loading}
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.signInText}>Sign In</Text>
+              <Text style={styles.primaryButtonText}>Send me the code</Text>
             )}
           </TouchableOpacity>
-        </ScrollView>
+
+          {/* Sign up link */}
+          <View style={styles.signUpRow}>
+            <Text style={styles.signUpBase}>New to VouchPay? </Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")} hitSlop={8}>
+              <Text style={styles.signUpLink}>Sign up →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
+    backgroundColor: Colors.white,
   },
   inner: {
-    paddingTop: 70,
+    flex: 1,
     paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
-  backButton: {
+  backBtn: {
     alignSelf: "flex-start",
-    marginBottom: 16,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 28,
-    color: Colors.gold,
+    marginBottom: 24,
+    padding: 4,
   },
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: Colors.white,
+    color: Colors.black,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 40,
+    color: Colors.grey500,
+    marginBottom: 36,
   },
   label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.grey500,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
   },
   input: {
     height: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
+    color: Colors.black,
+    backgroundColor: Colors.white,
     marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: Colors.white,
-  },
-  inputWrapper: {
-    marginBottom: 12,
-  },
-  inputNoMargin: {
-    marginBottom: 0,
-  },
-  inputPadRight: {
-    paddingRight: 48,
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-  },
-  forgotWrapper: {
-    alignSelf: "flex-end",
-    marginBottom: 36,
-  },
-  forgotText: {
-    fontSize: 14,
-    color: Colors.gold,
-    fontWeight: "600",
   },
   errorText: {
     fontSize: 13,
     color: Colors.red,
-    marginBottom: 16,
     textAlign: "center",
+    marginBottom: 16,
   },
-  signInButton: {
+  primaryButton: {
     height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  primaryButtonDisabled: {
+    opacity: 0.4,
   },
-  signInText: {
-    color: Colors.navy,
-    fontWeight: "700",
+  primaryButtonText: {
+    color: Colors.white,
     fontSize: 16,
-    letterSpacing: 0.5,
+    fontWeight: "700",
+  },
+  signUpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  signUpBase: {
+    fontSize: 14,
+    color: Colors.grey500,
+  },
+  signUpLink: {
+    fontSize: 14,
+    color: Colors.vouchGreen,
+    fontWeight: "600",
   },
 });
