@@ -392,7 +392,12 @@ export async function userVerifyEmail(verificationCode: string) {
   const user = await UserModel.findOneAndUpdate(
     { verificationCode: hashedCode },
     {
-      $set: { emailVerified: true, status: "Active", accountExpiresAt: null, updatedAt: new Date() },
+      $set: {
+        emailVerified: true,
+        status: "Active",
+        accountExpiresAt: null,
+        updatedAt: new Date(),
+      },
       $unset: { verificationCode: 1, verificationCodeExpiry: 1 },
     },
     { new: true }

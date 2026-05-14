@@ -40,7 +40,7 @@ export default function VerifyEmail() {
         return;
       }
       await login(data.accessToken, data.refreshToken, data.user);
-      router.replace("/(app)/projects");
+      router.replace("/(app)/home");
     } catch {
       setError("Network error. Please try again.");
     } finally {

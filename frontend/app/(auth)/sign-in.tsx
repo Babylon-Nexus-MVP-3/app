@@ -72,7 +72,7 @@ export default function SignIn() {
       if (data.user?.role === "Admin") {
         router.replace("/(admin)/projects");
       } else {
-        router.replace("/(app)/projects");
+        router.replace("/(app)/home");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -104,7 +104,7 @@ export default function SignIn() {
       if (data.user?.role === "Admin") {
         router.replace("/(admin)/projects");
       } else {
-        router.replace("/(app)/projects");
+        router.replace("/(app)/home");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");

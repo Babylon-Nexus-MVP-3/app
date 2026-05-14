@@ -11,9 +11,20 @@ export const Colors = {
   offWhite: "#F8F9FA",
   white: "#FFFFFF",
 
-  // Brand
+  // Brand (legacy v2)
   gold: "#C9A84C",
   goldLight: "#E8D5A0",
+
+  // v3 Brand
+  vouchGreen: "#1B5C38",
+  vouchGreenMid: "#2D7A4F",
+  vouchGreenLight: "#E8F5EE",
+  beige: "#F5EFE6",
+  black: "#1A1A1A",
+  grey100: "#F3F3F3",
+  grey300: "#D1D1D1",
+  grey500: "#9B9B9B",
+  grey700: "#5A5A5A",
 
   // Text
   textPrimary: "#1A1A2E",
