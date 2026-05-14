@@ -40,7 +40,7 @@ export default function Index() {
 
       {/* Tagline */}
       <View style={styles.taglineSection}>
-        <Text style={styles.tagline}>Sign up so it{"\n"}doesn't happen to you.</Text>
+        <Text style={styles.tagline}>{"Sign up so it\ndoesn't happen to you."}</Text>
       </View>
 
       {/* Buttons */}
@@ -53,10 +53,7 @@ export default function Index() {
           <Text style={styles.primaryButtonText}>Sign up — free</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/sign-in")}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => router.push("/(auth)/sign-in")} activeOpacity={0.7}>
           <Text style={styles.signInLink}>Already on Vouch? Sign in</Text>
         </TouchableOpacity>
       </View>

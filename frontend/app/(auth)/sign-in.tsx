@@ -48,7 +48,10 @@ export default function SignIn() {
     } finally {
       setLoading(false);
     }
-    router.push({ pathname: "/(auth)/verify-otp", params: { mobile: mobileDigits, flow: "signin" } });
+    router.push({
+      pathname: "/(auth)/verify-otp",
+      params: { mobile: mobileDigits, flow: "signin" },
+    });
   }
 
   return (
@@ -98,7 +101,7 @@ export default function SignIn() {
 
           {/* Sign up link */}
           <View style={styles.signUpRow}>
-            <Text style={styles.signUpBase}>New to VouchPay?  </Text>
+            <Text style={styles.signUpBase}>New to VouchPay? </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")} hitSlop={8}>
               <Text style={styles.signUpLink}>Sign up →</Text>
             </TouchableOpacity>

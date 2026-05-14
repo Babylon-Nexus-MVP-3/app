@@ -60,6 +60,7 @@ export default function SignUp() {
     return () => {
       if (abrTimeout.current) clearTimeout(abrTimeout.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abnDigits]);
 
   async function lookupAbn(digits: string) {
@@ -87,7 +88,8 @@ export default function SignUp() {
   }
 
   const mobileDigits = mobile.replace(/\D/g, "");
-  const canSubmit = mobileDigits.length >= 10 && abnDigits.length === 11 && name.trim().length > 0 && !abrLoading;
+  const canSubmit =
+    mobileDigits.length >= 10 && abnDigits.length === 11 && name.trim().length > 0 && !abrLoading;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -121,7 +123,10 @@ export default function SignUp() {
     } finally {
       setLoading(false);
     }
-    router.push({ pathname: "/(auth)/verify-otp", params: { mobile: mobileDigits, flow: "signup" } });
+    router.push({
+      pathname: "/(auth)/verify-otp",
+      params: { mobile: mobileDigits, flow: "signup" },
+    });
   }
 
   return (
@@ -189,9 +194,7 @@ export default function SignUp() {
               </Text>
             </View>
           )}
-          {abrError && !abrLoading && (
-            <Text style={styles.fieldError}>{abrError}</Text>
-          )}
+          {abrError && !abrLoading && <Text style={styles.fieldError}>{abrError}</Text>}
 
           {/* EMAIL */}
           <Text style={styles.label}>EMAIL</Text>

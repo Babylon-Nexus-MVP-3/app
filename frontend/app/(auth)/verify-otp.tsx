@@ -159,7 +159,9 @@ export default function VerifyOtp() {
           {digits.map((d, i) => (
             <TextInput
               key={i}
-              ref={(ref) => { inputRefs.current[i] = ref; }}
+              ref={(ref) => {
+                inputRefs.current[i] = ref;
+              }}
               style={[styles.box, d ? styles.boxFilled : null]}
               value={d}
               onChangeText={(v) => handleDigitChange(i, v)}
