@@ -166,7 +166,7 @@ export default function VerifyMobile() {
               </View>
               <AppText style={styles.title}>Verify your mobile</AppText>
               <AppText style={styles.subtitle}>
-                We'll send a one-time code to confirm your number.
+                {"We'll send a one-time code to confirm your number."}
               </AppText>
 
               <AppText style={styles.label}>MOBILE NUMBER</AppText>
