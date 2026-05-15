@@ -148,6 +148,12 @@ function toSafeUser(user: User): SafeUser {
   };
 }
 
+export async function getMe(userId: string): Promise<SafeUser> {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new AuthError("User not found", 401);
+  return toSafeUser(user);
+}
+
 export async function updateProfile(
   userId: string,
   patch: { abn?: string; businessName?: string }
@@ -270,7 +276,7 @@ export async function authRefresh(token: string) {
   const accessToken = createAccessToken(user);
   const newRefreshToken = await createRefreshToken(user);
 
-  return { accessToken, refreshToken: newRefreshToken };
+  return { accessToken, refreshToken: newRefreshToken, user: toSafeUser(user) };
 }
 
 export async function forgotPassword(email: string) {

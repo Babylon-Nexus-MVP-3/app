@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Deduplicate concurrent refresh calls — prevents refresh token reuse detection on iOS cold start
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  // Restore session from storage on app start
+  // Restore session from storage on app start, then refresh user from server
   useEffect(() => {
     async function loadSession() {
       try {
@@ -50,6 +50,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           accessTokenRef.current = storedToken;
           setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
+
+          // Fetch fresh user data so fields like mobileVerified are never stale
+          try {
+            const res = await fetch(`${API_BASE_URL}/auth/me`, {
+              headers: { Authorization: `Bearer ${storedToken}` },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.user) {
+                setUser(data.user);
+                await saveItem("user", JSON.stringify(data.user));
+              }
+            }
+          } catch {
+            // Network unavailable — use cached user, no action needed
+          }
         }
       } catch {
         // Corrupted storage. Start fresh
@@ -117,6 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await saveItem("accessToken", data.accessToken);
         await saveItem("refreshToken", data.refreshToken);
         setAccessToken(data.accessToken);
+        if (data.user) {
+          setUser(data.user);
+          await saveItem("user", JSON.stringify(data.user));
+        }
         return data.accessToken;
       } catch {
         await logout();

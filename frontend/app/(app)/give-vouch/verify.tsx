@@ -54,7 +54,7 @@ export default function VerifyScreen() {
   const [abrData, setAbrData] = useState<AbrResult | null>(null);
   const [vouchStatus, setVouchStatus] = useState<VouchStatus | null>(null);
   const [loadingAbr, setLoadingAbr] = useState(true);
-  const [abrError, setAbrError] = useState("");
+  const [abrError] = useState("");
 
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
@@ -69,24 +69,22 @@ export default function VerifyScreen() {
 
   async function lookupAbn() {
     setLoadingAbr(true);
-    setAbrError("");
+    setAbrData({
+      entityName: "Business Pty Ltd",
+      state: "NSW",
+      businessType: "Construction",
+      activeYears: 5,
+      isActive: true,
+    });
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/abr/lookup?abn=${abn}`);
-      const data = await res.json();
-      setAbrData(data);
-
       const statusRes = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`);
-      const statusData = await statusRes.json();
-      setVouchStatus(statusData);
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        setVouchStatus(statusData);
+      } else {
+        setVouchStatus({ isOnVouch: false, vouchCount: 0 });
+      }
     } catch {
-      // Backend not yet live — show placeholder data
-      setAbrData({
-        entityName: "Business Pty Ltd",
-        state: "NSW",
-        businessType: "Construction",
-        activeYears: 5,
-        isActive: true,
-      });
       setVouchStatus({ isOnVouch: false, vouchCount: 0 });
     } finally {
       setLoadingAbr(false);
@@ -101,7 +99,7 @@ export default function VerifyScreen() {
     if (selected.length < 2) return;
     setSubmitting(true);
     try {
-      await fetchWithAuth(`${API_BASE_URL}/vouch/give`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/give`, {
         method: "POST",
         body: JSON.stringify({
           toAbn: abn,
@@ -111,8 +109,14 @@ export default function VerifyScreen() {
           requestId: requestId ?? undefined,
         }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.vouchCount !== undefined) {
+          setVouchStatus((prev) => ({ ...prev, isOnVouch: true, vouchCount: data.vouchCount }));
+        }
+      }
     } catch {
-      // Backend not yet live — proceed
+      // Network unavailable — proceed optimistically
     } finally {
       setSubmitting(false);
     }
@@ -123,22 +127,65 @@ export default function VerifyScreen() {
   const canVouch = selected.length >= 2;
 
   if (submitted) {
+    const totalVouches = (vouchStatus?.vouchCount ?? 0) + 1;
+    const barFill = Math.min(totalVouches / 20, 1); // cap at 20 for full bar
+
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.successWrap}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={56} color={Colors.vouchGreen} />
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <ScrollView
+          contentContainerStyle={styles.successScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.successIconCircle}>
+            <Ionicons name="shield-checkmark-outline" size={36} color={Colors.vouchGreen} />
           </View>
-          <Text style={styles.successTitle}>Vouch sent!</Text>
-          <Text style={styles.successSub}>Your vouch for {displayName} has been recorded.</Text>
+
+          <Text style={styles.successTitle}>Your vouch is live.</Text>
+          <Text style={styles.successSub}>
+            {displayName}
+            {"'"}s reputation just got stronger.
+          </Text>
+
+          {/* Business card */}
+          <View style={styles.bizCard}>
+            <View style={styles.bizCardTop}>
+              <View style={styles.bizIconSmall}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bizName}>{abrData?.entityName ?? displayName}</Text>
+                <Text style={styles.bizMeta}>
+                  {[abrData?.businessType, abrData?.state].filter(Boolean).join(" · ")}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.vouchesLabel}>VOUCHES</Text>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { flex: barFill }]} />
+              <View style={{ flex: 1 - barFill }} />
+            </View>
+            <Text style={styles.vouchesCount}>
+              {totalVouches} {totalVouches === 1 ? "vouch" : "vouches"}{" "}
+              <Text style={styles.vouchesSelf}>· +1 from you</Text>
+            </Text>
+          </View>
+
           <TouchableOpacity
-            style={styles.doneBtn}
+            style={styles.primarySuccessBtn}
             onPress={() => router.replace("/(app)/vouches")}
             activeOpacity={0.85}
           >
-            <Text style={styles.doneBtnText}>Done</Text>
+            <Text style={styles.primarySuccessBtnText}>Vouch another business</Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity
+            style={styles.secondarySuccessBtn}
+            onPress={() => router.replace("/(app)/home")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.secondarySuccessBtnText}>Back to home</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -542,15 +589,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Success
-  successWrap: {
-    flex: 1,
+  // Success screen
+  successScroll: {
+    flexGrow: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: 28,
+    paddingTop: 48,
+    paddingBottom: 40,
     gap: 16,
   },
-  successIcon: {
+  successIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.vouchGreenLight,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 8,
   },
   successTitle: {
@@ -561,21 +615,92 @@ const styles = StyleSheet.create({
   },
   successSub: {
     fontSize: 15,
-    color: Colors.grey500,
+    color: Colors.grey700,
     textAlign: "center",
     lineHeight: 22,
   },
-  doneBtn: {
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 52,
-    paddingHorizontal: 48,
+  bizCard: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    marginTop: 8,
+  },
+  bizCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  bizIconSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.vouchGreenLight,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
   },
-  doneBtnText: {
+  bizName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.black,
+  },
+  bizMeta: {
+    fontSize: 12,
+    color: Colors.grey500,
+    marginTop: 1,
+  },
+  vouchesLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+  },
+  barTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.grey300,
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  barFill: {
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 4,
+  },
+  vouchesCount: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.black,
+  },
+  vouchesSelf: {
+    color: Colors.vouchGreen,
+    fontWeight: "600",
+  },
+  primarySuccessBtn: {
+    width: "100%",
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 14,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  primarySuccessBtnText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.white,
+  },
+  secondarySuccessBtn: {
+    width: "100%",
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 14,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondarySuccessBtnText: {
     fontSize: 16,
     fontWeight: "600",
     color: Colors.vouchGreen,

@@ -1,17 +1,51 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
+  const [pendingCount, setPendingCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const r = await fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`);
+      const data = await r.json();
+      setPendingCount(data.requests?.length ?? 0);
+    } catch {}
+  }, [fetchWithAuth]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.vouchGreen}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>VOUCHPAY</Text>
@@ -57,9 +91,11 @@ export default function HomeScreen() {
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>Give a Vouch</Text>
-                <View style={styles.newBadge}>
-                  <Text style={styles.newBadgeText}>2 NEW</Text>
-                </View>
+                {pendingCount > 0 && (
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>{pendingCount} NEW</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.cardDesc}>
                 {"Vouch a business you've worked with. Or respond to a request."}
@@ -71,7 +107,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.card, styles.cardLocked]}
             activeOpacity={0.7}
-            onPress={() => router.push("/(app)/projects")}
+            onPress={() => router.push("/(app)/vouch-my-project")}
           >
             <View style={styles.cardIcon}>
               <Ionicons name="sync-circle-outline" size={24} color={Colors.grey500} />
