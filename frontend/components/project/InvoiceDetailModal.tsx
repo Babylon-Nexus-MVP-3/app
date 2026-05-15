@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { AppText } from "@/components/AppText";
+import { Fonts } from "@/constants/fonts";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import {
   apiStatusToCalStatus,
@@ -35,7 +37,6 @@ export function InvoiceDetailModal({
   ) => Promise<string | null>;
   onClose: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -73,89 +74,95 @@ export function InvoiceDetailModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.detailScreen}>
-        <LinearGradient
-          colors={[Colors.navy, Colors.navyLight]}
-          style={[styles.detailHeader, { paddingTop: insets.top }]}
-        >
-          <View style={styles.headerTopRow}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.backBtn}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.backArrow}>‹</Text>
-              <Text style={styles.backLabel}>My Space</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.detailTitleRow}>
-            <Text style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</Text>
-            <View
-              style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginLeft: 10 }]}
-            >
-              <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
-                {invoiceStatusLabel(inv.status)}
-              </Text>
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
+          <View style={styles.detailHeader}>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.backBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Ionicons name="arrow-back" size={20} color={Colors.white} />
+                <AppText style={styles.backLabel}>My Space</AppText>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.detailTitleRow}>
+              <AppText style={styles.detailTitle}>{inv.invoiceNumber ?? "Invoice Details"}</AppText>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: statusBg(calStatus), marginLeft: 10 },
+                ]}
+              >
+                <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                  {invoiceStatusLabel(inv.status)}
+                </AppText>
+              </View>
             </View>
           </View>
-        </LinearGradient>
+        </SafeAreaView>
 
         <ScrollView
           style={styles.detailBody}
           contentContainerStyle={[styles.detailBodyContent, hasActions && { paddingBottom: 96 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.detailDesc}>{inv.description}</Text>
+          <AppText style={styles.detailDesc}>{inv.description}</AppText>
 
           <View style={styles.detailSection}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailKey}>Submitted by</Text>
+              <AppText style={styles.detailKey}>Submitted by</AppText>
               <View style={{ flex: 2, alignItems: "flex-end" }}>
-                <Text style={[styles.detailVal, { flex: 0 }]}>{inv.submittingParty}</Text>
+                <AppText style={[styles.detailVal, { flex: 0 }]}>{inv.submittingParty}</AppText>
                 {!!inv.submittedByName && (
-                  <Text style={styles.detailSubVal}>{inv.submittedByName}</Text>
+                  <AppText style={styles.detailSubVal}>{inv.submittedByName}</AppText>
                 )}
               </View>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailKey}>Category</Text>
-              <Text style={styles.detailVal}>{inv.submittingCategory}</Text>
+              <AppText style={styles.detailKey}>Category</AppText>
+              <AppText style={styles.detailVal}>{inv.submittingCategory}</AppText>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailKey}>Date submitted</Text>
-              <Text style={styles.detailVal}>
+              <AppText style={styles.detailKey}>Date submitted</AppText>
+              <AppText style={styles.detailVal}>
                 {new Date(inv.dateSubmitted).toLocaleDateString("en-AU", {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
                 })}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailKey}>Due date</Text>
-              <Text style={styles.detailVal}>
+              <AppText style={styles.detailKey}>Due date</AppText>
+              <AppText style={styles.detailVal}>
                 {new Date(inv.dateDue).toLocaleDateString("en-AU", {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
                 })}
-              </Text>
+              </AppText>
             </View>
             {showAmount && inv.amount != null && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailKey}>Amount</Text>
-                <Text style={[styles.detailVal, { fontWeight: "700", color: Colors.navy }]}>
+                <AppText style={styles.detailKey}>Amount</AppText>
+                <AppText
+                  style={[styles.detailVal, { fontFamily: Fonts.bold, color: Colors.vouchGreen }]}
+                >
                   ${inv.amount.toLocaleString()}
-                </Text>
+                </AppText>
               </View>
             )}
             <View style={styles.detailRow}>
-              <Text style={styles.detailKey}>Approver</Text>
+              <AppText style={styles.detailKey}>Approver</AppText>
               <View style={{ flex: 2, alignItems: "flex-end" }}>
-                <Text style={[styles.detailVal, { flex: 0 }]}>{displayRole(inv.approverRole)}</Text>
+                <AppText style={[styles.detailVal, { flex: 0 }]}>
+                  {displayRole(inv.approverRole)}
+                </AppText>
                 {inv.status === "Pending" && inv.approverNames && inv.approverNames.length > 0 && (
-                  <Text style={styles.detailSubVal}>{inv.approverNames.join(", ")}</Text>
+                  <AppText style={styles.detailSubVal}>{inv.approverNames.join(", ")}</AppText>
                 )}
               </View>
             </View>
@@ -164,16 +171,20 @@ export function InvoiceDetailModal({
               inv.status !== "Received" &&
               inv.status !== "Rejected" && (
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailKey}>Overdue by</Text>
-                  <Text style={[styles.detailVal, { color: Colors.red, fontWeight: "600" }]}>
+                  <AppText style={styles.detailKey}>Overdue by</AppText>
+                  <AppText
+                    style={[styles.detailVal, { color: Colors.red, fontFamily: Fonts.semiBold }]}
+                  >
                     {inv.daysOverdue} days
-                  </Text>
+                  </AppText>
                 </View>
               )}
             {inv.status === "Rejected" && inv.rejectionReason && (
               <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.detailKey}>Rejection reason</Text>
-                <Text style={[styles.detailVal, { color: Colors.red }]}>{inv.rejectionReason}</Text>
+                <AppText style={styles.detailKey}>Rejection reason</AppText>
+                <AppText style={[styles.detailVal, { color: Colors.red }]}>
+                  {inv.rejectionReason}
+                </AppText>
               </View>
             )}
           </View>
@@ -187,13 +198,13 @@ export function InvoiceDetailModal({
                   style={[styles.detailActionBtn, { backgroundColor: Colors.green, flex: 1 }]}
                   onPress={() => openConfirm("approve")}
                 >
-                  <Text style={styles.detailActionBtnText}>Approve</Text>
+                  <AppText style={styles.detailActionBtnText}>Approve</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.detailActionBtn, { backgroundColor: Colors.red, flex: 1 }]}
                   onPress={() => openConfirm("reject")}
                 >
-                  <Text style={styles.detailActionBtnText}>Reject</Text>
+                  <AppText style={styles.detailActionBtnText}>Reject</AppText>
                 </TouchableOpacity>
               </View>
             )}
@@ -202,15 +213,15 @@ export function InvoiceDetailModal({
                 style={[styles.detailActionBtn, { backgroundColor: Colors.green }]}
                 onPress={() => openConfirm("paid")}
               >
-                <Text style={styles.detailActionBtnText}>Mark as Paid</Text>
+                <AppText style={styles.detailActionBtnText}>Mark as Paid</AppText>
               </TouchableOpacity>
             )}
             {canReceive && (
               <TouchableOpacity
-                style={[styles.detailActionBtn, { backgroundColor: Colors.navy }]}
+                style={[styles.detailActionBtn, { backgroundColor: Colors.vouchGreen }]}
                 onPress={() => openConfirm("received")}
               >
-                <Text style={styles.detailActionBtnText}>Confirm Receipt</Text>
+                <AppText style={styles.detailActionBtnText}>Confirm Receipt</AppText>
               </TouchableOpacity>
             )}
           </View>

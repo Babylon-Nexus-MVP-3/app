@@ -5,18 +5,19 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
+import { AppText } from "@/components/AppText";
 
 /* ─── API types ─── */
 type AuditEventType =
@@ -71,7 +72,7 @@ const EVENT_LABEL: Record<AuditEventType, string> = {
 };
 
 const EVENT_COLOR: Record<AuditEventType, string> = {
-  InvoiceSubmitted: Colors.gold,
+  InvoiceSubmitted: Colors.amber,
   InvoiceApproved: Colors.green,
   InvoicePaid: Colors.green,
   InvoiceReceived: Colors.green,
@@ -81,7 +82,7 @@ const EVENT_COLOR: Record<AuditEventType, string> = {
 const STATUS_BORDER: Record<InvoiceAuditEntry["status"], string> = {
   Received: Colors.green,
   Paid: Colors.green,
-  Approved: Colors.grey,
+  Approved: Colors.grey300,
   Pending: Colors.amber,
   Rejected: Colors.red,
 };
@@ -132,23 +133,23 @@ function buildHtml(data: AuditLogData): string {
 <style>
   @page { size: A4; margin: 20mm; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #1A1A2E; margin: 0; width: 100%; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1A1A1A; margin: 0; width: 100%; }
   h1 { font-size: 20px; margin-bottom: 4px; }
-  .meta { color: #6B7280; font-size: 11px; margin-bottom: 20px; }
+  .meta { color: #9B9B9B; font-size: 11px; margin-bottom: 20px; }
   .summary { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
   .stat { border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 14px; min-width: 100px; }
-  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #6B7280; }
-  .stat-value { font-size: 16px; font-weight: bold; color: #1A1A2E; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #9B9B9B; }
+  .stat-value { font-size: 16px; font-weight: bold; color: #1A1A1A; }
   table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; page-break-after: auto; }
-  th { background: #1A1A2E; color: #C9A84C; font-size: 11px; text-transform: uppercase;
+  th { background: #1B5C38; color: #ffffff; font-size: 11px; text-transform: uppercase;
        letter-spacing: 0.5px; padding: 8px 10px; text-align: left; }
   td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
   .inv-cell { font-weight: 600; border-right: 1px solid #e0e0e0; max-width: 160px; word-wrap: break-word; }
-  small { color: #6B7280; font-size: 10px; }
+  small { color: #9B9B9B; font-size: 10px; }
   tr:nth-child(even) td { background: #fafafa; }
-  .footer { margin-top: 32px; font-size: 10px; color: #6B7280; border-top: 1px solid #e0e0e0;
+  .footer { margin-top: 32px; font-size: 10px; color: #9B9B9B; border-top: 1px solid #e0e0e0;
             padding-top: 12px; page-break-inside: avoid; }
 </style>
 </head>
@@ -191,10 +192,10 @@ function StatCard({
 }) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, valueColor ? { color: valueColor } : undefined]}>
+      <AppText style={styles.statLabel}>{label}</AppText>
+      <AppText style={[styles.statValue, valueColor ? { color: valueColor } : undefined]}>
         {value}
-      </Text>
+      </AppText>
     </View>
   );
 }
@@ -208,14 +209,14 @@ function TimelineEvent({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
         {!isLast && <View style={styles.eventConnector} />}
       </View>
       <View style={styles.eventContent}>
-        <Text style={styles.eventType}>{EVENT_LABEL[ev.type]}</Text>
-        <Text style={styles.eventActor}>
-          {ev.actorName} <Text style={styles.eventRole}>({ev.actorRole})</Text>
-        </Text>
-        <Text style={styles.eventTime}>{formatDateTime(ev.timestamp)}</Text>
+        <AppText style={styles.eventType}>{EVENT_LABEL[ev.type]}</AppText>
+        <AppText style={styles.eventActor}>
+          {ev.actorName} <AppText style={styles.eventRole}>({ev.actorRole})</AppText>
+        </AppText>
+        <AppText style={styles.eventTime}>{formatDateTime(ev.timestamp)}</AppText>
         {ev.rejectionReason && (
           <View style={styles.rejectionBox}>
-            <Text style={styles.rejectionText}>Reason: &quot;{ev.rejectionReason}&quot;</Text>
+            <AppText style={styles.rejectionText}>Reason: &quot;{ev.rejectionReason}&quot;</AppText>
           </View>
         )}
       </View>
@@ -236,21 +237,21 @@ function InvoiceCard({ entry }: { entry: InvoiceAuditEntry }) {
     <View style={[styles.invoiceCard, { borderLeftColor: borderColor }]}>
       <View style={styles.invoiceCardHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.invoiceDesc} numberOfLines={2}>
+          <AppText style={styles.invoiceDesc} numberOfLines={2}>
             {entry.description}
-          </Text>
+          </AppText>
           {entry.invoiceNumber && (
             <View style={styles.invoiceNumPill}>
-              <Text style={styles.invoiceNumPillText}>{entry.invoiceNumber}</Text>
+              <AppText style={styles.invoiceNumPillText}>{entry.invoiceNumber}</AppText>
             </View>
           )}
         </View>
-        <Text style={styles.invoiceAmount}>{formatCurrency(entry.amount)}</Text>
+        <AppText style={styles.invoiceAmount}>{formatCurrency(entry.amount)}</AppText>
       </View>
-      <Text style={styles.invoiceMeta}>
+      <AppText style={styles.invoiceMeta}>
         {entry.submittingParty} · {entry.submittingCategory}
-      </Text>
-      <Text style={styles.invoiceDates}>Due: {formatDate(entry.dateDue)}</Text>
+      </AppText>
+      <AppText style={styles.invoiceDates}>Due: {formatDate(entry.dateDue)}</AppText>
 
       <View style={styles.divider} />
 
@@ -260,9 +261,9 @@ function InvoiceCard({ entry }: { entry: InvoiceAuditEntry }) {
 
       {turnaround !== null && (
         <View style={styles.turnaroundBadge}>
-          <Text style={styles.turnaroundText}>
+          <AppText style={styles.turnaroundText}>
             {turnaround === 0 ? "Same day" : `${turnaround}d total turnaround`}
-          </Text>
+          </AppText>
         </View>
       )}
     </View>
@@ -326,55 +327,59 @@ export default function AuditLog() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      <View style={{ backgroundColor: Colors.vouchGreen }}>
         <SafeAreaView edges={["top"]}>
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/(app)/project/[id]",
-                params: { id: projectId, name: projectName ?? "" },
-              } as any)
-            }
-            style={styles.backBtn}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back to project"
-          >
-            <Text style={styles.backArrow}>‹</Text>
-            <Text style={styles.backLabel}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment Audit Log</Text>
-          <Text style={styles.headerSubtitle}>{projectName ?? data?.projectName ?? ""}</Text>
-          {data && (
-            <View style={styles.viewerBadge}>
-              <Text style={styles.viewerBadgeText}>{data.viewerRole.toUpperCase()}</Text>
-            </View>
-          )}
-          <View style={styles.exportBtns}>
+          <View style={styles.header}>
             <TouchableOpacity
-              style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
-              onPress={handleExportPdf}
-              disabled={exporting}
+              onPress={() =>
+                router.push({
+                  pathname: "/(app)/project/[id]",
+                  params: { id: projectId, name: projectName ?? "" },
+                } as any)
+              }
+              style={styles.backBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back to project"
             >
-              {exporting ? (
-                <ActivityIndicator size="small" color={Colors.gold} />
-              ) : (
-                <Text style={styles.exportBtnText}>↓ PDF</Text>
-              )}
+              <Ionicons name="arrow-back" size={20} color={Colors.white} />
+              <AppText style={styles.backLabel}>Back</AppText>
             </TouchableOpacity>
+            <AppText style={styles.headerTitle}>Payment Audit Log</AppText>
+            <AppText style={styles.headerSubtitle}>
+              {projectName ?? data?.projectName ?? ""}
+            </AppText>
+            {data && (
+              <View style={styles.viewerBadge}>
+                <AppText style={styles.viewerBadgeText}>{data.viewerRole.toUpperCase()}</AppText>
+              </View>
+            )}
+            <View style={styles.exportBtns}>
+              <TouchableOpacity
+                style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
+                onPress={handleExportPdf}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <AppText style={styles.exportBtnText}>↓ PDF</AppText>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.gold} />
+          <ActivityIndicator size="large" color={Colors.vouchGreen} />
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
+          <AppText style={styles.errorText}>{error}</AppText>
           <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <AppText style={styles.retryBtnText}>Retry</AppText>
           </TouchableOpacity>
         </View>
       ) : data ? (
@@ -386,11 +391,7 @@ export default function AuditLog() {
           <View style={styles.statsGrid}>
             <View style={styles.statsRow}>
               <StatCard label="TOTAL INVOICES" value={String(data.summary.totalInvoices)} />
-              <StatCard
-                label="TOTAL AMOUNT"
-                value={formatCurrency(data.summary.totalAmount)}
-                valueColor={Colors.textPrimary}
-              />
+              <StatCard label="TOTAL AMOUNT" value={formatCurrency(data.summary.totalAmount)} />
             </View>
             <View style={styles.statsRow}>
               <StatCard
@@ -408,17 +409,17 @@ export default function AuditLog() {
 
           {data.entries.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No invoices on this project yet.</Text>
+              <AppText style={styles.emptyText}>No invoices on this project yet.</AppText>
             </View>
           ) : (
             data.entries.map((entry) => <InvoiceCard key={entry.invoiceId} entry={entry} />)
           )}
 
           <View style={styles.notice}>
-            <Text style={styles.noticeText}>
+            <AppText style={styles.noticeText}>
               This record is generated from an immutable event log. Entries cannot be modified or
               deleted.
-            </Text>
+            </AppText>
           </View>
         </ScrollView>
       ) : null}
@@ -428,7 +429,7 @@ export default function AuditLog() {
 
 /* ─── Styles ─── */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.offWhite },
+  container: { flex: 1, backgroundColor: Colors.grey100 },
   header: { paddingBottom: 20, paddingHorizontal: 20 },
   backBtn: {
     flexDirection: "row",
@@ -442,12 +443,11 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     direction: "ltr",
   },
-  backArrow: { fontSize: 28, color: "rgba(255,255,255,0.6)", lineHeight: 30 },
-  backLabel: { fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: "500" },
+  backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
   exportBtns: { flexDirection: "row", gap: 8, marginTop: 14 },
   exportBtn: {
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: "rgba(255,255,255,0.4)",
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -455,39 +455,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   exportBtnDisabled: { opacity: 0.5 },
-  exportBtnText: { color: Colors.gold, fontSize: 13, fontWeight: "700" },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: Colors.white, marginBottom: 2 },
+  exportBtnText: { color: Colors.white, fontSize: 13, fontFamily: Fonts.bold },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: Fonts.extraBold,
+    color: Colors.white,
+    marginBottom: 2,
+  },
   headerSubtitle: {
     fontSize: 18,
     color: Colors.white,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginBottom: 8,
   },
   viewerBadge: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  viewerBadgeText: { color: Colors.gold, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  viewerBadgeText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.5,
+  },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   errorText: {
     color: Colors.red,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     textAlign: "center",
     paddingHorizontal: 32,
   },
   retryBtn: {
     borderWidth: 1.5,
-    borderColor: Colors.gold,
+    borderColor: Colors.vouchGreen,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 8,
   },
-  retryBtnText: { color: Colors.gold, fontWeight: "700", fontSize: 14 },
+  retryBtnText: { color: Colors.vouchGreen, fontFamily: Fonts.bold, fontSize: 14 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 12 },
   statsGrid: { gap: 8, marginBottom: 4 },
@@ -510,14 +521,19 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 9,
-    fontWeight: "700",
-    color: Colors.textSecondary,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 4,
     textAlign: "center",
   },
-  statValue: { fontSize: 13, fontWeight: "800", color: Colors.textPrimary, textAlign: "center" },
+  statValue: {
+    fontSize: 13,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
+    textAlign: "center",
+  },
   invoiceCard: {
     backgroundColor: Colors.white,
     borderRadius: 12,
@@ -540,20 +556,20 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 2,
   },
-  invoiceDesc: { flex: 1, fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
-  invoiceAmount: { fontSize: 15, fontWeight: "800", color: Colors.textPrimary },
+  invoiceDesc: { flex: 1, fontSize: 15, fontFamily: Fonts.bold, color: Colors.black },
+  invoiceAmount: { fontSize: 15, fontFamily: Fonts.extraBold, color: Colors.black },
   invoiceNumPill: {
     alignSelf: "flex-start",
-    backgroundColor: Colors.greyBg,
+    backgroundColor: Colors.grey100,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginTop: 4,
     marginBottom: 2,
   },
-  invoiceNumPillText: { fontSize: 11, fontWeight: "700", color: Colors.textPrimary },
-  invoiceMeta: { fontSize: 12, color: Colors.textSecondary, fontWeight: "500", marginBottom: 2 },
-  invoiceDates: { fontSize: 11, color: Colors.textSecondary, fontWeight: "500", marginBottom: 2 },
+  invoiceNumPillText: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black },
+  invoiceMeta: { fontSize: 12, color: Colors.grey700, fontFamily: Fonts.medium, marginBottom: 2 },
+  invoiceDates: { fontSize: 11, color: Colors.grey700, fontFamily: Fonts.medium, marginBottom: 2 },
   divider: { height: 1, backgroundColor: "rgba(0,0,0,0.07)", marginVertical: 10 },
   eventRow: { flexDirection: "row", marginBottom: 2 },
   eventLine: { width: 20, alignItems: "center" },
@@ -566,10 +582,10 @@ const styles = StyleSheet.create({
     marginBottom: -4,
   },
   eventContent: { flex: 1, paddingLeft: 8, paddingBottom: 12 },
-  eventType: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
-  eventActor: { fontSize: 12, fontWeight: "500", color: Colors.textSecondary, marginTop: 1 },
-  eventRole: { fontSize: 11, color: Colors.textSecondary },
-  eventTime: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  eventType: { fontSize: 13, fontFamily: Fonts.bold, color: Colors.black },
+  eventActor: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.grey700, marginTop: 1 },
+  eventRole: { fontSize: 11, color: Colors.grey700 },
+  eventTime: { fontSize: 11, color: Colors.grey700, marginTop: 1 },
   rejectionBox: {
     marginTop: 4,
     backgroundColor: Colors.redBg,
@@ -577,23 +593,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  rejectionText: { fontSize: 11, color: Colors.red, fontWeight: "600" },
+  rejectionText: { fontSize: 11, color: Colors.red, fontFamily: Fonts.semiBold },
   turnaroundBadge: {
     alignSelf: "flex-start",
-    backgroundColor: Colors.greyBg,
+    backgroundColor: Colors.grey100,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
     marginTop: 4,
   },
-  turnaroundText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
+  turnaroundText: { fontSize: 11, fontFamily: Fonts.semiBold, color: Colors.grey700 },
   emptyState: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, fontWeight: "500" },
-  notice: { backgroundColor: Colors.greyBg, borderRadius: 10, padding: 12, marginTop: 8 },
+  emptyText: { fontSize: 14, color: Colors.grey500, fontFamily: Fonts.medium },
+  notice: { backgroundColor: Colors.grey100, borderRadius: 10, padding: 12, marginTop: 8 },
   noticeText: {
     fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: "500",
+    color: Colors.grey500,
+    fontFamily: Fonts.medium,
     textAlign: "center",
     lineHeight: 16,
   },

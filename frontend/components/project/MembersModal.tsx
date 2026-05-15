@@ -1,9 +1,11 @@
 import React from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { AppText } from "@/components/AppText";
 import { Participant } from "./types";
 import { displayRole } from "./helpers";
 import { styles } from "./styles";
@@ -26,7 +28,6 @@ export function MembersModal({
   projectInfo: ProjectInfo;
   onClose: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const accepted = participants.filter((p) => p.status === "Accepted");
   const acceptedEmails = new Set(accepted.map((p) => p.email));
   const pending = participants.filter(
@@ -36,27 +37,26 @@ export function MembersModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.membersContainer}>
-        <LinearGradient
-          colors={[Colors.navy, Colors.navyLight]}
-          style={[styles.membersHeader, { paddingTop: insets.top }]}
-        >
-          <View style={styles.headerTopRow}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.backBtn}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.backArrow}>‹</Text>
-              <Text style={styles.backLabel}>Back</Text>
-            </TouchableOpacity>
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
+          <View style={styles.membersHeader}>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.backBtn}
+                hitSlop={HEADER_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Ionicons name="arrow-back" size={20} color={Colors.white} />
+                <AppText style={styles.backLabel}>Back</AppText>
+              </TouchableOpacity>
+            </View>
+            <AppText style={styles.membersTitle}>Project Information</AppText>
           </View>
-          <Text style={styles.membersTitle}>Project Information</Text>
-        </LinearGradient>
+        </SafeAreaView>
 
         <ScrollView contentContainerStyle={styles.membersBody} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionLabel}>PROJECT DETAILS</Text>
+          <AppText style={styles.sectionLabel}>PROJECT DETAILS</AppText>
           <View style={memberStyles.infoCard}>
             <InfoRow label="Name" value={projectInfo.name} />
             <InfoRow label="Location" value={projectInfo.location} />
@@ -68,9 +68,9 @@ export function MembersModal({
 
           {accepted.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
+              <AppText style={[styles.sectionLabel, { marginTop: 24 }]}>
                 ACTIVE ({accepted.length})
-              </Text>
+              </AppText>
               {accepted.map((p) => (
                 <MemberRow key={p.participantId} participant={p} />
               ))}
@@ -79,16 +79,16 @@ export function MembersModal({
 
           {pending.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
+              <AppText style={[styles.sectionLabel, { marginTop: 24 }]}>
                 PENDING ({pending.length})
-              </Text>
+              </AppText>
               {pending.map((p) => (
                 <MemberRow key={p.participantId} participant={p} />
               ))}
             </>
           )}
 
-          {participants.length === 0 && <Text style={styles.emptyText}>No members yet.</Text>}
+          {participants.length === 0 && <AppText style={styles.emptyText}>No members yet.</AppText>}
         </ScrollView>
       </View>
     </Modal>
@@ -98,8 +98,8 @@ export function MembersModal({
 function InfoRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
     <View style={[memberStyles.infoRow, last && memberStyles.infoRowLast]}>
-      <Text style={memberStyles.infoLabel}>{label}</Text>
-      <Text style={memberStyles.infoValue}>{value}</Text>
+      <AppText style={memberStyles.infoLabel}>{label}</AppText>
+      <AppText style={memberStyles.infoValue}>{value}</AppText>
     </View>
   );
 }
@@ -115,9 +115,9 @@ function ComplianceBadge({
 }) {
   return (
     <View style={value ? memberStyles.badgeGreen : memberStyles.badgeRed}>
-      <Text style={value ? memberStyles.badgeGreenText : memberStyles.badgeRedText}>
+      <AppText style={value ? memberStyles.badgeGreenText : memberStyles.badgeRedText}>
         {value ? `✓ ${trueLabel}` : `✗ ${falseLabel}`}
-      </Text>
+      </AppText>
     </View>
   );
 }
@@ -130,11 +130,11 @@ function MemberRow({ participant: p }: { participant: Participant }) {
   return (
     <View style={styles.memberRow}>
       <View style={styles.memberAvatar}>
-        <Text style={styles.memberAvatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+        <AppText style={styles.memberAvatarText}>{displayName.charAt(0).toUpperCase()}</AppText>
       </View>
       <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{displayName}</Text>
-        {showEmail && <Text style={styles.memberEmail}>{p.email}</Text>}
+        <AppText style={styles.memberName}>{displayName}</AppText>
+        {showEmail && <AppText style={styles.memberEmail}>{p.email}</AppText>}
         {showCompliance && (
           <View style={memberStyles.badgeRow}>
             {p.hasLicence != null && (
@@ -151,7 +151,7 @@ function MemberRow({ participant: p }: { participant: Participant }) {
         )}
       </View>
       <View style={styles.memberRolePill}>
-        <Text style={styles.memberRolePillText}>{displayRole(p.role)}</Text>
+        <AppText style={styles.memberRolePillText}>{displayRole(p.role)}</AppText>
       </View>
     </View>
   );
@@ -175,14 +175,14 @@ const memberStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.offWhite,
+    borderBottomColor: Colors.grey100,
   },
   infoRowLast: { borderBottomWidth: 0 },
-  infoLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  infoLabel: { fontSize: 13, color: Colors.grey500, fontFamily: Fonts.medium },
   infoValue: {
     fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: "600",
+    color: Colors.black,
+    fontFamily: Fonts.semiBold,
     textAlign: "right",
     flex: 1,
     marginLeft: 16,
@@ -194,12 +194,12 @@ const memberStyles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeGreenText: { fontSize: 10, fontWeight: "700", color: Colors.green },
+  badgeGreenText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.green },
   badgeRed: {
     backgroundColor: Colors.redBg,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeRedText: { fontSize: 10, fontWeight: "700", color: Colors.red },
+  badgeRedText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.red },
 });

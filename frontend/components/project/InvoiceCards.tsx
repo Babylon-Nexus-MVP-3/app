@@ -1,6 +1,7 @@
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
+import { AppText } from "@/components/AppText";
 import { ApiInvoice } from "./types";
 import { apiStatusToCalStatus, invoiceStatusLabel, statusBg, statusColor } from "./helpers";
 import { styles } from "./styles";
@@ -24,38 +25,38 @@ export function MyInvoiceCard({
       activeOpacity={0.85}
     >
       <View style={styles.invoiceRow}>
-        <Text style={[styles.invoiceName, { flex: 1 }]} numberOfLines={1}>
+        <AppText style={[styles.invoiceName, { flex: 1 }]} numberOfLines={1}>
           {inv.description}
-        </Text>
+        </AppText>
         <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-          <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+          <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
             {invoiceStatusLabel(inv.status)}
-          </Text>
+          </AppText>
         </View>
       </View>
       {inv.invoiceNumber ? (
         <View style={styles.invoiceNumPill}>
-          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+          <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
         </View>
       ) : null}
       <View style={styles.invoiceRow}>
-        <Text style={styles.invoiceDate}>
+        <AppText style={styles.invoiceDate}>
           Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-        </Text>
+        </AppText>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {inv.amount != null && (
-            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+            <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
           )}
           {!isDone && inv.daysOverdue > 0 && !canConfirm && inv.status !== "Rejected" && (
-            <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+            <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
               {inv.daysOverdue}d overdue
-            </Text>
+            </AppText>
           )}
         </View>
       </View>
       {canConfirm && (
         <TouchableOpacity style={styles.confirmBtn} onPress={onReceived}>
-          <Text style={styles.confirmBtnText}>Confirm Receipt</Text>
+          <AppText style={styles.confirmBtnText}>Confirm Receipt</AppText>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -90,36 +91,36 @@ export function ApprovalCard({
     >
       <View style={styles.invoiceRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
-          <Text style={styles.invoiceDate} numberOfLines={1}>
+          <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
+          <AppText style={styles.invoiceDate} numberOfLines={1}>
             {inv.description}
-          </Text>
+          </AppText>
         </View>
         <View style={{ alignItems: "flex-end" }}>
           {showAmount && inv.amount != null && (
-            <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+            <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
           )}
           <View
             style={[styles.statusBadge, { backgroundColor: statusBg(calStatus), marginTop: 4 }]}
           >
-            <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+            <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
               {invoiceStatusLabel(inv.status)}
-            </Text>
+            </AppText>
           </View>
         </View>
       </View>
       {inv.invoiceNumber ? (
         <View style={styles.invoiceNumPill}>
-          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+          <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
         </View>
       ) : null}
-      <Text style={styles.invoiceDate}>
+      <AppText style={styles.invoiceDate}>
         Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-      </Text>
+      </AppText>
       {inv.daysOverdue > 0 && !isDone && inv.status !== "Rejected" && (
-        <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+        <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
           {inv.daysOverdue} days overdue
-        </Text>
+        </AppText>
       )}
       {(canApprove || canPay) && (
         <View style={styles.actionRow}>
@@ -129,13 +130,13 @@ export function ApprovalCard({
                 style={[styles.actionBtn, { backgroundColor: Colors.green }]}
                 onPress={onApprove}
               >
-                <Text style={styles.actionBtnText}>Approve</Text>
+                <AppText style={styles.actionBtnText}>Approve</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: Colors.red }]}
                 onPress={onReject}
               >
-                <Text style={styles.actionBtnText}>Reject</Text>
+                <AppText style={styles.actionBtnText}>Reject</AppText>
               </TouchableOpacity>
             </>
           )}
@@ -144,13 +145,15 @@ export function ApprovalCard({
               style={[styles.actionBtn, { backgroundColor: Colors.green }]}
               onPress={onPaid}
             >
-              <Text style={styles.actionBtnText}>Mark as Paid</Text>
+              <AppText style={styles.actionBtnText}>Mark as Paid</AppText>
             </TouchableOpacity>
           )}
         </View>
       )}
       {isRejected && (
-        <Text style={[styles.invoiceDays, { color: Colors.red, marginTop: 6 }]}>✗ Rejected</Text>
+        <AppText style={[styles.invoiceDays, { color: Colors.red, marginTop: 6 }]}>
+          ✗ Rejected
+        </AppText>
       )}
     </TouchableOpacity>
   );
