@@ -10,6 +10,7 @@ import { projectRouter } from "./routes/project.route";
 import { projectsRouter } from "./routes/projects.route";
 import { adminRouter } from "./routes/admin.route";
 import { notificationRouter } from "./routes/notification.route";
+import { abrRouter } from "./routes/abr.route";
 import { clear } from "./clear";
 
 export const app = express();
@@ -47,6 +48,7 @@ app.use("/project", projectRouter);
 app.use("/projects", projectsRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationRouter);
+app.use("/abr", abrRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ success: true });
