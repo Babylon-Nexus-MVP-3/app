@@ -1,8 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { API_BASE_URL } from "@/constants/api";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -25,9 +34,21 @@ const STEPS = [
 type StepState = "done" | "active" | "locked";
 
 export default function GetVouchedIntro() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { step1, step2, references } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
+
+  const [profileSubmitted, setProfileSubmitted] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  useEffect(() => {
+    fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
+      .then((r) => {
+        if (r.ok) setProfileSubmitted(true);
+      })
+      .catch(() => {})
+      .finally(() => setCheckingProfile(false));
+  }, [fetchWithAuth]);
 
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(
@@ -85,125 +106,151 @@ export default function GetVouchedIntro() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
+      {checkingProfile ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={Colors.vouchGreen} />
         </View>
-
-        <Text style={styles.title}>Build your Vouch profile.</Text>
-        <Text style={styles.subtitle}>
-          Like a supplier credit application — built once, reused everywhere.
-        </Text>
-
-        <View style={styles.stepList}>
-          {/* Mobile verification prerequisite */}
-          <TouchableOpacity
-            style={[styles.stepRow, mobileVerified && styles.stepRowDone]}
-            activeOpacity={mobileVerified ? 1 : 0.7}
-            onPress={() => !mobileVerified && router.push("/(app)/verify-mobile")}
-            disabled={mobileVerified}
-          >
-            <View
-              style={[
-                styles.stepCircle,
-                mobileVerified ? styles.stepCircleDone : styles.stepCircleActive,
-              ]}
-            >
-              {mobileVerified ? (
-                <Ionicons name="checkmark" size={16} color={Colors.white} />
-              ) : (
-                <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
-              )}
+      ) : profileSubmitted ? (
+        <View style={styles.submittedWrap}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="shield-checkmark" size={40} color={Colors.vouchGreen} />
+          </View>
+          <Text style={styles.title}>Profile submitted.</Text>
+          <Text style={styles.subtitle}>
+            {"Your references have been notified. We'll update you once they respond."}
+          </Text>
+        </View>
+      ) : (
+        <>
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.stepTitle}>Verify mobile number</Text>
-              {mobileVerified ? (
-                <Text style={styles.stepDoneTag}>Completed</Text>
-              ) : (
-                <Text style={styles.prereqHint}>Required before you can apply</Text>
-              )}
-            </View>
-            {!mobileVerified && (
-              <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
-            )}
-          </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.divider} />
+            <Text style={styles.title}>Build your Vouch profile.</Text>
+            <Text style={styles.subtitle}>
+              Like a supplier credit application — built once, reused everywhere.
+            </Text>
 
-          {STEPS.map(({ n, title, time }) => {
-            const state = stepState(n);
-            const tappable = canTap(n);
-
-            return (
+            <View style={styles.stepList}>
+              {/* Mobile verification prerequisite */}
               <TouchableOpacity
-                key={n}
-                style={[styles.stepRow, !tappable && styles.stepRowLocked]}
-                activeOpacity={tappable ? 0.7 : 1}
-                onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
-                disabled={!tappable}
+                style={[styles.stepRow, mobileVerified && styles.stepRowDone]}
+                activeOpacity={mobileVerified ? 1 : 0.7}
+                onPress={() => !mobileVerified && router.push("/(app)/verify-mobile")}
+                disabled={mobileVerified}
               >
                 <View
                   style={[
                     styles.stepCircle,
-                    state === "done" && styles.stepCircleDone,
-                    state === "active" && styles.stepCircleActive,
-                    state === "locked" && styles.stepCircleLocked,
+                    mobileVerified ? styles.stepCircleDone : styles.stepCircleActive,
                   ]}
                 >
-                  {state === "done" ? (
+                  {mobileVerified ? (
                     <Ionicons name="checkmark" size={16} color={Colors.white} />
                   ) : (
-                    <Text
-                      style={[
-                        styles.stepNum,
-                        state === "active" && styles.stepNumActive,
-                        state === "locked" && styles.stepNumLocked,
-                      ]}
-                    >
-                      {n}
-                    </Text>
+                    <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
                   )}
                 </View>
-
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.stepTitle, state === "locked" && styles.stepTitleLocked]}>
-                    {title}
-                  </Text>
-                  {state === "done" && <Text style={styles.stepDoneTag}>Completed</Text>}
+                  <Text style={styles.stepTitle}>Verify mobile number</Text>
+                  {mobileVerified ? (
+                    <Text style={styles.stepDoneTag}>Completed</Text>
+                  ) : (
+                    <Text style={styles.prereqHint}>Required before you can apply</Text>
+                  )}
                 </View>
-
-                <Text style={styles.stepTime}>{time}</Text>
-
-                {tappable && (
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={state === "locked" ? Colors.grey300 : Colors.grey500}
-                  />
+                {!mobileVerified && (
+                  <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
                 )}
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
-          activeOpacity={0.85}
-          onPress={onPrimaryPress}
-          disabled={mobileVerified && allDone}
-        >
-          <Text style={styles.primaryBtnText}>{btnLabel}</Text>
-        </TouchableOpacity>
-      </View>
+              {/* Divider */}
+              <View style={styles.divider} />
+
+              {STEPS.map(({ n, title, time }) => {
+                const state = stepState(n);
+                const tappable = canTap(n);
+
+                return (
+                  <TouchableOpacity
+                    key={n}
+                    style={[styles.stepRow, !tappable && styles.stepRowLocked]}
+                    activeOpacity={tappable ? 0.7 : 1}
+                    onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
+                    disabled={!tappable}
+                  >
+                    <View
+                      style={[
+                        styles.stepCircle,
+                        state === "done" && styles.stepCircleDone,
+                        state === "active" && styles.stepCircleActive,
+                        state === "locked" && styles.stepCircleLocked,
+                      ]}
+                    >
+                      {state === "done" ? (
+                        <Ionicons name="checkmark" size={16} color={Colors.white} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.stepNum,
+                            state === "active" && styles.stepNumActive,
+                            state === "locked" && styles.stepNumLocked,
+                          ]}
+                        >
+                          {n}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[styles.stepTitle, state === "locked" && styles.stepTitleLocked]}
+                      >
+                        {title}
+                      </Text>
+                      {state === "done" && <Text style={styles.stepDoneTag}>Completed</Text>}
+                    </View>
+
+                    <Text style={styles.stepTime}>{time}</Text>
+
+                    {tappable && (
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={state === "locked" ? Colors.grey300 : Colors.grey500}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
+              activeOpacity={0.85}
+              onPress={onPrimaryPress}
+              disabled={mobileVerified && allDone}
+            >
+              <Text style={styles.primaryBtnText}>{btnLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
+  submittedWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",

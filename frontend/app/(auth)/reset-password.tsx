@@ -1,4 +1,3 @@
-import { API_BASE_URL } from "@/constants/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -6,16 +5,17 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { Fonts } from "@/constants/fonts";
+import { API_BASE_URL } from "@/constants/api";
+import { AppText } from "@/components/AppText";
 
 export default function ResetPassword() {
   const { resetCode } = useLocalSearchParams<{ resetCode: string }>();
@@ -50,78 +50,79 @@ export default function ResetPassword() {
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.inner}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Reset password</Text>
-          <Text style={styles.subtitle}>{"Choose a new password for your account."}</Text>
+          <AppText style={styles.title}>Reset password</AppText>
+          <AppText style={styles.subtitle}>Choose a new password for your account.</AppText>
 
-          <Text style={styles.label}>New Password</Text>
-          <View style={styles.inputWrapper}>
+          <AppText style={styles.label}>NEW PASSWORD</AppText>
+          <View style={styles.passwordRow}>
             <TextInput
-              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+              style={styles.passwordInput}
               value={password}
               onChangeText={setPassword}
               placeholder="Min. 12 characters"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={Colors.grey300}
               secureTextEntry={!showPassword}
               returnKeyType="next"
             />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+            >
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color="rgba(255,255,255,0.5)"
+                color={Colors.grey500}
               />
             </TouchableOpacity>
           </View>
+          {password.length > 0 && password.length < 12 ? (
+            <AppText style={styles.hintText}>Password must be at least 12 characters</AppText>
+          ) : null}
 
-          <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.inputWrapper}>
+          <AppText style={styles.label}>CONFIRM PASSWORD</AppText>
+          <View style={styles.passwordRow}>
             <TextInput
-              style={[styles.input, styles.inputNoMargin, styles.inputPadRight]}
+              style={styles.passwordInput}
               value={confirm}
               onChangeText={setConfirm}
               placeholder="Re-enter password"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={Colors.grey300}
               secureTextEntry={!showConfirm}
               returnKeyType="done"
               onSubmitEditing={handleReset}
             />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((v) => !v)}>
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowConfirm((v) => !v)}
+              hitSlop={8}
+            >
               <Ionicons
                 name={showConfirm ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color="rgba(255,255,255,0.5)"
+                color={Colors.grey500}
               />
             </TouchableOpacity>
           </View>
+          {confirm.length > 0 && password !== confirm ? (
+            <AppText style={styles.hintText}>Passwords do not match</AppText>
+          ) : null}
 
-          {password.length > 0 && password.length < 12 && (
-            <Text style={styles.hintText}>Password must be at least 12 characters</Text>
-          )}
-          {confirm.length > 0 && password !== confirm && (
-            <Text style={styles.hintText}>Passwords do not match</Text>
-          )}
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
           <TouchableOpacity
             style={[styles.button, isDisabled && styles.buttonDisabled]}
@@ -130,114 +131,100 @@ export default function ResetPassword() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Reset Password</Text>
+              <AppText style={styles.buttonText}>Reset password</AppText>
             )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  keyboardView: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
   inner: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
-  backButton: {
-    marginBottom: 32,
+  backBtn: {
     alignSelf: "flex-start",
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 24,
-    color: Colors.goldLight,
+    marginBottom: 24,
+    padding: 4,
   },
   title: {
     fontSize: 28,
-    fontWeight: "800",
-    color: Colors.white,
-    marginBottom: 10,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 32,
     lineHeight: 22,
-    marginBottom: 36,
   },
   label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
   },
-  input: {
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 12,
+    backgroundColor: Colors.white,
+    marginBottom: 8,
+    height: 52,
+  },
+  passwordInput: {
+    flex: 1,
     paddingHorizontal: 16,
     fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: Colors.white,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
   },
   hintText: {
     fontSize: 13,
-    color: Colors.gold,
-    marginBottom: 12,
-    marginTop: -12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
+    fontFamily: Fonts.semiBold,
     color: Colors.red,
-    fontWeight: "600",
     textAlign: "center",
     marginBottom: 16,
   },
   button: {
     height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 8,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: "700",
-    color: Colors.navy,
-    letterSpacing: 0.5,
-  },
-  inputWrapper: {
-    marginBottom: 20,
-  },
-  inputNoMargin: {
-    marginBottom: 0,
-  },
-  inputPadRight: {
-    paddingRight: 48,
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
+    fontFamily: Fonts.bold,
+    color: Colors.white,
   },
 });

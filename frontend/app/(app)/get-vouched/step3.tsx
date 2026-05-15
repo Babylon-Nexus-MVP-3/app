@@ -293,7 +293,7 @@ function RefForm({
 }
 
 export default function Step3() {
-  const { step2, references, setReferences } = useWizard();
+  const { step1, step2, references, setReferences } = useWizard();
   const { fetchWithAuth } = useAuth();
 
   const [refs, setRefs] = useState<Reference[]>(
@@ -347,6 +347,23 @@ export default function Step3() {
       await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
         body: JSON.stringify({
+          name: step1.name,
+          abn: step1.abn,
+          trade: step1.trade,
+          idType: step1.idType,
+          idNumber: step1.idNumber,
+          idExpiry: step1.idExpiry,
+          currentProjectName: step2.currentProjectName,
+          address: step2.address,
+          suburb: step2.suburb,
+          state: step2.state,
+          postcode: step2.postcode,
+          value: step2.value,
+          pastProjectName: step2.pastProjectName,
+          pastSuburb: step2.pastSuburb,
+          pastPostcode: step2.pastPostcode,
+          pastYear: step2.pastYear,
+          pastValue: step2.pastValue,
           references: refs.filter((r) => r.name.trim()),
         }),
       });
