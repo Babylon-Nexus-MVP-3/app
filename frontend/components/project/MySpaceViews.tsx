@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
+import { AppText } from "@/components/AppText";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import { apiStatusToCalStatus, invoiceStatusLabel, statusBg, statusColor } from "./helpers";
 import { styles } from "./styles";
 import { MyInvoiceCard, ApprovalCard } from "./InvoiceCards";
 import { ConfirmModal } from "./ConfirmModal";
 
-/* ─── Invoice uploader view (Subcontractor / Consultant) ─── */
+/* â”€â”€â”€ Invoice uploader view (Subcontractor / Consultant) â”€â”€â”€ */
 export function InvoiceUploaderView({
   invoices,
   userId,
@@ -77,9 +78,9 @@ export function InvoiceUploaderView({
             style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
             onPress={() => setSubTab(t.key)}
           >
-            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+            <AppText style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
               {t.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -89,27 +90,27 @@ export function InvoiceUploaderView({
           <>
             <View style={[styles.statRow, { flexDirection: "column" }]}>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Outstanding</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                <AppText style={styles.statBoxLabel}>Outstanding</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
-                </Text>
+                </AppText>
               </View>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Paid</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                <AppText style={styles.statBoxLabel}>Paid</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
-                </Text>
+                </AppText>
               </View>
             </View>
             <FilterChips filter={myFilter} onChange={setMyFilter} />
             {filteredMyInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices yet.</Text>
+              <AppText style={styles.emptyText}>No invoices yet.</AppText>
             )}
             {filteredMyInvoices.map((inv) => (
               <MyInvoiceCard
@@ -133,7 +134,7 @@ export function InvoiceUploaderView({
             />
             <FilterChips filter={allFilter} onChange={setAllFilter} />
             {filteredAllInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices yet.</Text>
+              <AppText style={styles.emptyText}>No invoices yet.</AppText>
             )}
             {filteredAllInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
@@ -146,27 +147,27 @@ export function InvoiceUploaderView({
                 >
                   <View style={styles.invoiceRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                       {inv.invoiceNumber ? (
                         <View style={styles.invoiceNumPill}>
-                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                          <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                         </View>
                       ) : null}
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                         {invoiceStatusLabel(inv.status)}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                   <View style={styles.invoiceRow}>
                     {inv.submittedByUserId === userId && inv.amount != null && (
-                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                      <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
                     )}
                     {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -188,7 +189,7 @@ export function InvoiceUploaderView({
   );
 }
 
-/* ─── Shared dual-role view (Builder / PM): My Invoices + To Action + All Invoices ─── */
+/* â”€â”€â”€ Shared dual-role view (Builder / PM): My Invoices + To Action + All Invoices â”€â”€â”€ */
 export function DualRoleMySpace({
   invoices,
   userId,
@@ -255,7 +256,7 @@ export function DualRoleMySpace({
 
   // PM sees all amounts; Builder sees amounts on own + approved invoices
   const canSeeAllAmounts = approverRole === "PM";
-  // For "To Action" tab: Builder IS the approver for all those invoices → show dollar total
+  // For "To Action" tab: Builder IS the approver for all those invoices â†’ show dollar total
   const canSeeToActionAmounts = true;
 
   const filteredMyInvoices = applyFilter(myInvoices, myFilter);
@@ -277,9 +278,9 @@ export function DualRoleMySpace({
             style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
             onPress={() => setSubTab(t.key)}
           >
-            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+            <AppText style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
               {t.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -289,27 +290,27 @@ export function DualRoleMySpace({
           <>
             <View style={[styles.statRow, { flexDirection: "column" }]}>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Outstanding</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                <AppText style={styles.statBoxLabel}>Outstanding</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
-                </Text>
+                </AppText>
               </View>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Paid</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                <AppText style={styles.statBoxLabel}>Paid</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {myPaid.length} invoice{myPaid.length !== 1 ? "s" : ""}
-                </Text>
+                </AppText>
               </View>
             </View>
             <FilterChips filter={myFilter} onChange={setMyFilter} />
             {filteredMyInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices submitted yet.</Text>
+              <AppText style={styles.emptyText}>No invoices submitted yet.</AppText>
             )}
             {filteredMyInvoices.map((inv) => (
               <MyInvoiceCard
@@ -326,35 +327,35 @@ export function DualRoleMySpace({
           <>
             <View style={[styles.statRow, { flexDirection: "column" }]}>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>To Action</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                <AppText style={styles.statBoxLabel}>To Action</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   {canSeeToActionAmounts
                     ? `$${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`
                     : `${toAction.length} invoice${toAction.length !== 1 ? "s" : ""}`}
-                </Text>
+                </AppText>
                 {canSeeToActionAmounts && (
-                  <Text style={styles.statBoxSub}>
+                  <AppText style={styles.statBoxSub}>
                     {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
-                  </Text>
+                  </AppText>
                 )}
               </View>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Actioned</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                <AppText style={styles.statBoxLabel}>Actioned</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   {canSeeToActionAmounts
                     ? `$${actionDone.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}`
                     : `${actionDone.length} invoice${actionDone.length !== 1 ? "s" : ""}`}
-                </Text>
+                </AppText>
                 {canSeeToActionAmounts && (
-                  <Text style={styles.statBoxSub}>
+                  <AppText style={styles.statBoxSub}>
                     {actionDone.length} invoice{actionDone.length !== 1 ? "s" : ""}
-                  </Text>
+                  </AppText>
                 )}
               </View>
             </View>
             <FilterChips filter={toActionFilter} onChange={setToActionFilter} />
             {filteredToAction.length === 0 && (
-              <Text style={styles.emptyText}>No invoices to approve.</Text>
+              <AppText style={styles.emptyText}>No invoices to approve.</AppText>
             )}
             {filteredToAction.map((inv) => (
               <ApprovalCard
@@ -381,7 +382,7 @@ export function DualRoleMySpace({
             />
             <FilterChips filter={allFilter} onChange={setAllFilter} />
             {filteredAllInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices yet.</Text>
+              <AppText style={styles.emptyText}>No invoices yet.</AppText>
             )}
             {filteredAllInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
@@ -395,27 +396,27 @@ export function DualRoleMySpace({
                 >
                   <View style={styles.invoiceRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                       {inv.invoiceNumber ? (
                         <View style={styles.invoiceNumPill}>
-                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                          <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                         </View>
                       ) : null}
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                         {invoiceStatusLabel(inv.status)}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                   <View style={styles.invoiceRow}>
                     {showAmt && inv.amount != null && (
-                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                      <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
                     )}
                     {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -440,7 +441,7 @@ export function DualRoleMySpace({
   );
 }
 
-/* ─── Builder ─── */
+/* â”€â”€â”€ Builder â”€â”€â”€ */
 export function BuilderMySpace({
   invoices,
   userId,
@@ -467,7 +468,7 @@ export function BuilderMySpace({
   );
 }
 
-/* ─── Project Manager ─── */
+/* â”€â”€â”€ Project Manager â”€â”€â”€ */
 export function PMMySpace({
   invoices,
   userId,
@@ -494,7 +495,7 @@ export function PMMySpace({
   );
 }
 
-/* ─── Owner ─── */
+/* â”€â”€â”€ Owner â”€â”€â”€ */
 export function OwnerMySpace({
   invoices,
   userId: _userId,
@@ -562,9 +563,9 @@ export function OwnerMySpace({
             style={[styles.innerTab, subTab === t.key && styles.innerTabActive]}
             onPress={() => setSubTab(t.key)}
           >
-            <Text style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
+            <AppText style={[styles.innerTabText, subTab === t.key && styles.innerTabTextActive]}>
               {t.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -574,35 +575,35 @@ export function OwnerMySpace({
           <>
             <View style={[styles.statRow, { flexDirection: "column" }]}>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>To Action</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.amber }]}>
+                <AppText style={styles.statBoxLabel}>To Action</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
-                </Text>
+                </AppText>
               </View>
               <View style={[styles.statBox, { flex: 0 }]}>
-                <Text style={styles.statBoxLabel}>Approved/Paid</Text>
-                <Text style={[styles.statBoxNum, { color: Colors.green }]}>
+                <AppText style={styles.statBoxLabel}>Approved/Paid</AppText>
+                <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   $
                   {approvalInvoices
                     .filter((i) => i.status === "Paid" || i.status === "Received")
                     .reduce((a, i) => a + (i.amount ?? 0), 0)
                     .toLocaleString()}
-                </Text>
-                <Text style={styles.statBoxSub}>
+                </AppText>
+                <AppText style={styles.statBoxSub}>
                   {
                     approvalInvoices.filter((i) => i.status === "Paid" || i.status === "Received")
                       .length
                   }{" "}
                   invoices
-                </Text>
+                </AppText>
               </View>
             </View>
             <FilterChips filter={toActionFilter} onChange={setToActionFilter} />
             {filteredToAction.length === 0 && (
-              <Text style={styles.emptyText}>No invoices awaiting action.</Text>
+              <AppText style={styles.emptyText}>No invoices awaiting action.</AppText>
             )}
             {filteredToAction.map((inv) => (
               <ApprovalCard
@@ -628,7 +629,7 @@ export function OwnerMySpace({
             />
             <FilterChips filter={allFilter} onChange={setAllFilter} />
             {filteredAllInvoices.length === 0 && (
-              <Text style={styles.emptyText}>No invoices yet.</Text>
+              <AppText style={styles.emptyText}>No invoices yet.</AppText>
             )}
             {filteredAllInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
@@ -641,27 +642,27 @@ export function OwnerMySpace({
                 >
                   <View style={styles.invoiceRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                      <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                       {inv.invoiceNumber ? (
                         <View style={styles.invoiceNumPill}>
-                          <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                          <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                         </View>
                       ) : null}
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                      <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                         {invoiceStatusLabel(inv.status)}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                   <View style={styles.invoiceRow}>
                     {inv.amount != null && (
-                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                      <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
                     )}
                     {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -683,7 +684,7 @@ export function OwnerMySpace({
   );
 }
 
-/* ─── Financier / VIP — read-only, full amounts ─── */
+/* â”€â”€â”€ Financier / VIP â€” read-only, full amounts â”€â”€â”€ */
 export function FinancierMySpace({
   invoices,
   onTapInvoice,
@@ -708,7 +709,9 @@ export function FinancierMySpace({
         canSeeAmounts={true}
       />
       <FilterChips filter={filter} onChange={setFilter} />
-      {filteredInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {filteredInvoices.length === 0 && (
+        <AppText style={styles.emptyText}>No invoices yet.</AppText>
+      )}
       {filteredInvoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
@@ -720,27 +723,27 @@ export function FinancierMySpace({
           >
             <View style={styles.invoiceRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                 {inv.invoiceNumber ? (
                   <View style={styles.invoiceNumPill}>
-                    <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                    <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                   </View>
                 ) : null}
               </View>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                   {invoiceStatusLabel(inv.status)}
-                </Text>
+                </AppText>
               </View>
             </View>
             <View style={styles.invoiceRow}>
               {inv.amount != null && (
-                <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
               )}
               {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                   {inv.daysOverdue} days overdue
-                </Text>
+                </AppText>
               )}
             </View>
           </TouchableOpacity>
@@ -750,7 +753,7 @@ export function FinancierMySpace({
   );
 }
 
-/* ─── Observer — read-only, no amounts ─── */
+/* â”€â”€â”€ Observer â€” read-only, no amounts â”€â”€â”€ */
 export function ObserverMySpace({
   invoices,
   onTapInvoice,
@@ -772,21 +775,23 @@ export function ObserverMySpace({
       <View style={[styles.statRow, { flexDirection: "column" }]}>
         {(
           [
-            ["Total", activeCount, Colors.textPrimary],
+            ["Total", activeCount, Colors.black],
             ["Overdue", overdueCount, Colors.red],
             ["Paid", paidCount, Colors.green],
           ] as const
         ).map(([label, count, color]) => (
           <View key={label} style={[styles.statBox, { flex: 0 }]}>
-            <Text style={styles.statBoxLabel}>{label}</Text>
-            <Text style={[styles.statBoxNum, { color }]}>{count}</Text>
-            <Text style={styles.statBoxSub}>invoices</Text>
+            <AppText style={styles.statBoxLabel}>{label}</AppText>
+            <AppText style={[styles.statBoxNum, { color }]}>{count}</AppText>
+            <AppText style={styles.statBoxSub}>invoices</AppText>
           </View>
         ))}
       </View>
 
       <FilterChips filter={filter} onChange={setFilter} />
-      {filteredInvoices.length === 0 && <Text style={styles.emptyText}>No invoices yet.</Text>}
+      {filteredInvoices.length === 0 && (
+        <AppText style={styles.emptyText}>No invoices yet.</AppText>
+      )}
       {filteredInvoices.map((inv) => {
         const calStatus = apiStatusToCalStatus(inv);
         return (
@@ -798,27 +803,27 @@ export function ObserverMySpace({
           >
             <View style={styles.invoiceRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                 {inv.invoiceNumber ? (
                   <View style={styles.invoiceNumPill}>
-                    <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                    <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                   </View>
                 ) : null}
               </View>
               <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                <AppText style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
                   {invoiceStatusLabel(inv.status)}
-                </Text>
+                </AppText>
               </View>
             </View>
             <View style={styles.invoiceRow}>
-              <Text style={styles.invoiceDate}>
+              <AppText style={styles.invoiceDate}>
                 Due: {new Date(inv.dateDue).toLocaleDateString("en-AU")}
-              </Text>
+              </AppText>
               {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                   {inv.daysOverdue} days overdue
-                </Text>
+                </AppText>
               )}
             </View>
           </TouchableOpacity>
@@ -828,7 +833,7 @@ export function ObserverMySpace({
   );
 }
 
-/* ─── Shared filter chips ─── */
+/* â”€â”€â”€ Shared filter chips â”€â”€â”€ */
 type FilterStatus = "All" | "Overdue" | "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
 const FILTER_STATUSES: FilterStatus[] = [
   "All",
@@ -875,16 +880,16 @@ function FilterChips({
           style={[styles.filterChip, filter === f && styles.filterChipActive]}
           onPress={() => onChange(f)}
         >
-          <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+          <AppText style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
             {f}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       ))}
     </ScrollView>
   );
 }
 
-/* ─── Shared 3-box stats row for All Invoices views ─── */
+/* â”€â”€â”€ Shared 3-box stats row for All Invoices views â”€â”€â”€ */
 function AllInvoicesStats({
   allActive,
   allPending,
@@ -914,37 +919,37 @@ function AllInvoicesStats({
   return (
     <View style={[styles.statRow, { flexDirection: "column" }]}>
       <View style={[styles.statBox, { flex: 0 }]}>
-        <Text style={styles.statBoxLabel}>Total</Text>
-        <Text style={[styles.statBoxNum, { color: Colors.textPrimary, fontSize: 16 }]}>
-          {val(allActive, Colors.textPrimary).text}
-        </Text>
+        <AppText style={styles.statBoxLabel}>Total</AppText>
+        <AppText style={[styles.statBoxNum, { color: Colors.black, fontSize: 16 }]}>
+          {val(allActive, Colors.black).text}
+        </AppText>
         {canSeeAmounts && (
-          <Text style={styles.statBoxSub}>
+          <AppText style={styles.statBoxSub}>
             {allActive.length} invoice{allActive.length !== 1 ? "s" : ""}
-          </Text>
+          </AppText>
         )}
       </View>
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={[styles.statBox, { flex: 1 }]}>
-          <Text style={styles.statBoxLabel}>Paid</Text>
-          <Text style={[styles.statBoxNum, { color: paidVal.color, fontSize: 16 }]}>
+          <AppText style={styles.statBoxLabel}>Paid</AppText>
+          <AppText style={[styles.statBoxNum, { color: paidVal.color, fontSize: 16 }]}>
             {paidVal.text}
-          </Text>
+          </AppText>
           {canSeeAmounts && (
-            <Text style={styles.statBoxSub}>
+            <AppText style={styles.statBoxSub}>
               {allPaid.length} invoice{allPaid.length !== 1 ? "s" : ""}
-            </Text>
+            </AppText>
           )}
         </View>
         <View style={[styles.statBox, { flex: 1 }]}>
-          <Text style={styles.statBoxLabel}>Outstanding</Text>
-          <Text style={[styles.statBoxNum, { color: outstandingVal.color, fontSize: 16 }]}>
+          <AppText style={styles.statBoxLabel}>Outstanding</AppText>
+          <AppText style={[styles.statBoxNum, { color: outstandingVal.color, fontSize: 16 }]}>
             {outstandingVal.text}
-          </Text>
+          </AppText>
           {canSeeAmounts && (
-            <Text style={styles.statBoxSub}>
+            <AppText style={styles.statBoxSub}>
               {outstanding.length} invoice{outstanding.length !== 1 ? "s" : ""}
-            </Text>
+            </AppText>
           )}
         </View>
       </View>

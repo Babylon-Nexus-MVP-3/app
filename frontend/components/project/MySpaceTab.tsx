@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { AppText } from "@/components/AppText";
 import { ApiInvoice, InvoiceActionType } from "./types";
 import { displayRole } from "./helpers";
 import { styles } from "./styles";
@@ -86,8 +87,8 @@ export function MySpaceTab({
   else
     content = (
       <View style={styles.placeholder}>
-        <Text style={styles.placeholderText}>My Space</Text>
-        <Text style={styles.placeholderSub}>View for {displayRole(role)} — coming soon</Text>
+        <AppText style={styles.placeholderText}>My Space</AppText>
+        <AppText style={styles.placeholderSub}>View for {displayRole(role)} — coming soon</AppText>
       </View>
     );
 

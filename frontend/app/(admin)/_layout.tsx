@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { useAuth } from "@/context/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,17 +26,17 @@ export default function AdminLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.navy,
+          backgroundColor: Colors.vouchGreen,
           borderTopWidth: 0,
           paddingTop: 8,
           paddingBottom: bottom,
           height: 60 + bottom,
         },
-        tabBarActiveTintColor: Colors.gold,
-        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarActiveTintColor: Colors.white,
+        tabBarInactiveTintColor: "rgba(255,255,255,0.45)",
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          fontFamily: Fonts.semiBold,
         },
       }}
     >
@@ -70,8 +71,11 @@ export default function AdminLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="project/[id]" options={{ href: null }} />
-      <Tabs.Screen name="approval/[id]" options={{ href: null }} />
+      <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
+      <Tabs.Screen
+        name="approval/[id]"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
     </Tabs>
   );
 }

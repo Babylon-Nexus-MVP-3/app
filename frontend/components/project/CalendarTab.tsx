@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { Colors } from "@/constants/colors";
+import { AppText } from "@/components/AppText";
 import { ApiInvoice, InvoiceActionType, InvoiceStatus, SEVERITY } from "./types";
 import {
   apiStatusToCalStatus,
@@ -34,7 +35,6 @@ export function CalendarTab({
   const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
   const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
 
-  // Build worst-status dot per date (YYYY-MM-DD key)
   const dayStatusMap = new Map<string, InvoiceStatus>();
   for (const inv of invoices.filter((i) => i.status !== "Rejected")) {
     const dateStr = inv.dateDue.split("T")[0];
@@ -45,7 +45,6 @@ export function CalendarTab({
     }
   }
 
-  // Build markedDates — priority: selected > status color > today ring
   const allMarkedDates = new Set([
     ...dayStatusMap.keys(),
     todayStr,
@@ -62,7 +61,7 @@ export function CalendarTab({
     let textColor: string;
 
     if (isSelected) {
-      container = { ...container, backgroundColor: Colors.gold };
+      container = { ...container, backgroundColor: Colors.vouchGreen };
       textColor = Colors.white;
     } else if (calStatus) {
       container = { ...container, backgroundColor: statusColor(calStatus) };
@@ -70,13 +69,13 @@ export function CalendarTab({
     } else if (isToday) {
       container = {
         ...container,
-        backgroundColor: Colors.offWhite,
+        backgroundColor: Colors.grey100,
         borderWidth: 2,
-        borderColor: Colors.navy,
+        borderColor: Colors.vouchGreen,
       };
-      textColor = Colors.textPrimary;
+      textColor = Colors.black;
     } else {
-      continue; // no marking needed
+      continue;
     }
 
     markedDates[dateStr] = {
@@ -87,7 +86,6 @@ export function CalendarTab({
     };
   }
 
-  // Invoices due on the selected date
   const selectedInvoices = selectedDate
     ? invoices.filter((i) => i.status !== "Rejected" && i.dateDue.split("T")[0] === selectedDate)
     : [];
@@ -110,13 +108,13 @@ export function CalendarTab({
           setSelectedDate(day.dateString === selectedDate ? null : day.dateString)
         }
         theme={{
-          backgroundColor: Colors.offWhite,
-          calendarBackground: Colors.offWhite,
-          textSectionTitleColor: Colors.textSecondary,
-          dayTextColor: Colors.textPrimary,
+          backgroundColor: Colors.grey100,
+          calendarBackground: Colors.grey100,
+          textSectionTitleColor: Colors.grey500,
+          dayTextColor: Colors.black,
           textDisabledColor: "rgba(0,0,0,0.2)",
-          arrowColor: Colors.navy,
-          monthTextColor: Colors.textPrimary,
+          arrowColor: Colors.vouchGreen,
+          monthTextColor: Colors.black,
           textMonthFontWeight: "bold",
           textMonthFontSize: 16,
           textDayFontSize: 13,
@@ -124,22 +122,20 @@ export function CalendarTab({
         style={styles.calendarWidget}
       />
 
-      {/* Legend */}
       <View style={styles.legend}>
         {(["green", "issued", "grey", "amber", "red"] as InvoiceStatus[]).map((s) => (
           <View key={s} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: statusColor(s) }]} />
-            <Text style={styles.legendLabel}>{statusLabel(s)}</Text>
+            <AppText style={styles.legendLabel}>{statusLabel(s)}</AppText>
           </View>
         ))}
       </View>
 
-      {/* Selected date invoice list */}
       {selectedDate && (
         <>
-          <Text style={styles.sectionLabel}>{selectedDateLabel}</Text>
+          <AppText style={styles.sectionLabel}>{selectedDateLabel}</AppText>
           {selectedInvoices.length === 0 ? (
-            <Text style={styles.emptyText}>No invoices due on this date.</Text>
+            <AppText style={styles.emptyText}>No invoices due on this date.</AppText>
           ) : (
             selectedInvoices.map((inv) => {
               const calStatus = apiStatusToCalStatus(inv);
@@ -152,29 +148,31 @@ export function CalendarTab({
                   <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
                     <View style={styles.invoiceRow}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.invoiceName}>{inv.submittingParty}</Text>
+                        <AppText style={styles.invoiceName}>{inv.submittingParty}</AppText>
                         {inv.invoiceNumber ? (
                           <View style={styles.invoiceNumPill}>
-                            <Text style={styles.invoiceNumText}>{inv.invoiceNumber}</Text>
+                            <AppText style={styles.invoiceNumText}>{inv.invoiceNumber}</AppText>
                           </View>
                         ) : null}
                       </View>
                       <View style={[styles.statusBadge, { backgroundColor: statusBg(calStatus) }]}>
-                        <Text style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}>
+                        <AppText
+                          style={[styles.statusBadgeText, { color: statusColor(calStatus) }]}
+                        >
                           {invoiceStatusLabel(inv.status)}
-                        </Text>
+                        </AppText>
                       </View>
                     </View>
-                    <Text style={styles.invoiceDate} numberOfLines={1}>
+                    <AppText style={styles.invoiceDate} numberOfLines={1}>
                       {inv.description}
-                    </Text>
+                    </AppText>
                     {canViewAmount(role, inv, userId) && inv.amount != null && (
-                      <Text style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</Text>
+                      <AppText style={styles.invoiceAmt}>${inv.amount.toLocaleString()}</AppText>
                     )}
                     {inv.daysOverdue > 0 && inv.status !== "Rejected" && (
-                      <Text style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
+                      <AppText style={[styles.invoiceDays, { color: statusColor(calStatus) }]}>
                         {inv.daysOverdue} days overdue
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                 </TouchableOpacity>

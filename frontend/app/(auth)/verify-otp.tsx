@@ -1,18 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
+import { AppText } from "@/components/AppText";
 
 const CODE_LENGTH = 6;
 
@@ -146,11 +141,11 @@ export default function VerifyOtp() {
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Enter the code</Text>
+        <AppText style={styles.title}>Enter the code</AppText>
         <View style={styles.sentRow}>
-          <Text style={styles.sentText}>Sent to {displayMobile} · </Text>
+          <AppText style={styles.sentText}>Sent to {displayMobile} · </AppText>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <Text style={styles.editLink}>Edit</Text>
+            <AppText style={styles.editLink}>Edit</AppText>
           </TouchableOpacity>
         </View>
 
@@ -176,19 +171,19 @@ export default function VerifyOtp() {
 
         {/* Resend */}
         <View style={styles.resendRow}>
-          <Text style={styles.resendBase}>{"Didn't get a code?  "}</Text>
+          <AppText style={styles.resendBase}>{"Didn't get a code?  "}</AppText>
           {canResend ? (
             <TouchableOpacity onPress={handleResend} hitSlop={8}>
-              <Text style={styles.resendLink}>Resend</Text>
+              <AppText style={styles.resendLink}>Resend</AppText>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.resendTimer}>
+            <AppText style={styles.resendTimer}>
               Resend in 0:{countdown.toString().padStart(2, "0")}
-            </Text>
+            </AppText>
           )}
         </View>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
         {/* Verify button */}
         <TouchableOpacity
@@ -200,7 +195,7 @@ export default function VerifyOtp() {
           {loading ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.primaryButtonText}>Verify</Text>
+            <AppText style={styles.primaryButtonText}>Verify</AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -236,7 +231,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: "700",
+    fontFamily: Fonts.extraBold,
     color: Colors.black,
     marginBottom: 8,
   },
@@ -247,12 +242,13 @@ const styles = StyleSheet.create({
   },
   sentText: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   editLink: {
     fontSize: 14,
     color: Colors.vouchGreen,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
   boxRow: {
     flexDirection: "row",
@@ -266,7 +262,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.grey300,
     borderRadius: 12,
     fontSize: 28,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
@@ -280,19 +276,22 @@ const styles = StyleSheet.create({
   },
   resendBase: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   resendLink: {
     fontSize: 14,
     color: Colors.vouchGreen,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
   resendTimer: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   errorText: {
     fontSize: 13,
+    fontFamily: Fonts.semiBold,
     color: Colors.red,
     textAlign: "center",
     marginBottom: 16,
@@ -311,6 +310,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: Colors.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 });

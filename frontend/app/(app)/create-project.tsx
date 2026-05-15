@@ -7,18 +7,20 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
+import { authStyles } from "@/constants/authStyles";
+import { appStyles } from "@/constants/appStyles";
+import { AppText } from "@/components/AppText";
 
 const ROLES = [
   "Owner",
@@ -37,13 +39,10 @@ const ROLE_MAP: Record<string, string> = {
 };
 
 type Invitee = { email: string; role: string };
-
-// Tracks which role picker is open: "creator" or an invitee index
 type RoleTarget = "creator" | number;
 
 export default function CreateProject() {
   const { user, fetchWithAuth } = useAuth();
-  const insets = useSafeAreaInsets();
 
   useFocusEffect(
     useCallback(() => {
@@ -155,247 +154,256 @@ export default function CreateProject() {
 
   if (submitted) {
     return (
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
-        <View style={[styles.successContainer, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
-          </TouchableOpacity>
-
-          <View style={styles.successContent}>
-            <View style={styles.checkCircle}>
-              <Ionicons name="checkmark" size={36} color={Colors.green} />
+      <SafeAreaView style={authStyles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.successScreen}>
+          <View style={styles.successCenter}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark" size={40} color={Colors.white} />
             </View>
-            <Text style={styles.successTitle}>Project Submitted</Text>
-            <Text style={styles.successSubtitle}>Awaiting Babylon Nexus admin approval.</Text>
-            <TouchableOpacity
-              style={styles.backToProjectsBtn}
-              onPress={() => router.replace("/(app)/projects")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.backToProjectsText}>Back to Projects</Text>
-            </TouchableOpacity>
+            <AppText style={styles.successTitle}>Project Submitted</AppText>
+            <AppText style={styles.successSubtitle}>
+              {"Awaiting VouchPay admin approval. You'll be notified once it's reviewed."}
+            </AppText>
           </View>
+          <TouchableOpacity
+            onPress={() => router.replace("/(app)/projects")}
+            style={authStyles.primaryButton}
+            activeOpacity={0.85}
+          >
+            <AppText style={authStyles.primaryButtonText}>Back to Projects</AppText>
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <View style={appStyles.safeArea}>
+      <View style={appStyles.header}>
+        <SafeAreaView edges={["top"]}>
+          <View style={appStyles.headerInner}>
+            <TouchableOpacity
+              onPress={() => router.replace("/(app)/projects" as any)}
+              style={appStyles.headerIconBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Ionicons name="arrow-back" size={20} color={Colors.white} />
+            </TouchableOpacity>
+            <AppText style={appStyles.headerTitle}>New Project</AppText>
+            <View style={{ width: 36 }} />
+          </View>
+        </SafeAreaView>
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={authStyles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={[styles.inner, { paddingTop: insets.top + 16 }]}
+          contentContainerStyle={authStyles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Create New Project</Text>
-          <Text style={styles.subtitle}>Submit a project for admin approval</Text>
-
           {/* ── Project details ── */}
-          <Text style={styles.label}>Project Name</Text>
+          <AppText style={authStyles.fieldLabel}>PROJECT NAME</AppText>
           <TextInput
-            style={styles.input}
+            style={authStyles.textInput}
             value={name}
             onChangeText={setName}
             placeholder="e.g. Strathfield Apartments"
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={Colors.grey300}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Project Address</Text>
+          <AppText style={authStyles.fieldLabel}>PROJECT ADDRESS</AppText>
           <TextInput
-            style={styles.input}
+            style={authStyles.textInput}
             value={address}
             onChangeText={setAddress}
             placeholder="e.g. 24 Albert Rd, Strathfield NSW"
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={Colors.grey300}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Council</Text>
+          <AppText style={authStyles.fieldLabel}>COUNCIL</AppText>
           <TextInput
-            style={styles.input}
+            style={authStyles.textInput}
             value={council}
             onChangeText={setCouncil}
             placeholder="e.g. Strathfield Council"
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={Colors.grey300}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Is this project DA approved?</Text>
-          <View style={styles.optionRow}>
+          <AppText style={authStyles.fieldLabel}>DA APPROVED?</AppText>
+          <View style={[appStyles.optionRow, styles.chipRow]}>
             {(["yes", "no"] as const).map((val) => (
               <TouchableOpacity
                 key={val}
-                style={[styles.optionBtn, daApproved === val && styles.optionBtnActive]}
+                style={[appStyles.optionChip, daApproved === val && appStyles.optionChipActive]}
                 onPress={() => {
                   setDaApproved(val);
                   if (val === "no") setDaNumber("");
                 }}
                 activeOpacity={0.75}
               >
-                <Text
-                  style={[styles.optionBtnText, daApproved === val && styles.optionBtnTextActive]}
+                <AppText
+                  style={[
+                    appStyles.optionChipText,
+                    daApproved === val && appStyles.optionChipTextActive,
+                  ]}
                 >
                   {val === "yes" ? "Yes" : "No"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
 
           {daApproved === "yes" && (
             <>
-              <Text style={styles.label}>
-                DA Number <Text style={styles.optionalLabel}>(optional)</Text>
-              </Text>
+              <AppText style={authStyles.fieldLabel}>
+                DA NUMBER <AppText style={styles.optionalLabel}>(optional)</AppText>
+              </AppText>
               <TextInput
-                style={styles.input}
+                style={authStyles.textInput}
                 value={daNumber}
                 onChangeText={setDaNumber}
                 placeholder="e.g. DA-2026-1001"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor={Colors.grey300}
                 returnKeyType="next"
               />
             </>
           )}
 
-          <Text style={styles.label}>Your Role on This Project</Text>
+          <AppText style={authStyles.fieldLabel}>YOUR ROLE</AppText>
           <TouchableOpacity
-            style={styles.input}
+            style={styles.roleSelector}
             onPress={() => setRolePickerTarget("creator")}
             activeOpacity={0.8}
           >
-            <Text style={role ? styles.roleSelected : styles.rolePlaceholder}>
+            <AppText style={role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}>
               {role || "Select role..."}
-            </Text>
+            </AppText>
+            <Ionicons name="chevron-down" size={18} color={Colors.grey500} />
           </TouchableOpacity>
 
           {/* ── Invite team members ── */}
           <View style={styles.sectionDivider} />
-          <Text style={styles.sectionTitle}>Invite Team Members</Text>
-          <Text style={styles.sectionHint}>
-            {"Add others to this project. They'll receive an invite code once approved."}
-          </Text>
+          <AppText style={styles.sectionTitle}>Invite Team Members</AppText>
+          <AppText style={styles.sectionHint}>
+            {"Add others to this project. They’ll receive an invite code once approved."}
+          </AppText>
 
           {invitees.map((inv, index) => (
             <View key={index} style={styles.inviteeCard}>
               <View style={styles.inviteeCardHeader}>
-                <Text style={styles.inviteeCardLabel}>Person {index + 1}</Text>
+                <AppText style={styles.inviteeCardLabel}>Person {index + 1}</AppText>
                 <TouchableOpacity onPress={() => removeInvitee(index)} hitSlop={8}>
-                  <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.35)" />
+                  <Ionicons name="close-circle" size={20} color={Colors.grey300} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.inviteeFieldLabel}>Email</Text>
+              <AppText style={styles.inviteeFieldLabel}>EMAIL</AppText>
               <TextInput
                 style={styles.inviteeInput}
                 value={inv.email}
                 onChangeText={(t) => updateInviteeEmail(index, t)}
                 placeholder="their@email.com"
-                placeholderTextColor="rgba(255,255,255,0.25)"
+                placeholderTextColor={Colors.grey300}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
               />
 
-              <Text style={styles.inviteeFieldLabel}>Role</Text>
+              <AppText style={styles.inviteeFieldLabel}>ROLE</AppText>
               <TouchableOpacity
-                style={styles.inviteeInput}
+                style={styles.inviteeRoleSelector}
                 onPress={() => setRolePickerTarget(index)}
                 activeOpacity={0.8}
               >
-                <Text style={inv.role ? styles.roleSelected : styles.rolePlaceholder}>
+                <AppText
+                  style={inv.role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}
+                >
                   {inv.role || "Select role..."}
-                </Text>
+                </AppText>
+                <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
               </TouchableOpacity>
             </View>
           ))}
 
           <TouchableOpacity style={styles.addInviteeBtn} onPress={addInvitee} activeOpacity={0.75}>
-            <Ionicons name="add-circle-outline" size={18} color={Colors.gold} />
-            <Text style={styles.addInviteeBtnText}>Add Team Member</Text>
+            <Ionicons name="add-circle-outline" size={18} color={Colors.vouchGreen} />
+            <AppText style={styles.addInviteeBtnText}>Add Team Member</AppText>
           </TouchableOpacity>
 
           {/* ── Compliance ── */}
           <View style={styles.sectionDivider} />
-          <Text style={styles.sectionTitle}>Compliance</Text>
+          <AppText style={styles.sectionTitle}>Compliance</AppText>
 
-          <Text style={styles.label}>Do you hold public liability insurance?</Text>
-          <View style={styles.optionRow}>
+          <AppText style={authStyles.fieldLabel}>PUBLIC LIABILITY INSURANCE?</AppText>
+          <View style={[appStyles.optionRow, styles.chipRow]}>
             {(["yes", "no", "na"] as const).map((val) => (
               <TouchableOpacity
                 key={val}
-                style={[styles.optionBtn, hasInsurance === val && styles.optionBtnActive]}
+                style={[appStyles.optionChip, hasInsurance === val && appStyles.optionChipActive]}
                 onPress={() => setHasInsurance(val)}
                 activeOpacity={0.75}
               >
-                <Text
-                  style={[styles.optionBtnText, hasInsurance === val && styles.optionBtnTextActive]}
+                <AppText
+                  style={[
+                    appStyles.optionChipText,
+                    hasInsurance === val && appStyles.optionChipTextActive,
+                  ]}
                 >
                   {val === "yes" ? "Yes" : val === "no" ? "No" : "N/A"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={styles.label}>{"Do you hold a contractor's licence?"}</Text>
-          <View style={styles.optionRow}>
+          <AppText style={authStyles.fieldLabel}>{"CONTRACTOR'S LICENCE?"}</AppText>
+          <View style={[appStyles.optionRow, styles.chipRow]}>
             {(["yes", "no", "na"] as const).map((val) => (
               <TouchableOpacity
                 key={val}
-                style={[styles.optionBtn, hasLicence === val && styles.optionBtnActive]}
+                style={[appStyles.optionChip, hasLicence === val && appStyles.optionChipActive]}
                 onPress={() => setHasLicence(val)}
                 activeOpacity={0.75}
               >
-                <Text
-                  style={[styles.optionBtnText, hasLicence === val && styles.optionBtnTextActive]}
+                <AppText
+                  style={[
+                    appStyles.optionChipText,
+                    hasLicence === val && appStyles.optionChipTextActive,
+                  ]}
                 >
                   {val === "yes" ? "Yes" : val === "no" ? "No" : "N/A"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <AppText style={authStyles.errorText}>{error}</AppText>}
 
           <TouchableOpacity
             style={[
-              styles.submitBtn,
-              (!name || !address || !council || !role) && styles.submitBtnDisabled,
+              authStyles.primaryButton,
+              (!name || !address || !council || !role) && authStyles.primaryButtonDisabled,
             ]}
             onPress={handleSubmit}
             disabled={loading || !name || !address || !council || !role}
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.submitText}>Submit for Approval</Text>
+              <AppText style={authStyles.primaryButtonText}>Submit for Approval</AppText>
             )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Shared role picker modal */}
+      {/* Role picker modal */}
       <Modal visible={rolePickerTarget !== null} transparent animationType="slide">
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -403,7 +411,7 @@ export default function CreateProject() {
           onPress={() => setRolePickerTarget(null)}
         >
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Select Role</Text>
+            <AppText style={styles.modalTitle}>Select Role</AppText>
             {ROLES.map((r) => {
               const active = getActiveRoleValue();
               return (
@@ -412,110 +420,82 @@ export default function CreateProject() {
                   style={styles.roleOption}
                   onPress={() => handleRoleSelect(r)}
                 >
-                  <Text style={[styles.roleOptionText, active === r && styles.roleOptionSelected]}>
+                  <AppText
+                    style={[styles.roleOptionText, active === r && styles.roleOptionSelected]}
+                  >
                     {r}
-                  </Text>
-                  {active === r && <Ionicons name="checkmark" size={18} color={Colors.gold} />}
+                  </AppText>
+                  {active === r && (
+                    <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
+                  )}
                 </TouchableOpacity>
               );
             })}
           </View>
         </TouchableOpacity>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
+  chipRow: {
+    marginBottom: 20,
   },
-  keyboardView: {
-    flex: 1,
+  optionalLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    textTransform: "none",
+    letterSpacing: 0,
   },
-  inner: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 24,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 28,
-    color: Colors.gold,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.white,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 36,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.goldLight,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  input: {
+  roleSelector: {
     height: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 12,
     paddingHorizontal: 16,
-    fontSize: 16,
     marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: Colors.white,
-    justifyContent: "center",
+    backgroundColor: Colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  rolePlaceholder: {
+  roleSelectorText: {
     fontSize: 16,
-    color: "rgba(255,255,255,0.3)",
+    fontFamily: Fonts.regular,
+    color: Colors.black,
   },
-  roleSelected: {
+  roleSelectorPlaceholder: {
     fontSize: 16,
-    color: Colors.white,
+    fontFamily: Fonts.regular,
+    color: Colors.grey300,
   },
-
-  // Team members section
   sectionDivider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: Colors.grey300,
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.white,
+    fontSize: 17,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
     marginBottom: 6,
   },
   sectionHint: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.4)",
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
     marginBottom: 20,
     lineHeight: 18,
   },
   inviteeCard: {
     borderWidth: 1,
-    borderColor: "rgba(201,168,76,0.2)",
+    borderColor: Colors.grey300,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: Colors.white,
   },
   inviteeCardHeader: {
     flexDirection: "row",
@@ -524,38 +504,49 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   inviteeCardLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.gold,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.vouchGreen,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   inviteeFieldLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.45)",
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 6,
   },
   inviteeInput: {
     height: 46,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: Colors.grey300,
     borderRadius: 10,
     paddingHorizontal: 14,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     marginBottom: 14,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    color: Colors.white,
-    justifyContent: "center",
+    backgroundColor: Colors.white,
+    color: Colors.black,
+  },
+  inviteeRoleSelector: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.white,
   },
   addInviteeBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.4)",
+    borderColor: Colors.vouchGreen,
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 16,
@@ -564,121 +555,53 @@ const styles = StyleSheet.create({
   },
   addInviteeBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: Colors.gold,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
-
-  optionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
-  },
-  optionBtn: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1.5,
-    borderColor: "rgba(201,168,76,0.25)",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  optionBtnActive: {
-    borderColor: Colors.gold,
-    backgroundColor: "rgba(201,168,76,0.15)",
-  },
-  optionBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.4)",
-  },
-  optionBtnTextActive: {
-    color: Colors.gold,
-  },
-  optionalLabel: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: "rgba(255,255,255,0.35)",
-    textTransform: "none",
-    letterSpacing: 0,
-  },
-  errorText: {
-    fontSize: 13,
-    color: Colors.red,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  submitBtn: {
-    height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  submitBtnDisabled: {
-    opacity: 0.4,
-  },
-  submitText: {
-    color: Colors.navy,
-    fontWeight: "700",
-    fontSize: 16,
-  },
-
   // Success screen
-  successContainer: {
+  successScreen: {
     flex: 1,
     paddingHorizontal: 24,
+    paddingBottom: 24,
+    justifyContent: "space-between",
   },
-  successContent: {
+  successCenter: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 60,
+    gap: 16,
   },
-  checkCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 18,
-    backgroundColor: "rgba(46,204,113,0.15)",
+  successIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.vouchGreen,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.white,
     marginBottom: 8,
   },
-  successSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 36,
+  successTitle: {
+    fontSize: 26,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
     textAlign: "center",
   },
-  backToProjectsBtn: {
-    height: 48,
-    paddingHorizontal: 32,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backToProjectsText: {
+  successSubtitle: {
     fontSize: 15,
-    fontWeight: "600",
-    color: Colors.gold,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    textAlign: "center",
+    lineHeight: 22,
+    paddingHorizontal: 16,
   },
-
-  // Role modal
+  // Role picker modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: Colors.navyLight,
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
@@ -687,8 +610,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: Colors.white,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
     marginBottom: 16,
   },
   roleOption: {
@@ -697,14 +620,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: Colors.grey100,
   },
   roleOptionText: {
     fontSize: 16,
-    color: "rgba(255,255,255,0.7)",
+    fontFamily: Fonts.regular,
+    color: Colors.black,
   },
   roleOptionSelected: {
-    color: Colors.gold,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
 });

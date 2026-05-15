@@ -86,7 +86,7 @@ export default function ChangePassword() {
             </AppText>
           </View>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace("/(app)/me" as any)}
             style={authStyles.primaryButton}
             activeOpacity={0.85}
           >
@@ -109,7 +109,7 @@ export default function ChangePassword() {
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace("/(app)/me" as any)}
             style={authStyles.backButton}
             hitSlop={HEADER_HIT_SLOP}
             accessibilityRole="button"
