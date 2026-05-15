@@ -6,13 +6,19 @@ import {
   loginUser,
   reactivateAccount,
   registerUser,
+  requestMobileOtp,
+  requestOtp,
+  resendOtp,
   resendResetCodeService,
   resendVerificationCode,
   resetPassword,
   savePushToken,
+  updateProfile,
   userChangePassword,
   userLogout,
   userVerifyEmail,
+  verifyMobileOtp,
+  verifyOtp,
   verifyResetCodeService,
 } from "../service/auth.service";
 
@@ -24,7 +30,7 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, mobile, abn, businessName } = req.body;
     if (
       !isNonEmptyString(firstName) ||
       !isNonEmptyString(lastName) ||
@@ -34,7 +40,15 @@ export async function register(req: Request, res: Response, next: NextFunction):
       res.status(400).json({ error: "All fields are required" });
       return;
     }
-    const result = await registerUser({ firstName, lastName, password, email });
+    const result = await registerUser({
+      firstName,
+      lastName,
+      password,
+      email,
+      mobile,
+      abn,
+      businessName,
+    });
     res.status(201).json(result);
   } catch (err) {
     next(err);
@@ -232,6 +246,93 @@ export const deleteUserAccount = async (req: Request, res: Response, next: NextF
     res.status(200).json(result);
   } catch (error) {
     next(error);
+  }
+};
+
+export const requestOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const { mobile, flow, abn, businessName, email, name } = req.body;
+  if (!isNonEmptyString(mobile)) {
+    return res.status(400).json({ error: "Mobile number is required" });
+  }
+  if (flow !== "signup" && flow !== "signin") {
+    return res.status(400).json({ error: "flow must be signup or signin" });
+  }
+
+  try {
+    const result = await requestOtp({ mobile, flow, abn, businessName, email, name });
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const { mobile, code, flow } = req.body;
+  if (!isNonEmptyString(mobile) || !isNonEmptyString(code)) {
+    return res.status(400).json({ error: "Mobile and code are required" });
+  }
+  if (flow !== "signup" && flow !== "signin") {
+    return res.status(400).json({ error: "flow must be signup or signin" });
+  }
+
+  try {
+    const result = await verifyOtp(mobile, code, flow);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const requestMobileOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  const { mobile } = req.body;
+  if (!isNonEmptyString(mobile)) {
+    return res.status(400).json({ error: "Mobile number is required" });
+  }
+  try {
+    const result = await requestMobileOtp(userId, mobile);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyMobileOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  const { mobile, code } = req.body;
+  if (!isNonEmptyString(mobile) || !isNonEmptyString(code)) {
+    return res.status(400).json({ error: "Mobile and code are required" });
+  }
+  try {
+    await verifyMobileOtp(userId, mobile, code);
+    res.status(200).json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resendOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const { mobile } = req.body;
+  if (!isNonEmptyString(mobile)) {
+    return res.status(400).json({ error: "Mobile number is required" });
+  }
+
+  try {
+    const result = await resendOtp(mobile);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateProfileHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.sub;
+  const { abn, businessName } = req.body;
+  try {
+    await updateProfile(userId, { abn, businessName });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    next(err);
   }
 };
 

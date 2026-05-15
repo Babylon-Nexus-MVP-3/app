@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useWizard, Reference } from "./WizardContext";
+import { useAuth } from "@/context/AuthContext";
 
 function refComplete(r: Reference) {
   return !!(r.name && r.company && r.mobile && r.relationship && r.project);
@@ -24,7 +25,9 @@ const STEPS = [
 type StepState = "done" | "active" | "locked";
 
 export default function GetVouchedIntro() {
+  const { user } = useAuth();
   const { step1, step2, references } = useWizard();
+  const mobileVerified = user?.mobileVerified ?? false;
 
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(
@@ -47,22 +50,27 @@ export default function GetVouchedIntro() {
   }
 
   function canTap(n: number) {
-    // Step 1 always reachable; step N reachable if all prior steps are done
+    if (!mobileVerified) return false;
     return n === 1 || completed.slice(0, n - 1).every(Boolean);
   }
 
-  // Find the next step the user should work on
   const nextIncompleteIndex = completed.indexOf(false);
   const hasStarted = step1Done || step2Done || step3Done;
   const allDone = step1Done && step2Done && step3Done;
 
-  const btnLabel = !hasStarted
-    ? "Start application"
-    : allDone
-      ? "All steps complete"
-      : `Continue to step ${nextIncompleteIndex + 1}`;
+  const btnLabel = !mobileVerified
+    ? "Verify mobile to continue"
+    : !hasStarted
+      ? "Start application"
+      : allDone
+        ? "All steps complete"
+        : `Continue to step ${nextIncompleteIndex + 1}`;
 
   function onPrimaryPress() {
+    if (!mobileVerified) {
+      router.push("/(app)/verify-mobile");
+      return;
+    }
     if (allDone) return;
     router.push(STEP_ROUTES[nextIncompleteIndex]);
   }
@@ -88,6 +96,41 @@ export default function GetVouchedIntro() {
         </Text>
 
         <View style={styles.stepList}>
+          {/* Mobile verification prerequisite */}
+          <TouchableOpacity
+            style={[styles.stepRow, mobileVerified && styles.stepRowDone]}
+            activeOpacity={mobileVerified ? 1 : 0.7}
+            onPress={() => !mobileVerified && router.push("/(app)/verify-mobile")}
+            disabled={mobileVerified}
+          >
+            <View
+              style={[
+                styles.stepCircle,
+                mobileVerified ? styles.stepCircleDone : styles.stepCircleActive,
+              ]}
+            >
+              {mobileVerified ? (
+                <Ionicons name="checkmark" size={16} color={Colors.white} />
+              ) : (
+                <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.stepTitle}>Verify mobile number</Text>
+              {mobileVerified ? (
+                <Text style={styles.stepDoneTag}>Completed</Text>
+              ) : (
+                <Text style={styles.prereqHint}>Required before you can apply</Text>
+              )}
+            </View>
+            {!mobileVerified && (
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+            )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
           {STEPS.map(({ n, title, time }) => {
             const state = stepState(n);
             const tappable = canTap(n);
@@ -147,10 +190,10 @@ export default function GetVouchedIntro() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, allDone && styles.primaryBtnDone]}
+          style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
           activeOpacity={0.85}
           onPress={onPrimaryPress}
-          disabled={allDone}
+          disabled={mobileVerified && allDone}
         >
           <Text style={styles.primaryBtnText}>{btnLabel}</Text>
         </TouchableOpacity>
@@ -235,6 +278,9 @@ const styles = StyleSheet.create({
   stepTitleLocked: { color: Colors.grey700 },
   stepDoneTag: { fontSize: 12, color: Colors.vouchGreen, marginTop: 2, fontWeight: "500" },
   stepTime: { fontSize: 13, color: Colors.grey500 },
+  stepRowDone: { backgroundColor: Colors.vouchGreenLight },
+  prereqHint: { fontSize: 12, color: Colors.amber, marginTop: 2, fontWeight: "500" },
+  divider: { height: 1, backgroundColor: Colors.grey300, marginVertical: 4 },
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 32,

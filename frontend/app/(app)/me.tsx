@@ -76,11 +76,70 @@ export default function MeScreen() {
         </View>
         <View style={styles.profileInfo}>
           <AppText style={styles.name}>{user?.name}</AppText>
-          <AppText style={styles.email}>{user?.email}</AppText>
+          {user?.email ? <AppText style={styles.email}>{user.email}</AppText> : null}
+          {user?.businessName ? (
+            <AppText style={styles.businessName}>{user.businessName}</AppText>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.menu}>
+        <TouchableOpacity
+          style={styles.menuRow}
+          onPress={() => router.push("/(app)/verify-mobile")}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="phone-portrait-outline" size={20} color={Colors.grey500} />
+          <View style={styles.menuRowContent}>
+            <AppText style={styles.menuRowText}>Mobile Number</AppText>
+            {user?.mobile ? (
+              <AppText style={styles.menuRowSub}>
+                {`0${user.mobile.replace(/^\+61/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3")}`}
+              </AppText>
+            ) : null}
+          </View>
+          {user?.mobileVerified ? (
+            <Ionicons name="checkmark-circle" size={20} color={Colors.vouchGreen} />
+          ) : (
+            <>
+              {!user?.mobileVerified && (
+                <View style={styles.verifyBadge}>
+                  <AppText style={styles.verifyBadgeText}>
+                    {user?.mobile ? "Verify" : "Add"}
+                  </AppText>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.menuDivider} />
+
+        <TouchableOpacity
+          style={styles.menuRow}
+          onPress={() => router.push("/(app)/add-abn")}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="business-outline" size={20} color={Colors.grey500} />
+          <View style={styles.menuRowContent}>
+            <AppText style={styles.menuRowText}>ABN</AppText>
+            {user?.abn ? (
+              <AppText style={styles.menuRowSub}>
+                {user.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, "$1 $2 $3 $4")}
+              </AppText>
+            ) : null}
+          </View>
+          {!user?.abn && (
+            <View style={styles.verifyBadge}>
+              <AppText style={styles.verifyBadgeText}>Add</AppText>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+        </TouchableOpacity>
+
+        <View style={styles.menuDivider} />
+
         <TouchableOpacity
           style={styles.menuRow}
           onPress={() => router.push("/(app)/change-password" as any)}
@@ -163,6 +222,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
+  businessName: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 2,
+  },
   menu: {
     marginHorizontal: 24,
     marginTop: 12,
@@ -171,6 +236,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.grey300,
   },
+  menuDivider: {
+    height: 1,
+    backgroundColor: Colors.grey300,
+    marginHorizontal: 16,
+  },
   menuRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -178,11 +248,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  menuRowText: {
+  menuRowContent: {
     flex: 1,
+  },
+  menuRowText: {
     fontSize: 15,
     fontFamily: Fonts.medium,
     color: Colors.black,
+  },
+  menuRowSub: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 2,
+  },
+  verifyBadge: {
+    backgroundColor: Colors.amberBg,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 4,
+  },
+  verifyBadgeText: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.amber,
   },
   footer: {
     position: "absolute",

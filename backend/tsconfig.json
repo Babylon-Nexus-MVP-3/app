@@ -11,6 +11,7 @@
     "module": "commonjs",
     "moduleResolution": "Node",
     "types": ["jest"],
+    "skipLibCheck": true,
   },
   "include": ["src/**/*"],
   "exclude": [

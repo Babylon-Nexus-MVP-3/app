@@ -3,4 +3,7 @@ export const config = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "fallback-refresh-for-tests",
   accessTokenTtlMinutes: Number(process.env.ACCESS_TOKEN_TTL_MINUTES) || 10,
   refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS) || 1,
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
+  twilioFromNumber: process.env.TWILIO_FROM_NUMBER || "",
 };

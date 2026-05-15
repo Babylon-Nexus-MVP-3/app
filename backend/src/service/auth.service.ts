@@ -15,6 +15,8 @@ import {
   hashCode,
   hashPassword,
 } from "../utils/authHelper";
+import { OtpModel } from "../models/otpModel";
+import { sendOtpSms } from "./sms.service";
 import {
   sendForgotPasswordEmail,
   sendOnboardingEmail,
@@ -30,12 +32,6 @@ export class AuthError extends Error {
     super(message);
     this.statusCode = statusCode;
   }
-}
-
-function isMongoDuplicateKeyError(error: unknown): error is { code: number } {
-  return (
-    typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
-  );
 }
 
 function isDocumentNotFoundError(error: unknown): boolean {
@@ -58,6 +54,9 @@ interface RegisterInput {
   lastName: string;
   password: string;
   email: string;
+  mobile?: string;
+  abn?: string;
+  businessName?: string;
 }
 
 interface RegisterResponse {
@@ -98,6 +97,9 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
     emailVerified: false,
     status: "Pending",
     accountExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete after 24h if unverified
+    ...(input.mobile ? { mobile: input.mobile } : {}),
+    ...(input.abn ? { abn: input.abn } : {}),
+    ...(input.businessName ? { businessName: input.businessName } : {}),
   });
 
   await newUser.save();
@@ -126,6 +128,35 @@ interface SafeUser {
   email: string;
   role: string;
   status: string;
+  mobile?: string;
+  mobileVerified?: boolean;
+  abn?: string;
+  businessName?: string;
+}
+
+function toSafeUser(user: User): SafeUser {
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email ?? "",
+    role: user.role,
+    status: user.status,
+    mobile: user.mobile,
+    mobileVerified: user.mobileVerified ?? false,
+    abn: user.abn,
+    businessName: user.businessName,
+  };
+}
+
+export async function updateProfile(
+  userId: string,
+  patch: { abn?: string; businessName?: string }
+): Promise<void> {
+  const update: Record<string, string> = {};
+  if (patch.abn) update.abn = patch.abn;
+  if (patch.businessName) update.businessName = patch.businessName;
+  if (!Object.keys(update).length) return;
+  await UserModel.findByIdAndUpdate(userId, { $set: update });
 }
 
 interface LoginResult {
@@ -138,7 +169,7 @@ function createAccessToken(user: User): string {
   const payload = {
     sub: user.id,
     role: user.role,
-    email: user.email,
+    email: user.email ?? "",
     name: user.name,
     status: user.status,
   } satisfies JwtPayload;
@@ -202,17 +233,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     payload: { email: user.email },
   });
 
-  return {
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  return { accessToken, refreshToken, user: toSafeUser(user) };
 }
 
 /*
@@ -359,18 +380,7 @@ export async function resetPassword(resetCode: string, newPassword: string) {
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
 
-  return {
-    success: true,
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  return { success: true, accessToken, refreshToken, user: toSafeUser(user) };
 }
 
 export async function userVerifyEmail(verificationCode: string) {
@@ -411,18 +421,7 @@ export async function userVerifyEmail(verificationCode: string) {
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
 
-  return {
-    success: true,
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  return { success: true, accessToken, refreshToken, user: toSafeUser(user) };
 }
 
 export async function resendVerificationCode(email: string) {
@@ -577,17 +576,7 @@ export async function reactivateAccount(email: string, password: string) {
     payload: { email: user.email },
   });
 
-  return {
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  return { accessToken, refreshToken, user: toSafeUser(user) };
 }
 
 export async function savePushToken(userId: string, pushToken: string) {
@@ -600,4 +589,162 @@ export async function savePushToken(userId: string, pushToken: string) {
   await user.save();
 
   return { success: true };
+}
+
+// Converts Australian mobile to E.164 format (+61XXXXXXXXX)
+function normalizeAuMobile(mobile: string): string {
+  const digits = mobile.replace(/\D/g, "");
+  if (digits.startsWith("61") && digits.length === 11) return `+${digits}`;
+  if (digits.startsWith("0") && digits.length === 10) return `+61${digits.slice(1)}`;
+  if (digits.length === 9) return `+61${digits}`;
+  return `+${digits}`;
+}
+
+async function generateAndStoreOtp(e164: string): Promise<string> {
+  await OtpModel.updateMany({ mobile: e164, used: false }, { $set: { used: true } });
+  const code = crypto.randomInt(100000, 1000000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await OtpModel.create({ mobile: e164, code: hashCode(code), expiresAt, used: false });
+  return code;
+}
+
+export interface RequestOtpInput {
+  mobile: string;
+  flow: "signup" | "signin";
+  abn?: string;
+  businessName?: string;
+  email?: string;
+  name?: string;
+}
+
+export async function requestOtp(input: RequestOtpInput): Promise<{ code?: string }> {
+  const e164 = normalizeAuMobile(input.mobile);
+
+  if (input.flow === "signup") {
+    if (!input.name?.trim()) throw new AuthError("Name is required");
+    if (!input.abn) throw new AuthError("ABN is required");
+
+    const existing = await UserModel.findOne({ mobile: e164 });
+    if (existing && existing.status === "Active") {
+      throw new AuthError("An account with this mobile already exists. Please sign in.", 409);
+    }
+
+    const updateData: Record<string, unknown> = {
+      name: input.name.trim(),
+      abn: input.abn,
+      businessName: input.businessName,
+      status: "Pending",
+      loginAttempts: 0,
+      accountLocked: false,
+    };
+    if (input.email) updateData.email = input.email.toLowerCase().trim();
+
+    await UserModel.findOneAndUpdate({ mobile: e164 }, { $set: updateData }, { upsert: true });
+  } else {
+    const user = await UserModel.findOne({ mobile: e164 });
+    if (!user) throw new AuthError("No account found for this number", 404);
+  }
+
+  const code = await generateAndStoreOtp(e164);
+
+  if (process.env.NODE_ENV !== "test") {
+    await sendOtpSms(e164, code).catch((err) => {
+      console.error(`Failed to send OTP SMS to ${e164}:`, err);
+    });
+  }
+
+  return process.env.NODE_ENV === "test" ? { code } : {};
+}
+
+export async function verifyOtp(
+  mobile: string,
+  code: string,
+  flow: "signup" | "signin"
+): Promise<LoginResult> {
+  const e164 = normalizeAuMobile(mobile);
+
+  const otp = await OtpModel.findOne({ mobile: e164, used: false, expiresAt: { $gt: new Date() } });
+  if (!otp) throw new AuthError("Invalid or expired code", 400);
+  if (otp.code !== hashCode(code)) throw new AuthError("Incorrect code. Please try again.", 400);
+
+  otp.used = true;
+  await otp.save();
+
+  const user = await UserModel.findOneAndUpdate(
+    { mobile: e164 },
+    { $set: { status: "Active", emailVerified: true } },
+    { new: true }
+  );
+  if (!user) throw new AuthError("Account not found", 404);
+
+  await EventModel.create({
+    type: flow === "signup" ? "UserRegistered" : "UserLoggedIn",
+    aggregateType: "User",
+    aggregateId: user.id,
+    userId: user._id.toString(),
+    payload: { mobile: e164 },
+  });
+
+  const accessToken = createAccessToken(user);
+  const refreshToken = await createRefreshToken(user);
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email ?? "",
+      role: user.role,
+      status: user.status,
+    } satisfies SafeUser,
+  };
+}
+
+export async function requestMobileOtp(
+  _userId: string,
+  mobile: string
+): Promise<{ code?: string }> {
+  const e164 = normalizeAuMobile(mobile);
+  const code = await generateAndStoreOtp(e164);
+
+  if (process.env.NODE_ENV !== "test") {
+    await sendOtpSms(e164, code).catch((err) => {
+      console.error(`Failed to send mobile OTP to ${e164}:`, err);
+    });
+  }
+
+  return process.env.NODE_ENV === "test" ? { code } : {};
+}
+
+export async function verifyMobileOtp(userId: string, mobile: string, code: string): Promise<void> {
+  const e164 = normalizeAuMobile(mobile);
+
+  const otp = await OtpModel.findOne({ mobile: e164, used: false, expiresAt: { $gt: new Date() } });
+  if (!otp) throw new AuthError("Invalid or expired code", 400);
+  if (otp.code !== hashCode(code)) throw new AuthError("Incorrect code. Please try again.", 400);
+
+  otp.used = true;
+  await otp.save();
+
+  await UserModel.findByIdAndUpdate(userId, {
+    $set: { mobile: e164, mobileVerified: true },
+  });
+}
+
+export async function resendOtp(mobile: string): Promise<{ code?: string }> {
+  const e164 = normalizeAuMobile(mobile);
+
+  const user = await UserModel.findOne({ mobile: e164 });
+  if (!user) throw new AuthError("No account found for this number", 404);
+
+  const code = await generateAndStoreOtp(e164);
+
+  if (process.env.NODE_ENV !== "test") {
+    await sendOtpSms(e164, code).catch((err) => {
+      console.error(`Failed to send OTP SMS to ${e164}:`, err);
+    });
+  }
+
+  return process.env.NODE_ENV === "test" ? { code } : {};
 }

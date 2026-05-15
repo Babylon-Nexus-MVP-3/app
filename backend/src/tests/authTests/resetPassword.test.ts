@@ -61,6 +61,7 @@ describe("POST /auth/reset-password", () => {
         name: expect.any(String),
         email: expect.any(String),
         status: expect.any(String),
+        mobileVerified: expect.any(Boolean),
       },
     });
   });

@@ -64,6 +64,7 @@ export default function VerifyScreen() {
   useEffect(() => {
     if (!abn) return;
     lookupAbn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abn]);
 
   async function lookupAbn() {

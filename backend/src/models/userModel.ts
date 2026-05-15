@@ -19,8 +19,14 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export interface User extends Document {
   id: string;
   name: string;
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
+  mobile?: string;
+  mobileVerified?: boolean;
+  abn?: string;
+  businessName?: string;
+  businessTrade?: string;
+  businessState?: string;
   status: "Pending" | "Active" | "Rejected";
   role: UserRole;
   loginAttempts: number;
@@ -43,11 +49,18 @@ const userSchema = new Schema<User>(
     name: { type: String, required: true },
     email: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
       lowercase: true,
     },
-    password: { type: String, required: true },
+    password: { type: String, required: false },
+    mobile: { type: String },
+    mobileVerified: { type: Boolean, default: false },
+    abn: { type: String },
+    businessName: { type: String },
+    businessTrade: { type: String },
+    businessState: { type: String },
     status: {
       type: String,
       required: true,
