@@ -1,4 +1,3 @@
-import { API_BASE_URL } from "@/constants/api";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,14 +5,16 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { Fonts } from "@/constants/fonts";
+import { API_BASE_URL } from "@/constants/api";
+import { AppText } from "@/components/AppText";
 
 export default function VerifyResetCode() {
   const { email } = useLocalSearchParams<{ email: string }>();
@@ -92,46 +93,40 @@ export default function VerifyResetCode() {
   }
 
   return (
-    <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.gradient}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.inner}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={HEADER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <Text style={styles.backArrow}>‹</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Enter reset code</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.title}>Enter reset code</AppText>
+          <AppText style={styles.subtitle}>
             {"A 6-digit code was sent to "}
-            <Text style={styles.emailHighlight}>{email}</Text>
+            <AppText style={styles.emailHighlight}>{email}</AppText>
             {"."}
-          </Text>
+          </AppText>
 
           <TextInput
             style={styles.codeInput}
             value={code}
             onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor="rgba(255,255,255,0.2)"
+            placeholderTextColor={Colors.grey300}
             keyboardType="number-pad"
             maxLength={6}
             autoFocus
           />
 
-          {resendMsg && <Text style={styles.resendMsg}>{resendMsg}</Text>}
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {resendMsg ? <AppText style={styles.resendMsg}>{resendMsg}</AppText> : null}
+          {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
           <TouchableOpacity
             style={[styles.button, (code.length < 6 || loading) && styles.buttonDisabled]}
@@ -140,120 +135,115 @@ export default function VerifyResetCode() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.navy} />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Verify Code</Text>
+              <AppText style={styles.buttonText}>Verify code</AppText>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleResend}
             disabled={resending || cooldown > 0}
-            style={styles.resendButton}
+            style={styles.resendBtn}
+            hitSlop={8}
           >
-            <Text style={styles.resendText}>
+            <AppText style={styles.resendText}>
               {resending
                 ? "Resending..."
                 : cooldown > 0
                   ? `Resend code (${cooldown}s)`
                   : "Resend code"}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  keyboardView: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
   inner: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
-  backButton: {
-    marginBottom: 32,
+  backBtn: {
     alignSelf: "flex-start",
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    direction: "ltr",
-  },
-  backArrow: {
-    fontSize: 24,
-    color: Colors.goldLight,
+    marginBottom: 24,
+    padding: 4,
   },
   title: {
     fontSize: 28,
-    fontWeight: "800",
-    color: Colors.white,
-    marginBottom: 10,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 32,
     lineHeight: 22,
-    marginBottom: 36,
   },
   emailHighlight: {
-    color: Colors.goldLight,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
   codeInput: {
     height: 72,
-    borderWidth: 1.5,
-    borderColor: Colors.gold + "40",
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
     paddingHorizontal: 24,
     fontSize: 36,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     letterSpacing: 10,
     marginBottom: 24,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    color: Colors.gold,
+    backgroundColor: Colors.white,
+    color: Colors.black,
     textAlign: "center",
   },
   resendMsg: {
     fontSize: 13,
-    color: Colors.goldLight,
+    fontFamily: Fonts.regular,
+    color: Colors.vouchGreen,
     textAlign: "center",
     marginBottom: 12,
   },
   errorText: {
     fontSize: 13,
+    fontFamily: Fonts.semiBold,
     color: Colors.red,
-    fontWeight: "600",
     textAlign: "center",
     marginBottom: 16,
   },
   button: {
     height: 54,
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: "700",
-    color: Colors.navy,
-    letterSpacing: 0.5,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
   },
-  resendButton: {
+  resendBtn: {
     alignItems: "center",
     paddingVertical: 8,
   },
   resendText: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.5)",
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
 });

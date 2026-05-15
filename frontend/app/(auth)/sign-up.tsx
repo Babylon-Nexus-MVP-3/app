@@ -147,7 +147,7 @@ export default function SignUp() {
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
-            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
           <AppText style={styles.title}>Create account.</AppText>
@@ -158,7 +158,7 @@ export default function SignUp() {
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Tom Cheng"
+            placeholder="Alex Smith"
             placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             returnKeyType="next"
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: Colors.grey500,
+    color: Colors.black,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
