@@ -47,18 +47,15 @@ export default function Index() {
           onPress={() => router.push("/(auth)/sign-up")}
           activeOpacity={0.85}
         >
-          <AppText style={styles.signUpText}>Sign up — free</AppText>
+          <AppText style={styles.signUpText}>Sign up</AppText>
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={styles.signInButton}
           onPress={() => router.push("/(auth)/sign-in")}
-          style={styles.signInWrapper}
-          activeOpacity={0.7}
+          activeOpacity={0.85}
         >
-          <AppText style={styles.signInText}>
-            {"Already on Vouch? "}
-            <AppText style={styles.signInLink}>Sign in</AppText>
-          </AppText>
+          <AppText style={styles.signInButtonText}>Sign in</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -75,17 +72,17 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   wordmark: {
-    fontSize: 20,
+    fontSize: 28,
     fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
     letterSpacing: 1,
   },
   tagline: {
-    fontSize: 11,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.grey700,
     letterSpacing: 0.5,
-    marginTop: 2,
+    marginTop: 3,
   },
   body: {
     flex: 1,
@@ -124,7 +121,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 8,
+    paddingBottom: 48,
     gap: 16,
   },
   signUpButton: {
@@ -139,17 +136,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
-  signInWrapper: {
+  signInButton: {
+    height: 54,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
     alignItems: "center",
-    paddingVertical: 8,
+    justifyContent: "center",
   },
-  signInText: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-  },
-  signInLink: {
+  signInButtonText: {
+    fontSize: 16,
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
-    fontFamily: Fonts.semiBold,
   },
 });

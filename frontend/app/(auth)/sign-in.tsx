@@ -70,7 +70,7 @@ export default function SignIn() {
       >
         <View style={styles.inner}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
-            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
           <AppText style={styles.title}>Welcome back.</AppText>
@@ -114,6 +114,14 @@ export default function SignIn() {
               />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.forgotBtn}
+            onPress={() => router.push("/(auth)/forgot-password")}
+            hitSlop={8}
+          >
+            <AppText style={styles.forgotText}>Forgot password?</AppText>
+          </TouchableOpacity>
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
@@ -173,7 +181,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: Colors.grey500,
+    color: Colors.black,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
@@ -209,6 +217,17 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     paddingHorizontal: 14,
+  },
+  forgotBtn: {
+    alignSelf: "flex-end",
+    marginTop: -8,
+    marginBottom: 20,
+    paddingVertical: 4,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
   errorText: {
     fontSize: 13,
