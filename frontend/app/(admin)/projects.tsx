@@ -3,19 +3,20 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { useAuth } from "@/context/AuthContext";
+import { AppText } from "@/components/AppText";
 
 type AdminProject = {
   _id: string;
@@ -67,45 +68,44 @@ export default function AdminProjects() {
 
   const total = projects.length;
 
-  function handleSignOutPress() {
-    Alert.alert("Sign out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign out",
-        style: "destructive",
-        onPress: () => {
-          void logout();
-        },
-      },
-    ]);
+  async function handleSignOutPress() {
+    if (Platform.OS === "web") {
+      if (!window.confirm("Are you sure you want to log out?")) return;
+      void logout();
+    } else {
+      Alert.alert("Sign out", "Are you sure you want to log out?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign out", style: "destructive", onPress: () => void logout() },
+      ]);
+    }
   }
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      <View style={{ backgroundColor: Colors.vouchGreen }}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerInner}>
             <View>
-              <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
-              <Text style={styles.headerTitle}>All Projects</Text>
+              <AppText style={styles.adminBadge}>ADMIN CONSOLE</AppText>
+              <AppText style={styles.headerTitle}>All Projects</AppText>
             </View>
             <TouchableOpacity
               onPress={handleSignOutPress}
               style={styles.signOutBtn}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-out-outline" size={22} color={Colors.gold} />
+              <Ionicons name="log-out-outline" size={22} color={Colors.white} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: Colors.green }]}>{total}</Text>
-              <Text style={styles.statLabel}>Active Projects</Text>
+              <AppText style={styles.statNum}>{total}</AppText>
+              <AppText style={styles.statLabel}>Active Projects</AppText>
             </View>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.body}
@@ -115,24 +115,24 @@ export default function AdminProjects() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={Colors.gold}
-            colors={[Colors.gold]}
+            tintColor={Colors.vouchGreen}
+            colors={[Colors.vouchGreen]}
           />
         }
       >
-        <Text style={styles.sectionLabel}>ALL PROJECTS</Text>
+        <AppText style={styles.sectionLabel}>ALL PROJECTS</AppText>
 
         {loading ? (
-          <ActivityIndicator color={Colors.gold} style={{ marginTop: 32 }} />
+          <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 32 }} />
         ) : error ? (
           <View style={styles.centerBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <AppText style={styles.errorText}>{error}</AppText>
             <TouchableOpacity onPress={() => fetchProjects()} style={styles.retryBtn}>
-              <Text style={styles.retryBtnText}>Retry</Text>
+              <AppText style={styles.retryBtnText}>Retry</AppText>
             </TouchableOpacity>
           </View>
         ) : projects.length === 0 ? (
-          <Text style={styles.emptyText}>No projects found.</Text>
+          <AppText style={styles.emptyText}>No projects found.</AppText>
         ) : (
           projects.map((project) => (
             <TouchableOpacity
@@ -148,14 +148,14 @@ export default function AdminProjects() {
             >
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>
-                  <Text style={styles.projectName}>{project.name}</Text>
-                  <Text style={styles.projectAddress}>{project.location}</Text>
+                  <AppText style={styles.projectName}>{project.name}</AppText>
+                  <AppText style={styles.projectAddress}>{project.location}</AppText>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+                <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
               </View>
-              <Text style={styles.projectDate}>
+              <AppText style={styles.projectDate}>
                 Submitted {new Date(project.createdAt).toLocaleDateString("en-AU")}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ))
         )}
@@ -165,13 +165,7 @@ export default function AdminProjects() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.offWhite,
-  },
-  header: {
-    paddingBottom: 20,
-  },
+  screen: { flex: 1, backgroundColor: Colors.grey100 },
   headerInner: {
     flexDirection: "row",
     alignItems: "center",
@@ -180,59 +174,39 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
   },
-  signOutBtn: {
-    padding: 4,
-  },
+  signOutBtn: { padding: 4 },
   adminBadge: {
     fontSize: 10,
-    color: Colors.goldLight,
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 4,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: Colors.white,
-  },
-  statsRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-  },
+  headerTitle: { fontSize: 24, fontFamily: Fonts.extraBold, color: Colors.white },
+  statsRow: { flexDirection: "row", paddingHorizontal: 16, paddingBottom: 20, gap: 8 },
   statCard: {
     flex: 1,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
   },
-  statNum: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.white,
-  },
+  statNum: { fontSize: 22, fontFamily: Fonts.extraBold, color: Colors.white },
   statLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.5)",
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: Fonts.semiBold,
     marginTop: 2,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
+  body: { flex: 1 },
+  bodyContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
   sectionLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: "700",
+    color: Colors.grey500,
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 16,
@@ -254,49 +228,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  cardTitleBlock: {
-    flex: 1,
-    marginRight: 12,
-  },
-  projectName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  projectAddress: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  projectDate: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  centerBox: {
-    alignItems: "center",
-    marginTop: 32,
-  },
+  cardTitleBlock: { flex: 1, marginRight: 12 },
+  projectName: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 2 },
+  projectAddress: { fontSize: 13, color: Colors.grey500, fontFamily: Fonts.regular },
+  projectDate: { fontSize: 12, color: Colors.grey500, fontFamily: Fonts.regular },
+  centerBox: { alignItems: "center", marginTop: 32 },
   errorText: {
     fontSize: 14,
     color: Colors.red,
+    fontFamily: Fonts.semiBold,
     textAlign: "center",
     marginBottom: 12,
   },
   retryBtn: {
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: Colors.vouchGreen,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 8,
   },
-  retryBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.gold,
-  },
+  retryBtnText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
   emptyText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.grey500,
+    fontFamily: Fonts.regular,
     textAlign: "center",
     marginTop: 32,
   },

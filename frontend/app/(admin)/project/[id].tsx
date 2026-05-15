@@ -3,18 +3,18 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +22,7 @@ import { CalendarTab } from "@/components/project/CalendarTab";
 import { FinancierMySpace } from "@/components/project/MySpaceViews";
 import { InvoiceDetailModal } from "@/components/project/InvoiceDetailModal";
 import { ApiInvoice } from "@/components/project/types";
+import { AppText } from "@/components/AppText";
 
 type Participant = {
   participantId: string;
@@ -100,76 +101,77 @@ export default function AdminProjectDetail() {
     setRefreshing(false);
   }
 
-  async function handleDeleteProject() {
-    Alert.alert(
-      "Archive Project",
-      `Are you sure you want to archive "${projectName}"? It will be moved to the Archives tab.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Archive",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${id}`, {
-                method: "DELETE",
-              });
-              if (!res.ok) {
-                const data = await res.json();
-                Alert.alert("Error", data.error ?? "Failed to delete project.");
-              } else {
-                router.replace("/(admin)/archives");
-              }
-            } catch {
-              Alert.alert("Error", "Network error. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+  async function doDeleteProject() {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        const msg = data.error ?? "Failed to archive project.";
+        if (Platform.OS === "web") window.alert(msg);
+        else Alert.alert("Error", msg);
+      } else {
+        router.replace("/(admin)/archives");
+      }
+    } catch {
+      const msg = "Network error. Please try again.";
+      if (Platform.OS === "web") window.alert(msg);
+      else Alert.alert("Error", msg);
+    }
   }
 
-  async function handleRemove(participant: Participant) {
-    Alert.alert(
-      "Remove Participant",
-      `Remove ${participant.email} (${participant.role}) from this project?`,
-      [
+  function handleDeleteProject() {
+    const msg = `Are you sure you want to archive "${projectName}"? It will be moved to the Archives tab.`;
+    if (Platform.OS === "web") {
+      if (!window.confirm(msg)) return;
+      void doDeleteProject();
+    } else {
+      Alert.alert("Archive Project", msg, [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await fetchWithAuth(
-                `${API_BASE_URL}/admin/projects/${id}/participants/remove`,
-                {
-                  method: "DELETE",
-                  body: JSON.stringify({ email: participant.email, role: participant.role }),
-                }
-              );
-              const data = await res.json();
-              if (!res.ok) {
-                Alert.alert("Error", data.error ?? "Failed to remove participant.");
-              } else {
-                setParticipants((prev) =>
-                  prev.filter(
-                    (p) => !(p.email === participant.email && p.role === participant.role)
-                  )
-                );
-              }
-            } catch {
-              Alert.alert("Error", "Network error. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+        { text: "Archive", style: "destructive", onPress: () => void doDeleteProject() },
+      ]);
+    }
+  }
+
+  async function doRemove(participant: Participant) {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${id}/participants/remove`, {
+        method: "DELETE",
+        body: JSON.stringify({ email: participant.email, role: participant.role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data.error ?? "Failed to remove participant.";
+        if (Platform.OS === "web") window.alert(msg);
+        else Alert.alert("Error", msg);
+      } else {
+        setParticipants((prev) =>
+          prev.filter((p) => !(p.email === participant.email && p.role === participant.role))
+        );
+      }
+    } catch {
+      const msg = "Network error. Please try again.";
+      if (Platform.OS === "web") window.alert(msg);
+      else Alert.alert("Error", msg);
+    }
+  }
+
+  function handleRemove(participant: Participant) {
+    const msg = `Remove ${participant.email} (${participant.role}) from this project?`;
+    if (Platform.OS === "web") {
+      if (!window.confirm(msg)) return;
+      void doRemove(participant);
+    } else {
+      Alert.alert("Remove Participant", msg, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => void doRemove(participant) },
+      ]);
+    }
   }
 
   return (
     <View style={styles.screen}>
       {/* Fixed top nav bar */}
-      <View style={{ backgroundColor: Colors.navy }}>
+      <View style={{ backgroundColor: Colors.vouchGreen }}>
         <SafeAreaView edges={["top"]}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -178,8 +180,8 @@ export default function AdminProjectDetail() {
             accessibilityRole="button"
             accessibilityLabel="Back to all projects"
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.gold} />
-            <Text style={styles.backLabel}>All Projects</Text>
+            <Ionicons name="arrow-back" size={20} color={Colors.white} />
+            <AppText style={styles.backLabel}>All Projects</AppText>
           </TouchableOpacity>
         </SafeAreaView>
       </View>
@@ -193,7 +195,7 @@ export default function AdminProjectDetail() {
             left: 0,
             right: 0,
             bottom: "50%",
-            backgroundColor: Colors.navy,
+            backgroundColor: Colors.vouchGreen,
           }}
         />
         <View
@@ -203,7 +205,7 @@ export default function AdminProjectDetail() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: Colors.offWhite,
+            backgroundColor: Colors.grey100,
           }}
         />
         <ScrollView
@@ -214,20 +216,20 @@ export default function AdminProjectDetail() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={Colors.gold}
-              colors={[Colors.gold]}
+              tintColor={Colors.white}
+              colors={[Colors.vouchGreen]}
             />
           }
         >
           {/* Header body — scrolls away */}
-          <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
-            <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
-            <Text style={styles.headerTitle}>{projectName || "Project"}</Text>
-            {!!location && <Text style={styles.headerSub}>{location}</Text>}
+          <View style={[styles.header, { backgroundColor: Colors.vouchGreen }]}>
+            <AppText style={styles.adminBadge}>ADMIN CONSOLE</AppText>
+            <AppText style={styles.headerTitle}>{projectName || "Project"}</AppText>
+            {!!location && <AppText style={styles.headerSub}>{location}</AppText>}
 
             <View style={styles.healthWrap}>
               {loading ? (
-                <ActivityIndicator color={Colors.gold} style={{ height: 100 }} />
+                <ActivityIndicator color={Colors.white} style={{ height: 100 }} />
               ) : (
                 <CircularProgress
                   value={health}
@@ -237,27 +239,27 @@ export default function AdminProjectDetail() {
                 />
               )}
               {change !== null && (
-                <Text
+                <AppText
                   style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
                 >
                   {change >= 0 ? "+" : ""}
                   {change}% vs last month
-                </Text>
+                </AppText>
               )}
             </View>
 
             {overdue > 0 && (
               <View style={styles.overdueAlert}>
-                <Text style={styles.overdueAlertText}>{overdue} invoices overdue</Text>
+                <AppText style={styles.overdueAlertText}>{overdue} invoices overdue</AppText>
               </View>
             )}
-          </LinearGradient>
+          </View>
 
           {error ? (
             <View style={styles.centerBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <AppText style={styles.errorText}>{error}</AppText>
               <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
-                <Text style={styles.retryBtnText}>Retry</Text>
+                <AppText style={styles.retryBtnText}>Retry</AppText>
               </TouchableOpacity>
             </View>
           ) : activeTab === "calendar" ? (
@@ -304,13 +306,21 @@ export default function AdminProjectDetail() {
               scrollRef.current?.scrollTo({ y: 0, animated: false });
             }}
           >
-            <Text style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
-              {t === "calendar"
-                ? "📅  Calendar"
-                : t === "invoices"
-                  ? "🧾  All Invoices"
-                  : "📋  Project Information"}
-            </Text>
+            <Ionicons
+              name={
+                t === "calendar"
+                  ? "calendar-outline"
+                  : t === "invoices"
+                    ? "receipt-outline"
+                    : "information-circle-outline"
+              }
+              size={16}
+              color={activeTab === t ? Colors.white : "rgba(255,255,255,0.4)"}
+              style={{ marginBottom: 2 }}
+            />
+            <AppText style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
+              {t === "calendar" ? "Calendar" : t === "invoices" ? "All Invoices" : "Project Info"}
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -338,16 +348,18 @@ function MembersTab({
 }) {
   return (
     <View style={styles.bodyContent}>
-      <Text style={styles.sectionLabel}>PROJECT DETAILS</Text>
+      <AppText style={styles.sectionLabel}>PROJECT DETAILS</AppText>
       <View style={[styles.membersCard, { marginBottom: 24 }]}>
         <InfoRow label="Location" value={location} />
         <InfoRow label="Council" value={council} last={!daNumber} />
         {!!daNumber && <InfoRow label="DA Number" value={daNumber} last />}
       </View>
 
-      <Text style={styles.sectionLabel}>MEMBERS</Text>
+      <AppText style={styles.sectionLabel}>MEMBERS</AppText>
       {participants.length === 0 ? (
-        <Text style={[styles.emptyText, { marginBottom: 24 }]}>No members on this project.</Text>
+        <AppText style={[styles.emptyText, { marginBottom: 24 }]}>
+          No members on this project.
+        </AppText>
       ) : (
         <View style={styles.membersCard}>
           {participants.map((p, i) => (
@@ -356,10 +368,10 @@ function MembersTab({
               style={[styles.memberRow, i < participants.length - 1 && styles.memberRowBorder]}
             >
               <View style={styles.memberInfo}>
-                {p.name && <Text style={styles.memberName}>{p.name}</Text>}
-                <Text style={styles.memberEmail}>{p.email}</Text>
+                {p.name && <AppText style={styles.memberName}>{p.name}</AppText>}
+                <AppText style={styles.memberEmail}>{p.email}</AppText>
                 <View style={styles.memberMeta}>
-                  <Text style={styles.memberRole}>{p.role}</Text>
+                  <AppText style={styles.memberRole}>{p.role}</AppText>
                   <View
                     style={[
                       styles.statusPill,
@@ -368,30 +380,32 @@ function MembersTab({
                       },
                     ]}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.statusPillText,
                         { color: p.status === "Accepted" ? Colors.green : Colors.amber },
                       ]}
                     >
                       {p.status}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
                 {(p.hasLicence != null || p.hasInsurance != null) && (
                   <View style={styles.complianceRow}>
                     {p.hasLicence != null && (
                       <View style={p.hasLicence ? styles.badgeGreen : styles.badgeRed}>
-                        <Text style={p.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
+                        <AppText style={p.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
                           {p.hasLicence ? "✓ Licenced" : "✗ No Licence"}
-                        </Text>
+                        </AppText>
                       </View>
                     )}
                     {p.hasInsurance != null && (
                       <View style={p.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
-                        <Text style={p.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}>
+                        <AppText
+                          style={p.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}
+                        >
                           {p.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
-                        </Text>
+                        </AppText>
                       </View>
                     )}
                   </View>
@@ -416,7 +430,7 @@ function MembersTab({
           activeOpacity={0.8}
         >
           <Ionicons name="trash-outline" size={18} color={Colors.white} />
-          <Text style={styles.deleteProjectBtnText}>Archive Project</Text>
+          <AppText style={styles.deleteProjectBtnText}>Archive Project</AppText>
         </TouchableOpacity>
       )}
     </View>
@@ -426,19 +440,18 @@ function MembersTab({
 function InfoRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
     <View style={[styles.infoRow, last && styles.infoRowLast]}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <AppText style={styles.infoLabel}>{label}</AppText>
+      <AppText style={styles.infoValue}>{value}</AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.offWhite },
+  screen: { flex: 1, backgroundColor: Colors.grey100 },
   header: { paddingBottom: 12 },
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -448,11 +461,11 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     direction: "ltr",
   },
-  backLabel: { fontSize: 13, color: Colors.gold, fontWeight: "600" },
+  backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
   adminBadge: {
     fontSize: 9,
-    color: Colors.goldLight,
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     paddingHorizontal: 20,
@@ -460,35 +473,19 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.white,
     paddingHorizontal: 20,
-    marginBottom: 0,
   },
   headerSub: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.65)",
+    fontFamily: Fonts.regular,
     paddingHorizontal: 20,
     marginBottom: 2,
   },
   healthWrap: { alignItems: "center", paddingVertical: 8 },
-  compactHeaderRow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    gap: 14,
-  },
-  compactHeaderInfo: { flex: 1 },
-  compactHeaderName: { fontSize: 15, fontWeight: "800", color: Colors.white, marginBottom: 2 },
-  compactHeaderSub: { fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 2 },
-  compactHeaderTrend: { fontSize: 11, fontWeight: "600" },
-  compactHeaderOverdue: { fontSize: 11, fontWeight: "600", color: Colors.red, marginTop: 2 },
-  healthTrend: { fontSize: 12, fontWeight: "600", marginTop: 4 },
+  healthTrend: { fontSize: 12, fontFamily: Fonts.semiBold, marginTop: 4 },
   overdueAlert: {
     flexDirection: "row",
     alignItems: "center",
@@ -500,52 +497,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  overdueAlertText: { fontSize: 11, color: Colors.red, fontWeight: "600" },
-  overdueAlertArrow: { fontSize: 14, color: Colors.red },
-  body: { flex: 1 },
+  overdueAlertText: { fontSize: 11, color: Colors.red, fontFamily: Fonts.semiBold },
   bodyContent: {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 40,
-    backgroundColor: Colors.offWhite,
+    backgroundColor: Colors.grey100,
   },
   centerBox: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  errorText: { fontSize: 14, color: Colors.red, textAlign: "center", marginBottom: 12 },
+  errorText: {
+    fontSize: 14,
+    color: Colors.red,
+    fontFamily: Fonts.semiBold,
+    textAlign: "center",
+    marginBottom: 12,
+  },
   retryBtn: {
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: Colors.vouchGreen,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 8,
   },
-  retryBtnText: { fontSize: 13, fontWeight: "600", color: Colors.gold },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
+  retryBtnText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.grey500,
+    fontFamily: Fonts.regular,
+    textAlign: "center",
+  },
   subTabBar: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.vouchGreen,
+    paddingBottom: 8,
   },
   subTab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
     alignItems: "center",
-  },
-  subTabActive: {
     borderTopWidth: 2,
-    borderTopColor: Colors.gold,
+    borderTopColor: "transparent",
   },
-  subTabText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
-  subTabTextActive: { color: Colors.navy },
+  subTabActive: { borderTopColor: Colors.white },
+  subTabText: { fontSize: 11, fontFamily: Fonts.semiBold, color: "rgba(255,255,255,0.4)" },
+  subTabTextActive: { color: Colors.white },
   sectionLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: "700",
+    color: Colors.grey500,
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 12,
   },
-  // Members
   membersCard: {
     backgroundColor: Colors.white,
     borderRadius: 14,
@@ -562,17 +565,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  memberRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
-  },
+  memberRowBorder: { borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.05)" },
   memberInfo: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 2 },
-  memberEmail: { fontSize: 12, color: Colors.textSecondary, marginBottom: 4 },
+  memberName: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black, marginBottom: 2 },
+  memberEmail: { fontSize: 12, color: Colors.grey500, fontFamily: Fonts.regular, marginBottom: 4 },
   memberMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
-  memberRole: { fontSize: 12, color: Colors.textSecondary, fontWeight: "500" },
+  memberRole: { fontSize: 12, color: Colors.grey500, fontFamily: Fonts.medium },
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  statusPillText: { fontSize: 11, fontWeight: "700" },
+  statusPillText: { fontSize: 11, fontFamily: Fonts.bold },
   removeBtn: { padding: 4 },
   infoRow: {
     flexDirection: "row",
@@ -584,11 +584,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
   infoRowLast: { borderBottomWidth: 0 },
-  infoLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  infoLabel: { fontSize: 13, color: Colors.grey700, fontFamily: Fonts.medium },
   infoValue: {
     fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: "600",
+    color: Colors.black,
+    fontFamily: Fonts.semiBold,
     textAlign: "right",
     flex: 1,
     marginLeft: 16,
@@ -600,27 +600,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeGreenText: { fontSize: 10, fontWeight: "700", color: Colors.green },
+  badgeGreenText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.green },
   badgeRed: {
     backgroundColor: Colors.redBg,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeRedText: { fontSize: 10, fontWeight: "700", color: Colors.red },
+  badgeRedText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.red },
   deleteProjectBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     backgroundColor: Colors.red,
-    borderRadius: 12,
+    borderRadius: 28,
     paddingVertical: 14,
     marginTop: 32,
   },
-  deleteProjectBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.white,
-  },
+  deleteProjectBtnText: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.white },
 });

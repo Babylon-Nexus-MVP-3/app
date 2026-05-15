@@ -1,10 +1,12 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { AppText } from "@/components/AppText";
 
 type Member = {
   name?: string;
@@ -31,7 +33,7 @@ export default function ApprovalProjectDetail() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={[Colors.navy, Colors.navyLight]} style={styles.header}>
+      <View style={{ backgroundColor: Colors.vouchGreen }}>
         <SafeAreaView edges={["top"]}>
           <TouchableOpacity
             onPress={() => router.replace("/(admin)/approvals")}
@@ -40,37 +42,38 @@ export default function ApprovalProjectDetail() {
             accessibilityRole="button"
             accessibilityLabel="Back to approvals"
           >
-            <Text style={styles.backArrow}>‹</Text>
-            <Text style={styles.backLabel}>Approvals</Text>
+            <Ionicons name="arrow-back" size={20} color={Colors.white} />
+            <AppText style={styles.backLabel}>Approvals</AppText>
           </TouchableOpacity>
 
-          <Text style={styles.adminBadge}>ADMIN CONSOLE</Text>
-          <Text style={styles.headerTitle}>{name || "Project"}</Text>
-          {!!location && <Text style={styles.headerSub}>{location}</Text>}
+          <AppText style={styles.adminBadge}>ADMIN CONSOLE</AppText>
+          <AppText style={styles.headerTitle}>{name || "Project"}</AppText>
+          {!!location && <AppText style={styles.headerSub}>{location}</AppText>}
           {!!createdAt && (
-            <Text style={styles.headerDate}>
+            <AppText style={styles.headerDate}>
               Submitted {new Date(createdAt).toLocaleDateString("en-AU")}
-            </Text>
+            </AppText>
           )}
+          <View style={{ height: 20 }} />
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionLabel}>PROJECT DETAILS</Text>
+        <AppText style={styles.sectionLabel}>PROJECT DETAILS</AppText>
         <View style={[styles.membersCard, { marginBottom: 24 }]}>
           <InfoRow label="Location" value={location ?? ""} />
           <InfoRow label="Council" value={council ?? ""} last={!daNumber} />
           {!!daNumber && <InfoRow label="DA Number" value={daNumber} last />}
         </View>
 
-        <Text style={styles.sectionLabel}>MEMBERS</Text>
+        <AppText style={styles.sectionLabel}>MEMBERS</AppText>
         <View style={styles.membersCard}>
           {allMembers.length === 0 ? (
-            <Text style={styles.emptyText}>No members listed.</Text>
+            <AppText style={styles.emptyText}>No members listed.</AppText>
           ) : (
             allMembers.map((m, i) => (
               <View
@@ -78,15 +81,15 @@ export default function ApprovalProjectDetail() {
                 style={[styles.memberRow, i < allMembers.length - 1 && styles.memberRowBorder]}
               >
                 <View style={styles.memberInfo}>
-                  {m.name && <Text style={styles.memberName}>{m.name}</Text>}
-                  <Text style={styles.memberEmail}>{m.email}</Text>
+                  {m.name && <AppText style={styles.memberName}>{m.name}</AppText>}
+                  <AppText style={styles.memberEmail}>{m.email}</AppText>
                   <View style={styles.rolePillRow}>
                     <View style={styles.rolePill}>
-                      <Text style={styles.rolePillText}>{m.role}</Text>
+                      <AppText style={styles.rolePillText}>{m.role}</AppText>
                     </View>
                     {i === 0 && creatorObj && (
                       <View style={styles.creatorPill}>
-                        <Text style={styles.creatorPillText}>Creator</Text>
+                        <AppText style={styles.creatorPillText}>Creator</AppText>
                       </View>
                     )}
                   </View>
@@ -94,18 +97,20 @@ export default function ApprovalProjectDetail() {
                     <View style={styles.complianceRow}>
                       {m.hasLicence != null && (
                         <View style={m.hasLicence ? styles.badgeGreen : styles.badgeRed}>
-                          <Text style={m.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
+                          <AppText
+                            style={m.hasLicence ? styles.badgeGreenText : styles.badgeRedText}
+                          >
                             {m.hasLicence ? "✓ Licenced" : "✗ No Licence"}
-                          </Text>
+                          </AppText>
                         </View>
                       )}
                       {m.hasInsurance != null && (
                         <View style={m.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
-                          <Text
+                          <AppText
                             style={m.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}
                           >
                             {m.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
-                          </Text>
+                          </AppText>
                         </View>
                       )}
                     </View>
@@ -123,19 +128,17 @@ export default function ApprovalProjectDetail() {
 function InfoRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
     <View style={[styles.infoRow, last && styles.infoRowLast]}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <AppText style={styles.infoLabel}>{label}</AppText>
+      <AppText style={styles.infoValue}>{value}</AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.offWhite },
-  header: { paddingBottom: 24 },
+  screen: { flex: 1, backgroundColor: Colors.grey100 },
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -145,12 +148,11 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     direction: "ltr",
   },
-  backArrow: { fontSize: 24, color: Colors.gold, lineHeight: 26 },
-  backLabel: { fontSize: 14, color: Colors.gold, fontWeight: "600" },
+  backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
   adminBadge: {
     fontSize: 10,
-    color: Colors.goldLight,
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     paddingHorizontal: 20,
@@ -158,20 +160,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.white,
     paddingHorizontal: 20,
     marginBottom: 2,
   },
   headerSub: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.65)",
+    fontFamily: Fonts.regular,
     paddingHorizontal: 20,
     marginBottom: 2,
   },
   headerDate: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.45)",
+    fontFamily: Fonts.regular,
     paddingHorizontal: 20,
     marginTop: 4,
   },
@@ -179,8 +183,8 @@ const styles = StyleSheet.create({
   bodyContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 40 },
   sectionLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: "700",
+    color: Colors.grey500,
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 12,
@@ -198,23 +202,23 @@ const styles = StyleSheet.create({
   memberRow: { paddingHorizontal: 16, paddingVertical: 14 },
   memberRowBorder: { borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.05)" },
   memberInfo: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 2 },
-  memberEmail: { fontSize: 12, color: Colors.textSecondary, marginBottom: 6 },
+  memberName: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black, marginBottom: 2 },
+  memberEmail: { fontSize: 12, color: Colors.grey500, fontFamily: Fonts.regular, marginBottom: 6 },
   rolePillRow: { flexDirection: "row", gap: 6 },
   rolePill: {
-    backgroundColor: Colors.greyBg ?? "rgba(0,0,0,0.06)",
+    backgroundColor: Colors.grey100,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  rolePillText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
+  rolePillText: { fontSize: 11, fontFamily: Fonts.semiBold, color: Colors.grey700 },
   creatorPill: {
-    backgroundColor: Colors.issuedBg ?? Colors.navy + "18",
+    backgroundColor: Colors.vouchGreenLight,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  creatorPillText: { fontSize: 11, fontWeight: "700", color: Colors.navy },
+  creatorPillText: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.vouchGreen },
   complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
   badgeGreen: {
     backgroundColor: Colors.greenBg,
@@ -222,14 +226,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeGreenText: { fontSize: 10, fontWeight: "700", color: Colors.green },
+  badgeGreenText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.green },
   badgeRed: {
     backgroundColor: Colors.redBg,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeRedText: { fontSize: 10, fontWeight: "700", color: Colors.red },
+  badgeRedText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.red },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -240,14 +244,14 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
   infoRowLast: { borderBottomWidth: 0 },
-  infoLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  infoLabel: { fontSize: 13, color: Colors.grey700, fontFamily: Fonts.medium },
   infoValue: {
     fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: "600",
+    color: Colors.black,
+    fontFamily: Fonts.semiBold,
     textAlign: "right",
     flex: 1,
     marginLeft: 16,
   },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, padding: 16 },
+  emptyText: { fontSize: 14, color: Colors.grey500, fontFamily: Fonts.regular, padding: 16 },
 });

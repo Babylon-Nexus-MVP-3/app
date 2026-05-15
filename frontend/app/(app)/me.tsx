@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,29 +18,38 @@ export default function MeScreen() {
     .toUpperCase()
     .slice(0, 2);
 
-  function handleSignOut() {
-    Alert.alert("Sign out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign out",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/");
+  async function handleSignOut() {
+    if (Platform.OS === "web") {
+      if (!window.confirm("Are you sure you want to sign out?")) return;
+      await logout();
+      router.replace("/");
+    } else {
+      Alert.alert("Sign out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/");
+          },
         },
-      },
-    ]);
+      ]);
+    }
   }
 
-  function handleDeleteAccount() {
-    Alert.alert(
-      "Delete Account",
-      "Your account will be deactivated immediately and permanently deleted after 30 days. You can reactivate it any time within that period by signing back in.",
-      [
+  async function handleDeleteAccount() {
+    const msg =
+      "Your account will be deactivated immediately and permanently deleted after 30 days. You can reactivate it any time within that period by signing back in.";
+    if (Platform.OS === "web") {
+      if (!window.confirm(`Delete Account\n\n${msg}`)) return;
+      await confirmDeleteAccount();
+    } else {
+      Alert.alert("Delete Account", msg, [
         { text: "Cancel", style: "cancel" },
         { text: "Deactivate", style: "destructive", onPress: confirmDeleteAccount },
-      ]
-    );
+      ]);
+    }
   }
 
   async function confirmDeleteAccount() {
@@ -54,13 +63,21 @@ export default function MeScreen() {
         } catch {
           data = {};
         }
-        Alert.alert("Error", data.error ?? text ?? "Failed to delete account. Please try again.");
+        if (Platform.OS === "web") {
+          window.alert(data.error ?? text ?? "Failed to delete account. Please try again.");
+        } else {
+          Alert.alert("Error", data.error ?? text ?? "Failed to delete account. Please try again.");
+        }
         return;
       }
       await logout();
       router.replace("/");
     } catch {
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      if (Platform.OS === "web") {
+        window.alert("Something went wrong. Please try again.");
+      } else {
+        Alert.alert("Error", "Something went wrong. Please try again.");
+      }
     }
   }
 
