@@ -39,7 +39,7 @@ export default function AdminProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { fetchWithAuth, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"calendar" | "members" | "invoices">("calendar");
+  const [activeTab, setActiveTab] = useState<"calendar" | "invoices" | "members">("calendar");
   const [detailInvoice, setDetailInvoice] = useState<ApiInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -295,7 +295,7 @@ export default function AdminProjectDetail() {
         </ScrollView>
       </View>
 
-      {/* Fixed tab bar */}
+      {/* Sub-tab bar */}
       <View style={styles.subTabBar}>
         {(["calendar", "invoices", "members"] as const).map((t) => (
           <TouchableOpacity
