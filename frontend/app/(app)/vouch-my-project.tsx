@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 
 export default function VouchMyProjectScreen() {
   return (
@@ -12,7 +14,7 @@ export default function VouchMyProjectScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>VOUCH MY PROJECT</Text>
+        <AppText style={styles.headerTitle}>VOUCH MY PROJECT</AppText>
         <TouchableOpacity hitSlop={8}>
           <Ionicons name="help-circle-outline" size={24} color={Colors.grey500} />
         </TouchableOpacity>
@@ -30,20 +32,24 @@ export default function VouchMyProjectScreen() {
         </View>
 
         {/* Heading */}
-        <Text style={styles.heading}>Your Score is locked.</Text>
-        <Text style={styles.subheading}>Get paid on time through trust and{"\n"}transparency.</Text>
+        <AppText style={styles.heading}>Your Score is locked.</AppText>
+        <AppText style={styles.subheading}>
+          Get paid on time through trust and{"\n"}transparency.
+        </AppText>
 
         {/* What your score will show */}
         <View style={styles.featureCard}>
-          <Text style={styles.featureCardLabel}>WHAT YOUR SCORE WILL SHOW</Text>
+          <AppText style={styles.featureCardLabel}>WHAT YOUR SCORE WILL SHOW</AppText>
 
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
               <Ionicons name="pulse-outline" size={20} color={Colors.amber} />
             </View>
             <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Payment health on active projects</Text>
-              <Text style={styles.featureDesc}>See how your project is flowing in real time.</Text>
+              <AppText style={styles.featureTitle}>Payment health on active projects</AppText>
+              <AppText style={styles.featureDesc}>
+                See how your project is flowing in real time.
+              </AppText>
             </View>
           </View>
 
@@ -52,8 +58,12 @@ export default function VouchMyProjectScreen() {
               <Ionicons name="calendar-outline" size={20} color={Colors.amber} />
             </View>
             <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Calendar view of Project Financial Health</Text>
-              <Text style={styles.featureDesc}>Every claim, every due date, all in one place.</Text>
+              <AppText style={styles.featureTitle}>
+                Calendar view of Project Financial Health
+              </AppText>
+              <AppText style={styles.featureDesc}>
+                Every claim, every due date, all in one place.
+              </AppText>
             </View>
           </View>
         </View>
@@ -62,10 +72,10 @@ export default function VouchMyProjectScreen() {
         <View style={styles.privacyCard}>
           <Ionicons name="lock-closed-outline" size={18} color={Colors.vouchGreen} />
           <View style={styles.privacyText}>
-            <Text style={styles.privacyTitle}>Amounts stay private</Text>
-            <Text style={styles.privacyDesc}>
+            <AppText style={styles.privacyTitle}>Amounts stay private</AppText>
+            <AppText style={styles.privacyDesc}>
               Only you see invoice values. Vouch uses payment timing, not amounts.
-            </Text>
+            </AppText>
           </View>
         </View>
       </View>
@@ -77,7 +87,7 @@ export default function VouchMyProjectScreen() {
           activeOpacity={0.85}
           onPress={() => router.push("/(app)/projects")}
         >
-          <Text style={styles.ctaText}>Set up my project →</Text>
+          <AppText style={styles.ctaText}>Set up my project →</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -98,8 +108,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: Colors.grey500,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
     letterSpacing: 1,
   },
   scroll: {
@@ -140,13 +150,14 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.black,
     textAlign: "center",
     marginBottom: 10,
   },
   subheading: {
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     textAlign: "center",
     lineHeight: 22,
@@ -162,7 +173,7 @@ const styles = StyleSheet.create({
   },
   featureCardLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.amber,
     letterSpacing: 0.8,
   },
@@ -184,12 +195,13 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 2,
   },
   featureDesc: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     lineHeight: 19,
   },
@@ -207,12 +219,13 @@ const styles = StyleSheet.create({
   },
   privacyTitle: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 4,
   },
   privacyDesc: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     lineHeight: 19,
   },
@@ -232,7 +245,7 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
 });

@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.grey500,
+    color: Colors.black,
     letterSpacing: 1,
   },
   scroll: {
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.grey700,
+    color: Colors.black,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 40,

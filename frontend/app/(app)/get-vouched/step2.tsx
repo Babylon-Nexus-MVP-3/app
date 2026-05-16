@@ -1,19 +1,124 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
+  Modal,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useWizard } from "./WizardContext";
+
+const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
+
+function StatePickerModal({
+  visible,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selected: string;
+  onSelect: (s: string) => void;
+  onClose: () => void;
+}) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, sp.overlay, { opacity: fadeAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        </Animated.View>
+        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+          <Animated.View style={[sp.sheet, { transform: [{ translateY: slideAnim }] }]}>
+            <View style={sp.handle} />
+            <AppText style={sp.title}>Select state</AppText>
+            {AU_STATES.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={sp.option}
+                onPress={() => {
+                  onSelect(s);
+                  onClose();
+                }}
+              >
+                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
+                  {s}
+                </AppText>
+                {selected === s && (
+                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const sp = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingTop: 12,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey300,
+  },
+  optionSelected: { borderBottomColor: Colors.grey300 },
+  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
+  optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
+});
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -46,7 +151,7 @@ function Field({
 }) {
   return (
     <View style={[styles.fieldWrap, flex !== undefined && { flex }]}>
-      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
+      {label ? <AppText style={styles.fieldLabel}>{label}</AppText> : null}
       <TextInput
         style={styles.input}
         value={value}
@@ -63,6 +168,20 @@ function Field({
 export default function Step2() {
   const { step2, setStep2 } = useWizard();
   const [form, setForm] = useState(step2);
+  const [statePickerOpen, setStatePickerOpen] = useState(false);
+  const [pastStatePickerOpen, setPastStatePickerOpen] = useState(false);
+
+  function formatMonthYear(raw: string) {
+    const digits = raw.replace(/\D/g, "").slice(0, 6);
+    if (digits.length <= 2) return digits;
+    return digits.slice(0, 2) + "/" + digits.slice(2);
+  }
+
+  function filterDecimal(v: string) {
+    const filtered = v.replace(/[^0-9.]/g, "");
+    const parts = filtered.split(".");
+    return parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : filtered;
+  }
 
   function update(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -70,7 +189,7 @@ export default function Step2() {
 
   function onContinue() {
     setStep2(form);
-    router.back();
+    router.push("/(app)/get-vouched/step3");
   }
 
   const canContinue =
@@ -87,7 +206,7 @@ export default function Step2() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>STEP 2 OF 3</Text>
+        <AppText style={styles.headerTitle}>STEP 2 OF 3</AppText>
         <View style={{ width: 24 }} />
       </View>
       <ProgressBar step={2} />
@@ -97,10 +216,10 @@ export default function Step2() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.heading}>Your projects</Text>
+          <AppText style={styles.heading}>Your projects</AppText>
 
           {/* Current project */}
-          <Text style={styles.sectionLabel}>CURRENT PROJECT</Text>
+          <AppText style={styles.sectionLabel}>CURRENT PROJECT</AppText>
           <View style={styles.section}>
             <Field
               label="PROJECT NAME"
@@ -121,49 +240,61 @@ export default function Step2() {
                 placeholder="Suburb"
                 flex={2}
               />
-              <Field
-                value={form.state}
-                onChangeText={(v) => update("state", v)}
-                placeholder="State"
-                flex={1}
-              />
-              <Field
-                value={form.postcode}
-                onChangeText={(v) => update("postcode", v)}
-                placeholder="Postcode"
-                keyboardType="numeric"
-                flex={1}
-              />
+              <TouchableOpacity
+                style={[styles.fieldWrap, { flex: 1 }]}
+                onPress={() => setStatePickerOpen(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.stateBtn}>
+                  <AppText style={[styles.stateBtnText, !form.state && styles.stateBtnPlaceholder]}>
+                    {form.state || "State"}
+                  </AppText>
+                  <Ionicons name="chevron-down" size={14} color={Colors.grey500} />
+                </View>
+              </TouchableOpacity>
+              <View style={[styles.fieldWrap, { flex: 1 }]}>
+                <TextInput
+                  style={styles.input}
+                  value={form.postcode}
+                  onChangeText={(v) => update("postcode", v.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="Postcode"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  autoCorrect={false}
+                />
+              </View>
             </View>
             <View style={styles.fieldWrap}>
               <View style={styles.valueLabelRow}>
-                <Text style={styles.fieldLabel}>VALUE</Text>
+                <AppText style={styles.fieldLabel}>VALUE</AppText>
                 <View style={styles.privateTag}>
                   <Ionicons name="lock-closed-outline" size={10} color={Colors.grey500} />
-                  <Text style={styles.privateText}>private</Text>
+                  <AppText style={styles.privateText}>private</AppText>
                 </View>
               </View>
               <TextInput
                 style={styles.input}
                 value={form.value}
-                onChangeText={(v) => update("value", v)}
+                onChangeText={(v) => update("value", filterDecimal(v))}
                 placeholder="A$ 0"
                 placeholderTextColor={Colors.grey300}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
           </View>
 
           {/* Past project */}
           <View style={styles.pastLabelRow}>
-            <Text style={styles.sectionLabel}>PAST PROJECT</Text>
-            <Text style={styles.optionalTag}>· optional</Text>
+            <AppText style={[styles.sectionLabel, { marginBottom: 0 }]}>PAST PROJECT</AppText>
+            <AppText style={styles.optionalTag}>· optional</AppText>
           </View>
           <View style={styles.section}>
             <Field
+              label="PROJECT NAME"
               value={form.pastProjectName}
               onChangeText={(v) => update("pastProjectName", v)}
-              placeholder="Project name"
+              placeholder="e.g. Riverside Apartments fitout"
             />
             <View style={styles.row}>
               <Field
@@ -172,44 +303,81 @@ export default function Step2() {
                 placeholder="Suburb"
                 flex={2}
               />
-              <Field
-                value={form.pastPostcode}
-                onChangeText={(v) => update("pastPostcode", v)}
-                placeholder="Postcode"
-                keyboardType="numeric"
-                flex={1}
-              />
+              <TouchableOpacity
+                style={[styles.fieldWrap, { flex: 1 }]}
+                onPress={() => setPastStatePickerOpen(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.stateBtn}>
+                  <AppText
+                    style={[styles.stateBtnText, !form.pastState && styles.stateBtnPlaceholder]}
+                  >
+                    {form.pastState || "State"}
+                  </AppText>
+                  <Ionicons name="chevron-down" size={14} color={Colors.grey500} />
+                </View>
+              </TouchableOpacity>
+              <View style={[styles.fieldWrap, { flex: 1 }]}>
+                <TextInput
+                  style={styles.input}
+                  value={form.pastPostcode}
+                  onChangeText={(v) => update("pastPostcode", v.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="Postcode"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  autoCorrect={false}
+                />
+              </View>
             </View>
             <View style={styles.row}>
-              <Field
-                value={form.pastYear}
-                onChangeText={(v) => update("pastYear", v)}
-                placeholder="Year"
-                keyboardType="numeric"
-                flex={1}
-              />
+              <View style={[styles.fieldWrap, { flex: 1 }]}>
+                <AppText style={styles.fieldLabel}>COMPLETED</AppText>
+                <TextInput
+                  style={styles.input}
+                  value={form.pastMonthYear}
+                  onChangeText={(v) => update("pastMonthYear", formatMonthYear(v))}
+                  placeholder="MM/YYYY"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="numeric"
+                  maxLength={7}
+                  autoCorrect={false}
+                />
+              </View>
               <View style={[styles.fieldWrap, { flex: 2 }]}>
                 <View style={styles.valueLabelRow}>
-                  <TextInput
-                    style={styles.input}
-                    value={form.pastValue}
-                    onChangeText={(v) => update("pastValue", v)}
-                    placeholder="A$ approx"
-                    placeholderTextColor={Colors.grey300}
-                    keyboardType="numeric"
-                  />
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={12}
-                    color={Colors.grey500}
-                    style={styles.lockOverlay}
-                  />
+                  <AppText style={styles.fieldLabel}>VALUE</AppText>
+                  <View style={styles.privateTag}>
+                    <Ionicons name="lock-closed-outline" size={10} color={Colors.grey500} />
+                    <AppText style={styles.privateText}>private</AppText>
+                  </View>
                 </View>
+                <TextInput
+                  style={styles.input}
+                  value={form.pastValue}
+                  onChangeText={(v) => update("pastValue", filterDecimal(v))}
+                  placeholder="A$ approx"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="decimal-pad"
+                />
               </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <StatePickerModal
+        visible={statePickerOpen}
+        selected={form.state}
+        onSelect={(s) => update("state", s)}
+        onClose={() => setStatePickerOpen(false)}
+      />
+      <StatePickerModal
+        visible={pastStatePickerOpen}
+        selected={form.pastState}
+        onSelect={(s) => update("pastState", s)}
+        onClose={() => setPastStatePickerOpen(false)}
+      />
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -218,7 +386,7 @@ export default function Step2() {
           disabled={!canContinue}
           activeOpacity={0.85}
         >
-          <Text style={styles.primaryBtnText}>Save &amp; continue</Text>
+          <AppText style={styles.primaryBtnText}>Save &amp; continue</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -235,12 +403,17 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 4,
   },
-  headerTitle: { fontSize: 13, fontWeight: "600", color: Colors.grey500, letterSpacing: 1 },
+  headerTitle: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    letterSpacing: 1,
+  },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
-  heading: { fontSize: 26, fontWeight: "700", color: Colors.black, marginBottom: 24 },
+  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 24 },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
     letterSpacing: 0.8,
     marginBottom: 14,
@@ -252,15 +425,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 14,
   },
-  optionalTag: { fontSize: 12, color: Colors.grey500 },
+  optionalTag: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
   section: { gap: 14, marginBottom: 28 },
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontWeight: "700", color: Colors.grey500, letterSpacing: 0.8 },
-  valueLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
+  valueLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   privateTag: { flexDirection: "row", alignItems: "center", gap: 3 },
-  privateText: { fontSize: 11, color: Colors.grey500 },
-  lockOverlay: { position: "absolute", right: 14, top: "50%" },
+  privateText: { fontSize: 11, fontFamily: Fonts.regular, color: Colors.grey500 },
   input: {
     borderWidth: 1,
     borderColor: Colors.grey300,
@@ -268,9 +440,23 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 14,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
+  stateBtn: {
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    height: 50,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.white,
+  },
+  stateBtnText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
+  stateBtnPlaceholder: { color: Colors.grey300 },
   footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,
@@ -280,5 +466,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
 });

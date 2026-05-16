@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -13,8 +13,28 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { API_BASE_URL } from "@/constants/api";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
+
+type AbrResult = {
+  entityName: string;
+  tradingName?: string;
+  businessType: string;
+  state: string;
+  activeYears: number;
+  isActive: boolean;
+};
+
+function formatAbn(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
+  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
+}
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -46,7 +66,7 @@ function Field({
 }) {
   return (
     <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <AppText style={styles.fieldLabel}>{label}</AppText>
       <TextInput
         style={styles.input}
         value={value}
@@ -65,12 +85,53 @@ export default function Step1() {
   const { step1, setStep1 } = useWizard();
 
   const [form, setForm] = useState(step1);
+  const [abnDisplay, setAbnDisplay] = useState(formatAbn(step1.abn));
+  const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
+  const [abrLoading, setAbrLoading] = useState(false);
+  const [abrError, setAbrError] = useState("");
+  const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!form.name && user?.name) {
       setForm((f) => ({ ...f, name: user.name }));
     }
   }, [user, form.name]);
+
+  useEffect(() => {
+    if (form.abn.length !== 11) {
+      setAbrResult(null);
+      setAbrError("");
+      return;
+    }
+    if (abrTimeout.current) clearTimeout(abrTimeout.current);
+    abrTimeout.current = setTimeout(() => lookupAbn(form.abn), 400);
+    return () => {
+      if (abrTimeout.current) clearTimeout(abrTimeout.current);
+    };
+  }, [form.abn]);
+
+  async function lookupAbn(digits: string) {
+    setAbrLoading(true);
+    setAbrError("");
+    setAbrResult(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`);
+      if (!res.ok) throw new Error("ABN not found");
+      const data: AbrResult = await res.json();
+      if (!data.isActive) throw new Error("This ABN is not active");
+      setAbrResult(data);
+    } catch {
+      setAbrError("ABN not found. Check the number and try again.");
+    } finally {
+      setAbrLoading(false);
+    }
+  }
+
+  function onAbnChange(text: string) {
+    const digits = text.replace(/\D/g, "").slice(0, 11);
+    setAbnDisplay(formatAbn(digits));
+    update("abn", digits);
+  }
 
   function update(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -85,12 +146,14 @@ export default function Step1() {
 
   function onContinue() {
     setStep1(form);
-    router.back();
+    router.push("/(app)/get-vouched/step2");
   }
 
   const canContinue =
     form.name.trim() &&
-    form.abn.trim() &&
+    form.abn.length === 11 &&
+    !abrLoading &&
+    !abrError &&
     form.trade.trim() &&
     form.idNumber.trim() &&
     form.idExpiry.trim();
@@ -101,7 +164,7 @@ export default function Step1() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>STEP 1 OF 3</Text>
+        <AppText style={styles.headerTitle}>STEP 1 OF 3</AppText>
         <View style={{ width: 24 }} />
       </View>
       <ProgressBar step={1} />
@@ -111,7 +174,7 @@ export default function Step1() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.heading}>Your details</Text>
+          <AppText style={styles.heading}>Your details</AppText>
 
           <View style={styles.section}>
             <Field
@@ -120,13 +183,37 @@ export default function Step1() {
               onChangeText={(v) => update("name", v)}
               placeholder="Full name"
             />
-            <Field
-              label="ABN"
-              value={form.abn}
-              onChangeText={(v) => update("abn", v)}
-              placeholder="11-digit ABN"
-              keyboardType="numeric"
-            />
+            <View style={styles.fieldWrap}>
+              <AppText style={styles.fieldLabel}>ABN</AppText>
+              <TextInput
+                style={[styles.input, abrError ? styles.inputError : null]}
+                value={abnDisplay}
+                onChangeText={onAbnChange}
+                placeholder="XX XXX XXX XXX"
+                placeholderTextColor={Colors.grey300}
+                keyboardType="numeric"
+                autoCorrect={false}
+              />
+              {abrLoading && (
+                <View style={styles.abrRow}>
+                  <ActivityIndicator size="small" color={Colors.vouchGreen} />
+                  <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
+                </View>
+              )}
+              {abrResult && !abrLoading && (
+                <View style={styles.abrConfirmed}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.vouchGreen} />
+                  <AppText style={styles.abrConfirmedText}>
+                    {abrResult.tradingName || abrResult.entityName}
+                    {"  ·  "}
+                    {abrResult.businessType}
+                    {"  ·  "}
+                    {abrResult.state}
+                  </AppText>
+                </View>
+              )}
+              {abrError && !abrLoading && <AppText style={styles.abrError}>{abrError}</AppText>}
+            </View>
             <Field
               label="TRADE / BUSINESS TYPE"
               value={form.trade}
@@ -136,7 +223,7 @@ export default function Step1() {
           </View>
 
           {/* ID Verification */}
-          <Text style={styles.sectionLabel}>ID VERIFICATION</Text>
+          <AppText style={styles.sectionLabel}>ID VERIFICATION</AppText>
 
           <View style={styles.idTypeRow}>
             <TouchableOpacity
@@ -148,11 +235,11 @@ export default function Step1() {
                 size={15}
                 color={form.idType === "passport" ? Colors.white : Colors.grey700}
               />
-              <Text
+              <AppText
                 style={[styles.chipText, form.idType === "passport" && styles.chipTextSelected]}
               >
                 Passport
-              </Text>
+              </AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -164,9 +251,11 @@ export default function Step1() {
                 size={15}
                 color={form.idType === "licence" ? Colors.white : Colors.grey700}
               />
-              <Text style={[styles.chipText, form.idType === "licence" && styles.chipTextSelected]}>
+              <AppText
+                style={[styles.chipText, form.idType === "licence" && styles.chipTextSelected]}
+              >
                 {"Driver's licence"}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
 
@@ -188,9 +277,9 @@ export default function Step1() {
 
           <View style={styles.privacyNote}>
             <Ionicons name="lock-closed-outline" size={13} color={Colors.grey500} />
-            <Text style={styles.privacyText}>
+            <AppText style={styles.privacyText}>
               Your ID is used for verification only and is never shared publicly.
-            </Text>
+            </AppText>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -202,7 +291,7 @@ export default function Step1() {
           disabled={!canContinue}
           activeOpacity={0.85}
         >
-          <Text style={styles.primaryBtnText}>Save &amp; continue</Text>
+          <AppText style={styles.primaryBtnText}>Save &amp; continue</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -219,12 +308,17 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 4,
   },
-  headerTitle: { fontSize: 13, fontWeight: "600", color: Colors.grey500, letterSpacing: 1 },
+  headerTitle: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    letterSpacing: 1,
+  },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
-  heading: { fontSize: 26, fontWeight: "700", color: Colors.black, marginBottom: 24 },
+  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 24 },
   section: { gap: 16, marginBottom: 28 },
   fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontWeight: "700", color: Colors.grey500, letterSpacing: 0.8 },
+  fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
   input: {
     borderWidth: 1,
     borderColor: Colors.grey300,
@@ -232,12 +326,33 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 14,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
+  inputError: { borderColor: Colors.red },
+  abrRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
+  abrLoadingText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
+  abrConfirmed: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+  },
+  abrConfirmedText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.vouchGreen,
+    lineHeight: 18,
+  },
+  abrError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 6 },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
     letterSpacing: 0.8,
     marginBottom: 14,
@@ -258,7 +373,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.vouchGreen,
     borderColor: Colors.vouchGreen,
   },
-  chipText: { fontSize: 13, fontWeight: "600", color: Colors.grey700 },
+  chipText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.grey700 },
   chipTextSelected: { color: Colors.white },
   privacyNote: {
     flexDirection: "row",
@@ -268,7 +383,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
   },
-  privacyText: { flex: 1, fontSize: 12, color: Colors.grey500, lineHeight: 17 },
+  privacyText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    lineHeight: 17,
+  },
   footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,
@@ -278,5 +399,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
 });

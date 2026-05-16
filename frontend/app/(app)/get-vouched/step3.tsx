@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -52,26 +54,51 @@ function PickerModal({
   onSelect: (v: string) => void;
   onClose: () => void;
 }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <TouchableOpacity style={modal.overlay} activeOpacity={1} onPress={onClose} />
-      <View style={modal.sheet}>
-        <View style={modal.handle} />
-        <FlatList
-          data={options}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={modal.option}
-              onPress={() => {
-                onSelect(item);
-                onClose();
-              }}
-            >
-              <Text style={modal.optionText}>{item}</Text>
-            </TouchableOpacity>
-          )}
-        />
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <Animated.View
+          style={[StyleSheet.absoluteFillObject, modal.overlay, { opacity: fadeAnim }]}
+        >
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        </Animated.View>
+        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+          <Animated.View style={[modal.sheet, { transform: [{ translateY: slideAnim }] }]}>
+            <View style={modal.handle} />
+            <FlatList
+              data={options}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={modal.option}
+                  onPress={() => {
+                    onSelect(item);
+                    onClose();
+                  }}
+                >
+                  <AppText style={modal.optionText}>{item}</AppText>
+                </TouchableOpacity>
+              )}
+            />
+          </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -101,7 +128,7 @@ const modal = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.grey100,
   },
-  optionText: { fontSize: 16, color: Colors.black },
+  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
 });
 
 function Dropdown({
@@ -119,9 +146,9 @@ function Dropdown({
   return (
     <>
       <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.7}>
-        <Text style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
+        <AppText style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
           {value || label}
-        </Text>
+        </AppText>
         <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
       </TouchableOpacity>
       <PickerModal
@@ -170,20 +197,20 @@ function RefCollapsedCard({
   return (
     <TouchableOpacity style={styles.collapsedCard} onPress={onTap} activeOpacity={0.7}>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={styles.collapsedLabel}>{label}</Text>
+        <AppText style={styles.collapsedLabel}>{label}</AppText>
         {hasData ? (
           <>
-            <Text style={styles.collapsedName}>
+            <AppText style={styles.collapsedName}>
               {r.name} · {r.company}
-            </Text>
+            </AppText>
             {r.relationship || r.project ? (
-              <Text style={styles.collapsedMeta}>
+              <AppText style={styles.collapsedMeta}>
                 {[r.relationship, r.project].filter(Boolean).join(" · ")}
-              </Text>
+              </AppText>
             ) : null}
           </>
         ) : (
-          <Text style={styles.collapsedEmpty}>Tap to fill in details</Text>
+          <AppText style={styles.collapsedEmpty}>Tap to fill in details</AppText>
         )}
       </View>
       <View style={styles.collapsedActions}>
@@ -197,6 +224,15 @@ function RefCollapsedCard({
     </TouchableOpacity>
   );
 }
+
+function formatMobile(v: string) {
+  // keep leading + for international (+61), then digits only
+  const stripped = v.replace(/[^0-9+]/g, "");
+  if (stripped.startsWith("+")) return "+" + stripped.slice(1).replace(/\D/g, "");
+  return stripped.replace(/\D/g, "");
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Expanded form — shown for the active ref
 function RefForm({
@@ -212,16 +248,19 @@ function RefForm({
   onDone: () => void;
   onDelete?: () => void;
 }) {
+  const [emailTouched, setEmailTouched] = useState(false);
+
   function update(key: keyof Reference, v: string) {
     onChange({ ...value, [key]: v });
   }
 
-  const done = isRefComplete(value);
+  const emailInvalid = emailTouched && value.email.trim() && !EMAIL_RE.test(value.email.trim());
+  const done = isRefComplete(value) && !emailInvalid;
 
   return (
     <View style={styles.refCard}>
       <View style={styles.refCardHeader}>
-        <Text style={styles.refLabel}>{label}</Text>
+        <AppText style={styles.refLabel}>{label}</AppText>
         {onDelete && (
           <TouchableOpacity onPress={onDelete} hitSlop={8}>
             <Ionicons name="trash-outline" size={18} color={Colors.red} />
@@ -245,27 +284,33 @@ function RefForm({
         placeholderTextColor={Colors.grey300}
         autoCorrect={false}
       />
-      <View style={styles.mobileEmailRow}>
+      <TextInput
+        style={styles.refInput}
+        value={value.mobile}
+        onChangeText={(v) => update("mobile", formatMobile(v))}
+        placeholder="+61 4XX XXX XXX or 04XX XXX XXX"
+        placeholderTextColor={Colors.grey300}
+        keyboardType="phone-pad"
+        autoCorrect={false}
+      />
+      <View>
         <TextInput
-          style={[styles.refInput, { flex: 1 }]}
-          value={value.mobile}
-          onChangeText={(v) => update("mobile", v)}
-          placeholder="Mobile"
-          placeholderTextColor={Colors.grey300}
-          keyboardType="phone-pad"
-        />
-        <TextInput
-          style={[styles.refInput, { flex: 1 }]}
+          style={[styles.refInput, emailInvalid && styles.refInputError]}
           value={value.email}
           onChangeText={(v) => update("email", v)}
+          onBlur={() => setEmailTouched(true)}
           placeholder="Email (optional)"
           placeholderTextColor={Colors.grey300}
           keyboardType="email-address"
           autoCapitalize="none"
+          autoCorrect={false}
         />
+        {emailInvalid ? (
+          <AppText style={styles.fieldError}>Enter a valid email address</AppText>
+        ) : null}
       </View>
 
-      <Text style={styles.dropdownLabel}>HOW DO YOU KNOW THEM?</Text>
+      <AppText style={styles.dropdownLabel}>HOW DO YOU KNOW THEM?</AppText>
       <Dropdown
         label="Select relationship"
         value={value.relationship}
@@ -281,7 +326,7 @@ function RefForm({
 
       {value.relationship === "From another project" && (
         <>
-          <Text style={styles.dropdownLabel}>WHICH PROJECT?</Text>
+          <AppText style={styles.dropdownLabel}>WHICH PROJECT?</AppText>
           <TextInput
             style={styles.refInput}
             value={value.project}
@@ -296,7 +341,7 @@ function RefForm({
       {done && (
         <TouchableOpacity style={styles.doneBtn} onPress={onDone}>
           <Ionicons name="checkmark" size={14} color={Colors.vouchGreen} />
-          <Text style={styles.doneBtnText}>Done</Text>
+          <AppText style={styles.doneBtnText}>Done</AppText>
         </TouchableOpacity>
       )}
     </View>
@@ -371,7 +416,8 @@ export default function Step3() {
           pastProjectName: step2.pastProjectName,
           pastSuburb: step2.pastSuburb,
           pastPostcode: step2.pastPostcode,
-          pastYear: step2.pastYear,
+          pastMonthYear: step2.pastMonthYear,
+          pastState: step2.pastState,
           pastValue: step2.pastValue,
           references: refs.filter((r) => r.name.trim()),
         }),
@@ -392,7 +438,7 @@ export default function Step3() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>STEP 3 OF 3</Text>
+        <AppText style={styles.headerTitle}>STEP 3 OF 3</AppText>
         <View style={{ width: 24 }} />
       </View>
       <ProgressBar />
@@ -402,10 +448,10 @@ export default function Step3() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.heading}>Your two references</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.heading}>Your two references</AppText>
+          <AppText style={styles.subtitle}>
             {"They'll get a quick request. Most respond in 24 hrs."}
-          </Text>
+          </AppText>
 
           {refs.map((ref, i) => {
             if (!showThird && i === 2) return null;
@@ -436,11 +482,11 @@ export default function Step3() {
           {!showThird && (
             <TouchableOpacity style={styles.addThirdBtn} onPress={addThird}>
               <Ionicons name="add" size={16} color={Colors.grey500} />
-              <Text style={styles.addThirdText}>Add a 3rd (optional)</Text>
+              <AppText style={styles.addThirdText}>Add a 3rd (optional)</AppText>
             </TouchableOpacity>
           )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <AppText style={styles.error}>{error}</AppText> : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -454,7 +500,7 @@ export default function Step3() {
           {submitting ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.primaryBtnText}>Send vouch requests</Text>
+            <AppText style={styles.primaryBtnText}>Send vouch requests</AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -472,10 +518,21 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 4,
   },
-  headerTitle: { fontSize: 13, fontWeight: "600", color: Colors.grey500, letterSpacing: 1 },
+  headerTitle: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    letterSpacing: 1,
+  },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24, gap: 16 },
-  heading: { fontSize: 26, fontWeight: "700", color: Colors.black },
-  subtitle: { fontSize: 14, color: Colors.grey500, lineHeight: 20, marginTop: 6 },
+  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+    lineHeight: 20,
+    marginTop: 6,
+  },
 
   refCardHeader: {
     flexDirection: "row",
@@ -492,7 +549,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: Colors.white,
   },
-  refLabel: { fontSize: 12, fontWeight: "700", color: Colors.vouchGreen, letterSpacing: 0.8 },
+  refLabel: { fontSize: 12, fontFamily: Fonts.bold, color: Colors.vouchGreen, letterSpacing: 0.8 },
   refInput: {
     borderWidth: 1,
     borderColor: Colors.grey300,
@@ -500,11 +557,18 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 14,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
-  mobileEmailRow: { flexDirection: "row", gap: 10 },
-  dropdownLabel: { fontSize: 11, fontWeight: "700", color: Colors.grey500, letterSpacing: 0.8 },
+  refInputError: { borderColor: Colors.red },
+  fieldError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
+  dropdownLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    letterSpacing: 0.8,
+  },
   dropdown: {
     borderWidth: 1,
     borderColor: Colors.grey300,
@@ -516,7 +580,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: Colors.white,
   },
-  dropdownText: { fontSize: 15, color: Colors.black },
+  dropdownText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
   dropdownPlaceholder: { color: Colors.grey300 },
   doneBtn: {
     flexDirection: "row",
@@ -529,7 +593,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.vouchGreen,
   },
-  doneBtnText: { fontSize: 13, fontWeight: "600", color: Colors.vouchGreen },
+  doneBtnText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 
   // Collapsed (inactive) reference card — solid grey border
   collapsedCard: {
@@ -544,14 +608,14 @@ const styles = StyleSheet.create({
   },
   collapsedLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
     letterSpacing: 0.8,
     marginBottom: 2,
   },
-  collapsedName: { fontSize: 15, fontWeight: "600", color: Colors.black },
-  collapsedMeta: { fontSize: 13, color: Colors.grey500 },
-  collapsedEmpty: { fontSize: 14, color: Colors.grey300 },
+  collapsedName: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.black },
+  collapsedMeta: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
+  collapsedEmpty: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey300 },
   collapsedActions: { flexDirection: "row", alignItems: "center", gap: 14 },
 
   // Add third
@@ -566,9 +630,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 16,
   },
-  addThirdText: { fontSize: 14, color: Colors.grey500 },
+  addThirdText: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500 },
 
-  error: { fontSize: 13, color: Colors.red, textAlign: "center" },
+  error: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.red, textAlign: "center" },
 
   footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
   primaryBtn: {
@@ -579,5 +643,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
 });
