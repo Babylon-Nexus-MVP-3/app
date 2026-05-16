@@ -63,7 +63,7 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="projects"
+        name="vouch-my-project"
         options={{
           title: "Project",
           tabBarIcon: ({ color, focused }) => (
@@ -86,6 +86,7 @@ export default function AppLayout() {
       />
 
       {/* Hidden screens — not in tab bar */}
+      <Tabs.Screen name="projects" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="change-password" options={{ href: null }} />

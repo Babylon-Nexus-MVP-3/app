@@ -3,6 +3,7 @@ import {
   authRefresh,
   deleteAccount,
   forgotPassword,
+  getMe,
   loginUser,
   reactivateAccount,
   registerUser,
@@ -320,6 +321,15 @@ export const resendOtpHandler = async (req: Request, res: Response, next: NextFu
   try {
     const result = await resendOtp(mobile);
     res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const meHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await getMe(req.user!.sub);
+    res.status(200).json({ user });
   } catch (err) {
     next(err);
   }

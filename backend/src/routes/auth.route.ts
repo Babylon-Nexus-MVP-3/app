@@ -35,6 +35,7 @@ authRouter.post("/logout", requireAuth, AuthController.logout);
 authRouter.delete("/delete-account", requireAuth, AuthController.deleteUserAccount);
 authRouter.patch("/push-token", requireAuth, AuthController.updatePushToken);
 authRouter.patch("/profile", requireAuth, AuthController.updateProfileHandler);
+authRouter.get("/me", requireAuth, AuthController.meHandler);
 
 // OTP-based auth (v3)
 authRouter.post("/request-otp", otpRequestLimiter, AuthController.requestOtpHandler);

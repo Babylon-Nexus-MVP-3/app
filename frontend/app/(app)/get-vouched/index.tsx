@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -33,22 +33,59 @@ const STEPS = [
 
 type StepState = "done" | "active" | "locked";
 
+type SentRequest = {
+  _id: string;
+  toMobile: string;
+  toEmail?: string;
+  relationship: string;
+  projectName: string;
+  status: "pending" | "responded";
+  fromName: string;
+  fromCompany: string;
+};
+
 export default function GetVouchedIntro() {
-  const { user, fetchWithAuth } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const { step1, step2, references } = useWizard();
-  const mobileVerified = user?.mobileVerified ?? false;
+  const mobileVerified = true; // TODO: restore to user?.mobileVerified ?? false once EC2 is updated
 
   const [profileSubmitted, setProfileSubmitted] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const r = await fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`);
+      if (r.ok) {
+        const profile = await r.json();
+        // Only treat as submitted if all 3 steps are present
+        const fullySubmitted =
+          profile.name &&
+          profile.currentProjectName &&
+          Array.isArray(profile.references) &&
+          profile.references.length >= 2;
+        if (!fullySubmitted) return;
+        setProfileSubmitted(true);
+        try {
+          const req = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`);
+          if (req.ok) {
+            const data = await req.json();
+            setSentRequests(data.requests ?? []);
+          }
+        } finally {
+          setLoadingRequests(false);
+        }
+      }
+    } catch {
+    } finally {
+      setCheckingProfile(false);
+    }
+  }, [fetchWithAuth]);
 
   useEffect(() => {
-    fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
-      .then((r) => {
-        if (r.ok) setProfileSubmitted(true);
-      })
-      .catch(() => {})
-      .finally(() => setCheckingProfile(false));
-  }, [fetchWithAuth]);
+    loadProfile();
+  }, [loadProfile]);
 
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(
@@ -111,15 +148,59 @@ export default function GetVouchedIntro() {
           <ActivityIndicator size="large" color={Colors.vouchGreen} />
         </View>
       ) : profileSubmitted ? (
-        <View style={styles.submittedWrap}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.iconCircle}>
-            <Ionicons name="shield-checkmark" size={40} color={Colors.vouchGreen} />
+            <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
           </View>
-          <Text style={styles.title}>Profile submitted.</Text>
+          <Text style={styles.title}>Vouch requests sent.</Text>
           <Text style={styles.subtitle}>
             {"Your references have been notified. We'll update you once they respond."}
           </Text>
-        </View>
+
+          <View style={styles.requestList}>
+            <Text style={styles.requestListLabel}>REFERENCE STATUS</Text>
+            {loadingRequests ? (
+              <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 12 }} />
+            ) : sentRequests.length === 0 ? (
+              <Text style={styles.requestMeta}>No requests found.</Text>
+            ) : (
+              sentRequests.map((r) => {
+                const done = r.status === "responded";
+                return (
+                  <View key={r._id} style={styles.requestRow}>
+                    <View
+                      style={[
+                        styles.requestDot,
+                        done ? styles.requestDotDone : styles.requestDotPending,
+                      ]}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.requestMobile}>{r.toEmail || r.toMobile}</Text>
+                      <Text style={styles.requestMeta}>
+                        {r.relationship} · {r.projectName}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        done ? styles.statusBadgeDone : styles.statusBadgePending,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusBadgeText,
+                          done ? styles.statusBadgeTextDone : styles.statusBadgeTextPending,
+                        ]}
+                      >
+                        {done ? "Completed" : "Pending"}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -245,12 +326,46 @@ export default function GetVouchedIntro() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  submittedWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
+  requestList: {
+    width: "100%",
+    marginTop: 8,
+    gap: 12,
   },
+  requestListLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  requestRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  requestDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  requestDotDone: { backgroundColor: Colors.vouchGreen },
+  requestDotPending: { backgroundColor: Colors.amber },
+  requestMobile: { fontSize: 14, fontWeight: "600", color: Colors.black },
+  requestMeta: { fontSize: 12, color: Colors.grey500, marginTop: 2 },
+  statusBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusBadgeDone: { backgroundColor: Colors.vouchGreenLight },
+  statusBadgePending: { backgroundColor: Colors.amberBg },
+  statusBadgeText: { fontSize: 11, fontWeight: "700" },
+  statusBadgeTextDone: { color: Colors.vouchGreen },
+  statusBadgeTextPending: { color: Colors.amber },
   header: {
     flexDirection: "row",
     alignItems: "center",

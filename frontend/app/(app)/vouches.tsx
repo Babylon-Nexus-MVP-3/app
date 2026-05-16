@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useFocusEffect, router } from "expo-router";
 import {
   View,
   Text,
@@ -7,10 +8,10 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -66,6 +67,7 @@ export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
   const [requests, setRequests] = useState<VouchRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
 
@@ -82,9 +84,17 @@ export default function VouchesScreen() {
     }
   }, [fetchWithAuth]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
 
   function onAbnChange(raw: string) {
     setAbn(formatAbn(raw));
@@ -103,10 +113,23 @@ export default function VouchesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <Ionicons name="arrow-back" size={24} color={Colors.black} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Vouch for someone</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.vouchGreen}
+          />
+        }
+      >
         {/* Pending requests */}
         <Text style={styles.sectionLabel}>
           PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
@@ -171,18 +194,6 @@ export default function VouchesScreen() {
           </Text>
         </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={() => router.push("/(app)/give-vouch/manual")}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.manualText}>
-            {"Don't have their ABN? "}
-            <Text style={styles.manualLink}>Add manually →</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -190,6 +201,9 @@ export default function VouchesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 12,
@@ -309,29 +323,14 @@ const styles = StyleSheet.create({
   },
   verifiedNote: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     marginTop: -4,
   },
   verifiedNoteText: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.grey500,
-    flex: 1,
     lineHeight: 18,
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    paddingTop: 8,
-    alignItems: "center",
-  },
-  manualText: {
-    fontSize: 14,
-    color: Colors.grey700,
-    textAlign: "center",
-  },
-  manualLink: {
-    color: Colors.vouchGreen,
-    fontWeight: "600",
   },
 });
