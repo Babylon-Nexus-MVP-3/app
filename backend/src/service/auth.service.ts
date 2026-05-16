@@ -694,17 +694,7 @@ export async function verifyOtp(
   const accessToken = createAccessToken(user);
   const refreshToken = await createRefreshToken(user);
 
-  return {
-    accessToken,
-    refreshToken,
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email ?? "",
-      role: user.role,
-      status: user.status,
-    } satisfies SafeUser,
-  };
+  return { accessToken, refreshToken, user: toSafeUser(user) };
 }
 
 export async function requestMobileOtp(

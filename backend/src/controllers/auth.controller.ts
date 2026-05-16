@@ -69,13 +69,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     res.status(200).json({
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
-      user: {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role,
-        status: result.user.status,
-      },
+      user: result.user,
     });
   } catch (err: any) {
     if (err?.code === "ACCOUNT_DEACTIVATED") {
@@ -103,13 +97,7 @@ export async function reactivate(req: Request, res: Response, next: NextFunction
     res.status(200).json({
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
-      user: {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role,
-        status: result.user.status,
-      },
+      user: result.user,
     });
   } catch (err) {
     next(err);
