@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Platform, StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
+import { Alert, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -109,7 +109,7 @@ export default function MeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.scroll}>
         {/* VouchPay credential card */}
         <View style={styles.vpCard}>
           {/* Card top row */}
@@ -253,21 +253,21 @@ export default function MeScreen() {
           <Ionicons name="trash-outline" size={15} color={Colors.red} />
           <AppText style={styles.deleteText}>Delete Account</AppText>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  scroll: { paddingHorizontal: 24, paddingBottom: 48, paddingTop: 20, gap: 12 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 16, paddingTop: 12, gap: 8 },
 
   // VouchPay credential card
   vpCard: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 20,
-    padding: 20,
-    gap: 20,
+    padding: 14,
+    gap: 12,
   },
   vpCardTop: {
     flexDirection: "row",
@@ -283,17 +283,17 @@ const styles = StyleSheet.create({
   },
   vpIdentity: { flexDirection: "row", alignItems: "center", gap: 14 },
   vpAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.3)",
   },
-  vpAvatarText: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
-  vpName: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.white },
+  vpAvatarText: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.white },
+  vpName: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.white },
   vpBusiness: {
     fontSize: 13,
     fontFamily: Fonts.regular,
@@ -305,11 +305,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.15)",
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     gap: 12,
   },
-  vpStat: { flex: 1, gap: 3 },
+  vpStat: { flex: 1, gap: 2 },
   vpStatLabel: {
     fontSize: 9,
     fontFamily: Fonts.bold,
@@ -317,14 +317,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   vpStatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  vpStatValue: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
+  vpStatValue: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.white },
 
   sectionLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: -4,
   },
 
@@ -340,13 +340,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   credIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -376,10 +376,10 @@ const styles = StyleSheet.create({
   signOutBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
-    height: 54,
+    height: 46,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   signOutText: { color: Colors.white, fontSize: 15, fontFamily: Fonts.bold },
 
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 50,
+    height: 42,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: Colors.red,

@@ -18,6 +18,8 @@ export default function Index() {
     }
   }, [isLoading, user]);
 
+  if (isLoading || user) return null;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>

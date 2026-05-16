@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -64,25 +64,32 @@ function formatAbn(raw: string): string {
   return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
 }
 
+type SearchResult = {
+  abn: string;
+  entityName: string;
+  state: string;
+};
+
 export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
   const [requests, setRequests] = useState<VouchRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
   const [checking, setChecking] = useState(false);
+  const [showNameSearch, setShowNameSearch] = useState(false);
+  const [nameQuery, setNameQuery] = useState("");
+  const [nameResults, setNameResults] = useState<SearchResult[]>([]);
+  const [nameSearching, setNameSearching] = useState(false);
+  const [nameError, setNameError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`);
       const data = await res.json();
       setRequests(data.requests ?? []);
     } catch {
       setRequests([]);
-    } finally {
-      setLoading(false);
     }
   }, [fetchWithAuth]);
 
@@ -127,6 +134,40 @@ export default function VouchesScreen() {
     router.push(`/(app)/give-vouch/verify?abn=${digits}`);
   }
 
+  function toggleNameSearch() {
+    setShowNameSearch((prev) => !prev);
+    setNameQuery("");
+    setNameResults([]);
+    setNameError("");
+  }
+
+  async function onNameSearch() {
+    const q = nameQuery.trim();
+    if (q.length < 3) {
+      setNameError("Enter at least 3 characters");
+      return;
+    }
+    setNameError("");
+    setNameSearching(true);
+    setNameResults([]);
+    try {
+      const res = await fetchWithAuth(
+        `${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`
+      );
+      const data = await res.json();
+      const results: SearchResult[] = data.results ?? [];
+      if (results.length === 0) {
+        setNameError("No businesses found. Try a different name.");
+      } else {
+        setNameResults(results);
+      }
+    } catch {
+      setNameError("Search failed. Please try again.");
+    } finally {
+      setNameSearching(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -155,9 +196,7 @@ export default function VouchesScreen() {
           PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
         </AppText>
 
-        {loading ? (
-          <ActivityIndicator color={Colors.vouchGreen} style={{ marginVertical: 20 }} />
-        ) : requests.length === 0 ? (
+        {requests.length === 0 ? (
           <View style={styles.emptyBox}>
             <Ionicons name="time-outline" size={20} color={Colors.grey500} />
             <AppText style={styles.emptyText}>No pending requests right now.</AppText>
@@ -192,39 +231,117 @@ export default function VouchesScreen() {
           {"Enter their ABN. We'll verify it instantly."}
         </AppText>
 
-        <AppText style={styles.abnLabel}>ABN</AppText>
-        <TextInput
-          style={[styles.abnInput, abnError ? styles.abnInputError : null]}
-          value={abn}
-          onChangeText={onAbnChange}
-          placeholder="XX XXX XXX XXX"
-          placeholderTextColor={Colors.grey300}
-          keyboardType="numeric"
-          returnKeyType="go"
-          onSubmitEditing={onLookup}
-        />
-        {abnError ? <AppText style={styles.abnErrorText}>{abnError}</AppText> : null}
+        {!showNameSearch && (
+          <>
+            <AppText style={styles.abnLabel}>ABN</AppText>
+            <TextInput
+              style={[styles.abnInput, abnError ? styles.abnInputError : null]}
+              value={abn}
+              onChangeText={onAbnChange}
+              placeholder="XX XXX XXX XXX"
+              placeholderTextColor={Colors.grey300}
+              keyboardType="numeric"
+              returnKeyType="go"
+              onSubmitEditing={onLookup}
+            />
+            {abnError ? <AppText style={styles.abnErrorText}>{abnError}</AppText> : null}
 
-        <TouchableOpacity
-          style={[styles.lookupBtn, checking && { opacity: 0.7 }]}
-          onPress={onLookup}
-          disabled={checking}
-          activeOpacity={0.85}
-        >
-          {checking ? (
-            <ActivityIndicator color={Colors.white} size="small" />
-          ) : (
-            <AppText style={styles.lookupBtnText}>Look up ABN</AppText>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.lookupBtn, checking && { opacity: 0.7 }]}
+              onPress={onLookup}
+              disabled={checking}
+              activeOpacity={0.85}
+            >
+              {checking ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <AppText style={styles.lookupBtnText}>Look up ABN</AppText>
+              )}
+            </TouchableOpacity>
 
-        <View style={styles.verifiedNote}>
-          <Ionicons name="shield-checkmark-outline" size={13} color={Colors.grey500} />
-          <AppText style={styles.verifiedNoteText}>
-            Verified with the Australian Business Register. We never search our user list.
-          </AppText>
-        </View>
+            <View style={styles.verifiedNote}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={Colors.grey500} />
+              <AppText style={styles.verifiedNoteText}>
+                Verified with the Australian Business Register. We never search our user list.
+              </AppText>
+            </View>
+          </>
+        )}
+
+        {showNameSearch && (
+          <>
+            <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
+            <View style={styles.nameSearchRow}>
+              <TextInput
+                style={styles.nameInput}
+                value={nameQuery}
+                onChangeText={(t) => {
+                  setNameQuery(t);
+                  setNameError("");
+                }}
+                placeholder="Search by business name"
+                placeholderTextColor={Colors.grey300}
+                returnKeyType="search"
+                onSubmitEditing={onNameSearch}
+                autoCapitalize="words"
+              />
+              <TouchableOpacity
+                style={styles.nameSearchBtn}
+                onPress={onNameSearch}
+                activeOpacity={0.85}
+                disabled={nameSearching}
+              >
+                {nameSearching ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Ionicons name="search" size={18} color={Colors.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {nameError ? <AppText style={styles.abnErrorText}>{nameError}</AppText> : null}
+
+            {nameResults.length > 0 && (
+              <View style={styles.resultsContainer}>
+                {nameResults.map((item, idx) => (
+                  <TouchableOpacity
+                    key={`${item.abn}-${idx}`}
+                    style={[
+                      styles.resultRow,
+                      idx < nameResults.length - 1 && styles.resultRowBorder,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/(app)/give-vouch/verify?abn=${item.abn}`)}
+                  >
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <AppText style={styles.resultName} numberOfLines={1}>
+                        {item.entityName}
+                      </AppText>
+                      <AppText style={styles.resultMeta}>
+                        {item.state} · ABN {formatAbn(item.abn)}
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
+
+      <TouchableOpacity onPress={toggleNameSearch} style={styles.toggleSearchLink} activeOpacity={0.7}>
+        {showNameSearch ? (
+          <AppText style={styles.toggleSearchText}>
+            <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>
+          </AppText>
+        ) : (
+          <AppText style={styles.toggleSearchText}>
+            {"Don't have their ABN? "}
+            <AppText style={styles.toggleSearchUnderline}>Add it manually</AppText>
+          </AppText>
+        )}
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -374,5 +491,71 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grey500,
     lineHeight: 18,
+  },
+  toggleSearchLink: {
+    alignItems: "center",
+    paddingVertical: 16,
+    backgroundColor: Colors.white,
+  },
+  toggleSearchText: {
+    fontSize: 13,
+    color: Colors.grey500,
+    fontWeight: "400",
+  },
+  toggleSearchUnderline: {
+    color: Colors.vouchGreen,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  nameSearchRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  nameInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    height: 50,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: Colors.black,
+    backgroundColor: Colors.white,
+  },
+  nameSearchBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: Colors.vouchGreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resultsContainer: {
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 14,
+    backgroundColor: Colors.white,
+    overflow: "hidden",
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  resultRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey100,
+  },
+  resultName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.black,
+  },
+  resultMeta: {
+    fontSize: 12,
+    color: Colors.grey500,
   },
 });

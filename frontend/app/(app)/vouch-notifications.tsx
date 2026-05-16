@@ -102,17 +102,17 @@ export default function VouchNotifications() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NOTIFICATIONS</Text>
-        {hasUnread ? (
-          <TouchableOpacity onPress={markAllRead} hitSlop={8}>
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 70 }} />
-        )}
+        <View style={styles.headerSide}>
+          {hasUnread ? (
+            <TouchableOpacity onPress={markAllRead} hitSlop={8}>
+              <Text style={styles.markAllText}>Mark all read</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {loading ? (
@@ -155,11 +155,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
+  headerSide: {
+    width: 90,
+  },
   headerTitle: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "600",
     color: Colors.grey500,
     letterSpacing: 1,
+    textAlign: "center",
   },
   markAllText: {
     fontSize: 13,

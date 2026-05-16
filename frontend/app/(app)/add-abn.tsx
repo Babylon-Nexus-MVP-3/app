@@ -100,14 +100,14 @@ export default function AddAbn() {
         throw new Error(data.error ?? "Failed to save. Please try again.");
       }
       await updateUser({ abn: abnDigits, businessName });
-      router.back();
+      router.push("/(app)/me" as any);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         await updateUser({
           abn: abnDigits,
           businessName: abrResult?.tradingName || abrResult?.entityName,
         });
-        router.back();
+        router.push("/(app)/me" as any);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -123,7 +123,7 @@ export default function AddAbn() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.inner}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.push("/(app)/me" as any)} hitSlop={14}>
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
