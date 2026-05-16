@@ -40,11 +40,14 @@ export default function MeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!user?.abn) return;
-      fetchWithAuth(`${API_BASE_URL}/vouch/business/${user.abn}`)
+      fetchWithAuth(`${API_BASE_URL}/auth/me`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
-          if (data) setVouchCount(data.vouchCount ?? 0);
+          const abn = data?.user?.abn ?? user?.abn;
+          if (!abn) return;
+          return fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((vd) => { if (vd) setVouchCount(vd.vouchCount ?? 0); });
         })
         .catch(() => {});
     }, [fetchWithAuth, user?.abn])
@@ -266,8 +269,8 @@ const styles = StyleSheet.create({
   vpCard: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 20,
-    padding: 14,
-    gap: 12,
+    padding: 20,
+    gap: 16,
   },
   vpCardTop: {
     flexDirection: "row",
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   vpWordmark: {
-    fontSize: 13,
+    fontSize: 16,
     fontFamily: Fonts.extraBold,
     color: Colors.white,
     letterSpacing: 1.5,
@@ -283,19 +286,19 @@ const styles = StyleSheet.create({
   },
   vpIdentity: { flexDirection: "row", alignItems: "center", gap: 14 },
   vpAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.3)",
   },
-  vpAvatarText: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.white },
-  vpName: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.white },
+  vpAvatarText: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
+  vpName: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
   vpBusiness: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: "rgba(255,255,255,0.65)",
     marginTop: 2,
@@ -311,21 +314,21 @@ const styles = StyleSheet.create({
   },
   vpStat: { flex: 1, gap: 2 },
   vpStatLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: Fonts.bold,
     color: "rgba(255,255,255,0.5)",
     letterSpacing: 0.8,
   },
   vpStatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  vpStatValue: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.white },
+  vpStatValue: { fontSize: 28, fontFamily: Fonts.extraBold, color: Colors.white },
 
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
-    marginTop: 4,
-    marginBottom: -4,
+    marginTop: 8,
+    marginBottom: -2,
   },
 
   credCard: {
@@ -341,18 +344,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 14,
   },
   credIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   credBody: { flex: 1 },
-  credTitle: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
-  credValue: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
+  credTitle: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.black },
+  credValue: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
 
   verifiedBadge: {
     flexDirection: "row",
@@ -376,22 +379,22 @@ const styles = StyleSheet.create({
   signOutBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
-    height: 46,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
+    marginTop: 8,
   },
-  signOutText: { color: Colors.white, fontSize: 15, fontFamily: Fonts.bold },
+  signOutText: { color: Colors.white, fontSize: 17, fontFamily: Fonts.bold },
 
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 42,
+    height: 50,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: Colors.red,
   },
-  deleteText: { color: Colors.red, fontSize: 14, fontFamily: Fonts.semiBold },
+  deleteText: { color: Colors.red, fontSize: 15, fontFamily: Fonts.semiBold },
 });

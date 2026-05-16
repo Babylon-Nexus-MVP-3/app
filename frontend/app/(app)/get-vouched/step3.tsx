@@ -348,7 +348,7 @@ function RefForm({
 
 export default function Step3() {
   const { step1, step2, references, setReferences } = useWizard();
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, updateUser } = useAuth();
 
   const [refs, setRefs] = useState<Reference[]>(
     references.length >= 2 ? references : [emptyRef(), emptyRef()]
@@ -396,7 +396,7 @@ export default function Step3() {
     setError("");
     setReferences(refs);
     try {
-      await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
+      const profileRes = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
         body: JSON.stringify({
           name: step1.name,
@@ -420,6 +420,9 @@ export default function Step3() {
           references: refs.filter((r) => r.name.trim()),
         }),
       });
+      if (profileRes.ok) {
+        await updateUser({ abn: step1.abn, businessName: step1.trade });
+      }
     } catch {
       // Backend not yet live — proceed to success screen
     } finally {

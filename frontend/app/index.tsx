@@ -74,13 +74,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   wordmark: {
-    fontSize: 28,
+    fontSize: 34,
     fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
     letterSpacing: 1,
   },
   tagline: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.semiBold,
     color: Colors.grey700,
     letterSpacing: 0.5,
@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heading: {
-    fontSize: 32,
+    fontSize: 40,
     fontFamily: Fonts.extraBold,
     color: Colors.black,
-    lineHeight: 40,
+    lineHeight: 50,
     marginBottom: 20,
   },
   statCard: {
@@ -105,18 +105,18 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 36,
     fontFamily: Fonts.extraBold,
     color: Colors.red,
-    lineHeight: 32,
+    lineHeight: 40,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: Fonts.semiBold,
     color: Colors.red,
   },
   statSub: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: 2,
@@ -127,19 +127,19 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   signUpButton: {
-    height: 54,
+    height: 58,
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   signUpText: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
   signInButton: {
-    height: 54,
+    height: 58,
     borderRadius: 28,
     borderWidth: 1.5,
     borderColor: Colors.vouchGreen,
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   signInButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
   },
