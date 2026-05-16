@@ -46,7 +46,11 @@ function NotifCard({ item }: { item: VouchNotif }) {
     : `${item.fromName} from ${item.fromCompany} requested a vouch for ${item.projectName ?? "a project"}.`;
 
   return (
-    <View style={[styles.card, !item.read && styles.cardUnread]}>
+    <TouchableOpacity
+      style={[styles.card, !item.read && styles.cardUnread]}
+      activeOpacity={0.7}
+      onPress={() => router.push("/(app)/vouches")}
+    >
       <View style={styles.iconWrap}>
         <Ionicons
           name={isReceived ? "shield-checkmark-outline" : "person-add-outline"}
@@ -59,7 +63,7 @@ function NotifCard({ item }: { item: VouchNotif }) {
         <Text style={styles.cardTime}>{timeAgo(item.createdAt)}</Text>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
-    </View>
+    </TouchableOpacity>
   );
 }
 

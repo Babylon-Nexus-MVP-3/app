@@ -178,6 +178,11 @@ export default function VouchesScreen() {
                 <AppText style={styles.requestMeta}>
                   {r.fromName} · {timeAgo(r.createdAt)}
                 </AppText>
+                {r.relationship || r.projectName ? (
+                  <AppText style={styles.requestRelationship}>
+                    {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+                  </AppText>
+                ) : null}
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
             </TouchableOpacity>
@@ -304,6 +309,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
+  },
+  requestRelationship: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.vouchGreen,
   },
   divider: {
     height: 1,
