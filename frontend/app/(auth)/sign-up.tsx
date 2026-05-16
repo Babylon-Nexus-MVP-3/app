@@ -234,7 +234,9 @@ export default function SignUp() {
           <View style={styles.abnWarning}>
             <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
             <AppText style={styles.abnWarningText}>
-              {"You can't change your ABN after creating your account — make sure it's correct."}
+              {
+                "You cannot change your ABN after creating your account — please make sure it's correct."
+              }
             </AppText>
           </View>
 
