@@ -47,7 +47,9 @@ export default function MeScreen() {
           if (!abn) return;
           return fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`)
             .then((r) => (r.ok ? r.json() : null))
-            .then((vd) => { if (vd) setVouchCount(vd.vouchCount ?? 0); });
+            .then((vd) => {
+              if (vd) setVouchCount(vd.vouchCount ?? 0);
+            });
         })
         .catch(() => {});
     }, [fetchWithAuth, user?.abn])

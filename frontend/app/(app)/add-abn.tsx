@@ -123,7 +123,11 @@ export default function AddAbn() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.inner}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.push("/(app)/me" as any)} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.push("/(app)/me" as any)}
+            hitSlop={14}
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 

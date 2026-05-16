@@ -151,9 +151,7 @@ export default function VouchesScreen() {
     setNameSearching(true);
     setNameResults([]);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`);
       const data = await res.json();
       const results: SearchResult[] = data.results ?? [];
       if (results.length === 0) {
@@ -330,7 +328,11 @@ export default function VouchesScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity onPress={toggleNameSearch} style={styles.toggleSearchLink} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={toggleNameSearch}
+        style={styles.toggleSearchLink}
+        activeOpacity={0.7}
+      >
         {showNameSearch ? (
           <AppText style={styles.toggleSearchText}>
             <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>

@@ -95,9 +95,16 @@ export default function HomeScreen() {
         <View style={styles.cards}>
           {/* Get Vouched / View vouch profile */}
           <TouchableOpacity
-            style={[styles.card, vouchProfileComplete ? styles.cardVouchComplete : styles.cardGetVouched]}
+            style={[
+              styles.card,
+              vouchProfileComplete ? styles.cardVouchComplete : styles.cardGetVouched,
+            ]}
             activeOpacity={0.7}
-            onPress={() => vouchProfileComplete ? router.push("/(app)/(tabs)/me") : router.push("/(app)/get-vouched")}
+            onPress={() =>
+              vouchProfileComplete
+                ? router.push("/(app)/(tabs)/me")
+                : router.push("/(app)/get-vouched")
+            }
           >
             <View style={styles.cardIcon}>
               <Ionicons
