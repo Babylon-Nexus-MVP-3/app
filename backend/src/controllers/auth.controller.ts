@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { VouchProfileModel } from "../models/vouchProfileModel";
 import {
   authRefresh,
   deleteAccount,
@@ -328,6 +329,10 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
   const { abn, businessName } = req.body;
   try {
     await updateProfile(userId, { abn, businessName });
+    // Keep VouchProfile in sync if one exists
+    if (abn) {
+      await VouchProfileModel.updateOne({ userId }, { $set: { abn } });
+    }
     res.status(200).json({ success: true });
   } catch (err) {
     next(err);

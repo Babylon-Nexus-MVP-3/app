@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { useWizard, Reference } from "./WizardContext";
@@ -45,7 +45,7 @@ type SentRequest = {
 };
 
 export default function GetVouchedIntro() {
-  const { user, fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const { step1, step2, references } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
 
@@ -83,9 +83,11 @@ export default function GetVouchedIntro() {
     }
   }, [fetchWithAuth]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile])
+  );
 
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(

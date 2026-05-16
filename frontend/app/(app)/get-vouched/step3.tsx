@@ -226,10 +226,7 @@ function RefCollapsedCard({
 }
 
 function formatMobile(v: string) {
-  // keep leading + for international (+61), then digits only
-  const stripped = v.replace(/[^0-9+]/g, "");
-  if (stripped.startsWith("+")) return "+" + stripped.slice(1).replace(/\D/g, "");
-  return stripped.replace(/\D/g, "");
+  return v.replace(/\D/g, "").slice(0, 10);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -288,9 +285,10 @@ function RefForm({
         style={styles.refInput}
         value={value.mobile}
         onChangeText={(v) => update("mobile", formatMobile(v))}
-        placeholder="+61 4XX XXX XXX or 04XX XXX XXX"
+        placeholder="04XX XXX XXX"
         placeholderTextColor={Colors.grey300}
-        keyboardType="phone-pad"
+        keyboardType="number-pad"
+        maxLength={10}
         autoCorrect={false}
       />
       <View>

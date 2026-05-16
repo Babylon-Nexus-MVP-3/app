@@ -173,10 +173,11 @@ export default function VerifyMobile() {
               <TextInput
                 style={styles.input}
                 value={mobile}
-                onChangeText={setMobile}
+                onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
                 placeholder="0412 345 678"
                 placeholderTextColor={Colors.grey300}
-                keyboardType="phone-pad"
+                keyboardType="number-pad"
+                maxLength={10}
                 returnKeyType="done"
                 onSubmitEditing={handleSendCode}
                 autoFocus

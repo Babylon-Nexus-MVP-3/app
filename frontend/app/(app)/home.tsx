@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -56,13 +58,15 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>VOUCHPAY</Text>
+          <AppText style={styles.logo}>VOUCHPAY</AppText>
           <TouchableOpacity hitSlop={8} onPress={() => router.push("/(app)/vouch-notifications")}>
             <View>
               <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
               {unreadCount > 0 && (
                 <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+                  <AppText style={styles.bellBadgeText}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </AppText>
                 </View>
               )}
             </View>
@@ -71,8 +75,8 @@ export default function HomeScreen() {
 
         {/* Greeting */}
         <View style={styles.greetingSection}>
-          <Text style={styles.greeting}>{`G'day, ${firstName}.`}</Text>
-          <Text style={styles.subtitle}>What do you want to do today?</Text>
+          <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
+          <AppText style={styles.subtitle}>What do you want to do today?</AppText>
         </View>
 
         {/* Cards */}
@@ -87,10 +91,10 @@ export default function HomeScreen() {
               <Ionicons name="shield-checkmark-outline" size={28} color={Colors.vouchGreen} />
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Get Vouched</Text>
-              <Text style={styles.cardDesc}>
+              <AppText style={styles.cardTitle}>Get Vouched</AppText>
+              <AppText style={styles.cardDesc}>
                 Build your Vouch profile. Apply for supplier credit accounts faster.
-              </Text>
+              </AppText>
             </View>
           </TouchableOpacity>
 
@@ -105,16 +109,16 @@ export default function HomeScreen() {
             </View>
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>Give a Vouch</Text>
+                <AppText style={styles.cardTitle}>Give a Vouch</AppText>
                 {pendingCount > 0 && (
                   <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>{pendingCount} NEW</Text>
+                    <AppText style={styles.newBadgeText}>{pendingCount} NEW</AppText>
                   </View>
                 )}
               </View>
-              <Text style={styles.cardDesc}>
+              <AppText style={styles.cardDesc}>
                 {"Vouch a business you've worked with. Or respond to a request."}
-              </Text>
+              </AppText>
             </View>
           </TouchableOpacity>
 
@@ -129,12 +133,12 @@ export default function HomeScreen() {
             </View>
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>Vouch my Project</Text>
+                <AppText style={styles.cardTitle}>Vouch my Project</AppText>
                 <View style={styles.lockedBadge}>
-                  <Text style={styles.lockedBadgeText}>LOCKED</Text>
+                  <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
                 </View>
               </View>
-              <Text style={styles.cardDesc}>{"See your project's payment health."}</Text>
+              <AppText style={styles.cardDesc}>{"See your project's payment health."}</AppText>
             </View>
           </TouchableOpacity>
         </View>
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 20,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
     letterSpacing: 1,
   },
@@ -169,12 +173,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 30,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   cards: {
@@ -215,12 +220,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     flex: 1,
   },
   cardDesc: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     lineHeight: 21,
   },
@@ -233,7 +239,7 @@ const styles = StyleSheet.create({
   },
   newBadgeText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.red,
   },
   lockedBadge: {
@@ -245,7 +251,7 @@ const styles = StyleSheet.create({
   },
   lockedBadgeText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.amber,
   },
   bellBadge: {
@@ -262,7 +268,7 @@ const styles = StyleSheet.create({
   },
   bellBadgeText: {
     fontSize: 9,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
 });

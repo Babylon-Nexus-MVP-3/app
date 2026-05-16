@@ -24,7 +24,7 @@ const vouchRequestSchema = new Schema<VouchRequest>(
     toEmail: { type: String, default: "" },
     toMobile: { type: String, required: true },
     relationship: { type: String, required: true },
-    projectName: { type: String, required: true },
+    projectName: { type: String, default: "" },
     status: { type: String, enum: ["pending", "responded"], default: "pending" },
     respondedAt: { type: Date },
   },
