@@ -298,7 +298,9 @@ export default function VerifyScreen() {
                 <View style={styles.alreadyVouchedCard}>
                   <Ionicons name="checkmark-circle" size={28} color={Colors.vouchGreen} />
                   <View style={{ flex: 1 }}>
-                    <AppText style={styles.alreadyVouchedTitle}>You've already vouched them</AppText>
+                    <AppText style={styles.alreadyVouchedTitle}>
+                      {"You've already vouched them"}
+                    </AppText>
                     <AppText style={styles.alreadyVouchedSub}>
                       You can only vouch for a business once.
                     </AppText>
@@ -341,7 +343,9 @@ export default function VerifyScreen() {
                     textAlignVertical="top"
                     fontFamily={Fonts.regular}
                   />
-                  <AppText style={styles.noteHint}>Notes are private and not shown publicly.</AppText>
+                  <AppText style={styles.noteHint}>
+                    Notes are private and not shown publicly.
+                  </AppText>
                 </>
               )}
             </>
@@ -370,7 +374,9 @@ export default function VerifyScreen() {
             )}
           </TouchableOpacity>
           {alreadyVouched ? (
-            <AppText style={styles.vouchHint}>You've already vouched for this business.</AppText>
+            <AppText style={styles.vouchHint}>
+              {"You've already vouched for this business."}
+            </AppText>
           ) : submitError ? (
             <AppText style={[styles.vouchHint, { color: Colors.red }]}>{submitError}</AppText>
           ) : !canVouch ? (

@@ -188,7 +188,9 @@ export default function VouchesScreen() {
 
         {/* Vouch a new business */}
         <AppText style={styles.newTitle}>Vouch a new business</AppText>
-        <AppText style={styles.newSubtitle}>{"Enter their ABN. We'll verify it instantly."}</AppText>
+        <AppText style={styles.newSubtitle}>
+          {"Enter their ABN. We'll verify it instantly."}
+        </AppText>
 
         <AppText style={styles.abnLabel}>ABN</AppText>
         <TextInput
