@@ -32,9 +32,9 @@ export default function VouchMyProjectScreen() {
         </View>
 
         {/* Heading */}
-        <AppText style={styles.heading}>Your Score is locked.</AppText>
+        <AppText style={styles.heading}>Your project health is locked.</AppText>
         <AppText style={styles.subheading}>
-          Get paid on time through trust and{"\n"}transparency.
+          Connect a project to start tracking{"\n"}payment health and build trust.
         </AppText>
 
         {/* What your score will show */}
@@ -72,9 +72,10 @@ export default function VouchMyProjectScreen() {
         <View style={styles.privacyCard}>
           <Ionicons name="lock-closed-outline" size={18} color={Colors.vouchGreen} />
           <View style={styles.privacyText}>
-            <AppText style={styles.privacyTitle}>Amounts stay private</AppText>
+            <AppText style={styles.privacyTitle}>Amounts stay off your public profile</AppText>
             <AppText style={styles.privacyDesc}>
-              Only you see invoice values. Vouch uses payment timing, not amounts.
+              Invoice values are visible to your project team only. Vouch tracks payment timing —
+              not dollar amounts.
             </AppText>
           </View>
         </View>

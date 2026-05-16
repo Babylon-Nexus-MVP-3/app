@@ -211,6 +211,12 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
     const userId = req.user!.sub;
     const { toAbn, toBusinessName, attributes, note, requestId } = req.body;
 
+    const existing = await GivenVouchModel.exists({ fromUserId: userId, toAbn });
+    if (existing) {
+      res.status(409).json({ error: "You have already vouched for this business." });
+      return;
+    }
+
     const giver = await UserModel.findById(userId).select("name businessName").lean();
     const giverName = giver?.name ?? "Someone";
     const giverCompany = giver?.businessName ?? "";
@@ -274,16 +280,20 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { abn } = req.params;
+      const userId = req.user!.sub;
 
       // isOnVouch = business has submitted a Get Vouched profile with this ABN
       const profile = await VouchProfileModel.findOne({ abn }).lean();
       const isOnVouch = !!profile;
 
-      const vouches = await GivenVouchModel.find({ toAbn: abn }).lean();
+      const [vouches, alreadyVouched] = await Promise.all([
+        GivenVouchModel.find({ toAbn: abn }).lean(),
+        GivenVouchModel.exists({ fromUserId: userId, toAbn: abn }),
+      ]);
       const vouchCount = vouches.length;
 
       if (!isOnVouch) {
-        res.status(200).json({ isOnVouch: false, vouchCount });
+        res.status(200).json({ isOnVouch: false, vouchCount, alreadyVouched: !!alreadyVouched });
         return;
       }
 
@@ -301,6 +311,7 @@ vouchRouter.get(
       res.status(200).json({
         isOnVouch: true,
         vouchCount,
+        alreadyVouched: !!alreadyVouched,
         attributeSummary: top.length > 0 ? top.join(" · ") : undefined,
       });
     } catch (err) {

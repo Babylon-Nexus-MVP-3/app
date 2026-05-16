@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { useFocusEffect, router } from "expo-router";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -13,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -50,7 +51,7 @@ function Avatar({ name, index }: { name: string; index: number }) {
   const bg = AVATAR_COLORS[index % AVATAR_COLORS.length];
   return (
     <View style={[styles.avatar, { backgroundColor: bg }]}>
-      <Text style={styles.avatarText}>{nameInitials(name)}</Text>
+      <AppText style={styles.avatarText}>{nameInitials(name)}</AppText>
     </View>
   );
 }
@@ -70,6 +71,7 @@ export default function VouchesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
+  const [checking, setChecking] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,11 +103,26 @@ export default function VouchesScreen() {
     setAbnError("");
   }
 
-  function onLookup() {
+  async function onLookup() {
     const digits = abn.replace(/\D/g, "");
     if (digits.length !== 11) {
       setAbnError("Please enter a valid 11-digit ABN");
       return;
+    }
+    setChecking(true);
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${digits}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.alreadyVouched) {
+          setAbnError("You've already vouched for this business.");
+          return;
+        }
+      }
+    } catch {
+      // network issue — let verify screen handle it
+    } finally {
+      setChecking(false);
     }
     router.push(`/(app)/give-vouch/verify?abn=${digits}`);
   }
@@ -116,7 +133,7 @@ export default function VouchesScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>GIVE A VOUCH</Text>
+        <AppText style={styles.headerTitle}>GIVE A VOUCH</AppText>
         <View style={{ width: 24 }} />
       </View>
 
@@ -131,19 +148,19 @@ export default function VouchesScreen() {
           />
         }
       >
-        <Text style={styles.pageTitle}>Vouch for someone</Text>
+        <AppText style={styles.pageTitle}>Vouch for someone</AppText>
 
         {/* Pending requests */}
-        <Text style={styles.sectionLabel}>
+        <AppText style={styles.sectionLabel}>
           PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
-        </Text>
+        </AppText>
 
         {loading ? (
           <ActivityIndicator color={Colors.vouchGreen} style={{ marginVertical: 20 }} />
         ) : requests.length === 0 ? (
           <View style={styles.emptyBox}>
             <Ionicons name="time-outline" size={20} color={Colors.grey500} />
-            <Text style={styles.emptyText}>No pending requests right now.</Text>
+            <AppText style={styles.emptyText}>No pending requests right now.</AppText>
           </View>
         ) : (
           requests.map((r, i) => (
@@ -157,10 +174,10 @@ export default function VouchesScreen() {
             >
               <Avatar name={r.fromName} index={i} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.requestCompany}>{r.fromCompany}</Text>
-                <Text style={styles.requestMeta}>
+                <AppText style={styles.requestCompany}>{r.fromCompany}</AppText>
+                <AppText style={styles.requestMeta}>
                   {r.fromName} · {timeAgo(r.createdAt)}
-                </Text>
+                </AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
             </TouchableOpacity>
@@ -170,10 +187,12 @@ export default function VouchesScreen() {
         <View style={styles.divider} />
 
         {/* Vouch a new business */}
-        <Text style={styles.newTitle}>Vouch a new business</Text>
-        <Text style={styles.newSubtitle}>{"Enter their ABN. We'll verify it instantly."}</Text>
+        <AppText style={styles.newTitle}>Vouch a new business</AppText>
+        <AppText style={styles.newSubtitle}>
+          {"Enter their ABN. We'll verify it instantly."}
+        </AppText>
 
-        <Text style={styles.abnLabel}>ABN</Text>
+        <AppText style={styles.abnLabel}>ABN</AppText>
         <TextInput
           style={[styles.abnInput, abnError ? styles.abnInputError : null]}
           value={abn}
@@ -184,17 +203,26 @@ export default function VouchesScreen() {
           returnKeyType="go"
           onSubmitEditing={onLookup}
         />
-        {abnError ? <Text style={styles.abnErrorText}>{abnError}</Text> : null}
+        {abnError ? <AppText style={styles.abnErrorText}>{abnError}</AppText> : null}
 
-        <TouchableOpacity style={styles.lookupBtn} onPress={onLookup} activeOpacity={0.85}>
-          <Text style={styles.lookupBtnText}>Look up ABN</Text>
+        <TouchableOpacity
+          style={[styles.lookupBtn, checking && { opacity: 0.7 }]}
+          onPress={onLookup}
+          disabled={checking}
+          activeOpacity={0.85}
+        >
+          {checking ? (
+            <ActivityIndicator color={Colors.white} size="small" />
+          ) : (
+            <AppText style={styles.lookupBtnText}>Look up ABN</AppText>
+          )}
         </TouchableOpacity>
 
         <View style={styles.verifiedNote}>
           <Ionicons name="shield-checkmark-outline" size={13} color={Colors.grey500} />
-          <Text style={styles.verifiedNoteText}>
+          <AppText style={styles.verifiedNoteText}>
             Verified with the Australian Business Register. We never search our user list.
-          </Text>
+          </AppText>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -212,13 +240,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: Colors.grey500,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
     letterSpacing: 1,
   },
   pageTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   scroll: {
@@ -228,7 +256,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     marginBottom: 4,
@@ -241,6 +269,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   requestCard: {
@@ -263,16 +292,17 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
   requestCompany: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
   requestMeta: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
   divider: {
@@ -282,17 +312,18 @@ const styles = StyleSheet.create({
   },
   newTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   newSubtitle: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: -4,
   },
   abnLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     marginBottom: 6,
@@ -305,6 +336,7 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 16,
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
@@ -313,6 +345,7 @@ const styles = StyleSheet.create({
   },
   abnErrorText: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.red,
     marginTop: -4,
   },
@@ -327,7 +360,7 @@ const styles = StyleSheet.create({
   lookupBtnText: {
     color: Colors.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   verifiedNote: {
     flexDirection: "row",
@@ -338,6 +371,7 @@ const styles = StyleSheet.create({
   },
   verifiedNoteText: {
     fontSize: 10,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     lineHeight: 18,
   },
