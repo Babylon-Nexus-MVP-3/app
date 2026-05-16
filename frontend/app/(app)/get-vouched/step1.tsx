@@ -148,11 +148,22 @@ export default function Step1() {
   }
 
   function formatExpiry(raw: string) {
-    // Strip everything except digits
     const digits = raw.replace(/\D/g, "");
     if (digits.length <= 2) return digits;
     return digits.slice(0, 2) + "/" + digits.slice(2, 6);
   }
+
+  function isExpiryValid(expiry: string): boolean {
+    const parts = expiry.split("/");
+    if (parts.length !== 2 || parts[1].length !== 4) return false;
+    const month = parseInt(parts[0], 10);
+    const year = parseInt(parts[1], 10);
+    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+    const now = new Date();
+    return new Date(year, month - 1, 1) >= new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const expiryInvalid = form.idExpiry.length >= 7 && !isExpiryValid(form.idExpiry);
 
   function onContinue() {
     setStep1(form);
@@ -166,7 +177,8 @@ export default function Step1() {
     !abrError &&
     form.trade.trim() &&
     form.idNumber.trim() &&
-    form.idExpiry.trim();
+    form.idExpiry.length === 7 &&
+    !expiryInvalid;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -288,13 +300,23 @@ export default function Step1() {
               onChangeText={(v) => update("idNumber", v)}
               placeholder={form.idType === "passport" ? "e.g. PA1234567" : "e.g. 12345678"}
             />
-            <Field
-              label="EXPIRY DATE"
-              value={form.idExpiry}
-              onChangeText={(v) => update("idExpiry", formatExpiry(v))}
-              placeholder="MM/YYYY"
-              keyboardType="numeric"
-            />
+            <View style={styles.fieldWrap}>
+              <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
+              <TextInput
+                style={[styles.input, expiryInvalid ? styles.inputError : null]}
+                value={form.idExpiry}
+                onChangeText={(v) => update("idExpiry", formatExpiry(v))}
+                placeholder="MM/YYYY"
+                placeholderTextColor={Colors.grey300}
+                keyboardType="numeric"
+                autoCorrect={false}
+              />
+              {expiryInvalid && (
+                <AppText style={styles.expiryError}>
+                  This document has expired — enter a valid expiry date.
+                </AppText>
+              )}
+            </View>
           </View>
 
           <View style={styles.privacyNote}>
@@ -380,6 +402,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   abrError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 6 },
+  expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   sectionLabel: {
     fontSize: 12,
     fontFamily: Fonts.bold,
