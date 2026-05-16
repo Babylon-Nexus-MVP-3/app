@@ -100,6 +100,14 @@ export default function AppLayout() {
         options={{ href: null, tabBarStyle: { display: "none" } }}
       />
       <Tabs.Screen name="add-abn" options={{ href: null, tabBarStyle: { display: "none" } }} />
+      <Tabs.Screen
+        name="vouch-notifications"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
+      <Tabs.Screen
+        name="mobile-status"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
     </Tabs>
   );
 }

@@ -45,9 +45,9 @@ type SentRequest = {
 };
 
 export default function GetVouchedIntro() {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { step1, step2, references } = useWizard();
-  const mobileVerified = true; // TODO: restore to user?.mobileVerified ?? false once EC2 is updated
+  const mobileVerified = user?.mobileVerified ?? false;
 
   const [profileSubmitted, setProfileSubmitted] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);

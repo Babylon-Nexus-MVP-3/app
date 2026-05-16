@@ -230,7 +230,14 @@ export default function VerifyScreen() {
               </View>
 
               {/* Vouch status card */}
-              {vouchStatus?.isOnVouch ? (
+              {requestId ? (
+                <View style={styles.neutralCard}>
+                  <Text style={styles.neutralCountNum}>{vouchStatus?.vouchCount ?? 0}</Text>
+                  <Text style={styles.neutralCountLabel}>
+                    {(vouchStatus?.vouchCount ?? 0) === 1 ? "vouch received" : "vouches received"}
+                  </Text>
+                </View>
+              ) : vouchStatus?.isOnVouch ? (
                 <View style={styles.activeCard}>
                   <View style={styles.statusRow}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={Colors.vouchGreen} />
@@ -326,7 +333,9 @@ export default function VerifyScreen() {
               <ActivityIndicator color={Colors.white} />
             ) : (
               <Text style={styles.vouchBtnText}>
-                {vouchStatus?.isOnVouch ? `Vouch for ${displayName}` : "Vouch and invite them"}
+                {requestId || vouchStatus?.isOnVouch
+                  ? `Vouch for ${displayName}`
+                  : "Vouch and invite them"}
               </Text>
             )}
           </TouchableOpacity>
@@ -406,6 +415,25 @@ const styles = StyleSheet.create({
   abrMeta: {
     fontSize: 13,
     color: Colors.grey500,
+  },
+
+  // Neutral vouch count card (for pending requests)
+  neutralCard: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    padding: 16,
+    alignItems: "center",
+    gap: 4,
+  },
+  neutralCountNum: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: Colors.black,
+  },
+  neutralCountLabel: {
+    fontSize: 14,
+    color: Colors.grey500,
+    fontWeight: "500",
   },
 
   // Active on vouch card

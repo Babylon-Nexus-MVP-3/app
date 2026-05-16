@@ -144,12 +144,13 @@ const emptyRef = (): Reference => ({
 });
 
 function isRefComplete(ref: Reference) {
+  const needsProject = ref.relationship === "From another project";
   return (
     ref.name.trim() &&
     ref.company.trim() &&
     ref.mobile.trim() &&
     ref.relationship.trim() &&
-    ref.project.trim()
+    (!needsProject || ref.project.trim())
   );
 }
 
@@ -202,14 +203,12 @@ function RefForm({
   label,
   value,
   onChange,
-  projectOptions,
   onDone,
   onDelete,
 }: {
   label: string;
   value: Reference;
   onChange: (r: Reference) => void;
-  projectOptions: string[];
   onDone: () => void;
   onDelete?: () => void;
 }) {
@@ -271,16 +270,28 @@ function RefForm({
         label="Select relationship"
         value={value.relationship}
         options={RELATIONSHIPS}
-        onSelect={(v) => update("relationship", v)}
+        onSelect={(v) => {
+          onChange({
+            ...value,
+            relationship: v,
+            project: v === "From another project" ? value.project : "",
+          });
+        }}
       />
 
-      <Text style={styles.dropdownLabel}>WHICH PROJECT?</Text>
-      <Dropdown
-        label="Select project"
-        value={value.project}
-        options={projectOptions}
-        onSelect={(v) => update("project", v)}
-      />
+      {value.relationship === "From another project" && (
+        <>
+          <Text style={styles.dropdownLabel}>WHICH PROJECT?</Text>
+          <TextInput
+            style={styles.refInput}
+            value={value.project}
+            onChangeText={(v) => update("project", v)}
+            placeholder="Project name"
+            placeholderTextColor={Colors.grey300}
+            autoCorrect={false}
+          />
+        </>
+      )}
 
       {done && (
         <TouchableOpacity style={styles.doneBtn} onPress={onDone}>
@@ -304,8 +315,6 @@ export default function Step3() {
   const [showThird, setShowThird] = useState(refs.length > 2);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const projectOptions = [step2.currentProjectName, step2.pastProjectName].filter(Boolean);
 
   function updateRef(index: number, ref: Reference) {
     const next = [...refs];
@@ -408,7 +417,6 @@ export default function Step3() {
                   label={refLabels[i]}
                   value={ref}
                   onChange={(r) => updateRef(i, r)}
-                  projectOptions={projectOptions}
                   onDone={() => handleDone(i)}
                   onDelete={isOptional ? deleteThird : undefined}
                 />

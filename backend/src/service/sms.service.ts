@@ -1,15 +1,39 @@
 import twilio from "twilio";
 import { config } from "../config";
 
+function getClient() {
+  return twilio(config.twilioAccountSid, config.twilioAuthToken);
+}
+
 export async function sendOtpSms(to: string, code: string): Promise<void> {
   if (!config.twilioAccountSid || !config.twilioAuthToken || !config.twilioFromNumber) {
     console.warn(`[SMS] Twilio not configured — OTP for ${to}: ${code}`);
     return;
   }
-  const client = twilio(config.twilioAccountSid, config.twilioAuthToken);
-  await client.messages.create({
+  await getClient().messages.create({
     body: `Your VouchPay code is ${code}. Valid for 10 minutes.`,
     from: config.twilioFromNumber,
     to,
   });
+}
+
+export async function sendMobileVerification(to: string): Promise<void> {
+  if (!config.twilioAccountSid || !config.twilioVerifySid) {
+    console.warn(`[SMS] Twilio Verify not configured — skipping OTP for ${to}`);
+    return;
+  }
+  await getClient()
+    .verify.v2.services(config.twilioVerifySid)
+    .verifications.create({ to, channel: "sms" });
+}
+
+export async function checkMobileVerification(to: string, code: string): Promise<boolean> {
+  if (!config.twilioAccountSid || !config.twilioVerifySid) {
+    console.warn(`[SMS] Twilio Verify not configured — auto-approving for ${to}`);
+    return true;
+  }
+  const result = await getClient()
+    .verify.v2.services(config.twilioVerifySid)
+    .verificationChecks.create({ to, code });
+  return result.status === "approved";
 }

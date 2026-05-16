@@ -11,13 +11,21 @@ export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const r = await fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`);
-      const data = await r.json();
-      setPendingCount(data.requests?.length ?? 0);
+      const [vouchRes, notifRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
+      ]);
+      const vouchData = await vouchRes.json();
+      const notifData = await notifRes.json();
+      setPendingCount(vouchData.requests?.length ?? 0);
+      setUnreadCount(
+        (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
+      );
     } catch {}
   }, [fetchWithAuth]);
 
@@ -49,8 +57,15 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>VOUCHPAY</Text>
-          <TouchableOpacity hitSlop={8}>
-            <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
+          <TouchableOpacity hitSlop={8} onPress={() => router.push("/(app)/vouch-notifications")}>
+            <View>
+              <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -69,7 +84,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/get-vouched")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="shield-checkmark-outline" size={24} color={Colors.vouchGreen} />
+              <Ionicons name="shield-checkmark-outline" size={28} color={Colors.vouchGreen} />
             </View>
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>Get Vouched</Text>
@@ -86,7 +101,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/vouches")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="person-outline" size={24} color={Colors.black} />
+              <Ionicons name="person-outline" size={28} color={Colors.black} />
             </View>
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
@@ -110,7 +125,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/vouch-my-project")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="sync-circle-outline" size={24} color={Colors.grey500} />
+              <Ionicons name="sync-circle-outline" size={28} color={Colors.grey500} />
             </View>
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
@@ -163,14 +178,14 @@ const styles = StyleSheet.create({
     color: Colors.grey500,
   },
   cards: {
-    gap: 14,
+    gap: 16,
   },
   card: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderRadius: 14,
-    padding: 18,
-    gap: 14,
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
   },
   cardGetVouched: {
     backgroundColor: Colors.white,
@@ -199,15 +214,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: Colors.black,
     flex: 1,
   },
   cardDesc: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.grey700,
-    lineHeight: 19,
+    lineHeight: 21,
   },
   newBadge: {
     backgroundColor: "#FDECEA",
@@ -232,5 +247,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: Colors.amber,
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: Colors.red,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: Colors.white,
   },
 });

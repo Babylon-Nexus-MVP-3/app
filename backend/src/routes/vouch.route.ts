@@ -211,6 +211,10 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
     const userId = req.user!.sub;
     const { toAbn, toBusinessName, attributes, note, requestId } = req.body;
 
+    const giver = await UserModel.findById(userId).select("name businessName").lean();
+    const giverName = giver?.name ?? "Someone";
+    const giverCompany = giver?.businessName ?? "";
+
     const vouch = await GivenVouchModel.create({
       fromUserId: userId,
       toAbn,
@@ -225,7 +229,6 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
         status: "responded",
         respondedAt: new Date(),
       });
-      // Mark the corresponding in-app notification as read
       await VouchNotificationModel.updateMany(
         { requestId: new mongoose.Types.ObjectId(requestId) },
         { $set: { read: true } }
@@ -233,6 +236,30 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
     }
 
     const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
+
+    // Notify the business being vouched
+    const recipient = await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
+    if (recipient && recipient._id.toString() !== userId) {
+      await VouchNotificationModel.create({
+        recipientUserId: recipient._id,
+        type: "vouch_received",
+        fromName: giverName,
+        fromCompany: giverCompany,
+        toBusinessName: toBusinessName ?? "",
+        read: false,
+      });
+
+      if (Expo.isExpoPushToken(recipient.pushToken ?? "")) {
+        await expo.sendPushNotificationsAsync([
+          {
+            to: recipient.pushToken!,
+            title: "New vouch received",
+            body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
+            data: { type: "vouch_received" },
+          },
+        ]);
+      }
+    }
 
     res.status(201).json({ vouch, vouchCount });
   } catch (err) {
