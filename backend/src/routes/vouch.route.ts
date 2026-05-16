@@ -236,11 +236,15 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
       requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
     });
 
+    let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
     if (requestId) {
-      await VouchRequestModel.findByIdAndUpdate(requestId, {
-        status: "responded",
-        respondedAt: new Date(),
-      });
+      vouchRequest = await VouchRequestModel.findByIdAndUpdate(
+        requestId,
+        { status: "responded", respondedAt: new Date() },
+        { returnDocument: "after" }
+      )
+        .select("fromUserId")
+        .lean();
       await VouchNotificationModel.updateMany(
         { requestId: new mongoose.Types.ObjectId(requestId) },
         { $set: { read: true } }
@@ -249,8 +253,12 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
 
     const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
 
-    // Notify the business being vouched
-    const recipient = await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
+    // Notify the requester directly when responding to a request, otherwise look up by ABN
+    const recipientId = vouchRequest?.fromUserId ?? null;
+    const recipient = recipientId
+      ? await UserModel.findById(recipientId).select("_id pushToken").lean()
+      : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
+
     if (recipient && recipient._id.toString() !== userId) {
       await VouchNotificationModel.create({
         recipientUserId: recipient._id,
@@ -261,15 +269,18 @@ vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next:
         read: false,
       });
 
-      if (Expo.isExpoPushToken(recipient.pushToken ?? "")) {
-        await expo.sendPushNotificationsAsync([
-          {
-            to: recipient.pushToken!,
-            title: "New vouch received",
-            body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
-            data: { type: "vouch_received" },
-          },
-        ]);
+      const token = recipient.pushToken ?? "";
+      if (Expo.isExpoPushToken(token)) {
+        expo
+          .sendPushNotificationsAsync([
+            {
+              to: token,
+              title: "New vouch received",
+              body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
+              data: { type: "vouch_received" },
+            },
+          ])
+          .catch(() => {});
       }
     }
 

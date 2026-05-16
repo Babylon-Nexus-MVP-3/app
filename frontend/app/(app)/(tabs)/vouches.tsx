@@ -151,9 +151,7 @@ export default function VouchesScreen() {
     setNameSearching(true);
     setNameResults([]);
     try {
-      const res = await fetchWithAuth(
-        `${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`
-      );
+      const res = await fetchWithAuth(`${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`);
       const data = await res.json();
       const results: SearchResult[] = data.results ?? [];
       if (results.length === 0) {
@@ -335,7 +333,11 @@ export default function VouchesScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity onPress={toggleNameSearch} style={styles.toggleSearchLink} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={toggleNameSearch}
+        style={styles.toggleSearchLink}
+        activeOpacity={0.7}
+      >
         {showNameSearch ? (
           <AppText style={styles.toggleSearchText}>
             <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>
@@ -361,13 +363,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   headerTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.semiBold,
     color: Colors.black,
     letterSpacing: 1,
   },
   pageTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontFamily: Fonts.bold,
     color: Colors.black,
   },
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
@@ -390,7 +392,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
@@ -418,12 +420,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   requestCompany: {
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
   requestMeta: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
@@ -438,12 +440,12 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   newTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: Fonts.bold,
     color: Colors.black,
   },
   newSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: -4,
@@ -460,9 +462,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.grey300,
     borderRadius: 12,
-    height: 50,
+    height: 54,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
@@ -479,14 +481,14 @@ const styles = StyleSheet.create({
   lookupBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
-    height: 50,
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
   },
   lookupBtnText: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: Fonts.bold,
   },
   verifiedNote: {
@@ -560,12 +562,12 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.grey100,
   },
   resultName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: Colors.black,
   },
   resultMeta: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.grey500,
   },
 });

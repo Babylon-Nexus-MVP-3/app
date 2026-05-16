@@ -21,8 +21,9 @@ module.exports = {
       versionCode: 4,
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        backgroundColor: "#0D3D2B",
         foregroundImage: "./assets/appIcon.png",
+        monochromeImage: "./assets/appIconMono.png",
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -45,9 +46,9 @@ module.exports = {
         "expo-splash-screen",
         {
           image: "./assets/appIcon.png",
-          imageWidth: 200,
+          imageWidth: 300,
           resizeMode: "contain",
-          backgroundColor: "#ffffff",
+          backgroundColor: "#0D3D2B",
           dark: {
             backgroundColor: "#000000",
           },

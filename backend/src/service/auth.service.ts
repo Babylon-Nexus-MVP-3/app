@@ -24,6 +24,8 @@ import {
   sendResendVerificationEmail,
 } from "./email.service";
 import { JwtPayload } from "../middleware";
+import { VouchRequestModel } from "../models/vouchRequestModel";
+import { VouchNotificationModel } from "../models/vouchNotificationModel";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -389,6 +391,42 @@ export async function resetPassword(resetCode: string, newPassword: string) {
   return { success: true, accessToken, refreshToken, user: toSafeUser(user) };
 }
 
+// Best-effort: create vouch_request notifications for any pending requests that
+// matched this user's mobile/email before they had an account.
+async function backfillVouchNotifications(
+  userId: string,
+  email?: string | null,
+  mobile?: string | null
+): Promise<void> {
+  try {
+    const orConditions: object[] = [];
+    if (mobile) orConditions.push({ toMobile: mobile });
+    if (email) orConditions.push({ toEmail: email });
+    if (orConditions.length === 0) return;
+
+    const pending = await VouchRequestModel.find({
+      $or: orConditions,
+      status: "pending",
+    }).lean();
+
+    if (pending.length === 0) return;
+
+    await VouchNotificationModel.insertMany(
+      pending.map((r) => ({
+        recipientUserId: userId,
+        requestId: r._id,
+        fromName: r.fromName,
+        fromCompany: r.fromCompany,
+        projectName: r.projectName,
+        type: "vouch_request",
+        read: false,
+      }))
+    );
+  } catch {
+    // best-effort — never fail account activation
+  }
+}
+
 export async function userVerifyEmail(verificationCode: string) {
   const hashedCode = hashCode(verificationCode);
 
@@ -422,6 +460,8 @@ export async function userVerifyEmail(verificationCode: string) {
   if (!user) {
     throw new AuthError("Invalid Verification Code");
   }
+
+  await backfillVouchNotifications(user._id.toString(), user.email, user.mobile);
 
   // Return accessToken and refreshToken so user is immediately logged in by the frontend
   const accessToken = createAccessToken(user);
