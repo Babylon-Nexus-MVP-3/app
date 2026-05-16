@@ -654,7 +654,7 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
   const code = await generateAndStoreOtp(e164);
 
   if (process.env.NODE_ENV !== "test") {
-    await sendOtpSms(e164, code).catch((err) => {
+    await sendOtpSms(e164, code).catch((err: unknown) => {
       console.error(`Failed to send OTP SMS to ${e164}:`, err);
     });
   }
@@ -744,7 +744,7 @@ export async function resendOtp(mobile: string): Promise<{ code?: string }> {
   const code = await generateAndStoreOtp(e164);
 
   if (process.env.NODE_ENV !== "test") {
-    await sendOtpSms(e164, code).catch((err) => {
+    await sendOtpSms(e164, code).catch((err: unknown) => {
       console.error(`Failed to send OTP SMS to ${e164}:`, err);
     });
   }
