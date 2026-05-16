@@ -18,8 +18,9 @@ export type Step2Data = {
   value: string;
   pastProjectName: string;
   pastSuburb: string;
+  pastState: string;
   pastPostcode: string;
-  pastYear: string;
+  pastMonthYear: string;
   pastValue: string;
 };
 
@@ -76,8 +77,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     value: "",
     pastProjectName: "",
     pastSuburb: "",
+    pastState: "",
     pastPostcode: "",
-    pastYear: "",
+    pastMonthYear: "",
     pastValue: "",
   });
   const [references, setReferences] = useState<Reference[]>([emptyRef(), emptyRef()]);

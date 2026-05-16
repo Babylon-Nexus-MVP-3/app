@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useWizard } from "./WizardContext";
 
 const NEXT_STEPS = [
@@ -23,32 +25,32 @@ export default function GetVouchedSuccess() {
           <Ionicons name="send-outline" size={36} color={Colors.vouchGreen} />
         </View>
 
-        <Text style={styles.title}>Vouch requests sent.</Text>
-        <Text style={styles.subtitle}>
+        <AppText style={styles.title}>Vouch requests sent.</AppText>
+        <AppText style={styles.subtitle}>
           {ref1Name} and {ref2Name} have been notified.
-        </Text>
+        </AppText>
 
         {/* Profile status card */}
         <View style={styles.statusCard}>
-          <Text style={styles.statusCardLabel}>YOUR PROFILE STATUS</Text>
-          <Text style={styles.statusValue}>Pending vouches</Text>
+          <AppText style={styles.statusCardLabel}>YOUR PROFILE STATUS</AppText>
+          <AppText style={styles.statusValue}>Pending vouches</AppText>
           <View style={styles.progressRow}>
             <View style={styles.progressTrack}>
               <View style={styles.progressFill} />
             </View>
-            <Text style={styles.progressCount}>0 / 2</Text>
+            <AppText style={styles.progressCount}>0 / 2</AppText>
           </View>
         </View>
 
         {/* What happens next */}
-        <Text style={styles.nextLabel}>WHAT HAPPENS NEXT</Text>
+        <AppText style={styles.nextLabel}>WHAT HAPPENS NEXT</AppText>
         <View style={styles.nextList}>
           {NEXT_STEPS.map((step, i) => (
             <View key={i} style={styles.nextRow}>
               <View style={styles.nextCircle}>
-                <Text style={styles.nextNum}>{i + 1}</Text>
+                <AppText style={styles.nextNum}>{i + 1}</AppText>
               </View>
-              <Text style={styles.nextText}>{step}</Text>
+              <AppText style={styles.nextText}>{step}</AppText>
             </View>
           ))}
         </View>
@@ -57,10 +59,13 @@ export default function GetVouchedSuccess() {
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.outlineBtn}
-          onPress={() => router.replace("/(app)/home")}
+          onPress={() => {
+            router.dismissAll();
+            router.replace("/(app)/home");
+          }}
           activeOpacity={0.8}
         >
-          <Text style={styles.outlineBtnText}>Done — back to home</Text>
+          <AppText style={styles.outlineBtnText}>Done</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -86,14 +91,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     textAlign: "center",
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.grey700,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 36,
@@ -110,13 +116,13 @@ const styles = StyleSheet.create({
   },
   statusCardLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: Colors.grey500,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
     letterSpacing: 0.8,
   },
   statusValue: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   progressRow: {
@@ -138,14 +144,15 @@ const styles = StyleSheet.create({
   },
   progressCount: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
 
   // What happens next
   nextLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: Colors.grey500,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
     letterSpacing: 0.8,
     alignSelf: "flex-start",
     marginBottom: 16,
@@ -160,8 +167,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  nextNum: { fontSize: 14, fontWeight: "700", color: Colors.white },
-  nextText: { flex: 1, fontSize: 15, color: Colors.black },
+  nextNum: { fontSize: 14, fontFamily: Fonts.bold, color: Colors.white },
+  nextText: { flex: 1, fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
 
   footer: {
     paddingHorizontal: 24,
@@ -179,6 +186,6 @@ const styles = StyleSheet.create({
   outlineBtnText: {
     color: Colors.vouchGreen,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 });
