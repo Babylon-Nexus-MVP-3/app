@@ -45,7 +45,7 @@ const vouchReferenceSchema = new Schema<VouchReference>(
     mobile: { type: String, required: true },
     email: { type: String },
     relationship: { type: String, required: true },
-    project: { type: String, required: true },
+    project: { type: String, default: "" },
   },
   { _id: false }
 );

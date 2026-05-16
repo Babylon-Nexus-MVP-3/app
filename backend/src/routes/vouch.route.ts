@@ -23,7 +23,7 @@ vouchRouter.post(
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
         { ...body, userId, submittedAt: new Date() },
-        { upsert: true, new: true, runValidators: true }
+        { upsert: true, returnDocument: "after", runValidators: true }
       );
 
       const references: Array<{
@@ -86,6 +86,12 @@ vouchRouter.post(
           }
         }
       }
+
+      // Keep UserModel in sync so Give a Vouch notifications work
+      await UserModel.findByIdAndUpdate(userId, {
+        abn: body.abn,
+        businessName: body.trade ?? body.name,
+      });
 
       res.status(201).json(profile);
     } catch (err) {
