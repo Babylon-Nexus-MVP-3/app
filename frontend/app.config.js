@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    name: "Babylon Nexus",
+    name: "VouchPay",
     slug: "babylonnexus",
     version: "2.0.0",
     orientation: "portrait",

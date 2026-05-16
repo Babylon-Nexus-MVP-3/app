@@ -116,7 +116,8 @@ export default function VouchesScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vouch for someone</Text>
+        <Text style={styles.headerTitle}>GIVE A VOUCH</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
@@ -130,6 +131,8 @@ export default function VouchesScreen() {
           />
         }
       >
+        <Text style={styles.pageTitle}>Vouch for someone</Text>
+
         {/* Pending requests */}
         <Text style={styles.sectionLabel}>
           PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
@@ -203,13 +206,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.grey500,
+    letterSpacing: 1,
+  },
+  pageTitle: {
+    fontSize: 18,
     fontWeight: "700",
     color: Colors.black,
   },

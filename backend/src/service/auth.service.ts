@@ -16,7 +16,7 @@ import {
   hashPassword,
 } from "../utils/authHelper";
 import { OtpModel } from "../models/otpModel";
-import { sendOtpSms } from "./sms.service";
+import { sendOtpSms, sendMobileVerification, checkMobileVerification } from "./sms.service";
 import {
   sendForgotPasswordEmail,
   sendOnboardingEmail,
@@ -712,26 +712,23 @@ export async function requestMobileOtp(
   mobile: string
 ): Promise<{ code?: string }> {
   const e164 = normalizeAuMobile(mobile);
-  const code = await generateAndStoreOtp(e164);
 
   if (process.env.NODE_ENV !== "test") {
-    await sendOtpSms(e164, code).catch((err) => {
+    await sendMobileVerification(e164).catch((err) => {
       console.error(`Failed to send mobile OTP to ${e164}:`, err);
     });
   }
 
-  return process.env.NODE_ENV === "test" ? { code } : {};
+  return {};
 }
 
 export async function verifyMobileOtp(userId: string, mobile: string, code: string): Promise<void> {
   const e164 = normalizeAuMobile(mobile);
 
-  const otp = await OtpModel.findOne({ mobile: e164, used: false, expiresAt: { $gt: new Date() } });
-  if (!otp) throw new AuthError("Invalid or expired code", 400);
-  if (otp.code !== hashCode(code)) throw new AuthError("Incorrect code. Please try again.", 400);
-
-  otp.used = true;
-  await otp.save();
+  if (process.env.NODE_ENV !== "test") {
+    const approved = await checkMobileVerification(e164, code);
+    if (!approved) throw new AuthError("Incorrect code. Please try again.", 400);
+  }
 
   await UserModel.findByIdAndUpdate(userId, {
     $set: { mobile: e164, mobileVerified: true },

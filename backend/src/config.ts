@@ -6,4 +6,5 @@ export const config = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER || "",
+  twilioVerifySid: process.env.TWILIO_VERIFY_SID || "",
 };

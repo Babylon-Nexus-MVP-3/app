@@ -82,8 +82,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" />
-        <Stack.Screen name="(admin)" />
+        <Stack.Screen name="(app)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(admin)" options={{ gestureEnabled: false }} />
       </Stack>
     </AuthProvider>
   );
