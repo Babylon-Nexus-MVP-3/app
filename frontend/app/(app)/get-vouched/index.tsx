@@ -47,7 +47,7 @@ type SentRequest = {
 export default function GetVouchedIntro() {
   const { fetchWithAuth, user } = useAuth();
   const { step1, step2, references } = useWizard();
-  const mobileVerified = __DEV__ ? true : (user?.mobileVerified ?? false);
+  const mobileVerified = user?.mobileVerified ?? false;
 
   const [profileSubmitted, setProfileSubmitted] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
