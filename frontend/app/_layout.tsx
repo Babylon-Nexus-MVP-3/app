@@ -48,6 +48,13 @@ export default function RootLayout() {
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, string>;
+
+      const vouchTypes = ["VouchRequest", "vouch_received"];
+      if (data.type && vouchTypes.includes(data.type)) {
+        router.push("/(app)/vouch-notifications" as any);
+        return;
+      }
+
       if (!data?.projectId) {
         router.push("/(app)/notifications" as any);
         return;
