@@ -187,6 +187,19 @@ export default function Step2() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function isPastDateValid(monthYear: string): boolean {
+    const parts = monthYear.split("/");
+    if (parts.length !== 2 || parts[1].length !== 4) return false;
+    const month = parseInt(parts[0], 10);
+    const year = parseInt(parts[1], 10);
+    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+    const now = new Date();
+    return new Date(year, month - 1, 1) < new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const pastMonthYearInvalid =
+    form.pastMonthYear.length === 7 && !isPastDateValid(form.pastMonthYear);
+
   function onContinue() {
     setStep2(form);
     router.push("/(app)/get-vouched/step3");
@@ -198,7 +211,8 @@ export default function Step2() {
     form.suburb.trim() &&
     form.state.trim() &&
     form.postcode.trim() &&
-    form.value.trim();
+    form.value.trim() &&
+    !pastMonthYearInvalid;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -334,7 +348,7 @@ export default function Step2() {
               <View style={[styles.fieldWrap, { flex: 1 }]}>
                 <AppText style={styles.fieldLabel}>COMPLETED</AppText>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, pastMonthYearInvalid ? styles.inputError : null]}
                   value={form.pastMonthYear}
                   onChangeText={(v) => update("pastMonthYear", formatMonthYear(v))}
                   placeholder="MM/YYYY"
@@ -343,6 +357,9 @@ export default function Step2() {
                   maxLength={7}
                   autoCorrect={false}
                 />
+                {pastMonthYearInvalid && (
+                  <AppText style={styles.fieldError}>Must be in the past.</AppText>
+                )}
               </View>
               <View style={[styles.fieldWrap, { flex: 2 }]}>
                 <View style={styles.valueLabelRow}>
@@ -444,6 +461,8 @@ const styles = StyleSheet.create({
     color: Colors.black,
     backgroundColor: Colors.white,
   },
+  inputError: { borderColor: Colors.red },
+  fieldError: { fontSize: 11, fontFamily: Fonts.regular, color: Colors.red, marginTop: 2 },
   stateBtn: {
     borderWidth: 1,
     borderColor: Colors.grey300,

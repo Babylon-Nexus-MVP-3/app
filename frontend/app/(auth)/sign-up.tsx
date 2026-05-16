@@ -94,7 +94,12 @@ export default function SignUp() {
   const lastName = nameParts.slice(1).join(" ") || "-";
 
   const canSubmit =
-    firstName.length > 0 && email.includes("@") && password.length >= 12 && !abrLoading;
+    firstName.length > 0 &&
+    email.includes("@") &&
+    password.length >= 12 &&
+    abnDigits.length === 11 &&
+    !abrError &&
+    !abrLoading;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -215,9 +220,7 @@ export default function SignUp() {
             returnKeyType="next"
           />
 
-          <AppText style={styles.label}>
-            ABN <AppText style={styles.optional}>(optional)</AppText>
-          </AppText>
+          <AppText style={styles.label}>ABN</AppText>
           <TextInput
             style={[styles.input, abrError ? styles.inputError : null]}
             value={abn}
@@ -228,6 +231,14 @@ export default function SignUp() {
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
           />
+          <View style={styles.abnWarning}>
+            <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
+            <AppText style={styles.abnWarningText}>
+              {
+                "You cannot change your ABN after creating your account — please make sure it's correct."
+              }
+            </AppText>
+          </View>
 
           {abrLoading && (
             <View style={styles.abrLoading}>
@@ -382,6 +393,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
     lineHeight: 18,
+  },
+  abnWarning: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    marginTop: -14,
+    marginBottom: 16,
+  },
+  abnWarningText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.amber,
+    lineHeight: 17,
   },
   fieldError: {
     fontSize: 12,

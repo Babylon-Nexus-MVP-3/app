@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -253,6 +253,15 @@ export default function MeScreen() {
           <Ionicons name="trash-outline" size={15} color={Colors.red} />
           <AppText style={styles.deleteText}>Delete Account</AppText>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => Linking.openURL("mailto:product@babylonnexus.com")}
+          activeOpacity={0.7}
+          style={styles.feedbackRow}
+        >
+          <AppText style={styles.feedbackText}>Have feedback or suggestions? </AppText>
+          <AppText style={styles.feedbackLink}>Email us</AppText>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -394,4 +403,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.red,
   },
   deleteText: { color: Colors.red, fontSize: 14, fontFamily: Fonts.semiBold },
+  feedbackRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  feedbackText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
+  feedbackLink: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });

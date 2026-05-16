@@ -91,11 +91,21 @@ export default function Step1() {
   const [abrError, setAbrError] = useState("");
   const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const hasAccountAbn = !!user?.abn;
+
   useEffect(() => {
     if (!form.name && user?.name) {
       setForm((f) => ({ ...f, name: user.name }));
     }
   }, [user, form.name]);
+
+  useEffect(() => {
+    if (!form.abn && user?.abn) {
+      const digits = user.abn.replace(/\D/g, "").slice(0, 11);
+      setAbnDisplay(formatAbn(digits));
+      setForm((f) => ({ ...f, abn: digits }));
+    }
+  }, [user, form.abn]);
 
   useEffect(() => {
     if (form.abn.length !== 11) {
@@ -138,11 +148,22 @@ export default function Step1() {
   }
 
   function formatExpiry(raw: string) {
-    // Strip everything except digits
     const digits = raw.replace(/\D/g, "");
     if (digits.length <= 2) return digits;
     return digits.slice(0, 2) + "/" + digits.slice(2, 6);
   }
+
+  function isExpiryValid(expiry: string): boolean {
+    const parts = expiry.split("/");
+    if (parts.length !== 2 || parts[1].length !== 4) return false;
+    const month = parseInt(parts[0], 10);
+    const year = parseInt(parts[1], 10);
+    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+    const now = new Date();
+    return new Date(year, month - 1, 1) >= new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const expiryInvalid = form.idExpiry.length >= 7 && !isExpiryValid(form.idExpiry);
 
   function onContinue() {
     setStep1(form);
@@ -156,7 +177,8 @@ export default function Step1() {
     !abrError &&
     form.trade.trim() &&
     form.idNumber.trim() &&
-    form.idExpiry.trim();
+    form.idExpiry.length === 7 &&
+    !expiryInvalid;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -185,15 +207,27 @@ export default function Step1() {
             />
             <View style={styles.fieldWrap}>
               <AppText style={styles.fieldLabel}>ABN</AppText>
-              <TextInput
-                style={[styles.input, abrError ? styles.inputError : null]}
-                value={abnDisplay}
-                onChangeText={onAbnChange}
-                placeholder="XX XXX XXX XXX"
-                placeholderTextColor={Colors.grey300}
-                keyboardType="numeric"
-                autoCorrect={false}
-              />
+              {hasAccountAbn ? (
+                <View style={[styles.input, styles.inputLocked]}>
+                  <AppText style={styles.lockedValue}>{abnDisplay || "—"}</AppText>
+                  <Ionicons name="lock-closed-outline" size={14} color={Colors.grey500} />
+                </View>
+              ) : (
+                <>
+                  <TextInput
+                    style={[styles.input, abrError ? styles.inputError : null]}
+                    value={abnDisplay}
+                    onChangeText={onAbnChange}
+                    placeholder="XX XXX XXX XXX"
+                    placeholderTextColor={Colors.grey300}
+                    keyboardType="numeric"
+                    autoCorrect={false}
+                  />
+                  <AppText style={styles.abnMissingHint}>
+                    No ABN on your account — add one via Me tab after submitting.
+                  </AppText>
+                </>
+              )}
               {abrLoading && (
                 <View style={styles.abrRow}>
                   <ActivityIndicator size="small" color={Colors.vouchGreen} />
@@ -266,13 +300,23 @@ export default function Step1() {
               onChangeText={(v) => update("idNumber", v)}
               placeholder={form.idType === "passport" ? "e.g. PA1234567" : "e.g. 12345678"}
             />
-            <Field
-              label="EXPIRY DATE"
-              value={form.idExpiry}
-              onChangeText={(v) => update("idExpiry", formatExpiry(v))}
-              placeholder="MM/YYYY"
-              keyboardType="numeric"
-            />
+            <View style={styles.fieldWrap}>
+              <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
+              <TextInput
+                style={[styles.input, expiryInvalid ? styles.inputError : null]}
+                value={form.idExpiry}
+                onChangeText={(v) => update("idExpiry", formatExpiry(v))}
+                placeholder="MM/YYYY"
+                placeholderTextColor={Colors.grey300}
+                keyboardType="numeric"
+                autoCorrect={false}
+              />
+              {expiryInvalid && (
+                <AppText style={styles.expiryError}>
+                  This document has expired — enter a valid expiry date.
+                </AppText>
+              )}
+            </View>
           </View>
 
           <View style={styles.privacyNote}>
@@ -331,6 +375,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inputError: { borderColor: Colors.red },
+  inputLocked: {
+    backgroundColor: Colors.grey100,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  lockedValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey700 },
+  abnMissingHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.amber, marginTop: 4 },
   abrRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
   abrLoadingText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
   abrConfirmed: {
@@ -350,6 +402,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   abrError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 6 },
+  expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   sectionLabel: {
     fontSize: 12,
     fontFamily: Fonts.bold,
