@@ -129,11 +129,11 @@ export default function VerifyMobile() {
         throw new Error(data.error ?? "Incorrect code. Please try again.");
       }
       await updateUser({ mobile: mobileDigits, mobileVerified: true });
-      router.back();
+      router.push("/(app)/me" as any);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         await updateUser({ mobile: mobileDigits, mobileVerified: true });
-        router.back();
+        router.push("/(app)/me" as any);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -153,7 +153,7 @@ export default function VerifyMobile() {
         <View style={styles.inner}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => (step === "otp" ? setStep("enter") : router.back())}
+            onPress={() => (step === "otp" ? setStep("enter") : router.push("/(app)/me" as any))}
             hitSlop={14}
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />

@@ -60,6 +60,54 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
   }
 });
 
+abrRouter.get("/search", async (req: Request, res: Response) => {
+  const name = String(req.query.name ?? "").trim();
+
+  if (name.length < 3) {
+    res.status(400).json({ error: "Name must be at least 3 characters" });
+    return;
+  }
+
+  const guid = process.env.ABR_GUID;
+
+  if (!guid) {
+    // Dev/test fallback — return plausible mocks so UI works without a real key
+    res.status(200).json({ results: buildSearchMock(name) });
+    return;
+  }
+
+  try {
+    const encodedName = encodeURIComponent(name);
+    const url = `https://abr.business.gov.au/json/MatchingNames.aspx?name=${encodedName}&guid=${guid}`;
+    const upstream = await fetch(url);
+    if (!upstream.ok) throw new Error("ABR upstream error");
+
+    const raw = await upstream.json();
+
+    const names: Array<{ Abn: string; Name: string; State: string; Postcode: string; Score: number }> =
+      raw.Names ?? [];
+
+    const results = names.slice(0, 10).map((entry) => ({
+      abn: entry.Abn,
+      entityName: entry.Name,
+      state: entry.State,
+    }));
+
+    res.status(200).json({ results });
+  } catch {
+    res.status(404).json({ error: "Search failed" });
+  }
+});
+
+function buildSearchMock(name: string): Array<{ abn: string; entityName: string; state: string }> {
+  return [
+    { abn: "12345678901", entityName: `${name} Pty Ltd`, state: "NSW" },
+    { abn: "98765432101", entityName: `${name} Group Pty Ltd`, state: "VIC" },
+    { abn: "11223344556", entityName: `${name} Services Pty Ltd`, state: "QLD" },
+    { abn: "55667788990", entityName: `${name} & Associates`, state: "WA" },
+  ];
+}
+
 function buildMock(abn: string): {
   entityName: string;
   tradingName: string | undefined;

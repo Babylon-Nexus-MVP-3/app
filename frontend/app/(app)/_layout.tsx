@@ -1,13 +1,9 @@
 import { useEffect } from "react";
-import { Tabs, router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { Stack, router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
-  const { bottom } = useSafeAreaInsets();
 
   useEffect(() => {
     if (isLoading) return;
@@ -21,93 +17,8 @@ export default function AppLayout() {
   if (isLoading || !user || user.role === "Admin") return null;
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopWidth: 1,
-          borderTopColor: Colors.grey300,
-          paddingTop: 8,
-          paddingBottom: bottom,
-          height: 60 + bottom,
-        },
-        tabBarActiveTintColor: Colors.vouchGreen,
-        tabBarInactiveTintColor: Colors.grey500,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="vouches"
-        options={{
-          title: "Vouches",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "shield-checkmark" : "shield-checkmark-outline"}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="vouch-my-project"
-        options={{
-          title: "Project",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "sync-circle" : "sync-circle-outline"}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="me"
-        options={{
-          title: "Me",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-
-      {/* Hidden screens — not in tab bar */}
-      <Tabs.Screen name="projects" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="change-password" options={{ href: null }} />
-      <Tabs.Screen name="create-project" options={{ href: null }} />
-      <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
-      <Tabs.Screen name="project/audit-log/[projectId]" options={{ href: null }} />
-      <Tabs.Screen name="get-vouched" options={{ href: null, tabBarStyle: { display: "none" } }} />
-      <Tabs.Screen name="give-vouch" options={{ href: null, tabBarStyle: { display: "none" } }} />
-      <Tabs.Screen
-        name="verify-mobile"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
-      <Tabs.Screen name="add-abn" options={{ href: null, tabBarStyle: { display: "none" } }} />
-      <Tabs.Screen
-        name="vouch-notifications"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
-      <Tabs.Screen
-        name="mobile-status"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+    </Stack>
   );
 }
