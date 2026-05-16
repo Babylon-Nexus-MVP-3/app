@@ -37,8 +37,9 @@ function formatAbn(raw: string): string {
 export default function AddAbn() {
   const { user, fetchWithAuth, updateUser } = useAuth();
 
+  const isLocked = !!user?.abn;
   const [abn, setAbn] = useState(user?.abn ? formatAbn(user.abn) : "");
-  const [abnDigits, setAbnDigits] = useState(user?.abn ?? "");
+  const [abnDigits, setAbnDigits] = useState(user?.abn?.replace(/\D/g, "") ?? "");
   const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
   const [abrLoading, setAbrLoading] = useState(false);
   const [abrError, setAbrError] = useState("");
@@ -131,23 +132,32 @@ export default function AddAbn() {
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
 
-          <AppText style={styles.title}>{user?.abn ? "Edit ABN" : "Add ABN"}</AppText>
+          <AppText style={styles.title}>{isLocked ? "Your ABN" : "Add ABN"}</AppText>
           <AppText style={styles.subtitle}>
-            Enter your Australian Business Number to link your business.
+            {isLocked
+              ? "Your ABN is locked to protect your vouch history."
+              : "Enter your Australian Business Number to link your business."}
           </AppText>
 
           <AppText style={styles.label}>ABN</AppText>
-          <TextInput
-            style={[styles.input, abrError ? styles.inputError : null]}
-            value={abn}
-            onChangeText={onAbnChange}
-            placeholder="XX XXX XXX XXX"
-            placeholderTextColor={Colors.grey300}
-            keyboardType="numeric"
-            returnKeyType="done"
-            onSubmitEditing={handleSave}
-            autoFocus
-          />
+          {isLocked ? (
+            <View style={styles.inputLocked}>
+              <AppText style={styles.lockedValue}>{abn}</AppText>
+              <Ionicons name="lock-closed-outline" size={14} color={Colors.grey500} />
+            </View>
+          ) : (
+            <TextInput
+              style={[styles.input, abrError ? styles.inputError : null]}
+              value={abn}
+              onChangeText={onAbnChange}
+              placeholder="XX XXX XXX XXX"
+              placeholderTextColor={Colors.grey300}
+              keyboardType="numeric"
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+              autoFocus
+            />
+          )}
 
           {abrLoading && (
             <View style={styles.abrLoading}>
@@ -173,18 +183,28 @@ export default function AddAbn() {
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
-          <TouchableOpacity
-            style={[styles.primaryButton, (!canSave || loading) && styles.primaryButtonDisabled]}
-            onPress={handleSave}
-            disabled={!canSave || loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <AppText style={styles.primaryButtonText}>Save</AppText>
-            )}
-          </TouchableOpacity>
+          {isLocked ? (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.back()}
+              activeOpacity={0.85}
+            >
+              <AppText style={styles.primaryButtonText}>Done</AppText>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.primaryButton, (!canSave || loading) && styles.primaryButtonDisabled]}
+              onPress={handleSave}
+              disabled={!canSave || loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <AppText style={styles.primaryButtonText}>Save</AppText>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -238,6 +258,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputError: { borderColor: Colors.red },
+  inputLocked: {
+    height: 52,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: Colors.grey100,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  lockedValue: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.grey700 },
   abrLoading: {
     flexDirection: "row",
     alignItems: "center",

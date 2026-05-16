@@ -285,7 +285,7 @@ function RefForm({
         style={styles.refInput}
         value={value.mobile}
         onChangeText={(v) => update("mobile", formatMobile(v))}
-        placeholder="04XX XXX XXX"
+        placeholder="Mobile number"
         placeholderTextColor={Colors.grey300}
         keyboardType="number-pad"
         maxLength={10}

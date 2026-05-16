@@ -45,19 +45,19 @@ export default function Index() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.signUpButton}
-          onPress={() => router.push("/(auth)/sign-up")}
-          activeOpacity={0.85}
-        >
-          <AppText style={styles.signUpText}>Sign up</AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={styles.signInButton}
           onPress={() => router.push("/(auth)/sign-in")}
           activeOpacity={0.85}
         >
           <AppText style={styles.signInButtonText}>Sign in</AppText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.signUpButton}
+          onPress={() => router.push("/(auth)/sign-up")}
+          activeOpacity={0.85}
+        >
+          <AppText style={styles.signUpText}>Sign up</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
