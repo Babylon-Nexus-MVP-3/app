@@ -74,7 +74,8 @@ export default function VouchMyProjectScreen() {
           <View style={styles.privacyText}>
             <AppText style={styles.privacyTitle}>Amounts stay off your public profile</AppText>
             <AppText style={styles.privacyDesc}>
-              Invoice values are visible to your project team only. Vouch tracks payment timing — not dollar amounts.
+              Invoice values are visible to your project team only. Vouch tracks payment timing —
+              not dollar amounts.
             </AppText>
           </View>
         </View>
