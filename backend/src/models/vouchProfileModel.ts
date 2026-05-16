@@ -27,8 +27,9 @@ export interface VouchProfile extends Document {
   value: string;
   pastProjectName: string;
   pastSuburb: string;
+  pastState: string;
   pastPostcode: string;
-  pastYear: string;
+  pastMonthYear: string;
   pastValue: string;
   // Step 3 — references
   references: VouchReference[];
@@ -66,15 +67,14 @@ const vouchProfileSchema = new Schema<VouchProfile>(
     value: { type: String, required: true },
     pastProjectName: { type: String, default: "" },
     pastSuburb: { type: String, default: "" },
+    pastState: { type: String, default: "" },
     pastPostcode: { type: String, default: "" },
-    pastYear: { type: String, default: "" },
+    pastMonthYear: { type: String, default: "" },
     pastValue: { type: String, default: "" },
     references: { type: [vouchReferenceSchema], required: true },
     submittedAt: { type: Date, required: true, default: Date.now },
   },
   { timestamps: true }
 );
-
-vouchProfileSchema.index({ userId: 1 });
 
 export const VouchProfileModel = mongoose.model<VouchProfile>("VouchProfile", vouchProfileSchema);

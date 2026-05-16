@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -14,6 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { Fonts } from "@/constants/fonts";
+import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -29,6 +30,7 @@ type AbrResult = {
 type VouchStatus = {
   isOnVouch: boolean;
   vouchCount: number;
+  alreadyVouched?: boolean;
   attributeSummary?: string;
 };
 
@@ -60,9 +62,16 @@ export default function VerifyScreen() {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     if (!abn) return;
+    setAbrData(null);
+    setVouchStatus(null);
+    setSelected([]);
+    setNote("");
+    setSubmitted(false);
+    setSubmitError("");
     lookupAbn();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abn]);
@@ -98,6 +107,7 @@ export default function VerifyScreen() {
   async function onVouch() {
     if (selected.length < 2) return;
     setSubmitting(true);
+    setSubmitError("");
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/give`, {
         method: "POST",
@@ -109,10 +119,16 @@ export default function VerifyScreen() {
           requestId: requestId ?? undefined,
         }),
       });
+      if (res.status === 409) {
+        setSubmitError("You've already vouched for this business.");
+        setVouchStatus((prev) => ({ ...prev!, alreadyVouched: true }));
+        setSubmitting(false);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.vouchCount !== undefined) {
-          setVouchStatus((prev) => ({ ...prev, isOnVouch: true, vouchCount: data.vouchCount }));
+          setVouchStatus((prev) => ({ ...prev!, isOnVouch: true, vouchCount: data.vouchCount }));
         }
       }
     } catch {
@@ -124,11 +140,11 @@ export default function VerifyScreen() {
   }
 
   const displayName = abrData?.tradingName || abrData?.entityName || "this business";
-  const canVouch = selected.length >= 2;
+  const alreadyVouched = !!vouchStatus?.alreadyVouched;
+  const canVouch = selected.length >= 2 && !alreadyVouched;
 
   if (submitted) {
     const totalVouches = (vouchStatus?.vouchCount ?? 0) + 1;
-    const barFill = Math.min(totalVouches / 20, 1); // cap at 20 for full bar
 
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -140,11 +156,11 @@ export default function VerifyScreen() {
             <Ionicons name="shield-checkmark-outline" size={36} color={Colors.vouchGreen} />
           </View>
 
-          <Text style={styles.successTitle}>Your vouch is live.</Text>
-          <Text style={styles.successSub}>
+          <AppText style={styles.successTitle}>Your vouch is live.</AppText>
+          <AppText style={styles.successSub}>
             {displayName}
             {"'"}s reputation just got stronger.
-          </Text>
+          </AppText>
 
           {/* Business card */}
           <View style={styles.bizCard}>
@@ -153,21 +169,16 @@ export default function VerifyScreen() {
                 <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.bizName}>{abrData?.entityName ?? displayName}</Text>
-                <Text style={styles.bizMeta}>
+                <AppText style={styles.bizName}>{abrData?.entityName ?? displayName}</AppText>
+                <AppText style={styles.bizMeta}>
                   {[abrData?.businessType, abrData?.state].filter(Boolean).join(" · ")}
-                </Text>
+                </AppText>
               </View>
             </View>
-            <Text style={styles.vouchesLabel}>VOUCHES</Text>
-            <View style={styles.barTrack}>
-              <View style={[styles.barFill, { flex: barFill }]} />
-              <View style={{ flex: 1 - barFill }} />
-            </View>
-            <Text style={styles.vouchesCount}>
+            <AppText style={styles.vouchesCount}>
               {totalVouches} {totalVouches === 1 ? "vouch" : "vouches"}{" "}
-              <Text style={styles.vouchesSelf}>· +1 from you</Text>
-            </Text>
+              <AppText style={styles.vouchesSelf}>· +1 from you</AppText>
+            </AppText>
           </View>
 
           <TouchableOpacity
@@ -175,7 +186,7 @@ export default function VerifyScreen() {
             onPress={() => router.replace("/(app)/vouches")}
             activeOpacity={0.85}
           >
-            <Text style={styles.primarySuccessBtnText}>Vouch another business</Text>
+            <AppText style={styles.primarySuccessBtnText}>Vouch another business</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -183,7 +194,7 @@ export default function VerifyScreen() {
             onPress={() => router.replace("/(app)/home")}
             activeOpacity={0.7}
           >
-            <Text style={styles.secondarySuccessBtnText}>Back to home</Text>
+            <AppText style={styles.secondarySuccessBtnText}>Back to home</AppText>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -193,10 +204,10 @@ export default function VerifyScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.replace("/(app)/vouches")} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verify business</Text>
+        <AppText style={styles.headerTitle}>Verify business</AppText>
         <View style={{ width: 24 }} />
       </View>
 
@@ -206,9 +217,9 @@ export default function VerifyScreen() {
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* ABN confirmed row */}
-          <Text style={styles.fieldLabel}>ABN</Text>
+          <AppText style={styles.fieldLabel}>ABN</AppText>
           <View style={styles.abnConfirmed}>
-            <Text style={styles.abnConfirmedText}>{formatDisplayAbn(abn ?? "")}</Text>
+            <AppText style={styles.abnConfirmedText}>{formatDisplayAbn(abn ?? "")}</AppText>
             {!loadingAbr && !abrError && (
               <Ionicons name="checkmark" size={20} color={Colors.vouchGreen} />
             )}
@@ -217,39 +228,39 @@ export default function VerifyScreen() {
           {loadingAbr ? (
             <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 24 }} />
           ) : abrError ? (
-            <Text style={styles.errorText}>{abrError}</Text>
+            <AppText style={styles.errorText}>{abrError}</AppText>
           ) : abrData ? (
             <>
               {/* ABR result */}
               <View style={styles.abrCard}>
-                <Text style={styles.abrFrom}>FROM ABR</Text>
-                <Text style={styles.abrName}>{abrData.entityName}</Text>
-                <Text style={styles.abrMeta}>
+                <AppText style={styles.abrFrom}>FROM ABR</AppText>
+                <AppText style={styles.abrName}>{abrData.entityName}</AppText>
+                <AppText style={styles.abrMeta}>
                   {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
-                </Text>
+                </AppText>
               </View>
 
               {/* Vouch status card */}
               {requestId ? (
                 <View style={styles.neutralCard}>
-                  <Text style={styles.neutralCountNum}>{vouchStatus?.vouchCount ?? 0}</Text>
-                  <Text style={styles.neutralCountLabel}>
+                  <AppText style={styles.neutralCountNum}>{vouchStatus?.vouchCount ?? 0}</AppText>
+                  <AppText style={styles.neutralCountLabel}>
                     {(vouchStatus?.vouchCount ?? 0) === 1 ? "vouch received" : "vouches received"}
-                  </Text>
+                  </AppText>
                 </View>
               ) : vouchStatus?.isOnVouch ? (
                 <View style={styles.activeCard}>
                   <View style={styles.statusRow}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={Colors.vouchGreen} />
-                    <Text style={styles.activeLabel}>ACTIVE ON VOUCH</Text>
+                    <AppText style={styles.activeLabel}>ACTIVE ON VOUCH</AppText>
                   </View>
-                  <Text style={styles.vouchCount}>
-                    <Text style={styles.vouchCountNum}>{vouchStatus.vouchCount}</Text>
+                  <AppText style={styles.vouchCount}>
+                    <AppText style={styles.vouchCountNum}>{vouchStatus.vouchCount}</AppText>
                     {"  "}
-                    <Text style={styles.vouchCountLabel}>vouches received</Text>
-                  </Text>
+                    <AppText style={styles.vouchCountLabel}>vouches received</AppText>
+                  </AppText>
                   {vouchStatus.attributeSummary ? (
-                    <Text style={styles.activeDesc}>{vouchStatus.attributeSummary}</Text>
+                    <AppText style={styles.activeDesc}>{vouchStatus.attributeSummary}</AppText>
                   ) : null}
                   <View style={styles.divider} />
                   <View style={styles.noteRow}>
@@ -258,70 +269,87 @@ export default function VerifyScreen() {
                       size={14}
                       color={Colors.vouchGreen}
                     />
-                    <Text style={styles.activeNote}>
+                    <AppText style={styles.activeNote}>
                       Your vouch joins their existing reputation.
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               ) : (
                 <View style={styles.pendingCard}>
                   <View style={styles.statusRow}>
                     <Ionicons name="shield-outline" size={16} color={Colors.amber} />
-                    <Text style={styles.pendingLabel}>NOT YET ON VOUCH</Text>
+                    <AppText style={styles.pendingLabel}>NOT YET ON VOUCH</AppText>
                   </View>
-                  <Text style={styles.pendingTitle}>Be the first to vouch them.</Text>
-                  <Text style={styles.pendingDesc}>
+                  <AppText style={styles.pendingTitle}>Be the first to vouch them.</AppText>
+                  <AppText style={styles.pendingDesc}>
                     {"Your vouch creates their profile on Vouch. We'll invite them to claim it."}
-                  </Text>
+                  </AppText>
                   <View style={styles.divider} />
                   <View style={styles.noteRow}>
                     <Ionicons name="time-outline" size={14} color={Colors.amber} />
-                    <Text style={styles.pendingNote}>
+                    <AppText style={styles.pendingNote}>
                       Your vouch stays pending until they accept the invite.
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               )}
 
-              {/* Attribute selection */}
-              <Text style={styles.attrHeading}>What would you say about them?</Text>
-              <Text style={styles.attrSub}>Pick at least 2.</Text>
-              <View style={styles.chipWrap}>
-                {ATTRIBUTES.map((attr) => {
-                  const active = selected.includes(attr);
-                  return (
-                    <TouchableOpacity
-                      key={attr}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => toggleAttribute(attr)}
-                      activeOpacity={0.7}
-                    >
-                      {active && <Ionicons name="checkmark" size={13} color={Colors.white} />}
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{attr}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {alreadyVouched ? (
+                <View style={styles.alreadyVouchedCard}>
+                  <Ionicons name="checkmark-circle" size={28} color={Colors.vouchGreen} />
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.alreadyVouchedTitle}>You've already vouched them</AppText>
+                    <AppText style={styles.alreadyVouchedSub}>
+                      You can only vouch for a business once.
+                    </AppText>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {/* Attribute selection */}
+                  <AppText style={styles.attrHeading}>What would you say about them?</AppText>
+                  <AppText style={styles.attrSub}>Pick at least 2.</AppText>
+                  <View style={styles.chipWrap}>
+                    {ATTRIBUTES.map((attr) => {
+                      const active = selected.includes(attr);
+                      return (
+                        <TouchableOpacity
+                          key={attr}
+                          style={[styles.chip, active && styles.chipActive]}
+                          onPress={() => toggleAttribute(attr)}
+                          activeOpacity={0.7}
+                        >
+                          {active && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                          <AppText style={[styles.chipText, active && styles.chipTextActive]}>
+                            {attr}
+                          </AppText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
 
-              {/* Optional note */}
-              <Text style={styles.noteLabel}>ADD A NOTE · optional</Text>
-              <TextInput
-                style={styles.noteInput}
-                value={note}
-                onChangeText={setNote}
-                placeholder="e.g. Worked together on Westmead Hospital Stage 2. Highly recommend."
-                placeholderTextColor={Colors.grey300}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <Text style={styles.noteHint}>Notes are private and not shown publicly.</Text>
+                  {/* Optional note */}
+                  <AppText style={styles.noteLabel}>ADD A NOTE · optional</AppText>
+                  <TextInput
+                    style={styles.noteInput}
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder="e.g. Worked together on Westmead Hospital Stage 2. Highly recommend."
+                    placeholderTextColor={Colors.grey300}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    fontFamily={Fonts.regular}
+                  />
+                  <AppText style={styles.noteHint}>Notes are private and not shown publicly.</AppText>
+                </>
+              )}
             </>
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {!loadingAbr && abrData && (
+      {!loadingAbr && abrData && !alreadyVouched && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.vouchBtn, !canVouch && styles.vouchBtnDisabled]}
@@ -332,16 +360,22 @@ export default function VerifyScreen() {
             {submitting ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.vouchBtnText}>
-                {requestId || vouchStatus?.isOnVouch
-                  ? `Vouch for ${displayName}`
-                  : "Vouch and invite them"}
-              </Text>
+              <AppText style={styles.vouchBtnText}>
+                {alreadyVouched
+                  ? "Already vouched"
+                  : requestId || vouchStatus?.isOnVouch
+                    ? `Vouch for ${displayName}`
+                    : "Vouch and invite them"}
+              </AppText>
             )}
           </TouchableOpacity>
-          {!canVouch && (
-            <Text style={styles.vouchHint}>Select at least 2 attributes to continue</Text>
-          )}
+          {alreadyVouched ? (
+            <AppText style={styles.vouchHint}>You've already vouched for this business.</AppText>
+          ) : submitError ? (
+            <AppText style={[styles.vouchHint, { color: Colors.red }]}>{submitError}</AppText>
+          ) : !canVouch ? (
+            <AppText style={styles.vouchHint}>Select at least 2 attributes to continue</AppText>
+          ) : null}
         </View>
       )}
     </SafeAreaView>
@@ -359,7 +393,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
   scroll: {
@@ -371,7 +405,7 @@ const styles = StyleSheet.create({
   // ABN confirmed
   fieldLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     marginBottom: 6,
@@ -389,7 +423,7 @@ const styles = StyleSheet.create({
   },
   abnConfirmedText: {
     fontSize: 16,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
     color: Colors.black,
   },
 
@@ -402,18 +436,19 @@ const styles = StyleSheet.create({
   },
   abrFrom: {
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 1,
     marginBottom: 2,
   },
   abrName: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   abrMeta: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
 
@@ -427,13 +462,13 @@ const styles = StyleSheet.create({
   },
   neutralCountNum: {
     fontSize: 36,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   neutralCountLabel: {
     fontSize: 14,
+    fontFamily: Fonts.medium,
     color: Colors.grey500,
-    fontWeight: "500",
   },
 
   // Active on vouch card
@@ -452,7 +487,7 @@ const styles = StyleSheet.create({
   },
   activeLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
     letterSpacing: 0.8,
   },
@@ -461,16 +496,17 @@ const styles = StyleSheet.create({
   },
   vouchCountNum: {
     fontSize: 28,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
   },
   vouchCountLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
   },
   activeDesc: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.vouchGreen,
     lineHeight: 19,
   },
@@ -486,7 +522,7 @@ const styles = StyleSheet.create({
   },
   activeNote: {
     fontSize: 13,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
     flex: 1,
   },
@@ -502,23 +538,24 @@ const styles = StyleSheet.create({
   },
   pendingLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.amber,
     letterSpacing: 0.8,
   },
   pendingTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   pendingDesc: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     lineHeight: 19,
   },
   pendingNote: {
     fontSize: 13,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
     color: Colors.amber,
     flex: 1,
   },
@@ -526,12 +563,13 @@ const styles = StyleSheet.create({
   // Attributes
   attrHeading: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     marginTop: 4,
   },
   attrSub: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: -8,
   },
@@ -557,7 +595,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
     color: Colors.grey700,
   },
   chipTextActive: {
@@ -567,7 +605,7 @@ const styles = StyleSheet.create({
   // Note
   noteLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
     letterSpacing: 0.8,
     marginBottom: 6,
@@ -585,6 +623,7 @@ const styles = StyleSheet.create({
   },
   noteHint: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: -8,
   },
@@ -609,10 +648,11 @@ const styles = StyleSheet.create({
   vouchBtnText: {
     color: Colors.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   vouchHint: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     textAlign: "center",
   },
@@ -637,12 +677,13 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 26,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
     textAlign: "center",
   },
   successSub: {
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.grey700,
     textAlign: "center",
     lineHeight: 22,
@@ -671,39 +712,23 @@ const styles = StyleSheet.create({
   },
   bizName: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.black,
   },
   bizMeta: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
     marginTop: 1,
   },
-  vouchesLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-  },
-  barTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.grey300,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  barFill: {
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 4,
-  },
   vouchesCount: {
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
   vouchesSelf: {
+    fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
-    fontWeight: "600",
   },
   primarySuccessBtn: {
     width: "100%",
@@ -716,7 +741,7 @@ const styles = StyleSheet.create({
   },
   primarySuccessBtnText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
   secondarySuccessBtn: {
@@ -730,9 +755,30 @@ const styles = StyleSheet.create({
   },
   secondarySuccessBtnText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
   },
 
-  errorText: { fontSize: 14, color: Colors.red, textAlign: "center" },
+  alreadyVouchedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 14,
+    padding: 16,
+    backgroundColor: Colors.vouchGreenLight,
+  },
+  alreadyVouchedTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+    marginBottom: 2,
+  },
+  alreadyVouchedSub: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.vouchGreen,
+  },
+  errorText: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.red, textAlign: "center" },
 });
