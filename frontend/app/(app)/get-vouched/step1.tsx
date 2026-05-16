@@ -91,11 +91,21 @@ export default function Step1() {
   const [abrError, setAbrError] = useState("");
   const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const hasAccountAbn = !!user?.abn;
+
   useEffect(() => {
     if (!form.name && user?.name) {
       setForm((f) => ({ ...f, name: user.name }));
     }
   }, [user, form.name]);
+
+  useEffect(() => {
+    if (!form.abn && user?.abn) {
+      const digits = user.abn.replace(/\D/g, "").slice(0, 11);
+      setAbnDisplay(formatAbn(digits));
+      setForm((f) => ({ ...f, abn: digits }));
+    }
+  }, [user, form.abn]);
 
   useEffect(() => {
     if (form.abn.length !== 11) {
@@ -185,15 +195,27 @@ export default function Step1() {
             />
             <View style={styles.fieldWrap}>
               <AppText style={styles.fieldLabel}>ABN</AppText>
-              <TextInput
-                style={[styles.input, abrError ? styles.inputError : null]}
-                value={abnDisplay}
-                onChangeText={onAbnChange}
-                placeholder="XX XXX XXX XXX"
-                placeholderTextColor={Colors.grey300}
-                keyboardType="numeric"
-                autoCorrect={false}
-              />
+              {hasAccountAbn ? (
+                <View style={[styles.input, styles.inputLocked]}>
+                  <AppText style={styles.lockedValue}>{abnDisplay || "—"}</AppText>
+                  <Ionicons name="lock-closed-outline" size={14} color={Colors.grey500} />
+                </View>
+              ) : (
+                <>
+                  <TextInput
+                    style={[styles.input, abrError ? styles.inputError : null]}
+                    value={abnDisplay}
+                    onChangeText={onAbnChange}
+                    placeholder="XX XXX XXX XXX"
+                    placeholderTextColor={Colors.grey300}
+                    keyboardType="numeric"
+                    autoCorrect={false}
+                  />
+                  <AppText style={styles.abnMissingHint}>
+                    No ABN on your account — add one via Me tab after submitting.
+                  </AppText>
+                </>
+              )}
               {abrLoading && (
                 <View style={styles.abrRow}>
                   <ActivityIndicator size="small" color={Colors.vouchGreen} />
@@ -331,6 +353,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inputError: { borderColor: Colors.red },
+  inputLocked: {
+    backgroundColor: Colors.grey100,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  lockedValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey700 },
+  abnMissingHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.amber, marginTop: 4 },
   abrRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
   abrLoadingText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
   abrConfirmed: {
