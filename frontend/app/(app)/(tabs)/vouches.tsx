@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -63,11 +63,12 @@ export default function VouchesScreen() {
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      setLoading(true);
+      if (!hasLoaded.current) setLoading(true);
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
@@ -76,6 +77,7 @@ export default function VouchesScreen() {
           if (cancelled) return;
           setGiven(givenData?.vouches ?? []);
           setReceived(receivedData?.vouches ?? []);
+          hasLoaded.current = true;
         })
         .catch(() => {})
         .finally(() => {
