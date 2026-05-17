@@ -151,7 +151,7 @@ export default function HomeScreen() {
                 )}
               </View>
               <AppText style={styles.cardDesc}>
-                {"Vouch a business you've worked with. Or respond to a request."}
+                {"Vouch a person or business you've worked with. Or respond to a request."}
               </AppText>
             </View>
           </TouchableOpacity>

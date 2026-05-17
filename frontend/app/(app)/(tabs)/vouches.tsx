@@ -228,8 +228,8 @@ export default function VouchesScreen() {
 
         <View style={styles.divider} />
 
-        {/* Vouch a new business */}
-        <AppText style={styles.newTitle}>Vouch a new business</AppText>
+        {/* Vouch a business */}
+        <AppText style={styles.newTitle}>Vouch a business</AppText>
         <AppText style={styles.newSubtitle}>
           {"Enter their ABN. We'll verify it instantly."}
         </AppText>
