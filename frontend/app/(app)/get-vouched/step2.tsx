@@ -17,6 +17,8 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useWizard } from "./WizardContext";
+import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
 
@@ -166,10 +168,19 @@ function Field({
 }
 
 export default function Step2() {
-  const { step2, setStep2 } = useWizard();
+  const { step1, step2, setStep2 } = useWizard();
+  const { fetchWithAuth } = useAuth();
   const [form, setForm] = useState(step2);
   const [statePickerOpen, setStatePickerOpen] = useState(false);
   const [pastStatePickerOpen, setPastStatePickerOpen] = useState(false);
+
+  // Sync if WizardContext loads API data after this screen mounts
+  useEffect(() => {
+    setForm((f) => {
+      const hasData = Object.values(f).some((v) => v !== "");
+      return hasData ? f : step2;
+    });
+  }, [step2]);
 
   function filterDecimal(v: string) {
     const filtered = v.replace(/[^0-9.]/g, "");
@@ -181,9 +192,13 @@ export default function Step2() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function onContinue() {
+  async function onContinue() {
     setStep2(form);
-    router.push("/(app)/get-vouched/step3");
+    fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
+      method: "POST",
+      body: JSON.stringify({ ...step1, ...form, references: [] }),
+    }).catch(() => {});
+    router.back();
   }
 
   const canContinue =

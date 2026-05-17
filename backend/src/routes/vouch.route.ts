@@ -7,6 +7,7 @@ import { VouchRequestModel } from "../models/vouchRequestModel";
 import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
+import { sendVouchRequestEmail } from "../service/email.service";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -73,28 +74,30 @@ vouchRouter.post(
         const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
         if (existing) continue;
 
+        const toEmail = ref.email?.trim().toLowerCase() ?? "";
+
         const request = await VouchRequestModel.create({
           fromUserId: userId,
           fromName,
           fromCompany,
           fromAbn,
-          toEmail: ref.email ?? "",
+          toEmail,
           toMobile: ref.mobile,
           relationship: ref.relationship,
           projectName: ref.project,
           status: "pending",
         });
 
-        // Find the reference's user account by mobile or email
+        // Find the reference's user account — match by either mobile or email
         const orConditions: object[] = [{ mobile: ref.mobile }];
-        if (ref.email) orConditions.push({ email: ref.email });
+        if (toEmail) orConditions.push({ email: toEmail });
 
         const refUser = await UserModel.findOne({ $or: orConditions })
           .select("_id pushToken")
           .lean();
 
         if (refUser) {
-          // Create in-app notification
+          // In-app notification
           await VouchNotificationModel.create({
             recipientUserId: refUser._id,
             requestId: request._id,
@@ -103,7 +106,7 @@ vouchRouter.post(
             projectName: ref.project,
           });
 
-          // Best-effort push notification
+          // Push notification (best-effort)
           const token = refUser.pushToken;
           if (token && Expo.isExpoPushToken(token)) {
             expo
@@ -117,6 +120,17 @@ vouchRouter.post(
               ])
               .catch(() => {});
           }
+        }
+
+        // Email notification — sent regardless of whether reference is on VouchPay
+        if (toEmail) {
+          sendVouchRequestEmail(
+            toEmail,
+            body.name,
+            fromCompany,
+            ref.relationship,
+            ref.project
+          ).catch(() => {});
         }
       }
 
@@ -161,10 +175,50 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const requests = await VouchRequestModel.find({ fromUserId: userId })
+      const requests = await VouchRequestModel.find({
+        fromUserId: userId,
+        status: { $ne: "ignored" },
+      })
         .sort({ createdAt: -1 })
         .lean();
       res.status(200).json({ requests });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /vouch/requests/:id/ignore — silently dismiss a vouch request (no notification sent)
+vouchRouter.patch(
+  "/requests/:id/ignore",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        res.status(400).json({ error: "Invalid request id" });
+        return;
+      }
+
+      const user = await UserModel.findById(userId).select("email mobile").lean();
+      const request = await VouchRequestModel.findById(id).select("toEmail toMobile").lean();
+
+      if (!request) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      const sentToEmail = request.toEmail && user?.email && request.toEmail === user.email;
+      const sentToMobile = request.toMobile && user?.mobile && request.toMobile === user.mobile;
+      if (!sentToEmail && !sentToMobile) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      await VouchRequestModel.findByIdAndUpdate(id, { status: "ignored" });
+      res.status(200).json({ ok: true });
     } catch (err) {
       next(err);
     }
@@ -344,6 +398,51 @@ vouchRouter.post(
       }
 
       res.status(201).json({ vouch, vouchCount });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /vouch/given — vouches the current user has given to others
+vouchRouter.get("/given", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.sub;
+    const vouches = await GivenVouchModel.find({ fromUserId: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.status(200).json({ vouches });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /vouch/received — vouches others have given to the current user's business
+vouchRouter.get(
+  "/received",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const user = await UserModel.findById(userId).select("abn").lean();
+      if (!user?.abn) {
+        res.status(200).json({ vouches: [] });
+        return;
+      }
+      const vouches = await GivenVouchModel.find({ toAbn: user.abn })
+        .sort({ createdAt: -1 })
+        .lean();
+      const giverIds = [...new Set(vouches.map((v) => v.fromUserId.toString()))];
+      const givers = await UserModel.find({ _id: { $in: giverIds } })
+        .select("name businessName")
+        .lean();
+      const giverMap = Object.fromEntries(givers.map((g) => [g._id.toString(), g]));
+      const populated = vouches.map((v) => ({
+        ...v,
+        fromName: giverMap[v.fromUserId.toString()]?.name ?? "Someone",
+        fromBusinessName: giverMap[v.fromUserId.toString()]?.businessName ?? "",
+      }));
+      res.status(200).json({ vouches: populated });
     } catch (err) {
       next(err);
     }

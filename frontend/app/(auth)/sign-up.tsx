@@ -16,6 +16,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 
 function formatAbn(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
@@ -25,38 +26,24 @@ function formatAbn(raw: string): string {
   return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
 }
 
-function PwHint({ met, label }: { met: boolean; label: string }) {
-  return (
-    <View style={styles.pwHintRow}>
-      <Ionicons
-        name={met ? "checkmark-circle" : "ellipse-outline"}
-        size={14}
-        color={met ? Colors.vouchGreen : Colors.grey300}
-      />
-      <AppText style={[styles.pwHintText, met && styles.pwHintTextMet]}>{label}</AppText>
-    </View>
-  );
-}
-
 export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState("");
-  const [mobileDisplay, setMobileDisplay] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function onMobileChange(text: string) {
-    const digits = text.replace(/\D/g, "").slice(0, 10);
-    setMobile(digits);
-    if (digits.length <= 4) setMobileDisplay(digits);
-    else if (digits.length <= 7) setMobileDisplay(`${digits.slice(0, 4)} ${digits.slice(4)}`);
-    else setMobileDisplay(`${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`);
+  const mobileDigits = mobile.replace(/\D/g, "");
+
+  function formatMobileDisplay(digits: string): string {
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
   }
 
   function onAbnChange(text: string) {
@@ -80,7 +67,6 @@ export default function SignUp() {
   const complexityMet =
     [pwChecks.lower, pwChecks.upper, pwChecks.number, pwChecks.special].filter(Boolean).length >= 3;
   const passwordValid = pwChecks.length && complexityMet;
-  const showPwHints = password.length > 0;
 
   const canSubmit =
     firstName.length > 0 && email.includes("@") && passwordValid && abnDigits.length === 11;
@@ -90,7 +76,6 @@ export default function SignUp() {
     setLoading(true);
     setError("");
     try {
-      const mobileDigits = mobile.replace(/\D/g, "");
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,25 +174,17 @@ export default function SignUp() {
               />
             </TouchableOpacity>
           </View>
-
-          {showPwHints && (
-            <View style={styles.pwHints}>
-              <PwHint met={pwChecks.length} label="At least 12 characters" />
-              <PwHint
-                met={complexityMet}
-                label="At least 3 of: uppercase, lowercase, number, special character"
-              />
-            </View>
-          )}
+          <PasswordStrengthHints password={password} />
 
           <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
             style={styles.input}
-            value={mobileDisplay}
-            onChangeText={onMobileChange}
+            value={formatMobileDisplay(mobileDigits)}
+            onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
             placeholder="0412 345 678"
             placeholderTextColor={Colors.grey300}
-            keyboardType="phone-pad"
+            keyboardType="number-pad"
+            maxLength={12}
             returnKeyType="next"
           />
 
@@ -322,25 +299,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.black,
-  },
-  pwHints: {
-    gap: 6,
-    marginTop: -12,
-    marginBottom: 20,
-  },
-  pwHintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  pwHintText: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.grey300,
-    flex: 1,
-  },
-  pwHintTextMet: {
-    color: Colors.vouchGreen,
   },
   eyeBtn: {
     paddingHorizontal: 14,

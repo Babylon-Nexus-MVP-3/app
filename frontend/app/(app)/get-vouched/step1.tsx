@@ -212,25 +212,6 @@ export default function Step1() {
   }, [user, form.abn]);
 
   useEffect(() => {
-    if (form.idNumber) return;
-    fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
-      .then((r: Response) => (r.ok ? r.json() : null))
-      .then((profile: Record<string, string> | null) => {
-        if (!profile) return;
-        setForm((f) => ({
-          ...f,
-          trade: f.trade || profile.trade || "",
-          idType: profile.idType === "licence" ? "licence" : "passport",
-          idNumber: f.idNumber || profile.idNumber || "",
-          idExpiry: f.idExpiry || profile.idExpiry || "",
-          idState: f.idState || profile.idState || "",
-          idCountry: f.idCountry || profile.idCountry || "",
-        }));
-      })
-      .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (form.abn.length !== 11) {
       setAbrResult(null);
       setAbrError("");
@@ -293,9 +274,13 @@ export default function Step1() {
 
   const expiryInvalid = form.idExpiry.length >= 10 && !isExpiryValid(form.idExpiry);
 
-  function onContinue() {
+  async function onContinue() {
     setStep1(form);
-    router.push("/(app)/get-vouched/step2");
+    fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
+      method: "POST",
+      body: JSON.stringify({ ...form, references: [] }),
+    }).catch(() => {});
+    router.back();
   }
 
   const canContinue =

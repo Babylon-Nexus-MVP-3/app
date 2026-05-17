@@ -19,6 +19,7 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { authStyles } from "@/constants/authStyles";
 import { AppText } from "@/components/AppText";
+import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 
 export default function ChangePassword() {
   const { fetchWithAuth } = useAuth();
@@ -168,6 +169,8 @@ export default function ChangePassword() {
               />
             </TouchableOpacity>
           </View>
+
+          <PasswordStrengthHints password={newPassword} />
 
           <AppText style={authStyles.fieldLabel}>CONFIRM NEW PASSWORD</AppText>
           <View style={authStyles.inputWrapper}>

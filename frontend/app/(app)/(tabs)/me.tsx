@@ -141,12 +141,22 @@ export default function MeScreen() {
           </View>
 
           {/* Bottom row — vouch count */}
-          <View style={styles.vpCardBottom}>
+          <TouchableOpacity
+            style={styles.vpCardBottom}
+            activeOpacity={0.75}
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/(tabs)/vouches",
+                params: { tab: "received" },
+              } as any)
+            }
+          >
             <View style={styles.vpStat}>
               <AppText style={styles.vpStatLabel}>VOUCHES RECEIVED</AppText>
               <AppText style={styles.vpStatValue}>{vouchCount ?? 0}</AppText>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
+          </TouchableOpacity>
         </View>
 
         {/* Credentials */}

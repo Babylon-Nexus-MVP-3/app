@@ -637,13 +637,19 @@ export async function savePushToken(userId: string, pushToken: string) {
   return { success: true };
 }
 
-// Converts Australian mobile to E.164 format (+61XXXXXXXXX)
+// Converts Australian mobile to E.164 format (+61XXXXXXXXX) — used for Twilio only
 function normalizeAuMobile(mobile: string): string {
   const digits = mobile.replace(/\D/g, "");
   if (digits.startsWith("61") && digits.length === 11) return `+${digits}`;
   if (digits.startsWith("0") && digits.length === 10) return `+61${digits.slice(1)}`;
   if (digits.length === 9) return `+61${digits}`;
   return `+${digits}`;
+}
+
+// Converts E.164 (+61XXXXXXXXX) to Australian 04 format (0XXXXXXXXX) for storage
+function toAuMobile(e164: string): string {
+  if (e164.startsWith("+61") && e164.length === 12) return `0${e164.slice(3)}`;
+  return e164;
 }
 
 async function generateAndStoreOtp(e164: string): Promise<string> {
@@ -670,7 +676,8 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
     if (!input.name?.trim()) throw new AuthError("Name is required");
     if (!input.abn) throw new AuthError("ABN is required");
 
-    const existing = await UserModel.findOne({ mobile: e164 });
+    const au04 = toAuMobile(e164);
+    const existing = await UserModel.findOne({ mobile: au04 });
     if (existing && existing.status === "Active") {
       throw new AuthError("An account with this mobile already exists. Please sign in.", 409);
     }
@@ -685,9 +692,9 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
     };
     if (input.email) updateData.email = input.email.toLowerCase().trim();
 
-    await UserModel.findOneAndUpdate({ mobile: e164 }, { $set: updateData }, { upsert: true });
+    await UserModel.findOneAndUpdate({ mobile: au04 }, { $set: updateData }, { upsert: true });
   } else {
-    const user = await UserModel.findOne({ mobile: e164 });
+    const user = await UserModel.findOne({ mobile: toAuMobile(e164) });
     if (!user) throw new AuthError("No account found for this number", 404);
   }
 
@@ -717,7 +724,7 @@ export async function verifyOtp(
   await otp.save();
 
   const user = await UserModel.findOneAndUpdate(
-    { mobile: e164 },
+    { mobile: toAuMobile(e164) },
     { $set: { status: "Active", emailVerified: true } },
     { new: true }
   );
@@ -761,14 +768,14 @@ export async function verifyMobileOtp(userId: string, mobile: string, code: stri
   }
 
   await UserModel.findByIdAndUpdate(userId, {
-    $set: { mobile: e164, mobileVerified: true },
+    $set: { mobile: toAuMobile(e164), mobileVerified: true },
   });
 }
 
 export async function resendOtp(mobile: string): Promise<{ code?: string }> {
   const e164 = normalizeAuMobile(mobile);
 
-  const user = await UserModel.findOne({ mobile: e164 });
+  const user = await UserModel.findOne({ mobile: toAuMobile(e164) });
   if (!user) throw new AuthError("No account found for this number", 404);
 
   const code = await generateAndStoreOtp(e164);
