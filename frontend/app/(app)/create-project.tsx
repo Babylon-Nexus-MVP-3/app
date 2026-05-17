@@ -178,7 +178,7 @@ export default function CreateProject() {
   }
 
   return (
-    <View style={appStyles.safeArea}>
+    <View style={appStyles.screen}>
       <View style={appStyles.header}>
         <SafeAreaView edges={["top"]}>
           <View style={appStyles.headerInner}>
