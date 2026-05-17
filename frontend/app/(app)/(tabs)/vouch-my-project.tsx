@@ -1,12 +1,43 @@
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { useCallback, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 export default function VouchMyProjectScreen() {
+  const { fetchWithAuth } = useAuth();
+  const [respondedCount, setRespondedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setLoading(true);
+      fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!cancelled) {
+            const requests: { status: string }[] = data?.requests ?? [];
+            setRespondedCount(requests.filter((r) => r.status === "responded").length);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchWithAuth])
+  );
+
+  const isUnlocked = respondedCount >= 2;
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -14,13 +45,19 @@ export default function VouchMyProjectScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>VOUCH MY PROJECT</AppText>
+        <AppText style={styles.headerTitle} numberOfLines={1}>
+          VOUCH MY PROJECT
+        </AppText>
         <TouchableOpacity hitSlop={8}>
           <Ionicons name="help-circle-outline" size={24} color={Colors.grey500} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero illustration */}
         <View style={styles.heroContainer}>
           <View style={styles.heroBigCircle}>
@@ -36,6 +73,27 @@ export default function VouchMyProjectScreen() {
         <AppText style={styles.subheading}>
           Connect a project to start tracking{"\n"}payment health and build trust.
         </AppText>
+
+        {/* Vouch gate notice */}
+        {!loading && (
+          <View style={styles.gateCard}>
+            <Ionicons
+              name={isUnlocked ? "shield-checkmark-outline" : "lock-closed-outline"}
+              size={18}
+              color={isUnlocked ? Colors.vouchGreen : Colors.amber}
+            />
+            <View style={styles.gateText}>
+              <AppText style={styles.gateTitle}>
+                {isUnlocked ? "Vouch profile complete" : "Complete your vouch profile to unlock"}
+              </AppText>
+              <AppText style={styles.gateDesc}>
+                {isUnlocked
+                  ? "You have 2 references — you can now set up your project."
+                  : `${respondedCount}/2 references have responded. Once 2 people vouch for you, this feature unlocks.`}
+              </AppText>
+            </View>
+          </View>
+        )}
 
         {/* What your score will show */}
         <View style={styles.featureCard}>
@@ -79,16 +137,24 @@ export default function VouchMyProjectScreen() {
             </AppText>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* CTA */}
       <View style={styles.ctaContainer}>
         <TouchableOpacity
-          style={styles.ctaButton}
-          activeOpacity={0.85}
-          onPress={() => router.push("/(app)/projects")}
+          style={[styles.ctaButton, (!isUnlocked || loading) && styles.ctaButtonLocked]}
+          activeOpacity={isUnlocked ? 0.85 : 1}
+          onPress={() => {
+            if (isUnlocked) router.push("/(app)/projects");
+          }}
         >
-          <AppText style={styles.ctaText}>Set up my project →</AppText>
+          {loading ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <AppText style={styles.ctaText}>
+              {isUnlocked ? "Set up my project →" : "Set up my project"}
+            </AppText>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -115,11 +181,12 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: 20,
     alignItems: "center",
-    justifyContent: "center",
   },
   heroContainer: {
     marginBottom: 16,
@@ -244,9 +311,37 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     alignItems: "center",
   },
+  ctaButtonLocked: {
+    backgroundColor: Colors.grey300,
+  },
   ctaText: {
     fontSize: 16,
     fontFamily: Fonts.bold,
     color: Colors.white,
+  },
+  gateCard: {
+    width: "100%",
+    backgroundColor: Colors.beige,
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 16,
+  },
+  gateText: {
+    flex: 1,
+  },
+  gateTitle: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    marginBottom: 4,
+  },
+  gateDesc: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey700,
+    lineHeight: 19,
   },
 });
