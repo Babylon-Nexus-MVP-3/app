@@ -7,7 +7,7 @@ import { VouchRequestModel } from "../models/vouchRequestModel";
 import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
-import { sendVouchRequestEmail } from "../service/email.service";
+import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -306,7 +306,7 @@ vouchRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const { toAbn, toBusinessName, attributes, note, requestId } = req.body;
+      const { toAbn, toBusinessName, attributes, note, requestId, recipientName, recipientEmail, recipientMobile } = req.body;
 
       if (requestId !== undefined) {
         if (!mongoose.isValidObjectId(requestId)) {
@@ -347,6 +347,9 @@ vouchRouter.post(
         attributes,
         note: note ?? undefined,
         requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
+        recipientName: recipientName ?? undefined,
+        recipientEmail: recipientEmail ?? undefined,
+        recipientMobile: recipientMobile ?? undefined,
       });
 
       let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
@@ -371,6 +374,10 @@ vouchRouter.post(
       const recipient = recipientId
         ? await UserModel.findById(recipientId).select("_id pushToken").lean()
         : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
+
+      if (!recipient && recipientEmail) {
+        sendVouchedForEmail(recipientEmail, recipientName ?? "there", giverName, giverCompany).catch(() => {});
+      }
 
       if (recipient && recipient._id.toString() !== userId) {
         await VouchNotificationModel.create({

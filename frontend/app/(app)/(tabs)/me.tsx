@@ -270,12 +270,13 @@ export default function MeScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => Linking.openURL("mailto:product@babylonnexus.com")}
+          onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
           activeOpacity={0.7}
           style={styles.feedbackRow}
         >
           <AppText style={styles.feedbackText}>Have feedback or suggestions? </AppText>
           <AppText style={styles.feedbackLink}>Email us</AppText>
+          <AppText style={styles.feedbackEmail}>support@vouchpay.app</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -427,4 +428,5 @@ const styles = StyleSheet.create({
   },
   feedbackText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
   feedbackLink: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
+  feedbackEmail: { fontSize: 11, fontFamily: Fonts.regular, color: Colors.grey500, width: "100%", textAlign: "center", marginTop: 2 },
 });

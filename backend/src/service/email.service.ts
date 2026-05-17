@@ -133,6 +133,38 @@ export async function sendVouchRequestEmail(
   });
 }
 
+export async function sendVouchedForEmail(
+  to: string,
+  recipientName: string,
+  giverName: string,
+  giverCompany: string
+): Promise<void> {
+  await transporter.sendMail({
+    from: `"VouchPay" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: "Your business was just vouched for on VouchPay",
+    text: `Hi ${recipientName},\n\n${giverName} from ${giverCompany} just vouched for your business on VouchPay.\n\nJoin VouchPay to claim your reputation and see who vouched for you:\n1. Download the VouchPay app\n2. Create a free account with your ABN\n3. Your vouch will be waiting for you\n\nVouchPay helps tradespeople and businesses build credibility through peer vouches.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>Your business was just vouched for on VouchPay</h2>
+        <p>Hi <strong>${recipientName}</strong>,</p>
+        <p><strong>${giverName}</strong> from <strong>${giverCompany}</strong> just vouched for your business on VouchPay.</p>
+        <div style="background: #E8F5EE; border-radius: 10px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; color: #1B5C38; font-weight: bold; font-size: 15px;">
+            Join VouchPay to claim your reputation and see who vouched for you.
+          </p>
+        </div>
+        <ol style="line-height: 1.8;">
+          <li>Download the <strong>VouchPay</strong> app</li>
+          <li>Create a free account using your ABN</li>
+          <li>Your vouch will be waiting for you</li>
+        </ol>
+        <p style="margin-top: 24px; color: #9b9b9b; font-size: 12px;">VouchPay helps tradespeople and businesses build credibility through peer vouches.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendForgotPasswordEmail(to: string, resetCode: string): Promise<void> {
   await transporter.sendMail({
     from: `"VouchPay" <${process.env.EMAIL_USER}>`,

@@ -7,6 +7,9 @@ export interface GivenVouch extends Document {
   attributes: string[];
   note?: string;
   requestId?: mongoose.Types.ObjectId;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientMobile?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +22,9 @@ const givenVouchSchema = new Schema<GivenVouch>(
     attributes: { type: [String], required: true },
     note: { type: String },
     requestId: { type: Schema.Types.ObjectId, ref: "VouchRequest" },
+    recipientName: { type: String },
+    recipientEmail: { type: String },
+    recipientMobile: { type: String },
   },
   { timestamps: true }
 );

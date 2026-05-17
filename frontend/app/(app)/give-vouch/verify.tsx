@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -32,12 +41,28 @@ function formatDisplayAbn(digits: string): string {
 }
 
 export default function VerifyScreen() {
-  const { abn, requestId } = useLocalSearchParams<{ abn: string; requestId?: string }>();
+  const {
+    abn,
+    requestId,
+    recipientName: recipientNameParam,
+    recipientEmail: recipientEmailParam,
+    recipientMobile: recipientMobileParam,
+  } = useLocalSearchParams<{
+    abn: string;
+    requestId?: string;
+    recipientName?: string;
+    recipientEmail?: string;
+    recipientMobile?: string;
+  }>();
   const { fetchWithAuth } = useAuth();
 
   const [abrData, setAbrData] = useState<AbrResult | null>(null);
   const [vouchStatus, setVouchStatus] = useState<VouchStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recipientName, setRecipientName] = useState(recipientNameParam ?? "");
+  const [recipientEmail, setRecipientEmail] = useState(recipientEmailParam ?? "");
+  const [recipientMobile, setRecipientMobile] = useState(recipientMobileParam ?? "");
+  const [contactError, setContactError] = useState("");
 
   useEffect(() => {
     if (!abn) return;
@@ -75,12 +100,33 @@ export default function VerifyScreen() {
   const displayName = abrData?.tradingName || abrData?.entityName || "this business";
   const alreadyVouched = !!vouchStatus?.alreadyVouched;
 
+  function formatMobileDisplay(digits: string): string {
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+
   function onPressVouch() {
+    if (!isOnVouch && !requestId) {
+      if (!recipientName.trim()) {
+        setContactError("Please enter their name.");
+        return;
+      }
+      if (!recipientEmail.trim() || !recipientEmail.includes("@")) {
+        setContactError("Please enter a valid email address.");
+        return;
+      }
+    }
+    setContactError("");
+    const mobileDigits = recipientMobile.replace(/\D/g, "");
     const params: Record<string, string> = {
       abn: abn ?? "",
       businessName: abrData?.entityName ?? displayName,
     };
     if (requestId) params.requestId = requestId;
+    if (recipientName.trim()) params.recipientName = recipientName.trim();
+    if (recipientEmail.trim()) params.recipientEmail = recipientEmail.trim().toLowerCase();
+    if (mobileDigits.length >= 10) params.recipientMobile = mobileDigits;
     router.push({
       pathname: "/(app)/give-vouch/attributes",
       params,
@@ -100,6 +146,7 @@ export default function VerifyScreen() {
         <View style={{ width: 24 }} />
       </View>
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* ABN confirmed row */}
         <AppText style={styles.fieldLabel}>ABN</AppText>
@@ -166,7 +213,7 @@ export default function VerifyScreen() {
                 </View>
               </View>
             ) : (
-              /* Not yet on Vouch */
+              /* Not yet on Vouch — unified card with contact fields */
               <View style={styles.pendingCard}>
                 <View style={styles.statusRow}>
                   <Ionicons name="shield-outline" size={16} color={Colors.amber} />
@@ -174,8 +221,49 @@ export default function VerifyScreen() {
                 </View>
                 <AppText style={styles.pendingTitle}>Be the first to vouch them.</AppText>
                 <AppText style={styles.pendingDesc}>
-                  {"Your vouch creates their profile on Vouch. We'll invite them to claim it."}
+                  Add their contact details and we'll email them to claim it.
                 </AppText>
+
+                <AppText style={styles.contactLabel}>NAME</AppText>
+                <TextInput
+                  style={styles.contactInput}
+                  value={recipientName}
+                  onChangeText={(v) => { setRecipientName(v); setContactError(""); }}
+                  placeholder="Business owner's name"
+                  placeholderTextColor={Colors.grey300}
+                  autoCapitalize="words"
+                />
+
+                <AppText style={styles.contactLabel}>EMAIL</AppText>
+                <TextInput
+                  style={styles.contactInput}
+                  value={recipientEmail}
+                  onChangeText={(v) => { setRecipientEmail(v); setContactError(""); }}
+                  placeholder="their@email.com"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+
+                <AppText style={styles.contactLabel}>
+                  MOBILE{" "}
+                  <AppText style={styles.contactOptional}>(optional)</AppText>
+                </AppText>
+                <TextInput
+                  style={styles.contactInput}
+                  value={formatMobileDisplay(recipientMobile.replace(/\D/g, ""))}
+                  onChangeText={(v) => setRecipientMobile(v.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="0412 345 678"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="number-pad"
+                  maxLength={12}
+                />
+
+                {contactError ? (
+                  <AppText style={styles.contactError}>{contactError}</AppText>
+                ) : null}
+
                 <View style={styles.divider} />
                 <View style={styles.noteRow}>
                   <Ionicons name="time-outline" size={14} color={Colors.amber} />
@@ -188,6 +276,7 @@ export default function VerifyScreen() {
           </>
         ) : null}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {!loading && abrData && !alreadyVouched && (
         <View style={styles.footer}>
@@ -352,7 +441,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     backgroundColor: Colors.amberBg,
-    gap: 8,
+    gap: 10,
   },
   pendingLabel: {
     fontSize: 11,
@@ -376,6 +465,36 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.amber,
     flex: 1,
+  },
+  contactLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    letterSpacing: 0.8,
+    marginTop: 2,
+  },
+  contactOptional: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    letterSpacing: 0,
+  },
+  contactInput: {
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    height: 50,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+    backgroundColor: Colors.white,
+  },
+  contactError: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.red,
+    marginTop: -2,
   },
 
   // Already vouched

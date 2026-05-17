@@ -28,10 +28,13 @@ const ATTRIBUTES = [
 ];
 
 export default function AttributesScreen() {
-  const { abn, businessName, requestId } = useLocalSearchParams<{
+  const { abn, businessName, requestId, recipientName, recipientEmail, recipientMobile } = useLocalSearchParams<{
     abn: string;
     businessName: string;
     requestId?: string;
+    recipientName?: string;
+    recipientEmail?: string;
+    recipientMobile?: string;
   }>();
   const { fetchWithAuth } = useAuth();
 
@@ -62,6 +65,9 @@ export default function AttributesScreen() {
           attributes: selected,
           note: note.trim() || undefined,
           requestId: requestId ?? undefined,
+          recipientName: recipientName ?? undefined,
+          recipientEmail: recipientEmail ?? undefined,
+          recipientMobile: recipientMobile ?? undefined,
         }),
       });
       if (res.status === 409) {
