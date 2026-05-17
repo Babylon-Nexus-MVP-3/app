@@ -298,7 +298,7 @@ function RefForm({
           value={value.email}
           onChangeText={(v) => update("email", v)}
           onBlur={() => setEmailTouched(true)}
-          placeholder="Email (optional)"
+          placeholder="Email"
           placeholderTextColor={Colors.grey300}
           keyboardType="email-address"
           autoCapitalize="none"
