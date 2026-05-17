@@ -1,573 +1,338 @@
-import { useState, useCallback } from "react";
-import { useFocusEffect, router } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
-  RefreshControl,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
-type VouchRequest = {
+type GivenVouch = {
+  _id: string;
+  toAbn: string;
+  toBusinessName: string;
+  attributes: string[];
+  note?: string;
+  createdAt: string;
+};
+
+type ReceivedVouch = {
   _id: string;
   fromName: string;
-  fromCompany: string;
-  fromAbn?: string;
-  relationship: string;
-  projectName: string;
+  fromBusinessName: string;
+  attributes: string[];
+  note?: string;
   createdAt: string;
 };
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 2) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hrs ago`;
-  if (hrs < 48) return "yesterday";
-  return `${Math.floor(hrs / 24)} days ago`;
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
+  const years = Math.floor(days / 365);
+  return `${years} year${years !== 1 ? "s" : ""} ago`;
 }
 
-function nameInitials(name: string): string {
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-const AVATAR_COLORS = [Colors.vouchGreen, "#5C6BC0", "#00897B", "#6D4C41", "#546E7A"];
-
-function Avatar({ name, index }: { name: string; index: number }) {
-  const bg = AVATAR_COLORS[index % AVATAR_COLORS.length];
+function AttributeChips({ attributes }: { attributes: string[] }) {
   return (
-    <View style={[styles.avatar, { backgroundColor: bg }]}>
-      <AppText style={styles.avatarText}>{nameInitials(name)}</AppText>
+    <View style={styles.chips}>
+      {attributes.map((a) => (
+        <View key={a} style={styles.chip}>
+          <AppText style={styles.chipText}>{a}</AppText>
+        </View>
+      ))}
     </View>
   );
 }
 
-function formatAbn(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-  if (digits.length <= 8) return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
-  return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
-}
-
-type SearchResult = {
-  abn: string;
-  entityName: string;
-  state: string;
-};
-
 export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
-  const [requests, setRequests] = useState<VouchRequest[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [abn, setAbn] = useState("");
-  const [abnError, setAbnError] = useState("");
-  const [checking, setChecking] = useState(false);
-  const [showNameSearch, setShowNameSearch] = useState(false);
-  const [nameQuery, setNameQuery] = useState("");
-  const [nameResults, setNameResults] = useState<SearchResult[]>([]);
-  const [nameSearching, setNameSearching] = useState(false);
-  const [nameError, setNameError] = useState("");
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`);
-      const data = await res.json();
-      setRequests(data.requests ?? []);
-    } catch {
-      setRequests([]);
-    }
-  }, [fetchWithAuth]);
+  const [tab, setTab] = useState<"given" | "received">("given");
+  const [given, setGiven] = useState<GivenVouch[]>([]);
+  const [received, setReceived] = useState<ReceivedVouch[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      let cancelled = false;
+      setLoading(true);
+      Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
+      ])
+        .then(([givenData, receivedData]) => {
+          if (cancelled) return;
+          setGiven(givenData?.vouches ?? []);
+          setReceived(receivedData?.vouches ?? []);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchWithAuth])
   );
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }
-
-  function onAbnChange(raw: string) {
-    setAbn(formatAbn(raw));
-    setAbnError("");
-  }
-
-  async function onLookup() {
-    const digits = abn.replace(/\D/g, "");
-    if (digits.length !== 11) {
-      setAbnError("Please enter a valid 11-digit ABN");
-      return;
-    }
-    setChecking(true);
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${digits}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.alreadyVouched) {
-          setAbnError("You've already vouched for this business.");
-          return;
-        }
-      }
-    } catch {
-      // network issue — let verify screen handle it
-    } finally {
-      setChecking(false);
-    }
-    router.push(`/(app)/give-vouch/verify?abn=${digits}`);
-  }
-
-  function toggleNameSearch() {
-    setShowNameSearch((prev) => !prev);
-    setNameQuery("");
-    setNameResults([]);
-    setNameError("");
-  }
-
-  async function onNameSearch() {
-    const q = nameQuery.trim();
-    if (q.length < 3) {
-      setNameError("Enter at least 3 characters");
-      return;
-    }
-    setNameError("");
-    setNameSearching(true);
-    setNameResults([]);
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      const results: SearchResult[] = data.results ?? [];
-      if (results.length === 0) {
-        setNameError("No businesses found. Try a different name.");
-      } else {
-        setNameResults(results);
-      }
-    } catch {
-      setNameError("Search failed. Please try again.");
-    } finally {
-      setNameSearching(false);
-    }
-  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>GIVE A VOUCH</AppText>
-        <View style={{ width: 24 }} />
+        <AppText style={styles.headerTitle}>VOUCHES</AppText>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.vouchGreen}
-          />
-        }
-      >
-        <AppText style={styles.pageTitle}>Vouch for someone</AppText>
+      {/* Segment control */}
+      <View style={styles.segmentWrap}>
+        <TouchableOpacity
+          style={[styles.segment, tab === "given" && styles.segmentActive]}
+          onPress={() => setTab("given")}
+          activeOpacity={0.8}
+        >
+          <AppText style={[styles.segmentText, tab === "given" && styles.segmentTextActive]}>
+            Given
+          </AppText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, tab === "received" && styles.segmentActive]}
+          onPress={() => setTab("received")}
+          activeOpacity={0.8}
+        >
+          <AppText style={[styles.segmentText, tab === "received" && styles.segmentTextActive]}>
+            Received
+          </AppText>
+        </TouchableOpacity>
+      </View>
 
-        {/* Pending requests */}
-        <AppText style={styles.sectionLabel}>
-          PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
-        </AppText>
-
-        {requests.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="time-outline" size={20} color={Colors.grey500} />
-            <AppText style={styles.emptyText}>No pending requests right now.</AppText>
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.vouchGreen} />
+        </View>
+      ) : tab === "given" ? (
+        given.length === 0 ? (
+          <View style={styles.centered}>
+            <Ionicons name="shield-outline" size={44} color={Colors.grey300} />
+            <AppText style={styles.emptyTitle}>No vouches given yet.</AppText>
+            <AppText style={styles.emptySubtitle}>
+              Vouching for a business builds trust across the industry.
+            </AppText>
           </View>
         ) : (
-          requests.map((r, i) => (
-            <TouchableOpacity
-              key={r._id}
-              style={styles.requestCard}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
-              }
-            >
-              <Avatar name={r.fromName} index={i} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <AppText style={styles.requestCompany}>{r.fromCompany}</AppText>
-                <AppText style={styles.requestMeta}>
-                  {r.fromName} · {timeAgo(r.createdAt)}
-                </AppText>
-                {r.relationship || r.projectName ? (
-                  <AppText style={styles.requestRelationship}>
-                    {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <AppText style={styles.countLabel}>
+              {given.length} {given.length === 1 ? "business" : "businesses"} vouched
+            </AppText>
+            {given.map((v) => (
+              <View key={v._id} style={styles.card}>
+                <View style={styles.cardTop}>
+                  <View style={styles.iconBadge}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.businessName}>{v.toBusinessName || "Business"}</AppText>
+                    <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                  </View>
+                </View>
+                <AttributeChips attributes={v.attributes} />
+                {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
+              </View>
+            ))}
+          </ScrollView>
+        )
+      ) : received.length === 0 ? (
+        <View style={styles.centered}>
+          <Ionicons name="shield-outline" size={44} color={Colors.grey300} />
+          <AppText style={styles.emptyTitle}>No vouches received yet.</AppText>
+          <AppText style={styles.emptySubtitle}>
+            Complete your Vouch profile and send requests to build your reputation.
+          </AppText>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <AppText style={styles.countLabel}>
+            {received.length} {received.length === 1 ? "vouch" : "vouches"} received
+          </AppText>
+          {received.map((v) => (
+            <View key={v._id} style={styles.card}>
+              <View style={styles.cardTop}>
+                <View style={styles.iconBadge}>
+                  <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.businessName}>
+                    {v.fromName || "Someone"}
+                    {v.fromBusinessName ? (
+                      <AppText style={styles.fromBusiness}>{`  ·  ${v.fromBusinessName}`}</AppText>
+                    ) : null}
                   </AppText>
-                ) : null}
+                  <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
-            </TouchableOpacity>
-          ))
-        )}
-
-        <View style={styles.divider} />
-
-        {/* Vouch a new business */}
-        <AppText style={styles.newTitle}>Vouch a new business</AppText>
-        <AppText style={styles.newSubtitle}>
-          {"Enter their ABN. We'll verify it instantly."}
-        </AppText>
-
-        {!showNameSearch && (
-          <>
-            <AppText style={styles.abnLabel}>ABN</AppText>
-            <TextInput
-              style={[styles.abnInput, abnError ? styles.abnInputError : null]}
-              value={abn}
-              onChangeText={onAbnChange}
-              placeholder="XX XXX XXX XXX"
-              placeholderTextColor={Colors.grey300}
-              keyboardType="numeric"
-              returnKeyType="go"
-              onSubmitEditing={onLookup}
-            />
-            {abnError ? <AppText style={styles.abnErrorText}>{abnError}</AppText> : null}
-
-            <TouchableOpacity
-              style={[styles.lookupBtn, checking && { opacity: 0.7 }]}
-              onPress={onLookup}
-              disabled={checking}
-              activeOpacity={0.85}
-            >
-              {checking ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <AppText style={styles.lookupBtnText}>Look up ABN</AppText>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.verifiedNote}>
-              <Ionicons name="shield-checkmark-outline" size={13} color={Colors.grey500} />
-              <AppText style={styles.verifiedNoteText}>
-                Verified with the Australian Business Register. We never search our user list.
-              </AppText>
+              <AttributeChips attributes={v.attributes} />
+              {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
             </View>
-          </>
-        )}
-
-        {showNameSearch && (
-          <>
-            <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
-            <View style={styles.nameSearchRow}>
-              <TextInput
-                style={styles.nameInput}
-                value={nameQuery}
-                onChangeText={(t) => {
-                  setNameQuery(t);
-                  setNameError("");
-                }}
-                placeholder="Search by business name"
-                placeholderTextColor={Colors.grey300}
-                returnKeyType="search"
-                onSubmitEditing={onNameSearch}
-                autoCapitalize="words"
-              />
-              <TouchableOpacity
-                style={styles.nameSearchBtn}
-                onPress={onNameSearch}
-                activeOpacity={0.85}
-                disabled={nameSearching}
-              >
-                {nameSearching ? (
-                  <ActivityIndicator size="small" color={Colors.white} />
-                ) : (
-                  <Ionicons name="search" size={18} color={Colors.white} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {nameError ? <AppText style={styles.abnErrorText}>{nameError}</AppText> : null}
-
-            {nameResults.length > 0 && (
-              <View style={styles.resultsContainer}>
-                {nameResults.map((item, idx) => (
-                  <TouchableOpacity
-                    key={`${item.abn}-${idx}`}
-                    style={[
-                      styles.resultRow,
-                      idx < nameResults.length - 1 && styles.resultRowBorder,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => router.push(`/(app)/give-vouch/verify?abn=${item.abn}`)}
-                  >
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <AppText style={styles.resultName} numberOfLines={1}>
-                        {item.entityName}
-                      </AppText>
-                      <AppText style={styles.resultMeta}>
-                        {item.state} · ABN {formatAbn(item.abn)}
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
-
-      <TouchableOpacity
-        onPress={toggleNameSearch}
-        style={styles.toggleSearchLink}
-        activeOpacity={0.7}
-      >
-        {showNameSearch ? (
-          <AppText style={styles.toggleSearchText}>
-            <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>
-          </AppText>
-        ) : (
-          <AppText style={styles.toggleSearchText}>
-            {"Don't have their ABN? "}
-            <AppText style={styles.toggleSearchUnderline}>Add it manually</AppText>
-          </AppText>
-        )}
-      </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
+  centered: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    justifyContent: "center",
+    paddingHorizontal: 40,
+    gap: 12,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   headerTitle: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
-  pageTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: Fonts.bold,
     color: Colors.black,
+    letterSpacing: 0.5,
   },
+
+  // Segment control
+  segmentWrap: {
+    flexDirection: "row",
+    marginHorizontal: 24,
+    marginBottom: 16,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 12,
+    padding: 4,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  segmentActive: {
+    backgroundColor: Colors.white,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.grey500,
+  },
+  segmentTextActive: {
+    color: Colors.black,
+  },
+
+  // List
   scroll: {
     paddingHorizontal: 24,
     paddingBottom: 32,
     gap: 12,
   },
-  sectionLabel: {
+  countLabel: {
     fontSize: 12,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.medium,
     color: Colors.grey500,
-    letterSpacing: 0.8,
     marginBottom: 4,
   },
-  emptyBox: {
+
+  // Vouch card
+  card: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
+    gap: 12,
   },
-  emptyText: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-  },
-  requestCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.white,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.vouchGreenLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    fontSize: 14,
-    fontFamily: Fonts.bold,
-    color: Colors.white,
-  },
-  requestCompany: {
-    fontSize: 17,
+  businessName: {
+    fontSize: 16,
     fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
-  requestMeta: {
+  fromBusiness: {
     fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
-  requestRelationship: {
+  cardMeta: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 2,
+  },
+
+  // Attribute chips
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  chip: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+  },
+  chipText: {
     fontSize: 12,
     fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
+    color: Colors.grey700,
   },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.grey300,
-    marginVertical: 8,
-  },
-  newTitle: {
-    fontSize: 22,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
-  newSubtitle: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginTop: -4,
-  },
-  abnLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  abnInput: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 54,
-    paddingHorizontal: 16,
-    fontSize: 17,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
-  abnInputError: {
-    borderColor: Colors.red,
-  },
-  abnErrorText: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.red,
-    marginTop: -4,
-  },
-  lookupBtn: {
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  lookupBtnText: {
-    color: Colors.white,
-    fontSize: 17,
-    fontFamily: Fonts.bold,
-  },
-  verifiedNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: -4,
-  },
-  verifiedNoteText: {
-    fontSize: 10,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    lineHeight: 18,
-  },
-  toggleSearchLink: {
-    alignItems: "center",
-    paddingVertical: 16,
-    backgroundColor: Colors.white,
-  },
-  toggleSearchText: {
+
+  // Note
+  note: {
     fontSize: 13,
-    color: Colors.grey500,
-    fontWeight: "400",
+    fontFamily: Fonts.regular,
+    color: Colors.grey700,
+    lineHeight: 19,
+    fontStyle: "italic",
   },
-  toggleSearchUnderline: {
-    color: Colors.vouchGreen,
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
-  nameSearchRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-  },
-  nameInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 16,
-    fontSize: 15,
+
+  // Empty state
+  emptyTitle: {
+    fontSize: 17,
+    fontFamily: Fonts.semiBold,
     color: Colors.black,
-    backgroundColor: Colors.white,
+    textAlign: "center",
   },
-  nameSearchBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: Colors.vouchGreen,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  resultsContainer: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 14,
-    backgroundColor: Colors.white,
-    overflow: "hidden",
-  },
-  resultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  resultRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey100,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.black,
-  },
-  resultMeta: {
-    fontSize: 13,
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

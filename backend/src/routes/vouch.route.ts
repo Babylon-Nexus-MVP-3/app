@@ -365,6 +365,55 @@ vouchRouter.post(
   }
 );
 
+// GET /vouch/given — vouches the current user has given to others
+vouchRouter.get(
+  "/given",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const vouches = await GivenVouchModel.find({ fromUserId: userId })
+        .sort({ createdAt: -1 })
+        .lean();
+      res.status(200).json({ vouches });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /vouch/received — vouches others have given to the current user's business
+vouchRouter.get(
+  "/received",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const user = await UserModel.findById(userId).select("abn").lean();
+      if (!user?.abn) {
+        res.status(200).json({ vouches: [] });
+        return;
+      }
+      const vouches = await GivenVouchModel.find({ toAbn: user.abn })
+        .sort({ createdAt: -1 })
+        .lean();
+      const giverIds = [...new Set(vouches.map((v) => v.fromUserId.toString()))];
+      const givers = await UserModel.find({ _id: { $in: giverIds } })
+        .select("name businessName")
+        .lean();
+      const giverMap = Object.fromEntries(givers.map((g) => [g._id.toString(), g]));
+      const populated = vouches.map((v) => ({
+        ...v,
+        fromName: giverMap[v.fromUserId.toString()]?.name ?? "Someone",
+        fromBusinessName: giverMap[v.fromUserId.toString()]?.businessName ?? "",
+      }));
+      res.status(200).json({ vouches: populated });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // GET /vouch/business/:abn — vouch score for a business
 vouchRouter.get(
   "/business/:abn",
