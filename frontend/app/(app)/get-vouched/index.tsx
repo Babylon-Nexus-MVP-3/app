@@ -178,6 +178,16 @@ export default function GetVouchedIntro() {
               );
             })}
           </View>
+
+          <TouchableOpacity
+            style={styles.requestsRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/get-vouched/requests" as any)}
+          >
+            <Ionicons name="time-outline" size={18} color={Colors.grey500} />
+            <AppText style={styles.requestsRowText}>My vouch requests</AppText>
+            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+          </TouchableOpacity>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -289,4 +299,18 @@ const styles = StyleSheet.create({
   },
   primaryBtnDone: { backgroundColor: Colors.grey300 },
   primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
+  requestsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  requestsRowText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.grey500,
+  },
 });
