@@ -58,6 +58,12 @@ export default function VerifyMobile() {
   const mobileDigits = mobile.replace(/\D/g, "");
   const canSend = mobileDigits.length >= 10;
 
+  function formatMobileDisplay(digits: string): string {
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+
   async function handleSendCode() {
     if (!canSend) return;
     setLoading(true);
@@ -172,12 +178,12 @@ export default function VerifyMobile() {
               <AppText style={styles.label}>MOBILE NUMBER</AppText>
               <TextInput
                 style={styles.input}
-                value={mobile}
+                value={formatMobileDisplay(mobileDigits)}
                 onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
                 placeholder="0412 345 678"
                 placeholderTextColor={Colors.grey300}
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={12}
                 returnKeyType="done"
                 onSubmitEditing={handleSendCode}
                 autoFocus

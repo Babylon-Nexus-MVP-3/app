@@ -16,6 +16,7 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 
 type AbrResult = {
   entityName: string;
@@ -82,6 +83,14 @@ export default function SignUp() {
     }
   }
 
+  const mobileDigits = mobile.replace(/\D/g, "");
+
+  function formatMobileDisplay(digits: string): string {
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+
   function onAbnChange(text: string) {
     const digits = text.replace(/\D/g, "").slice(0, 11);
     setAbnDigits(digits);
@@ -106,7 +115,6 @@ export default function SignUp() {
     setLoading(true);
     setError("");
     try {
-      const mobileDigits = mobile.replace(/\D/g, "");
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -206,17 +214,17 @@ export default function SignUp() {
               />
             </TouchableOpacity>
           </View>
+          <PasswordStrengthHints password={password} />
 
-          <AppText style={styles.label}>
-            MOBILE <AppText style={styles.optional}>(optional)</AppText>
-          </AppText>
+          <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
             style={styles.input}
-            value={mobile}
-            onChangeText={setMobile}
+            value={formatMobileDisplay(mobileDigits)}
+            onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
             placeholder="0412 345 678"
             placeholderTextColor={Colors.grey300}
-            keyboardType="phone-pad"
+            keyboardType="number-pad"
+            maxLength={12}
             returnKeyType="next"
           />
 
@@ -324,11 +332,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
-  },
-  optional: {
-    fontFamily: Fonts.regular,
-    textTransform: "none",
-    letterSpacing: 0,
   },
   input: {
     height: 52,
