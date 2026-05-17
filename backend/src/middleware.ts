@@ -101,6 +101,22 @@ export const otpVerifyLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const vouchProfileLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
+  message: { error: "Too many profile submissions. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const vouchGiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 20,
+  message: { error: "Too many vouch attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /**
  * Verifies JWT from Authorization: Bearer <token> and attaches decoded payload to req.user.
  * Responds with 401 if missing or invalid.
