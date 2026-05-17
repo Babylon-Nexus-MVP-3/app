@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -59,6 +59,7 @@ function AttributeChips({ attributes }: { attributes: string[] }) {
 
 export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<"given" | "received">("given");
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
@@ -67,6 +68,7 @@ export default function VouchesScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (tabParam === "received" || tabParam === "given") setTab(tabParam);
       let cancelled = false;
       if (!hasLoaded.current) setLoading(true);
       Promise.all([
