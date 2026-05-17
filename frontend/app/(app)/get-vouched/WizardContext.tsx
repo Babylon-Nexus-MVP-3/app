@@ -7,6 +7,8 @@ export type Step1Data = {
   idType: "passport" | "licence";
   idNumber: string;
   idExpiry: string;
+  idState: string;
+  idCountry: string;
 };
 
 export type Step2Data = {
@@ -64,9 +66,11 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     name: "",
     abn: "",
     trade: "",
-    idType: "passport",
+    idType: "licence",
     idNumber: "",
     idExpiry: "",
+    idState: "",
+    idCountry: "",
   });
   const [step2, setStep2] = useState<Step2Data>({
     currentProjectName: "",

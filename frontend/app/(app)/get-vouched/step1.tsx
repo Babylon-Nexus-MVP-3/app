@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Modal,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -35,6 +37,107 @@ function formatAbn(raw: string): string {
   if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
   return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
 }
+
+const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
+
+function StatePickerModal({
+  visible,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selected: string;
+  onSelect: (s: string) => void;
+  onClose: () => void;
+}) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={{ flex: 1 }}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, sp.overlay, { opacity: fadeAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        </Animated.View>
+        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+          <Animated.View style={[sp.sheet, { transform: [{ translateY: slideAnim }] }]}>
+            <View style={sp.handle} />
+            <AppText style={sp.title}>Select state</AppText>
+            {AU_STATES.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={sp.option}
+                onPress={() => {
+                  onSelect(s);
+                  onClose();
+                }}
+              >
+                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
+                  {s}
+                </AppText>
+                {selected === s && (
+                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const sp = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingTop: 12,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey300,
+  },
+  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
+  optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
+});
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -86,6 +189,7 @@ export default function Step1() {
 
   const [form, setForm] = useState(step1);
   const [abnDisplay, setAbnDisplay] = useState(formatAbn(step1.abn));
+  const [statePickerOpen, setStatePickerOpen] = useState(false);
   const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
   const [abrLoading, setAbrLoading] = useState(false);
   const [abrError, setAbrError] = useState("");
@@ -119,6 +223,8 @@ export default function Step1() {
           idType: profile.idType === "licence" ? "licence" : "passport",
           idNumber: f.idNumber || profile.idNumber || "",
           idExpiry: f.idExpiry || profile.idExpiry || "",
+          idState: f.idState || profile.idState || "",
+          idCountry: f.idCountry || profile.idCountry || "",
         }));
       })
       .catch(() => {});
@@ -167,20 +273,25 @@ export default function Step1() {
   function formatExpiry(raw: string) {
     const digits = raw.replace(/\D/g, "");
     if (digits.length <= 2) return digits;
-    return digits.slice(0, 2) + "/" + digits.slice(2, 6);
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
   }
 
   function isExpiryValid(expiry: string): boolean {
     const parts = expiry.split("/");
-    if (parts.length !== 2 || parts[1].length !== 4) return false;
-    const month = parseInt(parts[0], 10);
-    const year = parseInt(parts[1], 10);
-    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+    if (parts.length !== 3 || parts[2].length !== 4) return false;
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+    if (day < 1 || day > 31 || month < 1 || month > 12) return false;
     const now = new Date();
-    return new Date(year, month - 1, 1) >= new Date(now.getFullYear(), now.getMonth(), 1);
+    return (
+      new Date(year, month - 1, day) >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    );
   }
 
-  const expiryInvalid = form.idExpiry.length >= 7 && !isExpiryValid(form.idExpiry);
+  const expiryInvalid = form.idExpiry.length >= 10 && !isExpiryValid(form.idExpiry);
 
   function onContinue() {
     setStep1(form);
@@ -194,8 +305,9 @@ export default function Step1() {
     !abrError &&
     form.trade.trim() &&
     form.idNumber.trim() &&
-    form.idExpiry.length === 7 &&
-    !expiryInvalid;
+    form.idExpiry.length === 10 &&
+    !expiryInvalid &&
+    (form.idType === "licence" ? !!form.idState.trim() : !!form.idCountry.trim());
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -278,22 +390,6 @@ export default function Step1() {
 
           <View style={styles.idTypeRow}>
             <TouchableOpacity
-              style={[styles.chip, form.idType === "passport" && styles.chipSelected]}
-              onPress={() => update("idType", "passport")}
-            >
-              <Ionicons
-                name="document-outline"
-                size={15}
-                color={form.idType === "passport" ? Colors.white : Colors.grey700}
-              />
-              <AppText
-                style={[styles.chipText, form.idType === "passport" && styles.chipTextSelected]}
-              >
-                Passport
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[styles.chip, form.idType === "licence" && styles.chipSelected]}
               onPress={() => update("idType", "licence")}
             >
@@ -308,6 +404,22 @@ export default function Step1() {
                 {"Driver's licence"}
               </AppText>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.chip, form.idType === "passport" && styles.chipSelected]}
+              onPress={() => update("idType", "passport")}
+            >
+              <Ionicons
+                name="document-outline"
+                size={15}
+                color={form.idType === "passport" ? Colors.white : Colors.grey700}
+              />
+              <AppText
+                style={[styles.chipText, form.idType === "passport" && styles.chipTextSelected]}
+              >
+                Passport
+              </AppText>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -315,15 +427,41 @@ export default function Step1() {
               label="DOCUMENT NUMBER"
               value={form.idNumber}
               onChangeText={(v) => update("idNumber", v)}
-              placeholder={form.idType === "passport" ? "e.g. PA1234567" : "e.g. 12345678"}
+              placeholder={form.idType === "licence" ? "e.g. 12345678" : "e.g. PA1234567"}
             />
+
+            {form.idType === "licence" ? (
+              <View style={styles.fieldWrap}>
+                <AppText style={styles.fieldLabel}>STATE</AppText>
+                <TouchableOpacity
+                  style={[styles.input, styles.inputSelect]}
+                  onPress={() => setStatePickerOpen(true)}
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    style={form.idState ? styles.inputSelectValue : styles.inputSelectPlaceholder}
+                  >
+                    {form.idState || "Select state"}
+                  </AppText>
+                  <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Field
+                label="COUNTRY"
+                value={form.idCountry}
+                onChangeText={(v) => update("idCountry", v)}
+                placeholder="e.g. Australia"
+              />
+            )}
+
             <View style={styles.fieldWrap}>
               <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
               <TextInput
                 style={[styles.input, expiryInvalid ? styles.inputError : null]}
                 value={form.idExpiry}
                 onChangeText={(v) => update("idExpiry", formatExpiry(v))}
-                placeholder="MM/YYYY"
+                placeholder="DD/MM/YYYY"
                 placeholderTextColor={Colors.grey300}
                 keyboardType="numeric"
                 autoCorrect={false}
@@ -335,6 +473,13 @@ export default function Step1() {
               )}
             </View>
           </View>
+
+          <StatePickerModal
+            visible={statePickerOpen}
+            selected={form.idState}
+            onSelect={(s) => update("idState", s)}
+            onClose={() => setStatePickerOpen(false)}
+          />
 
           <View style={styles.privacyNote}>
             <Ionicons name="lock-closed-outline" size={13} color={Colors.grey500} />
@@ -392,6 +537,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inputError: { borderColor: Colors.red },
+  inputSelect: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  inputSelectValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
+  inputSelectPlaceholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey300 },
   inputLocked: {
     backgroundColor: Colors.grey100,
     flexDirection: "row" as const,
