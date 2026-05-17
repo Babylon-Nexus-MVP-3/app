@@ -237,13 +237,11 @@ function RefForm({
   label,
   value,
   onChange,
-  onDone,
   onDelete,
 }: {
   label: string;
   value: Reference;
   onChange: (r: Reference) => void;
-  onDone: () => void;
   onDelete?: () => void;
 }) {
   const [emailTouched, setEmailTouched] = useState(false);
@@ -253,7 +251,6 @@ function RefForm({
   }
 
   const emailInvalid = emailTouched && value.email.trim() && !EMAIL_RE.test(value.email.trim());
-  const done = isRefComplete(value) && !emailInvalid;
 
   return (
     <View style={styles.refCard}>
@@ -336,13 +333,6 @@ function RefForm({
           />
         </>
       )}
-
-      {done && (
-        <TouchableOpacity style={styles.doneBtn} onPress={onDone}>
-          <Ionicons name="checkmark" size={14} color={Colors.vouchGreen} />
-          <AppText style={styles.doneBtnText}>Done</AppText>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -364,16 +354,6 @@ export default function Step3() {
     const next = [...refs];
     next[index] = ref;
     setRefs(next);
-  }
-
-  function handleDone(index: number) {
-    // Move to the next unfilled ref, or collapse if all done
-    const nextEmpty = refs.findIndex((r, i) => i !== index && !isRefComplete(r));
-    if (nextEmpty !== -1) {
-      setActiveIndex(nextEmpty);
-    } else {
-      setActiveIndex(-1);
-    }
   }
 
   function addThird() {
@@ -474,7 +454,6 @@ export default function Step3() {
                   label={refLabels[i]}
                   value={ref}
                   onChange={(r) => updateRef(i, r)}
-                  onDone={() => handleDone(i)}
                   onDelete={isOptional ? deleteThird : undefined}
                 />
               );
@@ -593,18 +572,6 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
   dropdownPlaceholder: { color: Colors.grey300 },
-  doneBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-end",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.vouchGreen,
-  },
-  doneBtnText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 
   // Collapsed (inactive) reference card — solid grey border
   collapsedCard: {
