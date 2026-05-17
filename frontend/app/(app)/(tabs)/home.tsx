@@ -1,4 +1,11 @@
-import { View, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from "react-native";
+import {
+  Alert,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -145,6 +152,30 @@ export default function HomeScreen() {
               </View>
               <AppText style={styles.cardDesc}>
                 {"Vouch a business you've worked with. Or respond to a request."}
+              </AppText>
+            </View>
+          </TouchableOpacity>
+
+          {/* Apply for supplier credit — locked */}
+          <TouchableOpacity
+            style={[styles.card, styles.cardLocked]}
+            activeOpacity={0.7}
+            onPress={() =>
+              Alert.alert("Locked", "Complete your vouch profile to unlock.", [{ text: "OK" }])
+            }
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="card-outline" size={28} color={Colors.grey500} />
+            </View>
+            <View style={styles.cardContent}>
+              <View style={styles.cardTitleRow}>
+                <AppText style={styles.cardTitle}>Apply for supplier credit</AppText>
+                <View style={styles.lockedBadge}>
+                  <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
+                </View>
+              </View>
+              <AppText style={styles.cardDesc}>
+                {"Instant multiple applications with Vouchpay"}
               </AppText>
             </View>
           </TouchableOpacity>
