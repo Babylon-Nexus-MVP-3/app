@@ -298,11 +298,8 @@ export default function Step2() {
             </View>
           </View>
 
-          {/* Past project */}
-          <View style={styles.pastLabelRow}>
-            <AppText style={[styles.sectionLabel, { marginBottom: 0 }]}>PAST PROJECT</AppText>
-            <AppText style={styles.optionalTag}>· optional</AppText>
-          </View>
+          {/* Other projects */}
+          <AppText style={styles.sectionLabel}>OTHER PROJECTS</AppText>
           <View style={styles.section}>
             <Field
               label="PROJECT NAME"
@@ -435,14 +432,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 14,
   },
-  pastLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  optionalTag: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
   section: { gap: 14, marginBottom: 28 },
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
