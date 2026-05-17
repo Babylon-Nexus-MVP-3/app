@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -348,11 +348,13 @@ function RefForm({
 }
 
 export default function Step3() {
+  const { fresh } = useLocalSearchParams<{ fresh?: string }>();
+  const isFresh = fresh === "true";
   const { step1, step2, references, setReferences } = useWizard();
   const { fetchWithAuth, updateUser } = useAuth();
 
   const [refs, setRefs] = useState<Reference[]>(
-    references.length >= 2 ? references : [emptyRef(), emptyRef()]
+    isFresh ? [emptyRef(), emptyRef()] : references.length >= 2 ? references : [emptyRef(), emptyRef()]
   );
   // Which card is currently expanded (-1 = none)
   const [activeIndex, setActiveIndex] = useState(0);
