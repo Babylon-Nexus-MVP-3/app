@@ -1,12 +1,24 @@
-import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { useCallback, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
+
+type SentRequest = {
+  _id: string;
+  toMobile: string;
+  toEmail?: string;
+  relationship: string;
+  projectName: string;
+  status: "pending" | "responded";
+  createdAt: string;
+};
 
 function refComplete(r: Reference) {
   return !!(r.name && r.company && r.mobile && r.relationship && r.project);
@@ -27,10 +39,133 @@ const STEPS = [
 type StepState = "done" | "active" | "locked";
 
 export default function GetVouchedIntro() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { step1, step2, references } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
 
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setLoadingStatus(true);
+      fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!cancelled) setSentRequests(data?.requests ?? []);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setLoadingStatus(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchWithAuth])
+  );
+
+  // Already submitted — show request status view
+  if (!loadingStatus && sentRequests.length > 0) {
+    const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
+          </TouchableOpacity>
+          <AppText style={styles.headerTitle}>GET VOUCHED</AppText>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="send-outline" size={36} color={Colors.vouchGreen} />
+          </View>
+
+          <AppText style={styles.title}>Requests sent.</AppText>
+          <AppText style={styles.subtitle}>
+            {respondedCount === 0
+              ? "Waiting on your references to respond."
+              : `${respondedCount} of ${sentRequests.length} ${sentRequests.length === 1 ? "reference has" : "references have"} responded.`}
+          </AppText>
+
+          <View style={styles.progressCard}>
+            <AppText style={styles.progressLabel}>VOUCHES RECEIVED</AppText>
+            <AppText style={styles.progressCount}>
+              {respondedCount} / {sentRequests.length}
+            </AppText>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    flex: respondedCount,
+                  },
+                ]}
+              />
+              <View style={{ flex: sentRequests.length - respondedCount }} />
+            </View>
+          </View>
+
+          <AppText style={styles.requestsLabel}>YOUR REFERENCES</AppText>
+          {sentRequests.map((r) => {
+            const done = r.status === "responded";
+            return (
+              <View key={r._id} style={styles.requestCard}>
+                <View style={[styles.dot, done ? styles.dotDone : styles.dotPending]} />
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.requestContact}>{r.toEmail || r.toMobile}</AppText>
+                  <AppText style={styles.requestMeta}>
+                    {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+                  </AppText>
+                </View>
+                <View style={[styles.badge, done ? styles.badgeDone : styles.badgePending]}>
+                  <AppText
+                    style={[
+                      styles.badgeText,
+                      done ? styles.badgeTextDone : styles.badgeTextPending,
+                    ]}
+                  >
+                    {done ? "Vouched" : "Pending"}
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+
+          <TouchableOpacity
+            style={styles.addRefBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(app)/get-vouched/step3")}
+          >
+            <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
+            <AppText style={styles.addRefBtnText}>Request another vouch</AppText>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Loading state
+  if (loadingStatus) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
+          </TouchableOpacity>
+          <AppText style={styles.headerTitle}>GET VOUCHED</AppText>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.vouchGreen} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Wizard steps view
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(
     step2.currentProjectName &&
@@ -65,7 +200,7 @@ export default function GetVouchedIntro() {
     : !hasStarted
       ? "Start application"
       : allDone
-        ? "All steps complete"
+        ? "Review & send"
         : `Continue to step ${nextIncompleteIndex + 1}`;
 
   function onPrimaryPress() {
@@ -73,8 +208,7 @@ export default function GetVouchedIntro() {
       router.push("/(app)/verify-mobile");
       return;
     }
-    if (allDone) return;
-    router.push(STEP_ROUTES[nextIncompleteIndex]);
+    router.push(STEP_ROUTES[nextIncompleteIndex === -1 ? 2 : nextIncompleteIndex]);
   }
 
   return (
@@ -178,24 +312,14 @@ export default function GetVouchedIntro() {
               );
             })}
           </View>
-
-          <TouchableOpacity
-            style={styles.requestsRow}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(app)/get-vouched/requests" as any)}
-          >
-            <Ionicons name="time-outline" size={18} color={Colors.grey500} />
-            <AppText style={styles.requestsRowText}>My vouch requests</AppText>
-            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
-          </TouchableOpacity>
         </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
+            style={[styles.primaryBtn, !mobileVerified && styles.primaryBtnDisabled]}
             activeOpacity={0.85}
             onPress={onPrimaryPress}
-            disabled={mobileVerified && allDone}
+            disabled={!mobileVerified && !hasStarted}
           >
             <AppText style={styles.primaryBtnText}>{btnLabel}</AppText>
           </TouchableOpacity>
@@ -207,6 +331,7 @@ export default function GetVouchedIntro() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -245,11 +370,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.black,
+    color: Colors.grey500,
     textAlign: "center",
     lineHeight: 22,
-    marginBottom: 40,
+    marginBottom: 36,
   },
+
+  // Wizard steps
   stepList: { width: "100%", gap: 12 },
   stepRow: {
     flexDirection: "row",
@@ -282,7 +409,6 @@ const styles = StyleSheet.create({
   stepTitleLocked: { color: Colors.grey700 },
   stepDoneTag: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.vouchGreen, marginTop: 2 },
   stepTime: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
-  stepRowDone: { backgroundColor: Colors.vouchGreenLight },
   prereqHint: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
   divider: { height: 1, backgroundColor: Colors.grey300, marginVertical: 4 },
   footer: {
@@ -297,20 +423,85 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnDone: { backgroundColor: Colors.grey300 },
+  primaryBtnDisabled: { opacity: 0.45 },
   primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
-  requestsRow: {
+
+  // Submitted / requests view
+  progressCard: {
+    width: "100%",
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    padding: 18,
+    gap: 8,
+    marginBottom: 28,
+  },
+  progressLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+  },
+  progressCount: {
+    fontSize: 28,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+  },
+  progressTrack: {
+    flexDirection: "row",
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.grey300,
+    overflow: "hidden",
+  },
+  progressFill: {
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 3,
+  },
+  requestsLabel: {
+    alignSelf: "flex-start",
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  requestCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginTop: 8,
+    gap: 12,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
     paddingVertical: 14,
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
+    width: "100%",
+    marginBottom: 8,
   },
-  requestsRowText: {
-    flex: 1,
-    fontSize: 14,
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  dotDone: { backgroundColor: Colors.vouchGreen },
+  dotPending: { backgroundColor: Colors.amber },
+  requestContact: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
+  requestMeta: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 2 },
+  badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  badgeDone: { backgroundColor: Colors.vouchGreenLight },
+  badgePending: { backgroundColor: Colors.amberBg },
+  badgeText: { fontSize: 11, fontFamily: Fonts.bold },
+  badgeTextDone: { color: Colors.vouchGreen },
+  badgeTextPending: { color: Colors.amber },
+  addRefBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 28,
+    height: 52,
+    width: "100%",
+  },
+  addRefBtnText: {
+    fontSize: 15,
     fontFamily: Fonts.semiBold,
-    color: Colors.grey500,
+    color: Colors.vouchGreen,
   },
 });
