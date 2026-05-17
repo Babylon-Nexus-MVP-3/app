@@ -74,6 +74,7 @@ export default function GiveAVouchScreen() {
   const { fetchWithAuth } = useAuth();
   const [requests, setRequests] = useState<VouchRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [ignoring, setIgnoring] = useState<string | null>(null);
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
   const [checking, setChecking] = useState(false);
@@ -98,6 +99,18 @@ export default function GiveAVouchScreen() {
       load();
     }, [load])
   );
+
+  async function onIgnore(id: string) {
+    setIgnoring(id);
+    try {
+      await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, { method: "PATCH" });
+      setRequests((prev) => prev.filter((r) => r._id !== id));
+    } catch {
+      // silently fail — list unchanged
+    } finally {
+      setIgnoring(null);
+    }
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -201,28 +214,39 @@ export default function GiveAVouchScreen() {
           </View>
         ) : (
           requests.map((r, i) => (
-            <TouchableOpacity
-              key={r._id}
-              style={styles.requestCard}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
-              }
-            >
-              <Avatar name={r.fromName} index={i} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <AppText style={styles.requestCompany}>{r.fromCompany}</AppText>
-                <AppText style={styles.requestMeta}>
-                  {r.fromName} · {timeAgo(r.createdAt)}
-                </AppText>
-                {r.relationship || r.projectName ? (
-                  <AppText style={styles.requestRelationship}>
-                    {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+            <View key={r._id}>
+              <TouchableOpacity
+                style={styles.requestCard}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
+                }
+              >
+                <Avatar name={r.fromName} index={i} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText style={styles.requestCompany}>{r.fromCompany}</AppText>
+                  <AppText style={styles.requestMeta}>
+                    {r.fromName} · {timeAgo(r.createdAt)}
                   </AppText>
-                ) : null}
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
-            </TouchableOpacity>
+                  {r.relationship || r.projectName ? (
+                    <AppText style={styles.requestRelationship}>
+                      {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+                    </AppText>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.ignoreBtn}
+                onPress={() => onIgnore(r._id)}
+                disabled={ignoring === r._id}
+                hitSlop={8}
+              >
+                <AppText style={styles.ignoreText}>
+                  {ignoring === r._id ? "Ignoring…" : "Ignore"}
+                </AppText>
+              </TouchableOpacity>
+            </View>
           ))
         )}
 
@@ -429,6 +453,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
+  },
+  ignoreBtn: {
+    alignSelf: "flex-end",
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  ignoreText: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.grey500,
   },
   divider: {
     height: 1,

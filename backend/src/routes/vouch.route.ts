@@ -176,10 +176,50 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const requests = await VouchRequestModel.find({ fromUserId: userId })
+      const requests = await VouchRequestModel.find({
+        fromUserId: userId,
+        status: { $ne: "ignored" },
+      })
         .sort({ createdAt: -1 })
         .lean();
       res.status(200).json({ requests });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /vouch/requests/:id/ignore — silently dismiss a vouch request (no notification sent)
+vouchRouter.patch(
+  "/requests/:id/ignore",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        res.status(400).json({ error: "Invalid request id" });
+        return;
+      }
+
+      const user = await UserModel.findById(userId).select("email mobile").lean();
+      const request = await VouchRequestModel.findById(id).select("toEmail toMobile").lean();
+
+      if (!request) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      const sentToEmail = request.toEmail && user?.email && request.toEmail === user.email;
+      const sentToMobile = request.toMobile && user?.mobile && request.toMobile === user.mobile;
+      if (!sentToEmail && !sentToMobile) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      await VouchRequestModel.findByIdAndUpdate(id, { status: "ignored" });
+      res.status(200).json({ ok: true });
     } catch (err) {
       next(err);
     }
