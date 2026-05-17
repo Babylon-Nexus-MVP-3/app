@@ -12,7 +12,6 @@ import { sendVouchRequestEmail } from "../service/email.service";
 export const vouchRouter = express.Router();
 const expo = new Expo();
 
-
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
   "/profile",
@@ -406,21 +405,17 @@ vouchRouter.post(
 );
 
 // GET /vouch/given — vouches the current user has given to others
-vouchRouter.get(
-  "/given",
-  requireAuth,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user!.sub;
-      const vouches = await GivenVouchModel.find({ fromUserId: userId })
-        .sort({ createdAt: -1 })
-        .lean();
-      res.status(200).json({ vouches });
-    } catch (err) {
-      next(err);
-    }
+vouchRouter.get("/given", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.sub;
+    const vouches = await GivenVouchModel.find({ fromUserId: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.status(200).json({ vouches });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 // GET /vouch/received — vouches others have given to the current user's business
 vouchRouter.get(

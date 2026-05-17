@@ -357,7 +357,11 @@ export default function GiveAVouchScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity onPress={toggleNameSearch} style={styles.toggleSearchLink} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={toggleNameSearch}
+        style={styles.toggleSearchLink}
+        activeOpacity={0.7}
+      >
         {showNameSearch ? (
           <AppText style={styles.toggleSearchText}>
             <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>

@@ -1,11 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -124,7 +118,10 @@ export default function GetVouchedIntro() {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.submittedScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.submittedScroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.iconCircle, styles.iconCircleGreen]}>
             <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
           </View>
@@ -168,7 +165,10 @@ export default function GetVouchedIntro() {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.submittedScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.submittedScroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.iconCircle, styles.iconCircleAmber]}>
             <Ionicons name="time-outline" size={40} color={Colors.amber} />
           </View>
@@ -255,7 +255,10 @@ export default function GetVouchedIntro() {
       </View>
 
       <>
-        <ScrollView contentContainerStyle={styles.wizardScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.wizardScroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.iconCircle}>
             <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
           </View>

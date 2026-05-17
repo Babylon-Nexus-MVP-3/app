@@ -380,10 +380,14 @@ export default function Step3() {
 
   function deleteRef(index: number) {
     setRefs((r) => r.filter((_, i) => i !== index));
-    setActiveIndex((prev) => (prev === index ? Math.max(0, index - 1) : prev > index ? prev - 1 : prev));
+    setActiveIndex((prev) =>
+      prev === index ? Math.max(0, index - 1) : prev > index ? prev - 1 : prev
+    );
   }
 
-  const canSubmit = isFresh ? isRefComplete(refs[0]) : isRefComplete(refs[0]) && isRefComplete(refs[1]);
+  const canSubmit = isFresh
+    ? isRefComplete(refs[0])
+    : isRefComplete(refs[0]) && isRefComplete(refs[1]);
 
   async function onSubmit() {
     setSubmitting(true);
