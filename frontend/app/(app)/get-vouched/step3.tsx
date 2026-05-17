@@ -438,6 +438,7 @@ export default function Step3() {
     } finally {
       setSubmitting(false);
     }
+    router.dismissAll();
     router.push("/(app)/get-vouched/success");
   }
 
