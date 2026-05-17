@@ -423,8 +423,7 @@ export default function Step3() {
     if (isFresh) {
       router.back();
     } else {
-      router.dismissAll();
-      router.push("/(app)/get-vouched/success");
+      router.replace("/(app)/get-vouched/success" as any);
     }
   }
 

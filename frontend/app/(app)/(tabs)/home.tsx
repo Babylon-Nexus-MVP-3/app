@@ -21,20 +21,27 @@ export default function HomeScreen() {
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [vouchMyProjectUnlocked, setVouchMyProjectUnlocked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, notifRes] = await Promise.all([
+      const [vouchRes, notifRes, sentRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
       ]);
       const vouchData = await vouchRes.json();
       const notifData = await notifRes.json();
+      const sentData = sentRes.ok ? await sentRes.json() : null;
       setPendingCount(vouchData.requests?.length ?? 0);
       setUnreadCount(
         (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
       );
+      const respondedCount = (sentData?.requests ?? []).filter(
+        (r: { status: string }) => r.status === "responded"
+      ).length;
+      setVouchMyProjectUnlocked(respondedCount >= 2);
     } catch {}
   }, [fetchWithAuth]);
 
@@ -153,21 +160,27 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Vouch my Project — locked, navigates to existing projects screen */}
+          {/* Vouch my Project */}
           <TouchableOpacity
-            style={[styles.card, styles.cardLocked]}
+            style={[styles.card, vouchMyProjectUnlocked ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/vouch-my-project")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="sync-circle-outline" size={28} color={Colors.grey500} />
+              <Ionicons
+                name="sync-circle-outline"
+                size={28}
+                color={vouchMyProjectUnlocked ? Colors.black : Colors.grey500}
+              />
             </View>
             <View style={styles.cardContent}>
               <View style={styles.cardTitleRow}>
                 <AppText style={styles.cardTitle}>Vouch my Project</AppText>
-                <View style={styles.lockedBadge}>
-                  <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
-                </View>
+                {!vouchMyProjectUnlocked && (
+                  <View style={styles.lockedBadge}>
+                    <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
+                  </View>
+                )}
               </View>
               <AppText style={styles.cardDesc}>{"See your project's payment health."}</AppText>
             </View>
