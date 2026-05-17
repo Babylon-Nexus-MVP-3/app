@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -99,7 +93,7 @@ export default function VerifyScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(app)/vouches")} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>Verify business</AppText>
@@ -165,11 +159,7 @@ export default function VerifyScreen() {
                 ) : null}
                 <View style={styles.divider} />
                 <View style={styles.noteRow}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={14}
-                    color={Colors.vouchGreen}
-                  />
+                  <Ionicons name="information-circle-outline" size={14} color={Colors.vouchGreen} />
                   <AppText style={styles.activeNote}>
                     Your vouch joins their existing reputation.
                   </AppText>

@@ -1,7 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import Expo from "expo-server-sdk";
-import { requireAuth } from "../middleware";
+import { requireAuth, vouchProfileLimiter, vouchGiveLimiter } from "../middleware";
 import { VouchProfileModel } from "../models/vouchProfileModel";
 import { VouchRequestModel } from "../models/vouchRequestModel";
 import { GivenVouchModel } from "../models/givenVouchModel";
@@ -24,10 +24,16 @@ function normalizeAuMobile(mobile: string): string {
 vouchRouter.post(
   "/profile",
   requireAuth,
+  vouchProfileLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
       const body = req.body;
+
+      // Source identity fields from DB — not the request body — to prevent impersonation
+      const dbUser = await UserModel.findById(userId).select("name abn").lean();
+      const fromName = dbUser?.name ?? "";
+      const fromAbn = dbUser?.abn ?? body.abn ?? "";
 
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
@@ -45,18 +51,45 @@ vouchRouter.post(
       }> = body.references ?? [];
 
       const fromCompany = body.trade ?? body.name ?? "Unknown";
+      const userAbn: string = body.abn ?? "";
+
+      // Pre-check: block if any reference has already given a vouch to this user
+      for (const ref of references) {
+        if (!ref.name || !ref.mobile) continue;
+        const orConditions: object[] = [{ mobile: ref.mobile }];
+        if (ref.email) orConditions.push({ email: ref.email });
+        const refUser = await UserModel.findOne({ $or: orConditions }).select("_id").lean();
+        if (refUser && userAbn) {
+          const alreadyVouched = await GivenVouchModel.exists({
+            fromUserId: refUser._id,
+            toAbn: userAbn,
+          });
+          if (alreadyVouched) {
+            res.status(400).json({
+              error: `${ref.name} has already vouched for you. You cannot send them another request.`,
+            });
+            return;
+          }
+        }
+      }
 
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
+
+        // Skip if a request was already sent to this reference
+        const dupConditions: object[] = [{ toMobile: ref.mobile }];
+        if (ref.email) dupConditions.push({ toEmail: ref.email });
+        const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
+        if (existing) continue;
 
         const normalizedMobile = normalizeAuMobile(ref.mobile);
         const normalizedEmail = ref.email?.trim().toLowerCase() ?? "";
 
         const request = await VouchRequestModel.create({
           fromUserId: userId,
-          fromName: body.name,
+          fromName,
           fromCompany,
-          fromAbn: body.abn ?? "",
+          fromAbn,
           toEmail: normalizedEmail,
           toMobile: normalizedMobile,
           relationship: ref.relationship,
@@ -77,7 +110,7 @@ vouchRouter.post(
           await VouchNotificationModel.create({
             recipientUserId: refUser._id,
             requestId: request._id,
-            fromName: body.name,
+            fromName,
             fromCompany,
             projectName: ref.project,
           });
@@ -90,7 +123,7 @@ vouchRouter.post(
                 {
                   to: token,
                   title: "New vouch request",
-                  body: `${body.name} from ${fromCompany} has asked you to vouch for them.`,
+                  body: `${fromName} from ${fromCompany} has asked you to vouch for them.`,
                   data: { type: "VouchRequest", requestId: request._id.toString() },
                 },
               ])
@@ -235,83 +268,110 @@ vouchRouter.patch(
 );
 
 // POST /vouch/give — record a vouch and mark the originating request as responded
-vouchRouter.post("/give", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user!.sub;
-    const { toAbn, toBusinessName, attributes, note, requestId } = req.body;
+vouchRouter.post(
+  "/give",
+  requireAuth,
+  vouchGiveLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const { toAbn, toBusinessName, attributes, note, requestId } = req.body;
 
-    const existing = await GivenVouchModel.exists({ fromUserId: userId, toAbn });
-    if (existing) {
-      res.status(409).json({ error: "You have already vouched for this business." });
-      return;
-    }
+      if (requestId !== undefined) {
+        if (!mongoose.isValidObjectId(requestId)) {
+          res.status(400).json({ error: "Invalid requestId" });
+          return;
+        }
+        // Verify the request was actually sent to this user
+        const giver = await UserModel.findById(userId).select("email mobile").lean();
+        const request = await VouchRequestModel.findById(requestId)
+          .select("toEmail toMobile")
+          .lean();
+        if (!request) {
+          res.status(404).json({ error: "Vouch request not found" });
+          return;
+        }
+        const sentToEmail = request.toEmail && giver?.email && request.toEmail === giver.email;
+        const sentToMobile = request.toMobile && giver?.mobile && request.toMobile === giver.mobile;
+        if (!sentToEmail && !sentToMobile) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+      }
 
-    const giver = await UserModel.findById(userId).select("name businessName").lean();
-    const giverName = giver?.name ?? "Someone";
-    const giverCompany = giver?.businessName ?? "";
+      const existing = await GivenVouchModel.exists({ fromUserId: userId, toAbn });
+      if (existing) {
+        res.status(409).json({ error: "You have already vouched for this business." });
+        return;
+      }
 
-    const vouch = await GivenVouchModel.create({
-      fromUserId: userId,
-      toAbn,
-      toBusinessName,
-      attributes,
-      note: note ?? undefined,
-      requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
-    });
+      const giver = await UserModel.findById(userId).select("name businessName").lean();
+      const giverName = giver?.name ?? "Someone";
+      const giverCompany = giver?.businessName ?? "";
 
-    let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
-    if (requestId) {
-      vouchRequest = await VouchRequestModel.findByIdAndUpdate(
-        requestId,
-        { status: "responded", respondedAt: new Date() },
-        { returnDocument: "after" }
-      )
-        .select("fromUserId")
-        .lean();
-      await VouchNotificationModel.updateMany(
-        { requestId: new mongoose.Types.ObjectId(requestId) },
-        { $set: { read: true } }
-      );
-    }
-
-    const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
-
-    // Notify the requester directly when responding to a request, otherwise look up by ABN
-    const recipientId = vouchRequest?.fromUserId ?? null;
-    const recipient = recipientId
-      ? await UserModel.findById(recipientId).select("_id pushToken").lean()
-      : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
-
-    if (recipient && recipient._id.toString() !== userId) {
-      await VouchNotificationModel.create({
-        recipientUserId: recipient._id,
-        type: "vouch_received",
-        fromName: giverName,
-        fromCompany: giverCompany,
-        toBusinessName: toBusinessName ?? "",
-        read: false,
+      const vouch = await GivenVouchModel.create({
+        fromUserId: userId,
+        toAbn,
+        toBusinessName,
+        attributes,
+        note: note ?? undefined,
+        requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
       });
 
-      const token = recipient.pushToken ?? "";
-      if (Expo.isExpoPushToken(token)) {
-        expo
-          .sendPushNotificationsAsync([
-            {
-              to: token,
-              title: "New vouch received",
-              body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
-              data: { type: "vouch_received" },
-            },
-          ])
-          .catch(() => {});
+      let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
+      if (requestId) {
+        vouchRequest = await VouchRequestModel.findByIdAndUpdate(
+          requestId,
+          { status: "responded", respondedAt: new Date() },
+          { returnDocument: "after" }
+        )
+          .select("fromUserId")
+          .lean();
+        await VouchNotificationModel.updateMany(
+          { requestId: new mongoose.Types.ObjectId(requestId) },
+          { $set: { read: true } }
+        );
       }
-    }
 
-    res.status(201).json({ vouch, vouchCount });
-  } catch (err) {
-    next(err);
+      const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
+
+      // Notify the requester directly when responding to a request, otherwise look up by ABN
+      const recipientId = vouchRequest?.fromUserId ?? null;
+      const recipient = recipientId
+        ? await UserModel.findById(recipientId).select("_id pushToken").lean()
+        : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
+
+      if (recipient && recipient._id.toString() !== userId) {
+        await VouchNotificationModel.create({
+          recipientUserId: recipient._id,
+          type: "vouch_received",
+          fromName: giverName,
+          fromCompany: giverCompany,
+          toBusinessName: toBusinessName ?? "",
+          read: false,
+        });
+
+        const token = recipient.pushToken ?? "";
+        if (Expo.isExpoPushToken(token)) {
+          expo
+            .sendPushNotificationsAsync([
+              {
+                to: token,
+                title: "New vouch received",
+                body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
+                data: { type: "vouch_received" },
+              },
+            ])
+            .catch(() => {});
+        }
+      }
+
+      res.status(201).json({ vouch, vouchCount });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 // GET /vouch/business/:abn — vouch score for a business
 vouchRouter.get(
