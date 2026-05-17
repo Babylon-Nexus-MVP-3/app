@@ -617,10 +617,15 @@ export default function ProjectDetail() {
               </AppText>
             </View>
           </SafeAreaView>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+          >
           <ScrollView
             style={styles.inviteBody}
             contentContainerStyle={styles.inviteBodyContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {inviteCode ? (
               <View style={styles.inviteSuccess}>
@@ -712,6 +717,7 @@ export default function ProjectDetail() {
               </>
             )}
           </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
