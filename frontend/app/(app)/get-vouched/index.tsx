@@ -1,12 +1,10 @@
-import { useState, useCallback } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
-import { API_BASE_URL } from "@/constants/api";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -28,58 +26,10 @@ const STEPS = [
 
 type StepState = "done" | "active" | "locked";
 
-type SentRequest = {
-  _id: string;
-  toMobile: string;
-  toEmail?: string;
-  relationship: string;
-  projectName: string;
-  status: "pending" | "responded";
-};
-
 export default function GetVouchedIntro() {
-  const { fetchWithAuth, user } = useAuth();
+  const { user } = useAuth();
   const { step1, step2, references } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
-
-  const [profileSubmitted, setProfileSubmitted] = useState(false);
-  const [checkingProfile, setCheckingProfile] = useState(true);
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
-
-  const loadProfile = useCallback(async () => {
-    try {
-      const r = await fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`);
-      if (r.ok) {
-        const profile = await r.json();
-        const fullySubmitted =
-          profile.name &&
-          profile.currentProjectName &&
-          Array.isArray(profile.references) &&
-          profile.references.length >= 2;
-        if (!fullySubmitted) return;
-        setProfileSubmitted(true);
-        try {
-          const req = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`);
-          if (req.ok) {
-            const data = await req.json();
-            setSentRequests(data.requests ?? []);
-          }
-        } finally {
-          setLoadingRequests(false);
-        }
-      }
-    } catch {
-    } finally {
-      setCheckingProfile(false);
-    }
-  }, [fetchWithAuth]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadProfile();
-    }, [loadProfile])
-  );
 
   const step1Done = !!(step1.name && step1.abn && step1.trade && step1.idNumber && step1.idExpiry);
   const step2Done = !!(
@@ -137,170 +87,110 @@ export default function GetVouchedIntro() {
         <View style={{ width: 24 }} />
       </View>
 
-      {checkingProfile ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={Colors.vouchGreen} />
-        </View>
-      ) : profileSubmitted ? (
+      <>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.iconCircle}>
             <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
           </View>
-          <AppText style={styles.title}>Vouch requests sent.</AppText>
+
+          <AppText style={styles.title}>Build your Vouch profile.</AppText>
           <AppText style={styles.subtitle}>
-            {"Your references have been notified. We'll update you once they respond."}
+            Like a supplier credit application — built once, reused everywhere.
           </AppText>
 
-          <View style={styles.requestList}>
-            <AppText style={styles.requestListLabel}>REFERENCE STATUS</AppText>
-            {loadingRequests ? (
-              <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 12 }} />
-            ) : sentRequests.length === 0 ? (
-              <AppText style={styles.requestMeta}>No requests found.</AppText>
-            ) : (
-              sentRequests.map((r) => {
-                const done = r.status === "responded";
-                return (
-                  <View key={r._id} style={styles.requestRow}>
-                    <View
-                      style={[
-                        styles.requestDot,
-                        done ? styles.requestDotDone : styles.requestDotPending,
-                      ]}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <AppText style={styles.requestMobile}>{r.toEmail || r.toMobile}</AppText>
-                      <AppText style={styles.requestMeta}>
-                        {r.relationship} · {r.projectName}
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        done ? styles.statusBadgeDone : styles.statusBadgePending,
-                      ]}
-                    >
+          <View style={styles.stepList}>
+            {/* Mobile verification prerequisite — hidden once verified */}
+            {!mobileVerified && (
+              <>
+                <TouchableOpacity
+                  style={styles.stepRow}
+                  activeOpacity={0.7}
+                  onPress={() => router.push("/(app)/verify-mobile")}
+                >
+                  <View style={[styles.stepCircle, styles.stepCircleActive]}>
+                    <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.stepTitle}>Verify mobile number</AppText>
+                    <AppText style={styles.prereqHint}>Required before you can apply</AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+                </TouchableOpacity>
+
+                <View style={styles.divider} />
+              </>
+            )}
+
+            {STEPS.map(({ n, title, time }) => {
+              const state = stepState(n);
+              const tappable = canTap(n);
+
+              return (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.stepRow, !tappable && styles.stepRowLocked]}
+                  activeOpacity={tappable ? 0.7 : 1}
+                  onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
+                  disabled={!tappable}
+                >
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      state === "done" && styles.stepCircleDone,
+                      state === "active" && styles.stepCircleActive,
+                      state === "locked" && styles.stepCircleLocked,
+                    ]}
+                  >
+                    {state === "done" ? (
+                      <Ionicons name="checkmark" size={16} color={Colors.white} />
+                    ) : (
                       <AppText
                         style={[
-                          styles.statusBadgeText,
-                          done ? styles.statusBadgeTextDone : styles.statusBadgeTextPending,
+                          styles.stepNum,
+                          state === "active" && styles.stepNumActive,
+                          state === "locked" && styles.stepNumLocked,
                         ]}
                       >
-                        {done ? "Completed" : "Pending"}
+                        {n}
                       </AppText>
-                    </View>
+                    )}
                   </View>
-                );
-              })
-            )}
+
+                  <View style={{ flex: 1 }}>
+                    <AppText
+                      style={[styles.stepTitle, state === "locked" && styles.stepTitleLocked]}
+                    >
+                      {title}
+                    </AppText>
+                    {state === "done" && <AppText style={styles.stepDoneTag}>Completed</AppText>}
+                  </View>
+
+                  <AppText style={styles.stepTime}>{time}</AppText>
+
+                  {tappable && (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={state === "locked" ? Colors.grey300 : Colors.grey500}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
-      ) : (
-        <>
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
-            </View>
 
-            <AppText style={styles.title}>Build your Vouch profile.</AppText>
-            <AppText style={styles.subtitle}>
-              Like a supplier credit application — built once, reused everywhere.
-            </AppText>
-
-            <View style={styles.stepList}>
-              {/* Mobile verification prerequisite — hidden once verified */}
-              {!mobileVerified && (
-                <>
-                  <TouchableOpacity
-                    style={styles.stepRow}
-                    activeOpacity={0.7}
-                    onPress={() => router.push("/(app)/verify-mobile")}
-                  >
-                    <View style={[styles.stepCircle, styles.stepCircleActive]}>
-                      <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText style={styles.stepTitle}>Verify mobile number</AppText>
-                      <AppText style={styles.prereqHint}>Required before you can apply</AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
-                  </TouchableOpacity>
-
-                  <View style={styles.divider} />
-                </>
-              )}
-
-              {STEPS.map(({ n, title, time }) => {
-                const state = stepState(n);
-                const tappable = canTap(n);
-
-                return (
-                  <TouchableOpacity
-                    key={n}
-                    style={[styles.stepRow, !tappable && styles.stepRowLocked]}
-                    activeOpacity={tappable ? 0.7 : 1}
-                    onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
-                    disabled={!tappable}
-                  >
-                    <View
-                      style={[
-                        styles.stepCircle,
-                        state === "done" && styles.stepCircleDone,
-                        state === "active" && styles.stepCircleActive,
-                        state === "locked" && styles.stepCircleLocked,
-                      ]}
-                    >
-                      {state === "done" ? (
-                        <Ionicons name="checkmark" size={16} color={Colors.white} />
-                      ) : (
-                        <AppText
-                          style={[
-                            styles.stepNum,
-                            state === "active" && styles.stepNumActive,
-                            state === "locked" && styles.stepNumLocked,
-                          ]}
-                        >
-                          {n}
-                        </AppText>
-                      )}
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <AppText
-                        style={[styles.stepTitle, state === "locked" && styles.stepTitleLocked]}
-                      >
-                        {title}
-                      </AppText>
-                      {state === "done" && <AppText style={styles.stepDoneTag}>Completed</AppText>}
-                    </View>
-
-                    <AppText style={styles.stepTime}>{time}</AppText>
-
-                    {tappable && (
-                      <Ionicons
-                        name="chevron-forward"
-                        size={16}
-                        color={state === "locked" ? Colors.grey300 : Colors.grey500}
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
-              activeOpacity={0.85}
-              onPress={onPrimaryPress}
-              disabled={mobileVerified && allDone}
-            >
-              <AppText style={styles.primaryBtnText}>{btnLabel}</AppText>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, mobileVerified && allDone && styles.primaryBtnDone]}
+            activeOpacity={0.85}
+            onPress={onPrimaryPress}
+            disabled={mobileVerified && allDone}
+          >
+            <AppText style={styles.primaryBtnText}>{btnLabel}</AppText>
+          </TouchableOpacity>
+        </View>
+      </>
     </SafeAreaView>
   );
 }
@@ -380,12 +270,7 @@ const styles = StyleSheet.create({
   stepNumLocked: { color: Colors.grey700 },
   stepTitle: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.black },
   stepTitleLocked: { color: Colors.grey700 },
-  stepDoneTag: {
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
-    marginTop: 2,
-  },
+  stepDoneTag: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.vouchGreen, marginTop: 2 },
   stepTime: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
   stepRowDone: { backgroundColor: Colors.vouchGreenLight },
   prereqHint: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
@@ -404,34 +289,4 @@ const styles = StyleSheet.create({
   },
   primaryBtnDone: { backgroundColor: Colors.grey300 },
   primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
-
-  // Status screen — request list
-  requestList: { width: "100%", marginTop: 8, gap: 12 },
-  requestListLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  requestRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  requestDot: { width: 10, height: 10, borderRadius: 5 },
-  requestDotDone: { backgroundColor: Colors.vouchGreen },
-  requestDotPending: { backgroundColor: Colors.amber },
-  requestMobile: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
-  requestMeta: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 2 },
-  statusBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  statusBadgeDone: { backgroundColor: Colors.vouchGreenLight },
-  statusBadgePending: { backgroundColor: Colors.amberBg },
-  statusBadgeText: { fontSize: 11, fontFamily: Fonts.bold },
-  statusBadgeTextDone: { color: Colors.vouchGreen },
-  statusBadgeTextPending: { color: Colors.amber },
 });
