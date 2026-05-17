@@ -171,12 +171,6 @@ export default function Step2() {
   const [statePickerOpen, setStatePickerOpen] = useState(false);
   const [pastStatePickerOpen, setPastStatePickerOpen] = useState(false);
 
-  function formatMonthYear(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 6);
-    if (digits.length <= 2) return digits;
-    return digits.slice(0, 2) + "/" + digits.slice(2);
-  }
-
   function filterDecimal(v: string) {
     const filtered = v.replace(/[^0-9.]/g, "");
     const parts = filtered.split(".");
@@ -186,19 +180,6 @@ export default function Step2() {
   function update(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
-
-  function isPastDateValid(monthYear: string): boolean {
-    const parts = monthYear.split("/");
-    if (parts.length !== 2 || parts[1].length !== 4) return false;
-    const month = parseInt(parts[0], 10);
-    const year = parseInt(parts[1], 10);
-    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
-    const now = new Date();
-    return new Date(year, month - 1, 1) < new Date(now.getFullYear(), now.getMonth(), 1);
-  }
-
-  const pastMonthYearInvalid =
-    form.pastMonthYear.length === 7 && !isPastDateValid(form.pastMonthYear);
 
   function onContinue() {
     setStep2(form);
@@ -212,7 +193,7 @@ export default function Step2() {
     form.state.trim() &&
     form.postcode.trim() &&
     form.value.trim() &&
-    !pastMonthYearInvalid;
+    true;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -345,18 +326,15 @@ export default function Step2() {
               <View style={[styles.fieldWrap, { flex: 1 }]}>
                 <AppText style={styles.fieldLabel}>COMPLETED</AppText>
                 <TextInput
-                  style={[styles.input, pastMonthYearInvalid ? styles.inputError : null]}
+                  style={styles.input}
                   value={form.pastMonthYear}
-                  onChangeText={(v) => update("pastMonthYear", formatMonthYear(v))}
-                  placeholder="MM/YYYY"
+                  onChangeText={(v) => update("pastMonthYear", v.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="YYYY"
                   placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
-                  maxLength={7}
+                  maxLength={4}
                   autoCorrect={false}
                 />
-                {pastMonthYearInvalid && (
-                  <AppText style={styles.fieldError}>Must be in the past.</AppText>
-                )}
               </View>
               <View style={[styles.fieldWrap, { flex: 2 }]}>
                 <View style={styles.valueLabelRow}>
