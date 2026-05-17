@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
@@ -42,6 +42,7 @@ export default function ProjectDetail() {
   const openInvoiceId = params.openInvoice;
 
   const { fetchWithAuth, user } = useAuth();
+  const insets = useSafeAreaInsets();
   const userId = user?.id ?? "";
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
 
@@ -600,23 +601,21 @@ export default function ProjectDetail() {
       {/* ── Invite modal ── */}
       <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={styles.inviteScreen}>
-          <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
-            <View style={styles.inviteHeader}>
-              <TouchableOpacity
-                onPress={() => setInviteVisible(false)}
-                style={styles.inviteBackBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Close invite"
-              >
-                <Ionicons name="arrow-back" size={20} color={Colors.white} />
-                <AppText style={styles.inviteBackLabel}>My Space</AppText>
-              </TouchableOpacity>
-              <AppText style={styles.inviteTitle}>
-                {inviteCode ? "Invite Sent" : "Invite Team Member"}
-              </AppText>
-            </View>
-          </SafeAreaView>
+          <View style={[styles.inviteHeader, { paddingTop: insets.top + 8, backgroundColor: Colors.vouchGreen }]}>
+            <TouchableOpacity
+              onPress={() => setInviteVisible(false)}
+              style={styles.inviteBackBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Close invite"
+            >
+              <Ionicons name="arrow-back" size={20} color={Colors.white} />
+              <AppText style={styles.inviteBackLabel}>My Space</AppText>
+            </TouchableOpacity>
+            <AppText style={styles.inviteTitle}>
+              {inviteCode ? "Invite Sent" : "Invite Team Member"}
+            </AppText>
+          </View>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ flex: 1 }}
