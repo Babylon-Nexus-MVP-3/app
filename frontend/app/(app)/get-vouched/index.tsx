@@ -238,7 +238,7 @@ export default function GetVouchedIntro() {
 
   function onPrimaryPress() {
     if (!mobileVerified) {
-      router.push("/(app)/verify-mobile");
+      router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } });
       return;
     }
     router.push(STEP_ROUTES[nextIncompleteIndex === -1 ? 2 : nextIncompleteIndex]);
@@ -264,9 +264,7 @@ export default function GetVouchedIntro() {
           </View>
 
           <AppText style={styles.title}>Build your Vouch profile.</AppText>
-          <AppText style={styles.subtitle}>
-            Like a supplier credit application — built once, reused everywhere.
-          </AppText>
+          <AppText style={styles.subtitle}>Built once, used everywhere</AppText>
 
           <View style={styles.stepList}>
             {!mobileVerified && (
@@ -274,7 +272,12 @@ export default function GetVouchedIntro() {
                 <TouchableOpacity
                   style={styles.stepRow}
                   activeOpacity={0.7}
-                  onPress={() => router.push("/(app)/verify-mobile")}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(app)/verify-mobile",
+                      params: { returnTo: "get-vouched" },
+                    })
+                  }
                 >
                   <View style={[styles.stepCircle, styles.stepCircleActive]}>
                     <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />

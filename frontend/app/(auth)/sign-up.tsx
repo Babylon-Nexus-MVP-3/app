@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,20 +12,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
+import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
-
-type AbrResult = {
-  entityName: string;
-  tradingName?: string;
-  businessType: string;
-  state: string;
-  activeYears: number;
-  isActive: boolean;
-};
 
 function formatAbn(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
@@ -44,44 +35,8 @@ export default function SignUp() {
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
 
-  const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
-  const [abrLoading, setAbrLoading] = useState(false);
-  const [abrError, setAbrError] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (abnDigits.length !== 11) {
-      setAbrResult(null);
-      setAbrError("");
-      return;
-    }
-    if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    abrTimeout.current = setTimeout(() => lookupAbn(abnDigits), 400);
-    return () => {
-      if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    };
-  }, [abnDigits]);
-
-  async function lookupAbn(digits: string) {
-    setAbrLoading(true);
-    setAbrError("");
-    setAbrResult(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`);
-      if (!res.ok) throw new Error("ABN not found");
-      const data: AbrResult = await res.json();
-      if (!data.isActive) throw new Error("This ABN is not active");
-      setAbrResult(data);
-    } catch {
-      setAbrError("ABN not found. Check the number and try again.");
-    } finally {
-      setAbrLoading(false);
-    }
-  }
 
   const mobileDigits = mobile.replace(/\D/g, "");
 
@@ -102,13 +57,19 @@ export default function SignUp() {
   const firstName = nameParts[0] ?? "";
   const lastName = nameParts.slice(1).join(" ") || "-";
 
+  const pwChecks = {
+    length: password.length >= 12,
+    lower: /[a-z]/.test(password),
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^a-zA-Z0-9]/.test(password),
+  };
+  const complexityMet =
+    [pwChecks.lower, pwChecks.upper, pwChecks.number, pwChecks.special].filter(Boolean).length >= 3;
+  const passwordValid = pwChecks.length && complexityMet;
+
   const canSubmit =
-    firstName.length > 0 &&
-    email.includes("@") &&
-    password.length >= 12 &&
-    abnDigits.length === 11 &&
-    !abrError &&
-    !abrLoading;
+    firstName.length > 0 && email.includes("@") && passwordValid && abnDigits.length === 11;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -125,7 +86,6 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
-          ...(abrResult ? { businessName: abrResult.tradingName || abrResult.entityName } : {}),
         }),
       });
       if (!res.ok) {
@@ -230,7 +190,7 @@ export default function SignUp() {
 
           <AppText style={styles.label}>ABN</AppText>
           <TextInput
-            style={[styles.input, abrError ? styles.inputError : null]}
+            style={styles.input}
             value={abn}
             onChangeText={onAbnChange}
             placeholder="XX XXX XXX XXX"
@@ -247,28 +207,6 @@ export default function SignUp() {
               }
             </AppText>
           </View>
-
-          {abrLoading && (
-            <View style={styles.abrLoading}>
-              <ActivityIndicator size="small" color={Colors.vouchGreen} />
-              <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
-            </View>
-          )}
-          {abrResult && !abrLoading && (
-            <View style={styles.abrConfirmed}>
-              <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
-              <AppText style={styles.abrConfirmedText}>
-                {abrResult.tradingName || abrResult.entityName}
-                {"  ·  "}
-                {abrResult.businessType}
-                {"  ·  "}
-                {abrResult.state}
-                {"  ·  active "}
-                {abrResult.activeYears} yrs
-              </AppText>
-            </View>
-          )}
-          {abrError && !abrLoading && <AppText style={styles.fieldError}>{abrError}</AppText>}
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
@@ -345,9 +283,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     marginBottom: 20,
   },
-  inputError: {
-    borderColor: Colors.red,
-  },
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -368,35 +303,6 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 14,
   },
-  abrLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: -12,
-    marginBottom: 16,
-  },
-  abrLoadingText: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-  },
-  abrConfirmed: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: -12,
-    marginBottom: 20,
-  },
-  abrConfirmedText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
-    lineHeight: 18,
-  },
   abnWarning: {
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
@@ -410,13 +316,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.amber,
     lineHeight: 17,
-  },
-  fieldError: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.red,
-    marginTop: -14,
-    marginBottom: 16,
   },
   errorText: {
     fontSize: 13,

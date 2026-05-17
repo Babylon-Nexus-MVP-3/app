@@ -31,9 +31,9 @@ export default function Index() {
         <AppText style={styles.heading}>{"Sign up so it\ndoesn't happen\nto you."}</AppText>
 
         <View style={styles.statCard}>
-          <AppText style={styles.statNumber}>3,490</AppText>
+          <AppText style={styles.statNumber}>~3,490</AppText>
           <AppText style={styles.statLabel}>collapses</AppText>
-          <AppText style={styles.statSub}>Australian construction · FY24</AppText>
+          <AppText style={styles.statSub}>Australian construction</AppText>
         </View>
 
         <View style={styles.statCard}>
