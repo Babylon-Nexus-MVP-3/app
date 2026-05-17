@@ -10,7 +10,7 @@ interface AppTextProps extends TextProps {
 export function AppText({
   weight = "regular",
   style,
-  maxFontSizeMultiplier = 1.3,
+  maxFontSizeMultiplier = 1,
   ...props
 }: AppTextProps) {
   return (
