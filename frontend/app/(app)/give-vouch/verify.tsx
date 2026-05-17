@@ -74,14 +74,6 @@ export default function VerifyScreen() {
 
   async function lookupAbn() {
     setLoading(true);
-    // ABR data is hardcoded until ABR_GUID is configured
-    setAbrData({
-      entityName: "Business Pty Ltd",
-      state: "NSW",
-      businessType: "Construction",
-      activeYears: 5,
-      isActive: true,
-    });
     try {
       const statusRes = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`);
       if (statusRes.ok) {
@@ -157,16 +149,18 @@ export default function VerifyScreen() {
 
         {loading ? (
           <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 24 }} />
-        ) : abrData ? (
+        ) : vouchStatus ? (
           <>
-            {/* ABR result */}
-            <View style={styles.abrCard}>
-              <AppText style={styles.abrFrom}>FROM ABR</AppText>
-              <AppText style={styles.abrName}>{abrData.entityName}</AppText>
-              <AppText style={styles.abrMeta}>
-                {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
-              </AppText>
-            </View>
+            {/* ABR result — hidden until ABR_GUID is configured */}
+            {abrData && (
+              <View style={styles.abrCard}>
+                <AppText style={styles.abrFrom}>FROM ABR</AppText>
+                <AppText style={styles.abrName}>{abrData.entityName}</AppText>
+                <AppText style={styles.abrMeta}>
+                  {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
+                </AppText>
+              </View>
+            )}
 
             {/* Already vouched */}
             {alreadyVouched ? (
@@ -278,7 +272,7 @@ export default function VerifyScreen() {
       </ScrollView>
       </KeyboardAvoidingView>
 
-      {!loading && abrData && !alreadyVouched && (
+      {!loading && vouchStatus && !alreadyVouched && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.vouchBtn} onPress={onPressVouch} activeOpacity={0.85}>
             <AppText style={styles.vouchBtnText}>{btnLabel}</AppText>
