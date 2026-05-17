@@ -183,7 +183,7 @@ export default function VerifyScreen() {
 
           <TouchableOpacity
             style={styles.primarySuccessBtn}
-            onPress={() => router.replace("/(app)/vouches")}
+            onPress={() => router.back()}
             activeOpacity={0.85}
           >
             <AppText style={styles.primarySuccessBtnText}>Vouch another business</AppText>
@@ -191,7 +191,10 @@ export default function VerifyScreen() {
 
           <TouchableOpacity
             style={styles.secondarySuccessBtn}
-            onPress={() => router.replace("/(app)/home")}
+            onPress={() => {
+              router.dismissAll();
+              router.replace("/(app)/home" as any);
+            }}
             activeOpacity={0.7}
           >
             <AppText style={styles.secondarySuccessBtnText}>Back to home</AppText>
@@ -204,7 +207,7 @@ export default function VerifyScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(app)/vouches")} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>Verify business</AppText>
@@ -333,7 +336,7 @@ export default function VerifyScreen() {
                   {/* Optional note */}
                   <AppText style={styles.noteLabel}>ADD A NOTE · optional</AppText>
                   <TextInput
-                    style={styles.noteInput}
+                    style={[styles.noteInput, { fontFamily: Fonts.regular }]}
                     value={note}
                     onChangeText={setNote}
                     placeholder="e.g. Worked together on Westmead Hospital Stage 2. Highly recommend."
@@ -341,7 +344,6 @@ export default function VerifyScreen() {
                     multiline
                     numberOfLines={3}
                     textAlignVertical="top"
-                    fontFamily={Fonts.regular}
                   />
                   <AppText style={styles.noteHint}>
                     Notes are private and not shown publicly.

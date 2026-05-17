@@ -36,15 +36,42 @@ vouchRouter.post(
       }> = body.references ?? [];
 
       const fromCompany = body.trade ?? body.name ?? "Unknown";
+      const userAbn: string = body.abn ?? "";
+
+      // Pre-check: block if any reference has already given a vouch to this user
+      for (const ref of references) {
+        if (!ref.name || !ref.mobile) continue;
+        const orConditions: object[] = [{ mobile: ref.mobile }];
+        if (ref.email) orConditions.push({ email: ref.email });
+        const refUser = await UserModel.findOne({ $or: orConditions }).select("_id").lean();
+        if (refUser && userAbn) {
+          const alreadyVouched = await GivenVouchModel.exists({
+            fromUserId: refUser._id,
+            toAbn: userAbn,
+          });
+          if (alreadyVouched) {
+            res.status(400).json({
+              error: `${ref.name} has already vouched for you. You cannot send them another request.`,
+            });
+            return;
+          }
+        }
+      }
 
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
+
+        // Skip if a request was already sent to this reference
+        const dupConditions: object[] = [{ toMobile: ref.mobile }];
+        if (ref.email) dupConditions.push({ toEmail: ref.email });
+        const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
+        if (existing) continue;
 
         const request = await VouchRequestModel.create({
           fromUserId: userId,
           fromName: body.name,
           fromCompany,
-          fromAbn: body.abn ?? "",
+          fromAbn: userAbn,
           toEmail: ref.email ?? "",
           toMobile: ref.mobile,
           relationship: ref.relationship,
