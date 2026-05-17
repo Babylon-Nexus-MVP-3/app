@@ -30,11 +30,20 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState("");
+  const [mobileDisplay, setMobileDisplay] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function onMobileChange(text: string) {
+    const digits = text.replace(/\D/g, "").slice(0, 10);
+    setMobile(digits);
+    if (digits.length <= 4) setMobileDisplay(digits);
+    else if (digits.length <= 7) setMobileDisplay(`${digits.slice(0, 4)} ${digits.slice(4)}`);
+    else setMobileDisplay(`${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`);
+  }
 
   function onAbnChange(text: string) {
     const digits = text.replace(/\D/g, "").slice(0, 11);
@@ -155,13 +164,11 @@ export default function SignUp() {
             </TouchableOpacity>
           </View>
 
-          <AppText style={styles.label}>
-            MOBILE <AppText style={styles.optional}>(optional)</AppText>
-          </AppText>
+          <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
             style={styles.input}
-            value={mobile}
-            onChangeText={setMobile}
+            value={mobileDisplay}
+            onChangeText={onMobileChange}
             placeholder="0412 345 678"
             placeholderTextColor={Colors.grey300}
             keyboardType="phone-pad"
@@ -250,11 +257,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
-  },
-  optional: {
-    fontFamily: Fonts.regular,
-    textTransform: "none",
-    letterSpacing: 0,
   },
   input: {
     height: 52,
