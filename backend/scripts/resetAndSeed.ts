@@ -95,7 +95,7 @@ async function resetAndSeed() {
     businessName: "Smith Construction",
   });
 
-  const charlie = await UserModel.create({
+  await UserModel.create({
     name: "Charlie Brown",
     email: "charlie@vouchpay.dev",
     password: hashed,
