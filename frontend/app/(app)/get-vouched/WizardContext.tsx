@@ -9,6 +9,8 @@ export type Step1Data = {
   idType: "passport" | "licence";
   idNumber: string;
   idExpiry: string;
+  idState: string;
+  idCountry: string;
 };
 
 export type Step2Data = {
@@ -65,9 +67,11 @@ const emptyStep1: Step1Data = {
   name: "",
   abn: "",
   trade: "",
-  idType: "passport",
+  idType: "licence",
   idNumber: "",
   idExpiry: "",
+  idState: "",
+  idCountry: "",
 };
 
 const emptyStep2: Step2Data = {
@@ -104,6 +108,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           idType: p.idType === "licence" ? "licence" : "passport",
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
+          idState: p.idState ?? "",
+          idCountry: p.idCountry ?? "",
         });
         setStep2({
           currentProjectName: p.currentProjectName ?? "",
