@@ -103,7 +103,12 @@ export default function GetVouchedIntro() {
                 <TouchableOpacity
                   style={styles.stepRow}
                   activeOpacity={0.7}
-                  onPress={() => router.push("/(app)/verify-mobile")}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(app)/verify-mobile",
+                      params: { returnTo: "get-vouched" },
+                    })
+                  }
                 >
                   <View style={[styles.stepCircle, styles.stepCircleActive]}>
                     <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
