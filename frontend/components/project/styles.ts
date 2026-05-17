@@ -445,12 +445,18 @@ export const styles = StyleSheet.create({
   fabText: { fontSize: 28, color: Colors.white, lineHeight: 32, fontFamily: Fonts.regular },
 
   // Raise Invoice
+  raiseFixedHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: Colors.grey100,
+  },
   raiseKeyboardView: { flex: 1 },
   raiseScroll: { flex: 1 },
   raiseBody: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 72 },
   raiseBack: {
     alignSelf: "flex-start",
-    marginBottom: 24,
+    marginBottom: 16,
     minHeight: 44,
     minWidth: 44,
     justifyContent: "center",
@@ -459,7 +465,7 @@ export const styles = StyleSheet.create({
   },
   raiseBackArrow: { fontSize: 28, color: Colors.black },
   raiseTitle: { fontSize: 28, fontFamily: Fonts.extraBold, color: Colors.black, marginBottom: 6 },
-  raiseSubtitle: { fontSize: 14, color: Colors.grey500, marginBottom: 36 },
+  raiseSubtitle: { fontSize: 14, color: Colors.grey500, marginBottom: 12 },
   raiseFieldLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,

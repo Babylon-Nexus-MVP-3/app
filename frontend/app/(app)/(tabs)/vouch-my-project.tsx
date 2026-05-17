@@ -60,18 +60,28 @@ export default function VouchMyProjectScreen() {
       >
         {/* Hero illustration */}
         <View style={styles.heroContainer}>
-          <View style={styles.heroBigCircle}>
-            <Ionicons name="radio-button-on-outline" size={38} color={Colors.amber} />
+          <View style={[styles.heroBigCircle, isUnlocked && styles.heroBigCircleUnlocked]}>
+            <Ionicons
+              name={isUnlocked ? "shield-checkmark-outline" : "radio-button-on-outline"}
+              size={38}
+              color={isUnlocked ? Colors.vouchGreen : Colors.amber}
+            />
           </View>
-          <View style={styles.heroLockBadge}>
-            <Ionicons name="lock-closed-outline" size={14} color={Colors.black} />
-          </View>
+          {!isUnlocked && (
+            <View style={styles.heroLockBadge}>
+              <Ionicons name="lock-closed-outline" size={14} color={Colors.black} />
+            </View>
+          )}
         </View>
 
         {/* Heading */}
-        <AppText style={styles.heading}>Your project health is locked.</AppText>
+        <AppText style={styles.heading}>
+          {isUnlocked ? "Your project is ready." : "Your project health is locked."}
+        </AppText>
         <AppText style={styles.subheading}>
-          Connect a project to start tracking{"\n"}payment health and build trust.
+          {isUnlocked
+            ? "Connect a project to start tracking payment health and building trust."
+            : `Connect a project to start tracking${"\n"}payment health and build trust.`}
         </AppText>
 
         {/* Vouch gate notice */}
@@ -96,12 +106,18 @@ export default function VouchMyProjectScreen() {
         )}
 
         {/* What your score will show */}
-        <View style={styles.featureCard}>
-          <AppText style={styles.featureCardLabel}>WHAT YOUR SCORE WILL SHOW</AppText>
+        <View style={[styles.featureCard, isUnlocked && styles.featureCardUnlocked]}>
+          <AppText style={[styles.featureCardLabel, isUnlocked && styles.featureCardLabelUnlocked]}>
+            WHAT YOUR SCORE WILL SHOW
+          </AppText>
 
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Ionicons name="pulse-outline" size={20} color={Colors.amber} />
+              <Ionicons
+                name="pulse-outline"
+                size={20}
+                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
+              />
             </View>
             <View style={styles.featureText}>
               <AppText style={styles.featureTitle}>Payment health on active projects</AppText>
@@ -113,7 +129,11 @@ export default function VouchMyProjectScreen() {
 
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.amber} />
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
+              />
             </View>
             <View style={styles.featureText}>
               <AppText style={styles.featureTitle}>
@@ -203,6 +223,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  heroBigCircleUnlocked: {
+    backgroundColor: Colors.vouchGreenLight,
+  },
   heroLockBadge: {
     position: "absolute",
     bottom: 0,
@@ -244,6 +267,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.amber,
     letterSpacing: 0.8,
+  },
+  featureCardUnlocked: {
+    backgroundColor: Colors.vouchGreenLight,
+  },
+  featureCardLabelUnlocked: {
+    color: Colors.vouchGreen,
   },
   featureItem: {
     flexDirection: "row",

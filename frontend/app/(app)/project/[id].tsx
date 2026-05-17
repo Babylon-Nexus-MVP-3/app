@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
@@ -42,6 +42,7 @@ export default function ProjectDetail() {
   const openInvoiceId = params.openInvoice;
 
   const { fetchWithAuth, user } = useAuth();
+  const insets = useSafeAreaInsets();
   const userId = user?.id ?? "";
   const [activeTab, setActiveTab] = useState<"calendar" | "myspace">("calendar");
 
@@ -510,18 +511,8 @@ export default function ProjectDetail() {
               </TouchableOpacity>
             </View>
           ) : (
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
-              style={styles.raiseKeyboardView}
-            >
-              <ScrollView
-                style={styles.raiseScroll}
-                contentContainerStyle={styles.raiseBody}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-              >
+            <>
+              <View style={styles.raiseFixedHeader}>
                 <TouchableOpacity
                   onPress={() => setInvoiceVisible(false)}
                   style={styles.raiseBack}
@@ -531,65 +522,77 @@ export default function ProjectDetail() {
                 >
                   <Ionicons name="arrow-back" size={24} color={Colors.black} />
                 </TouchableOpacity>
-
                 <AppText style={styles.raiseTitle}>Raise Invoice</AppText>
                 <AppText style={styles.raiseSubtitle}>{projectName}</AppText>
-
-                <AppText style={styles.raiseFieldLabel}>Amount ($)</AppText>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. 45000"
-                  placeholderTextColor={Colors.grey300}
-                  value={invAmount}
-                  onChangeText={setInvAmount}
-                  keyboardType="numeric"
-                />
-
-                <AppText style={styles.raiseFieldLabel}>Description</AppText>
-                <TextInput
-                  style={[styles.raiseInput, styles.raiseMultiline]}
-                  placeholder="e.g. Electrical rough-in — Level 3"
-                  placeholderTextColor={Colors.grey300}
-                  value={invDesc}
-                  onChangeText={setInvDesc}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-
-                <AppText style={styles.raiseFieldLabel}>Submitting Party</AppText>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. ABC Electrical"
-                  placeholderTextColor={Colors.grey300}
-                  value={invSubmittingParty}
-                  onChangeText={setInvSubmittingParty}
-                />
-
-                <AppText style={styles.raiseFieldLabel}>Category</AppText>
-                <TextInput
-                  style={styles.raiseInput}
-                  placeholder="e.g. Electrical, Plumbing"
-                  placeholderTextColor={Colors.grey300}
-                  value={invCategory}
-                  onChangeText={setInvCategory}
-                />
-
-                {invoiceError && <AppText style={styles.inviteError}>{invoiceError}</AppText>}
-
-                <TouchableOpacity
-                  style={styles.raisePrimaryBtn}
-                  onPress={handleAddInvoice}
-                  disabled={invoiceLoading}
+              </View>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+                style={styles.raiseKeyboardView}
+              >
+                <ScrollView
+                  style={styles.raiseScroll}
+                  contentContainerStyle={styles.raiseBody}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
                 >
-                  {invoiceLoading ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <AppText style={styles.raisePrimaryBtnText}>Submit Invoice</AppText>
-                  )}
-                </TouchableOpacity>
-              </ScrollView>
-            </KeyboardAvoidingView>
+                  <AppText style={styles.raiseFieldLabel}>Amount ($)</AppText>
+                  <TextInput
+                    style={styles.raiseInput}
+                    placeholder="e.g. 45000"
+                    placeholderTextColor={Colors.grey300}
+                    value={invAmount}
+                    onChangeText={setInvAmount}
+                    keyboardType="numeric"
+                  />
+
+                  <AppText style={styles.raiseFieldLabel}>Description</AppText>
+                  <TextInput
+                    style={[styles.raiseInput, styles.raiseMultiline]}
+                    placeholder="e.g. Electrical rough-in — Level 3"
+                    placeholderTextColor={Colors.grey300}
+                    value={invDesc}
+                    onChangeText={setInvDesc}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+
+                  <AppText style={styles.raiseFieldLabel}>Submitting Party</AppText>
+                  <TextInput
+                    style={styles.raiseInput}
+                    placeholder="e.g. ABC Electrical"
+                    placeholderTextColor={Colors.grey300}
+                    value={invSubmittingParty}
+                    onChangeText={setInvSubmittingParty}
+                  />
+
+                  <AppText style={styles.raiseFieldLabel}>Category</AppText>
+                  <TextInput
+                    style={styles.raiseInput}
+                    placeholder="e.g. Electrical, Plumbing"
+                    placeholderTextColor={Colors.grey300}
+                    value={invCategory}
+                    onChangeText={setInvCategory}
+                  />
+
+                  {invoiceError && <AppText style={styles.inviteError}>{invoiceError}</AppText>}
+
+                  <TouchableOpacity
+                    style={styles.raisePrimaryBtn}
+                    onPress={handleAddInvoice}
+                    disabled={invoiceLoading}
+                  >
+                    {invoiceLoading ? (
+                      <ActivityIndicator color={Colors.white} />
+                    ) : (
+                      <AppText style={styles.raisePrimaryBtnText}>Submit Invoice</AppText>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </KeyboardAvoidingView>
+            </>
           )}
         </SafeAreaView>
       </Modal>
@@ -597,118 +600,129 @@ export default function ProjectDetail() {
       {/* ── Invite modal ── */}
       <Modal visible={inviteVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={styles.inviteScreen}>
-          <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
-            <View style={styles.inviteHeader}>
-              <TouchableOpacity
-                onPress={() => setInviteVisible(false)}
-                style={styles.inviteBackBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Close invite"
-              >
-                <Ionicons name="arrow-back" size={20} color={Colors.white} />
-                <AppText style={styles.inviteBackLabel}>My Space</AppText>
-              </TouchableOpacity>
-              <AppText style={styles.inviteTitle}>
-                {inviteCode ? "Invite Sent" : "Invite Team Member"}
-              </AppText>
-            </View>
-          </SafeAreaView>
-          <ScrollView
-            style={styles.inviteBody}
-            contentContainerStyle={styles.inviteBodyContent}
-            showsVerticalScrollIndicator={false}
+          <View
+            style={[
+              styles.inviteHeader,
+              { paddingTop: insets.top + 8, backgroundColor: Colors.vouchGreen },
+            ]}
           >
-            {inviteCode ? (
-              <View style={styles.inviteSuccess}>
-                <View style={styles.inviteSuccessIcon}>
-                  <Ionicons name="checkmark" size={32} color={Colors.white} />
+            <TouchableOpacity
+              onPress={() => setInviteVisible(false)}
+              style={styles.inviteBackBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Close invite"
+            >
+              <Ionicons name="arrow-back" size={20} color={Colors.white} />
+              <AppText style={styles.inviteBackLabel}>My Space</AppText>
+            </TouchableOpacity>
+            <AppText style={styles.inviteTitle}>
+              {inviteCode ? "Invite Sent" : "Invite Team Member"}
+            </AppText>
+          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              style={styles.inviteBody}
+              contentContainerStyle={styles.inviteBodyContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {inviteCode ? (
+                <View style={styles.inviteSuccess}>
+                  <View style={styles.inviteSuccessIcon}>
+                    <Ionicons name="checkmark" size={32} color={Colors.white} />
+                  </View>
+                  <AppText style={styles.inviteSuccessTitle}>Invite Sent!</AppText>
+                  <AppText style={styles.inviteSuccessHint}>
+                    Share this code with {inviteEmail}:
+                  </AppText>
+                  <View style={styles.inviteCodeBox}>
+                    <AppText style={styles.inviteCodeText}>{inviteCode}</AppText>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.copyBtn}
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(inviteCode!);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    <AppText style={styles.copyBtnText}>
+                      {copied ? "✓ Copied!" : "Copy Code"}
+                    </AppText>
+                  </TouchableOpacity>
+                  <AppText style={styles.inviteCodeNote}>
+                    The invitee will use this code to join the project.
+                  </AppText>
+                  <TouchableOpacity
+                    style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 32 }]}
+                    onPress={() => setInviteVisible(false)}
+                  >
+                    <AppText style={styles.invitePrimaryBtnText}>Done</AppText>
+                  </TouchableOpacity>
                 </View>
-                <AppText style={styles.inviteSuccessTitle}>Invite Sent!</AppText>
-                <AppText style={styles.inviteSuccessHint}>
-                  Share this code with {inviteEmail}:
-                </AppText>
-                <View style={styles.inviteCodeBox}>
-                  <AppText style={styles.inviteCodeText}>{inviteCode}</AppText>
-                </View>
-                <TouchableOpacity
-                  style={styles.copyBtn}
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(inviteCode!);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
-                >
-                  <AppText style={styles.copyBtnText}>{copied ? "✓ Copied!" : "Copy Code"}</AppText>
-                </TouchableOpacity>
-                <AppText style={styles.inviteCodeNote}>
-                  The invitee will use this code to join the project.
-                </AppText>
-                <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { alignSelf: "stretch", marginTop: 32 }]}
-                  onPress={() => setInviteVisible(false)}
-                >
-                  <AppText style={styles.invitePrimaryBtnText}>Done</AppText>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <AppText style={styles.inviteFieldLabel}>Email</AppText>
-                <TextInput
-                  style={styles.inviteInput}
-                  placeholder="name@company.com"
-                  placeholderTextColor={Colors.grey300}
-                  value={inviteEmail}
-                  onChangeText={setInviteEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <AppText style={styles.inviteFieldLabel}>Role</AppText>
-                <View style={styles.inviteRoleRow}>
-                  {INVITE_ROLES.map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      style={[
-                        styles.inviteRoleChip,
-                        inviteRole === r && styles.inviteRoleChipActive,
-                      ]}
-                      onPress={() => setInviteRole(r)}
-                    >
-                      <AppText
+              ) : (
+                <>
+                  <AppText style={styles.inviteFieldLabel}>Email</AppText>
+                  <TextInput
+                    style={styles.inviteInput}
+                    placeholder="name@company.com"
+                    placeholderTextColor={Colors.grey300}
+                    value={inviteEmail}
+                    onChangeText={setInviteEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <AppText style={styles.inviteFieldLabel}>Role</AppText>
+                  <View style={styles.inviteRoleRow}>
+                    {INVITE_ROLES.map((r) => (
+                      <TouchableOpacity
+                        key={r}
                         style={[
-                          styles.inviteRoleChipText,
-                          inviteRole === r && styles.inviteRoleChipTextActive,
+                          styles.inviteRoleChip,
+                          inviteRole === r && styles.inviteRoleChipActive,
                         ]}
+                        onPress={() => setInviteRole(r)}
                       >
-                        {r}
-                      </AppText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <AppText style={styles.inviteFieldLabel}>Trade</AppText>
-                <TextInput
-                  style={styles.inviteInput}
-                  placeholder="e.g. Electrical, Plumbing"
-                  placeholderTextColor={Colors.grey300}
-                  value={inviteTrade}
-                  onChangeText={setInviteTrade}
-                />
-                {inviteError && <AppText style={styles.inviteError}>{inviteError}</AppText>}
-                <TouchableOpacity
-                  style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
-                  onPress={handleInvite}
-                  disabled={inviteLoading}
-                >
-                  {inviteLoading ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <AppText style={styles.invitePrimaryBtnText}>Send Invite</AppText>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
+                        <AppText
+                          style={[
+                            styles.inviteRoleChipText,
+                            inviteRole === r && styles.inviteRoleChipTextActive,
+                          ]}
+                        >
+                          {r}
+                        </AppText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <AppText style={styles.inviteFieldLabel}>Trade</AppText>
+                  <TextInput
+                    style={styles.inviteInput}
+                    placeholder="e.g. Electrical, Plumbing"
+                    placeholderTextColor={Colors.grey300}
+                    value={inviteTrade}
+                    onChangeText={setInviteTrade}
+                  />
+                  {inviteError && <AppText style={styles.inviteError}>{inviteError}</AppText>}
+                  <TouchableOpacity
+                    style={[styles.invitePrimaryBtn, { marginTop: 8 }]}
+                    onPress={handleInvite}
+                    disabled={inviteLoading}
+                  >
+                    {inviteLoading ? (
+                      <ActivityIndicator color={Colors.white} />
+                    ) : (
+                      <AppText style={styles.invitePrimaryBtnText}>Send Invite</AppText>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
