@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -348,15 +348,15 @@ function RefForm({
 }
 
 export default function Step3() {
+  const { fresh } = useLocalSearchParams<{ fresh?: string }>();
+  const isFresh = fresh === "true";
   const { step1, step2, references, setReferences } = useWizard();
   const { fetchWithAuth, updateUser } = useAuth();
 
   const [refs, setRefs] = useState<Reference[]>(
-    references.length >= 2 ? references : [emptyRef(), emptyRef()]
+    isFresh ? [emptyRef()] : references.length >= 2 ? references : [emptyRef(), emptyRef()]
   );
-  // Which card is currently expanded (-1 = none)
   const [activeIndex, setActiveIndex] = useState(0);
-  const [showThird, setShowThird] = useState(refs.length > 2);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -367,30 +367,27 @@ export default function Step3() {
   }
 
   function handleDone(index: number) {
-    // Move to the next unfilled ref, or collapse if all done
     const nextEmpty = refs.findIndex((r, i) => i !== index && !isRefComplete(r));
-    if (nextEmpty !== -1) {
-      setActiveIndex(nextEmpty);
-    } else {
-      setActiveIndex(-1);
-    }
+    setActiveIndex(nextEmpty !== -1 ? nextEmpty : -1);
   }
 
-  function addThird() {
+  function addRef() {
     if (refs.length < 3) {
       setRefs((r) => [...r, emptyRef()]);
-      setActiveIndex(2);
+      setActiveIndex(refs.length);
     }
-    setShowThird(true);
   }
 
-  function deleteThird() {
-    setRefs((r) => r.slice(0, 2));
-    setShowThird(false);
-    setActiveIndex((prev) => (prev === 2 ? 0 : prev));
+  function deleteRef(index: number) {
+    setRefs((r) => r.filter((_, i) => i !== index));
+    setActiveIndex((prev) =>
+      prev === index ? Math.max(0, index - 1) : prev > index ? prev - 1 : prev
+    );
   }
 
-  const canSubmit = isRefComplete(refs[0]) && isRefComplete(refs[1]);
+  const canSubmit = isFresh
+    ? isRefComplete(refs[0])
+    : isRefComplete(refs[0]) && isRefComplete(refs[1]);
 
   async function onSubmit() {
     setSubmitting(true);
@@ -438,8 +435,12 @@ export default function Step3() {
     } finally {
       setSubmitting(false);
     }
-    router.dismissAll();
-    router.push("/(app)/get-vouched/success");
+    if (isFresh) {
+      router.back();
+    } else {
+      router.dismissAll();
+      router.push("/(app)/get-vouched/success");
+    }
   }
 
   const refLabels = ["REFERENCE 1", "REFERENCE 2", "REFERENCE 3"];
@@ -450,24 +451,25 @@ export default function Step3() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>STEP 3 OF 3</AppText>
+        <AppText style={styles.headerTitle}>{isFresh ? "REQUEST A VOUCH" : "STEP 3 OF 3"}</AppText>
         <View style={{ width: 24 }} />
       </View>
-      <ProgressBar />
+      {!isFresh && <ProgressBar />}
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>Your two references</AppText>
+          <AppText style={styles.heading}>
+            {isFresh ? "Who can vouch for you?" : "Your two references"}
+          </AppText>
           <AppText style={styles.subtitle}>
             {"They'll get a quick request. Most respond in 24 hrs."}
           </AppText>
 
           {refs.map((ref, i) => {
-            if (!showThird && i === 2) return null;
-            const isOptional = i === 2;
+            const canDel = isFresh ? i > 0 : i === 2;
             if (i === activeIndex) {
               return (
                 <RefForm
@@ -476,7 +478,7 @@ export default function Step3() {
                   value={ref}
                   onChange={(r) => updateRef(i, r)}
                   onDone={() => handleDone(i)}
-                  onDelete={isOptional ? deleteThird : undefined}
+                  onDelete={canDel ? () => deleteRef(i) : undefined}
                 />
               );
             }
@@ -486,15 +488,17 @@ export default function Step3() {
                 ref={ref}
                 label={refLabels[i]}
                 onTap={() => setActiveIndex(i)}
-                onDelete={isOptional ? deleteThird : undefined}
+                onDelete={canDel ? () => deleteRef(i) : undefined}
               />
             );
           })}
 
-          {!showThird && (
-            <TouchableOpacity style={styles.addThirdBtn} onPress={addThird}>
+          {refs.length < 3 && (
+            <TouchableOpacity style={styles.addThirdBtn} onPress={addRef}>
               <Ionicons name="add" size={16} color={Colors.grey500} />
-              <AppText style={styles.addThirdText}>Add a 3rd (optional)</AppText>
+              <AppText style={styles.addThirdText}>
+                {isFresh ? "Add another" : "Add a 3rd (optional)"}
+              </AppText>
             </TouchableOpacity>
           )}
 

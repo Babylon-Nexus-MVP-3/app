@@ -9,7 +9,7 @@ export interface VouchRequest extends Document {
   toMobile: string;
   relationship: string;
   projectName: string;
-  status: "pending" | "responded";
+  status: "pending" | "responded" | "ignored";
   respondedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +25,7 @@ const vouchRequestSchema = new Schema<VouchRequest>(
     toMobile: { type: String, required: true },
     relationship: { type: String, required: true },
     projectName: { type: String, default: "" },
-    status: { type: String, enum: ["pending", "responded"], default: "pending" },
+    status: { type: String, enum: ["pending", "responded", "ignored"], default: "pending" },
     respondedAt: { type: Date },
   },
   { timestamps: true }
