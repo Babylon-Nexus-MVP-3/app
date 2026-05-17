@@ -432,5 +432,12 @@ const styles = StyleSheet.create({
   },
   feedbackText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
   feedbackLink: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
-  feedbackEmail: { fontSize: 11, fontFamily: Fonts.regular, color: Colors.grey500, width: "100%", textAlign: "center", marginTop: 2 },
+  feedbackEmail: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    width: "100%",
+    textAlign: "center",
+    marginTop: 2,
+  },
 });

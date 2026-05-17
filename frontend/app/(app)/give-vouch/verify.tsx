@@ -138,138 +138,150 @@ export default function VerifyScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* ABN confirmed row */}
-        <AppText style={styles.fieldLabel}>ABN</AppText>
-        <View style={styles.abnConfirmed}>
-          <AppText style={styles.abnConfirmedText}>{formatDisplayAbn(abn ?? "")}</AppText>
-          {!loading && <Ionicons name="checkmark" size={20} color={Colors.vouchGreen} />}
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* ABN confirmed row */}
+          <AppText style={styles.fieldLabel}>ABN</AppText>
+          <View style={styles.abnConfirmed}>
+            <AppText style={styles.abnConfirmedText}>{formatDisplayAbn(abn ?? "")}</AppText>
+            {!loading && <Ionicons name="checkmark" size={20} color={Colors.vouchGreen} />}
+          </View>
 
-        {loading ? (
-          <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 24 }} />
-        ) : vouchStatus ? (
-          <>
-            {/* ABR result — hidden until ABR_GUID is configured */}
-            {abrData && (
-              <View style={styles.abrCard}>
-                <AppText style={styles.abrFrom}>FROM ABR</AppText>
-                <AppText style={styles.abrName}>{abrData.entityName}</AppText>
-                <AppText style={styles.abrMeta}>
-                  {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
-                </AppText>
-              </View>
-            )}
-
-            {/* Already vouched */}
-            {alreadyVouched ? (
-              <View style={styles.alreadyVouchedCard}>
-                <Ionicons name="checkmark-circle" size={28} color={Colors.vouchGreen} />
-                <View style={{ flex: 1 }}>
-                  <AppText style={styles.alreadyVouchedTitle}>
-                    {"You've already vouched them"}
-                  </AppText>
-                  <AppText style={styles.alreadyVouchedSub}>
-                    You can only vouch for a business once.
+          {loading ? (
+            <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 24 }} />
+          ) : vouchStatus ? (
+            <>
+              {/* ABR result — hidden until ABR_GUID is configured */}
+              {abrData && (
+                <View style={styles.abrCard}>
+                  <AppText style={styles.abrFrom}>FROM ABR</AppText>
+                  <AppText style={styles.abrName}>{abrData.entityName}</AppText>
+                  <AppText style={styles.abrMeta}>
+                    {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
                   </AppText>
                 </View>
-              </View>
-            ) : requestId ? (
-              /* Pending request — show neutral vouch count */
-              <View style={styles.neutralCard}>
-                <AppText style={styles.neutralCountNum}>{vouchStatus?.vouchCount ?? 0}</AppText>
-                <AppText style={styles.neutralCountLabel}>
-                  {(vouchStatus?.vouchCount ?? 0) === 1 ? "vouch received" : "vouches received"}
-                </AppText>
-              </View>
-            ) : isOnVouch ? (
-              /* Active on Vouch */
-              <View style={styles.activeCard}>
-                <View style={styles.statusRow}>
-                  <Ionicons name="shield-checkmark-outline" size={16} color={Colors.vouchGreen} />
-                  <AppText style={styles.activeLabel}>ACTIVE ON VOUCH</AppText>
+              )}
+
+              {/* Already vouched */}
+              {alreadyVouched ? (
+                <View style={styles.alreadyVouchedCard}>
+                  <Ionicons name="checkmark-circle" size={28} color={Colors.vouchGreen} />
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.alreadyVouchedTitle}>
+                      {"You've already vouched them"}
+                    </AppText>
+                    <AppText style={styles.alreadyVouchedSub}>
+                      You can only vouch for a business once.
+                    </AppText>
+                  </View>
                 </View>
-                <AppText style={styles.vouchCount}>
-                  <AppText style={styles.vouchCountNum}>{vouchStatus!.vouchCount}</AppText>
-                  {"  "}
-                  <AppText style={styles.vouchCountLabel}>vouches received</AppText>
-                </AppText>
-                {vouchStatus?.attributeSummary ? (
-                  <AppText style={styles.activeDesc}>{vouchStatus.attributeSummary}</AppText>
-                ) : null}
-                <View style={styles.divider} />
-                <View style={styles.noteRow}>
-                  <Ionicons name="information-circle-outline" size={14} color={Colors.vouchGreen} />
-                  <AppText style={styles.activeNote}>
-                    Your vouch joins their existing reputation.
+              ) : requestId ? (
+                /* Pending request — show neutral vouch count */
+                <View style={styles.neutralCard}>
+                  <AppText style={styles.neutralCountNum}>{vouchStatus?.vouchCount ?? 0}</AppText>
+                  <AppText style={styles.neutralCountLabel}>
+                    {(vouchStatus?.vouchCount ?? 0) === 1 ? "vouch received" : "vouches received"}
                   </AppText>
                 </View>
-              </View>
-            ) : (
-              /* Not yet on Vouch — unified card with contact fields */
-              <View style={styles.pendingCard}>
-                <View style={styles.statusRow}>
-                  <Ionicons name="shield-outline" size={16} color={Colors.amber} />
-                  <AppText style={styles.pendingLabel}>NOT YET ON VOUCH</AppText>
-                </View>
-                <AppText style={styles.pendingTitle}>Be the first to vouch them.</AppText>
-                <AppText style={styles.pendingDesc}>
-                  Add their contact details and we'll email them to claim it.
-                </AppText>
-
-                <AppText style={styles.contactLabel}>NAME</AppText>
-                <TextInput
-                  style={styles.contactInput}
-                  value={recipientName}
-                  onChangeText={(v) => { setRecipientName(v); setContactError(""); }}
-                  placeholder="Business owner's name"
-                  placeholderTextColor={Colors.grey300}
-                  autoCapitalize="words"
-                />
-
-                <AppText style={styles.contactLabel}>EMAIL</AppText>
-                <TextInput
-                  style={styles.contactInput}
-                  value={recipientEmail}
-                  onChangeText={(v) => { setRecipientEmail(v); setContactError(""); }}
-                  placeholder="their@email.com"
-                  placeholderTextColor={Colors.grey300}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-
-                <AppText style={styles.contactLabel}>
-                  MOBILE{" "}
-                  <AppText style={styles.contactOptional}>(optional)</AppText>
-                </AppText>
-                <TextInput
-                  style={styles.contactInput}
-                  value={formatMobileDisplay(recipientMobile.replace(/\D/g, ""))}
-                  onChangeText={(v) => setRecipientMobile(v.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="0412 345 678"
-                  placeholderTextColor={Colors.grey300}
-                  keyboardType="number-pad"
-                  maxLength={12}
-                />
-
-                {contactError ? (
-                  <AppText style={styles.contactError}>{contactError}</AppText>
-                ) : null}
-
-                <View style={styles.divider} />
-                <View style={styles.noteRow}>
-                  <Ionicons name="time-outline" size={14} color={Colors.amber} />
-                  <AppText style={styles.pendingNote}>
-                    Your vouch stays pending until they accept the invite.
+              ) : isOnVouch ? (
+                /* Active on Vouch */
+                <View style={styles.activeCard}>
+                  <View style={styles.statusRow}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={Colors.vouchGreen} />
+                    <AppText style={styles.activeLabel}>ACTIVE ON VOUCH</AppText>
+                  </View>
+                  <AppText style={styles.vouchCount}>
+                    <AppText style={styles.vouchCountNum}>{vouchStatus!.vouchCount}</AppText>
+                    {"  "}
+                    <AppText style={styles.vouchCountLabel}>vouches received</AppText>
                   </AppText>
+                  {vouchStatus?.attributeSummary ? (
+                    <AppText style={styles.activeDesc}>{vouchStatus.attributeSummary}</AppText>
+                  ) : null}
+                  <View style={styles.divider} />
+                  <View style={styles.noteRow}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={14}
+                      color={Colors.vouchGreen}
+                    />
+                    <AppText style={styles.activeNote}>
+                      Your vouch joins their existing reputation.
+                    </AppText>
+                  </View>
                 </View>
-              </View>
-            )}
-          </>
-        ) : null}
-      </ScrollView>
+              ) : (
+                /* Not yet on Vouch — unified card with contact fields */
+                <View style={styles.pendingCard}>
+                  <View style={styles.statusRow}>
+                    <Ionicons name="shield-outline" size={16} color={Colors.amber} />
+                    <AppText style={styles.pendingLabel}>NOT YET ON VOUCH</AppText>
+                  </View>
+                  <AppText style={styles.pendingTitle}>Be the first to vouch them.</AppText>
+                  <AppText style={styles.pendingDesc}>
+                    {"Add their contact details and we'll email them to claim it."}
+                  </AppText>
+
+                  <AppText style={styles.contactLabel}>NAME</AppText>
+                  <TextInput
+                    style={styles.contactInput}
+                    value={recipientName}
+                    onChangeText={(v) => {
+                      setRecipientName(v);
+                      setContactError("");
+                    }}
+                    placeholder="Business owner's name"
+                    placeholderTextColor={Colors.grey300}
+                    autoCapitalize="words"
+                  />
+
+                  <AppText style={styles.contactLabel}>EMAIL</AppText>
+                  <TextInput
+                    style={styles.contactInput}
+                    value={recipientEmail}
+                    onChangeText={(v) => {
+                      setRecipientEmail(v);
+                      setContactError("");
+                    }}
+                    placeholder="their@email.com"
+                    placeholderTextColor={Colors.grey300}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+
+                  <AppText style={styles.contactLabel}>
+                    MOBILE <AppText style={styles.contactOptional}>(optional)</AppText>
+                  </AppText>
+                  <TextInput
+                    style={styles.contactInput}
+                    value={formatMobileDisplay(recipientMobile.replace(/\D/g, ""))}
+                    onChangeText={(v) => setRecipientMobile(v.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="0412 345 678"
+                    placeholderTextColor={Colors.grey300}
+                    keyboardType="number-pad"
+                    maxLength={12}
+                  />
+
+                  {contactError ? (
+                    <AppText style={styles.contactError}>{contactError}</AppText>
+                  ) : null}
+
+                  <View style={styles.divider} />
+                  <View style={styles.noteRow}>
+                    <Ionicons name="time-outline" size={14} color={Colors.amber} />
+                    <AppText style={styles.pendingNote}>
+                      Your vouch stays pending until they accept the invite.
+                    </AppText>
+                  </View>
+                </View>
+              )}
+            </>
+          ) : null}
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {!loading && vouchStatus && !alreadyVouched && (

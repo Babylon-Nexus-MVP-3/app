@@ -28,14 +28,15 @@ const ATTRIBUTES = [
 ];
 
 export default function AttributesScreen() {
-  const { abn, businessName, requestId, recipientName, recipientEmail, recipientMobile } = useLocalSearchParams<{
-    abn: string;
-    businessName: string;
-    requestId?: string;
-    recipientName?: string;
-    recipientEmail?: string;
-    recipientMobile?: string;
-  }>();
+  const { abn, businessName, requestId, recipientName, recipientEmail, recipientMobile } =
+    useLocalSearchParams<{
+      abn: string;
+      businessName: string;
+      requestId?: string;
+      recipientName?: string;
+      recipientEmail?: string;
+      recipientMobile?: string;
+    }>();
   const { fetchWithAuth } = useAuth();
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -180,7 +181,7 @@ export default function AttributesScreen() {
 
           <AppText style={styles.noteLabel}>ADD A NOTE · optional</AppText>
           <TextInput
-            style={styles.noteInput}
+            style={[styles.noteInput, { fontFamily: Fonts.regular }]}
             value={note}
             onChangeText={setNote}
             placeholder="e.g. Worked together on Westmead Hospital Stage 2. Highly recommend."
@@ -188,7 +189,6 @@ export default function AttributesScreen() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            fontFamily={Fonts.regular}
           />
           <AppText style={styles.noteHint}>Notes are private and not shown publicly.</AppText>
         </ScrollView>

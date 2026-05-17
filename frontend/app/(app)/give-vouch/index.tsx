@@ -342,7 +342,10 @@ export default function GiveAVouchScreen() {
                       idx < nameResults.length - 1 && styles.resultRowBorder,
                     ]}
                     activeOpacity={0.7}
-                    onPress={() => { setShowNameSearch(false); proceedWithAbn(item.abn); }}
+                    onPress={() => {
+                      setShowNameSearch(false);
+                      proceedWithAbn(item.abn);
+                    }}
                   >
                     <View style={{ flex: 1, gap: 2 }}>
                       <AppText style={styles.resultName} numberOfLines={1}>
