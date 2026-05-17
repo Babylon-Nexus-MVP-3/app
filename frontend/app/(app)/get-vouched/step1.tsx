@@ -348,18 +348,7 @@ export default function Step1() {
                   <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
                 </View>
               )}
-              {abrResult && !abrLoading && (
-                <View style={styles.abrConfirmed}>
-                  <Ionicons name="checkmark-circle" size={16} color={Colors.vouchGreen} />
-                  <AppText style={styles.abrConfirmedText}>
-                    {abrResult.tradingName || abrResult.entityName}
-                    {"  ·  "}
-                    {abrResult.businessType}
-                    {"  ·  "}
-                    {abrResult.state}
-                  </AppText>
-                </View>
-              )}
+              {/* abrConfirmed card hidden until ABR_GUID is configured — restore the block below when ready */}
               {abrError && !abrLoading && <AppText style={styles.abrError}>{abrError}</AppText>}
             </View>
             <Field

@@ -86,6 +86,7 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
+          // When ABR_GUID is configured: add ABR lookup here and include businessName in this body
         }),
       });
       if (!res.ok) {

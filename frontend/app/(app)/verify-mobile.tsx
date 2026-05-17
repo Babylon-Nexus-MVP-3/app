@@ -168,7 +168,7 @@ export default function VerifyMobile() {
         <View style={styles.inner}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => (step === "otp" ? setStep("enter") : navigateAfterVerify())}
+            onPress={() => (step === "otp" ? setStep("enter") : router.back())}
             hitSlop={14}
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />

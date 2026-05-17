@@ -91,23 +91,21 @@ export default function AddAbn() {
     setLoading(true);
     setError("");
     try {
-      const businessName = abrResult?.tradingName || abrResult?.entityName;
+      // When ABR_GUID is configured: uncomment businessName below and in updateUser calls
+      // const businessName = abrResult?.tradingName || abrResult?.entityName;
       const res = await fetchWithAuth(`${API_BASE_URL}/auth/profile`, {
         method: "PATCH",
-        body: JSON.stringify({ abn: abnDigits, businessName }),
+        body: JSON.stringify({ abn: abnDigits /*, businessName */ }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Failed to save. Please try again.");
       }
-      await updateUser({ abn: abnDigits, businessName });
+      await updateUser({ abn: abnDigits /*, businessName */ });
       router.push("/(app)/me" as any);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
-        await updateUser({
-          abn: abnDigits,
-          businessName: abrResult?.tradingName || abrResult?.entityName,
-        });
+        await updateUser({ abn: abnDigits /*, businessName */ });
         router.push("/(app)/me" as any);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -165,20 +163,7 @@ export default function AddAbn() {
               <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
             </View>
           )}
-          {abrResult && !abrLoading && (
-            <View style={styles.abrConfirmed}>
-              <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
-              <AppText style={styles.abrConfirmedText}>
-                {abrResult.tradingName || abrResult.entityName}
-                {"  ·  "}
-                {abrResult.businessType}
-                {"  ·  "}
-                {abrResult.state}
-                {"  ·  active "}
-                {abrResult.activeYears} yrs
-              </AppText>
-            </View>
-          )}
+          {/* abrConfirmed card hidden until ABR_GUID is configured */}
           {abrError && !abrLoading && <AppText style={styles.fieldError}>{abrError}</AppText>}
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
