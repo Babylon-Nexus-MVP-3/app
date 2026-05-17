@@ -94,9 +94,7 @@ export default function GetVouchedIntro() {
           </View>
 
           <AppText style={styles.title}>Build your Vouch profile.</AppText>
-          <AppText style={styles.subtitle}>
-            Like a supplier credit application — built once, reused everywhere.
-          </AppText>
+          <AppText style={styles.subtitle}>Built once, used everywhere</AppText>
 
           <View style={styles.stepList}>
             {/* Mobile verification prerequisite — hidden once verified */}
