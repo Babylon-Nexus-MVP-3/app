@@ -84,8 +84,13 @@ abrRouter.get("/search", async (req: Request, res: Response) => {
 
     const raw = await upstream.json();
 
-    const names: Array<{ Abn: string; Name: string; State: string; Postcode: string; Score: number }> =
-      raw.Names ?? [];
+    const names: Array<{
+      Abn: string;
+      Name: string;
+      State: string;
+      Postcode: string;
+      Score: number;
+    }> = raw.Names ?? [];
 
     const results = names.slice(0, 10).map((entry) => ({
       abn: entry.Abn,
