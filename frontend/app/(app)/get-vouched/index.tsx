@@ -42,7 +42,24 @@ type SentRequest = {
   status: "pending" | "responded";
   fromName: string;
   fromCompany: string;
+  createdAt: string;
+  respondedAt?: string;
 };
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days} day${days !== 1 ? "s" : ""} ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks} week${weeks !== 1 ? "s" : ""} ago`;
+  const months = Math.floor(days / 30);
+  return `${months} month${months !== 1 ? "s" : ""} ago`;
+}
 
 export default function GetVouchedIntro() {
   const { fetchWithAuth, user } = useAuth();
@@ -52,14 +69,13 @@ export default function GetVouchedIntro() {
   const [profileSubmitted, setProfileSubmitted] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   const loadProfile = useCallback(async () => {
     try {
       const r = await fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`);
       if (r.ok) {
         const profile = await r.json();
-        // Only treat as submitted if all 3 steps are present
         const fullySubmitted =
           profile.name &&
           profile.currentProjectName &&
@@ -67,6 +83,7 @@ export default function GetVouchedIntro() {
           profile.references.length >= 2;
         if (!fullySubmitted) return;
         setProfileSubmitted(true);
+        setLoadingRequests(true);
         try {
           const req = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`);
           if (req.ok) {
@@ -160,7 +177,7 @@ export default function GetVouchedIntro() {
           </Text>
 
           <View style={styles.requestList}>
-            <Text style={styles.requestListLabel}>REFERENCE STATUS</Text>
+            <Text style={styles.requestListLabel}>VOUCH REQUESTS · {sentRequests.length}</Text>
             {loadingRequests ? (
               <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 12 }} />
             ) : sentRequests.length === 0 ? (
@@ -169,39 +186,63 @@ export default function GetVouchedIntro() {
               sentRequests.map((r) => {
                 const done = r.status === "responded";
                 return (
-                  <View key={r._id} style={styles.requestRow}>
-                    <View
-                      style={[
-                        styles.requestDot,
-                        done ? styles.requestDotDone : styles.requestDotPending,
-                      ]}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.requestMobile}>{r.toEmail || r.toMobile}</Text>
-                      <Text style={styles.requestMeta}>
-                        {r.relationship} · {r.projectName}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        done ? styles.statusBadgeDone : styles.statusBadgePending,
-                      ]}
-                    >
-                      <Text
+                  <View key={r._id} style={[styles.requestRow, done && styles.requestRowDone]}>
+                    <View style={styles.requestRowTop}>
+                      <View style={styles.requestContact}>
+                        <Ionicons
+                          name={done ? "shield-checkmark" : "time-outline"}
+                          size={18}
+                          color={done ? Colors.vouchGreen : Colors.amber}
+                        />
+                        <Text style={styles.requestMobile} numberOfLines={1}>
+                          {r.toEmail || r.toMobile}
+                        </Text>
+                      </View>
+                      <View
                         style={[
-                          styles.statusBadgeText,
-                          done ? styles.statusBadgeTextDone : styles.statusBadgeTextPending,
+                          styles.statusBadge,
+                          done ? styles.statusBadgeDone : styles.statusBadgePending,
                         ]}
                       >
-                        {done ? "Completed" : "Pending"}
+                        <Text
+                          style={[
+                            styles.statusBadgeText,
+                            done ? styles.statusBadgeTextDone : styles.statusBadgeTextPending,
+                          ]}
+                        >
+                          {done ? "Vouched" : "Pending"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.requestRelMeta}>
+                      {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+                    </Text>
+
+                    <View style={styles.requestTimeRow}>
+                      <Text style={styles.requestTimeSent}>
+                        Sent {timeAgo(r.createdAt)}
                       </Text>
+                      {done && r.respondedAt ? (
+                        <Text style={styles.requestTimeResponded}>
+                          · Vouched {timeAgo(r.respondedAt)}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 );
               })
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.requestVouchBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push("/(app)/get-vouched/step3")}
+          >
+            <Ionicons name="person-add-outline" size={18} color={Colors.vouchGreen} />
+            <Text style={styles.requestVouchBtnText}>Request a vouch from someone</Text>
+          </TouchableOpacity>
         </ScrollView>
       ) : (
         <>
@@ -341,32 +382,46 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   requestRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
     backgroundColor: Colors.offWhite,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
+    gap: 6,
   },
-  requestDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  requestRowDone: {
+    backgroundColor: Colors.vouchGreenLight,
   },
-  requestDotDone: { backgroundColor: Colors.vouchGreen },
-  requestDotPending: { backgroundColor: Colors.amber },
-  requestMobile: { fontSize: 14, fontWeight: "600", color: Colors.black },
+  requestRowTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  requestContact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    flex: 1,
+  },
+  requestMobile: { fontSize: 14, fontWeight: "600", color: Colors.black, flex: 1 },
+  requestRelMeta: { fontSize: 12, color: Colors.grey500 },
+  requestTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  requestTimeSent: { fontSize: 12, color: Colors.grey500 },
+  requestTimeResponded: { fontSize: 12, color: Colors.vouchGreen, fontWeight: "600" },
   requestMeta: { fontSize: 12, color: Colors.grey500, marginTop: 2 },
   statusBadge: {
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  statusBadgeDone: { backgroundColor: Colors.vouchGreenLight },
+  statusBadgeDone: { backgroundColor: Colors.vouchGreen },
   statusBadgePending: { backgroundColor: Colors.amberBg },
   statusBadgeText: { fontSize: 11, fontWeight: "700" },
-  statusBadgeTextDone: { color: Colors.vouchGreen },
+  statusBadgeTextDone: { color: Colors.white },
   statusBadgeTextPending: { color: Colors.amber },
   header: {
     flexDirection: "row",
@@ -462,5 +517,22 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "700",
+  },
+  requestVouchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 28,
+    height: 52,
+    width: "100%",
+  },
+  requestVouchBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.vouchGreen,
   },
 });

@@ -7,9 +7,18 @@ import { VouchRequestModel } from "../models/vouchRequestModel";
 import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
+import { sendVouchRequestEmail } from "../service/email.service";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
+
+function normalizeAuMobile(mobile: string): string {
+  const digits = mobile.replace(/\D/g, "");
+  if (digits.startsWith("61") && digits.length === 11) return `+${digits}`;
+  if (digits.startsWith("0") && digits.length === 10) return `+61${digits.slice(1)}`;
+  if (digits.length === 9) return `+61${digits}`;
+  return `+${digits}`;
+}
 
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
@@ -40,28 +49,31 @@ vouchRouter.post(
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
+        const normalizedMobile = normalizeAuMobile(ref.mobile);
+        const normalizedEmail = ref.email?.trim().toLowerCase() ?? "";
+
         const request = await VouchRequestModel.create({
           fromUserId: userId,
           fromName: body.name,
           fromCompany,
           fromAbn: body.abn ?? "",
-          toEmail: ref.email ?? "",
-          toMobile: ref.mobile,
+          toEmail: normalizedEmail,
+          toMobile: normalizedMobile,
           relationship: ref.relationship,
           projectName: ref.project,
           status: "pending",
         });
 
-        // Find the reference's user account by mobile or email
-        const orConditions: object[] = [{ mobile: ref.mobile }];
-        if (ref.email) orConditions.push({ email: ref.email });
+        // Find the reference's user account — match by either mobile or email
+        const orConditions: object[] = [{ mobile: normalizedMobile }];
+        if (normalizedEmail) orConditions.push({ email: normalizedEmail });
 
         const refUser = await UserModel.findOne({ $or: orConditions })
           .select("_id pushToken")
           .lean();
 
         if (refUser) {
-          // Create in-app notification
+          // In-app notification
           await VouchNotificationModel.create({
             recipientUserId: refUser._id,
             requestId: request._id,
@@ -70,7 +82,7 @@ vouchRouter.post(
             projectName: ref.project,
           });
 
-          // Best-effort push notification
+          // Push notification (best-effort)
           const token = refUser.pushToken;
           if (token && Expo.isExpoPushToken(token)) {
             expo
@@ -84,6 +96,17 @@ vouchRouter.post(
               ])
               .catch(() => {});
           }
+        }
+
+        // Email notification — sent regardless of whether reference is on VouchPay
+        if (normalizedEmail) {
+          sendVouchRequestEmail(
+            normalizedEmail,
+            body.name,
+            fromCompany,
+            ref.relationship,
+            ref.project
+          ).catch(() => {});
         }
       }
 

@@ -15,15 +15,12 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [vouchProfileComplete, setVouchProfileComplete] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, notifRes, profileRes, sentRes] = await Promise.all([
+      const [vouchRes, notifRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
       ]);
       const vouchData = await vouchRes.json();
       const notifData = await notifRes.json();
@@ -31,15 +28,6 @@ export default function HomeScreen() {
       setUnreadCount(
         (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
       );
-      if (profileRes.ok) {
-        const sentData = await sentRes.json();
-        const sentRequests: { status: string }[] = sentData.requests ?? [];
-        const allResponded =
-          sentRequests.length > 0 && sentRequests.every((r) => r.status === "responded");
-        setVouchProfileComplete(allResponded);
-      } else {
-        setVouchProfileComplete(false);
-      }
     } catch {}
   }, [fetchWithAuth]);
 
@@ -93,34 +81,19 @@ export default function HomeScreen() {
 
         {/* Cards */}
         <View style={styles.cards}>
-          {/* Get Vouched / View vouch profile */}
+          {/* Get Vouched */}
           <TouchableOpacity
-            style={[
-              styles.card,
-              vouchProfileComplete ? styles.cardVouchComplete : styles.cardGetVouched,
-            ]}
+            style={[styles.card, styles.cardGetVouched]}
             activeOpacity={0.7}
-            onPress={() =>
-              vouchProfileComplete
-                ? router.push("/(app)/(tabs)/me")
-                : router.push("/(app)/get-vouched")
-            }
+            onPress={() => router.push("/(app)/get-vouched")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons
-                name={vouchProfileComplete ? "shield-checkmark" : "shield-checkmark-outline"}
-                size={28}
-                color={vouchProfileComplete ? Colors.white : Colors.vouchGreen}
-              />
+              <Ionicons name="shield-checkmark-outline" size={28} color={Colors.vouchGreen} />
             </View>
             <View style={styles.cardContent}>
-              <AppText style={[styles.cardTitle, vouchProfileComplete && styles.cardTitleWhite]}>
-                {vouchProfileComplete ? "View your vouch profile" : "Get Vouched"}
-              </AppText>
-              <AppText style={[styles.cardDesc, vouchProfileComplete && styles.cardDescWhite]}>
-                {vouchProfileComplete
-                  ? "Your references have all vouched for you."
-                  : "Build your Vouch profile. Apply for supplier credit accounts faster."}
+              <AppText style={styles.cardTitle}>Get Vouched</AppText>
+              <AppText style={styles.cardDesc}>
+                Build your Vouch profile. Apply for supplier credit accounts faster.
               </AppText>
             </View>
           </TouchableOpacity>
@@ -223,16 +196,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderWidth: 1.5,
     borderColor: Colors.vouchGreen,
-  },
-  cardVouchComplete: {
-    backgroundColor: Colors.vouchGreen,
-    borderWidth: 0,
-  },
-  cardTitleWhite: {
-    color: Colors.white,
-  },
-  cardDescWhite: {
-    color: "rgba(255,255,255,0.8)",
   },
   cardDefault: {
     backgroundColor: Colors.white,
