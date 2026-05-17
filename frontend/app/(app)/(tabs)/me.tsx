@@ -105,7 +105,7 @@ export default function MeScreen() {
   }
 
   const displayMobile = user?.mobile
-    ? `0${user.mobile.replace(/^\+61/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3")}`
+    ? user.mobile.replace(/(\d{4})(\d{3})(\d{3})/, "$1 $2 $3")
     : null;
 
   const displayAbn = user?.abn
