@@ -100,6 +100,39 @@ export async function sendResendVerificationEmail(
   });
 }
 
+export async function sendVouchRequestEmail(
+  to: string,
+  fromName: string,
+  fromCompany: string,
+  relationship: string,
+  projectName: string
+): Promise<void> {
+  const context = [relationship, projectName].filter(Boolean).join(" on ");
+  await transporter.sendMail({
+    from: `"VouchPay" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: `${fromName} has asked you to vouch for them on VouchPay`,
+    text: `Hi,\n\n${fromName} from ${fromCompany} (${context}) has asked you to vouch for them on VouchPay.\n\nTo respond:\n1. Download the VouchPay app\n2. Sign in or create a free account\n3. Tap "Give a Vouch" — their request will be waiting for you\n\nVouchPay helps tradespeople and businesses build credibility through peer vouches.\n\nIf you weren't expecting this, you can safely ignore it.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>${fromName} wants you to vouch for them</h2>
+        <p><strong>${fromName}</strong> from <strong>${fromCompany}</strong> has asked you to vouch for them on VouchPay.</p>
+        <div style="background: #f8f9fa; border-radius: 10px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; color: #5a5a5a; font-size: 14px;">${context}</p>
+        </div>
+        <p>To respond, open the VouchPay app, tap <strong>"Give a Vouch"</strong> and their request will be waiting for you.</p>
+        <p>If you don't have the app yet:</p>
+        <ol style="line-height: 1.8;">
+          <li>Download <strong>VouchPay</strong></li>
+          <li>Create a free account</li>
+          <li>Tap <strong>"Give a Vouch"</strong> — the request will appear automatically</li>
+        </ol>
+        <p style="margin-top: 24px; color: #9b9b9b; font-size: 12px;">If you weren't expecting this, you can safely ignore it.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendForgotPasswordEmail(to: string, resetCode: string): Promise<void> {
   await transporter.sendMail({
     from: `"VouchPay" <${process.env.EMAIL_USER}>`,
