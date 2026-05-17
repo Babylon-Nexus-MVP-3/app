@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   View,
   StyleSheet,
@@ -396,7 +397,7 @@ export default function Step3() {
     setError("");
     setReferences(refs);
     try {
-      const profileRes = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
         body: JSON.stringify({
           name: step1.name,
@@ -420,11 +421,20 @@ export default function Step3() {
           references: refs.filter((r) => r.name.trim()),
         }),
       });
-      if (profileRes.ok) {
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        Alert.alert(
+          "Cannot send request",
+          data.error ?? "One of your references has already vouched for you."
+        );
+        setSubmitting(false);
+        return;
+      }
+      if (res.ok) {
         await updateUser({ abn: step1.abn, businessName: step1.trade });
       }
     } catch {
-      // Backend not yet live — proceed to success screen
+      // Network unavailable — proceed to success
     } finally {
       setSubmitting(false);
     }

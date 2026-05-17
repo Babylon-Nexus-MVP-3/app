@@ -42,7 +42,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
       await expo.sendPushNotificationsAsync([
         {
           to: token,
-          title: "Babylon Nexus",
+          title: "VouchPay",
           body: input.message,
           data: {
             type: input.type,

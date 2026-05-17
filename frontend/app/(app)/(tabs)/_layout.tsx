@@ -70,6 +70,8 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Hidden screen — part of tabs so the tab bar stays visible on the projects list */}
+      <Tabs.Screen name="projects" options={{ href: null }} />
     </Tabs>
   );
 }
