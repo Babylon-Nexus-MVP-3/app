@@ -81,7 +81,7 @@ function Field({
 }
 
 export default function Step1() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { step1, setStep1 } = useWizard();
 
   const [form, setForm] = useState(step1);
@@ -106,6 +106,23 @@ export default function Step1() {
       setForm((f) => ({ ...f, abn: digits }));
     }
   }, [user, form.abn]);
+
+  useEffect(() => {
+    if (form.idNumber) return;
+    fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
+      .then((r: Response) => (r.ok ? r.json() : null))
+      .then((profile: Record<string, string> | null) => {
+        if (!profile) return;
+        setForm((f) => ({
+          ...f,
+          trade: f.trade || profile.trade || "",
+          idType: profile.idType === "licence" ? "licence" : "passport",
+          idNumber: f.idNumber || profile.idNumber || "",
+          idExpiry: f.idExpiry || profile.idExpiry || "",
+        }));
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (form.abn.length !== 11) {
