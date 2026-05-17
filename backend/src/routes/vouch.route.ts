@@ -306,7 +306,16 @@ vouchRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const { toAbn, toBusinessName, attributes, note, requestId, recipientName, recipientEmail, recipientMobile } = req.body;
+      const {
+        toAbn,
+        toBusinessName,
+        attributes,
+        note,
+        requestId,
+        recipientName,
+        recipientEmail,
+        recipientMobile,
+      } = req.body;
 
       if (requestId !== undefined) {
         if (!mongoose.isValidObjectId(requestId)) {
@@ -376,7 +385,12 @@ vouchRouter.post(
         : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
 
       if (!recipient && recipientEmail) {
-        sendVouchedForEmail(recipientEmail, recipientName ?? "there", giverName, giverCompany).catch(() => {});
+        sendVouchedForEmail(
+          recipientEmail,
+          recipientName ?? "there",
+          giverName,
+          giverCompany
+        ).catch(() => {});
       }
 
       if (recipient && recipient._id.toString() !== userId) {
