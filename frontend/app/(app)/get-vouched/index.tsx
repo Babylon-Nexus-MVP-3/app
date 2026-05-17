@@ -70,7 +70,7 @@ export default function GetVouchedIntro() {
 
   function onPrimaryPress() {
     if (!mobileVerified) {
-      router.push("/(app)/verify-mobile");
+      router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } });
       return;
     }
     if (allDone) return;

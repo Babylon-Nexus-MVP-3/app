@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
@@ -20,7 +20,16 @@ import { useAuth } from "@/context/AuthContext";
 const CODE_LENGTH = 6;
 
 export default function VerifyMobile() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { user, fetchWithAuth, updateUser } = useAuth();
+
+  function navigateAfterVerify() {
+    if (returnTo === "get-vouched") {
+      router.push("/(app)/get-vouched" as any);
+    } else {
+      router.push("/(app)/me" as any);
+    }
+  }
 
   const [step, setStep] = useState<"enter" | "otp">("enter");
   const [mobile, setMobile] = useState(user?.mobile ?? "");
@@ -129,11 +138,11 @@ export default function VerifyMobile() {
         throw new Error(data.error ?? "Incorrect code. Please try again.");
       }
       await updateUser({ mobile: mobileDigits, mobileVerified: true });
-      router.push("/(app)/me" as any);
+      navigateAfterVerify();
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         await updateUser({ mobile: mobileDigits, mobileVerified: true });
-        router.push("/(app)/me" as any);
+        navigateAfterVerify();
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -153,7 +162,7 @@ export default function VerifyMobile() {
         <View style={styles.inner}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => (step === "otp" ? setStep("enter") : router.push("/(app)/me" as any))}
+            onPress={() => (step === "otp" ? setStep("enter") : navigateAfterVerify())}
             hitSlop={14}
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
