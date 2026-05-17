@@ -1,8 +1,7 @@
 import { useCallback, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";

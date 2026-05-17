@@ -12,13 +12,6 @@ import { sendVouchRequestEmail } from "../service/email.service";
 export const vouchRouter = express.Router();
 const expo = new Expo();
 
-function normalizeAuMobile(mobile: string): string {
-  const digits = mobile.replace(/\D/g, "");
-  if (digits.startsWith("61") && digits.length === 11) return `+${digits}`;
-  if (digits.startsWith("0") && digits.length === 10) return `+61${digits.slice(1)}`;
-  if (digits.length === 9) return `+61${digits}`;
-  return `+${digits}`;
-}
 
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
@@ -82,24 +75,23 @@ vouchRouter.post(
         const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
         if (existing) continue;
 
-        const normalizedMobile = normalizeAuMobile(ref.mobile);
-        const normalizedEmail = ref.email?.trim().toLowerCase() ?? "";
+        const toEmail = ref.email?.trim().toLowerCase() ?? "";
 
         const request = await VouchRequestModel.create({
           fromUserId: userId,
           fromName,
           fromCompany,
           fromAbn,
-          toEmail: normalizedEmail,
-          toMobile: normalizedMobile,
+          toEmail,
+          toMobile: ref.mobile,
           relationship: ref.relationship,
           projectName: ref.project,
           status: "pending",
         });
 
         // Find the reference's user account — match by either mobile or email
-        const orConditions: object[] = [{ mobile: normalizedMobile }];
-        if (normalizedEmail) orConditions.push({ email: normalizedEmail });
+        const orConditions: object[] = [{ mobile: ref.mobile }];
+        if (toEmail) orConditions.push({ email: toEmail });
 
         const refUser = await UserModel.findOne({ $or: orConditions })
           .select("_id pushToken")
@@ -132,9 +124,9 @@ vouchRouter.post(
         }
 
         // Email notification — sent regardless of whether reference is on VouchPay
-        if (normalizedEmail) {
+        if (toEmail) {
           sendVouchRequestEmail(
-            normalizedEmail,
+            toEmail,
             body.name,
             fromCompany,
             ref.relationship,
