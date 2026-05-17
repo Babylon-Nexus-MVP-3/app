@@ -24,6 +24,19 @@ function formatAbn(raw: string): string {
   return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
 }
 
+function PwHint({ met, label }: { met: boolean; label: string }) {
+  return (
+    <View style={styles.pwHintRow}>
+      <Ionicons
+        name={met ? "checkmark-circle" : "ellipse-outline"}
+        size={14}
+        color={met ? Colors.vouchGreen : Colors.grey300}
+      />
+      <AppText style={[styles.pwHintText, met && styles.pwHintTextMet]}>{label}</AppText>
+    </View>
+  );
+}
+
 export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,8 +69,20 @@ export default function SignUp() {
   const firstName = nameParts[0] ?? "";
   const lastName = nameParts.slice(1).join(" ") || "-";
 
+  const pwChecks = {
+    length: password.length >= 12,
+    lower: /[a-z]/.test(password),
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^a-zA-Z0-9]/.test(password),
+  };
+  const complexityMet =
+    [pwChecks.lower, pwChecks.upper, pwChecks.number, pwChecks.special].filter(Boolean).length >= 3;
+  const passwordValid = pwChecks.length && complexityMet;
+  const showPwHints = password.length > 0;
+
   const canSubmit =
-    firstName.length > 0 && email.includes("@") && password.length >= 12 && abnDigits.length === 11;
+    firstName.length > 0 && email.includes("@") && passwordValid && abnDigits.length === 11;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -163,6 +188,16 @@ export default function SignUp() {
               />
             </TouchableOpacity>
           </View>
+
+          {showPwHints && (
+            <View style={styles.pwHints}>
+              <PwHint met={pwChecks.length} label="At least 12 characters" />
+              <PwHint
+                met={complexityMet}
+                label="At least 3 of: uppercase, lowercase, number, special character"
+              />
+            </View>
+          )}
 
           <AppText style={styles.label}>MOBILE</AppText>
           <TextInput
@@ -286,6 +321,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.black,
+  },
+  pwHints: {
+    gap: 6,
+    marginTop: -12,
+    marginBottom: 20,
+  },
+  pwHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  pwHintText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey300,
+    flex: 1,
+  },
+  pwHintTextMet: {
+    color: Colors.vouchGreen,
   },
   eyeBtn: {
     paddingHorizontal: 14,
