@@ -510,18 +510,8 @@ export default function ProjectDetail() {
               </TouchableOpacity>
             </View>
           ) : (
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
-              style={styles.raiseKeyboardView}
-            >
-              <ScrollView
-                style={styles.raiseScroll}
-                contentContainerStyle={styles.raiseBody}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-              >
+            <>
+              <View style={styles.raiseFixedHeader}>
                 <TouchableOpacity
                   onPress={() => setInvoiceVisible(false)}
                   style={styles.raiseBack}
@@ -531,9 +521,21 @@ export default function ProjectDetail() {
                 >
                   <Ionicons name="arrow-back" size={24} color={Colors.black} />
                 </TouchableOpacity>
-
                 <AppText style={styles.raiseTitle}>Raise Invoice</AppText>
                 <AppText style={styles.raiseSubtitle}>{projectName}</AppText>
+              </View>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+                style={styles.raiseKeyboardView}
+              >
+              <ScrollView
+                style={styles.raiseScroll}
+                contentContainerStyle={styles.raiseBody}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+              >
 
                 <AppText style={styles.raiseFieldLabel}>Amount ($)</AppText>
                 <TextInput
@@ -589,7 +591,8 @@ export default function ProjectDetail() {
                   )}
                 </TouchableOpacity>
               </ScrollView>
-            </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </>
           )}
         </SafeAreaView>
       </Modal>
