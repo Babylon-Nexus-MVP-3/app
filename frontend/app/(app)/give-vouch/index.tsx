@@ -16,6 +16,7 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { formatAbn } from "@/lib/useAbrLookup";
 
 type VouchRequest = {
   _id: string;
@@ -54,14 +55,6 @@ function Avatar({ name, index }: { name: string; index: number }) {
       <AppText style={styles.avatarText}>{nameInitials(name)}</AppText>
     </View>
   );
-}
-
-function formatAbn(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-  if (digits.length <= 8) return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
-  return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
 }
 
 type SearchResult = {
@@ -148,7 +141,38 @@ export default function GiveAVouchScreen() {
       setAbnError("Please enter a valid 11-digit ABN");
       return;
     }
-    await proceedWithAbn(digits);
+    setChecking(true);
+    let canProceed = true;
+    try {
+      const [abrRes, statusRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/business/${digits}`).catch(() => null),
+      ]);
+      if (!abrRes.ok) {
+        setAbnError("ABN not found. Check the number and try again.");
+        canProceed = false;
+      } else {
+        const abrData = await abrRes.json();
+        if (!abrData.isActive) {
+          setAbnError("This ABN is not currently active.");
+          canProceed = false;
+        }
+      }
+      if (canProceed && statusRes?.ok) {
+        const statusData = await statusRes.json();
+        if (statusData.alreadyVouched) {
+          setAbnError("You've already vouched for this business.");
+          canProceed = false;
+        }
+      }
+    } catch {
+      // network error — let verify screen handle it
+    } finally {
+      setChecking(false);
+    }
+    if (canProceed) {
+      router.push(`/(app)/give-vouch/verify?abn=${digits}`);
+    }
   }
 
   function toggleNameSearch() {
