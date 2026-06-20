@@ -32,7 +32,7 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { firstName, lastName, email, password, mobile, abn, businessName } = req.body;
+    const { firstName, lastName, email, password, mobile, abn, businessName, businessTrade } = req.body;
     if (
       !isNonEmptyString(firstName) ||
       !isNonEmptyString(lastName) ||
@@ -50,6 +50,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
       mobile,
       abn,
       businessName,
+      businessTrade,
     });
     res.status(201).json(result);
   } catch (err) {

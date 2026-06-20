@@ -55,6 +55,7 @@ export default function Projects() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [canCreateProject, setCanCreateProject] = useState(false);
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -68,9 +69,12 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/projects`);
-      const data = await res.json();
-      if (!res.ok) {
+      const [projectsRes, sentRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/projects`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
+      ]);
+      const data = await projectsRes.json();
+      if (!projectsRes.ok) {
         setProjectsError(data.error ?? "Failed to load projects.");
         return;
       }
@@ -84,6 +88,12 @@ export default function Projects() {
         change: 0,
       }));
       setProjects(mapped);
+
+      const sentData = sentRes.ok ? await sentRes.json() : null;
+      const respondedCount = (sentData?.requests ?? []).filter(
+        (r: { status: string }) => r.status === "responded"
+      ).length;
+      setCanCreateProject(respondedCount >= 2);
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
@@ -166,12 +176,20 @@ export default function Projects() {
           {/* Action buttons */}
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, !canCreateProject && styles.actionBtnDisabled]}
               activeOpacity={0.85}
-              onPress={() => router.push("/(app)/create-project")}
+              onPress={() => {
+                if (canCreateProject) {
+                  router.push("/(app)/create-project");
+                } else {
+                  router.push("/(app)/project-locked");
+                }
+              }}
             >
-              <Ionicons name="add" size={15} color={Colors.vouchGreen} />
-              <AppText style={styles.actionBtnText}>New Project</AppText>
+              <Ionicons name="add" size={15} color={canCreateProject ? Colors.vouchGreen : Colors.grey500} />
+              <AppText style={[styles.actionBtnText, !canCreateProject && styles.actionBtnTextDisabled]}>
+                New Project
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionBtnOutline}
@@ -471,6 +489,12 @@ const styles = StyleSheet.create({
     color: Colors.vouchGreen,
     fontFamily: Fonts.bold,
     fontSize: 13,
+  },
+  actionBtnDisabled: {
+    opacity: 0.45,
+  },
+  actionBtnTextDisabled: {
+    color: Colors.grey500,
   },
   actionBtnOutline: {
     flex: 1,

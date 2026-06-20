@@ -14,6 +14,7 @@ export interface AuthUser {
   mobileVerified?: boolean;
   abn?: string;
   businessName?: string;
+  businessTrade?: string;
 }
 
 interface AuthState {

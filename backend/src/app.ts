@@ -44,6 +44,8 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
+app.use("/assets", express.static(path.join(__dirname, "assets")));
+
 app.use("/auth", authRouter);
 app.use("/project", projectRouter);
 app.use("/projects", projectsRouter);

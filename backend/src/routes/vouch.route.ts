@@ -389,7 +389,9 @@ vouchRouter.post(
           recipientEmail,
           recipientName ?? "there",
           giverName,
-          giverCompany
+          giverCompany,
+          attributes ?? [],
+          note
         ).catch(() => {});
       }
 

@@ -51,7 +51,7 @@ module.exports = {
           resizeMode: "contain",
           backgroundColor: "#0D3D2B",
           dark: {
-            backgroundColor: "#000000",
+            backgroundColor: "#0D3D2B",
           },
         },
       ],

@@ -61,11 +61,7 @@ function StatePickerModal({
             <View style={sp.handle} />
             <AppText style={sp.title}>Select state</AppText>
             {AU_STATES.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={sp.option}
-                onPress={() => { onSelect(s); onClose(); }}
-              >
+              <TouchableOpacity key={s} style={sp.option} onPress={() => { onSelect(s); onClose(); }}>
                 <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>{s}</AppText>
                 {selected === s && <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />}
               </TouchableOpacity>
@@ -79,14 +75,7 @@ function StatePickerModal({
 
 const sp = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  sheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    paddingTop: 12,
-  },
+  sheet: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24, paddingTop: 12 },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.grey300, alignSelf: "center", marginBottom: 16 },
   title: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black, marginBottom: 8, letterSpacing: 0.5 },
   option: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.grey300 },
@@ -94,20 +83,9 @@ const sp = StyleSheet.create({
   optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });
 
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  flex,
-}: {
-  label?: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "numeric" | "phone-pad";
-  flex?: number;
+function Field({ label, value, onChangeText, placeholder, keyboardType, flex }: {
+  label?: string; value: string; onChangeText: (v: string) => void;
+  placeholder?: string; keyboardType?: "default" | "numeric"; flex?: number;
 }) {
   return (
     <View style={[styles.fieldWrap, flex !== undefined && { flex }]}>
@@ -125,7 +103,7 @@ function Field({
   );
 }
 
-export default function Step2() {
+export default function Step5() {
   const { step1, step2, setStep2 } = useWizard();
   const { fetchWithAuth } = useAuth();
   const [form, setForm] = useState(step2);
@@ -157,10 +135,7 @@ export default function Step2() {
     router.back();
   }
 
-  const canContinue =
-    form.currentProjectName.trim() &&
-    form.suburb.trim() &&
-    form.state.trim();
+  const canContinue = form.pastProjectName.trim() && form.pastSuburb.trim() && form.pastState.trim();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -168,36 +143,30 @@ export default function Step2() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>STEP 2 OF 6</AppText>
+        <AppText style={styles.headerTitle}>STEP 5 OF 6</AppText>
         <View style={{ width: 24 }} />
       </View>
       <View style={styles.progressWrap}>
-        <View style={[styles.progressFill, { flex: 2 }]} />
-        <View style={[styles.progressEmpty, { flex: 4 }]} />
+        <View style={[styles.progressFill, { flex: 5 }]} />
+        <View style={[styles.progressEmpty, { flex: 1 }]} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>Current project</AppText>
-          <AppText style={styles.subheading}>Tell us about the project you're working on right now.</AppText>
+          <AppText style={styles.heading}>Past project</AppText>
+          <AppText style={styles.subheading}>Share a completed project to show your track record.</AppText>
 
           <View style={styles.section}>
             <Field
               label="PROJECT NAME"
-              value={form.currentProjectName}
-              onChangeText={(v) => update("currentProjectName", v)}
-              placeholder="e.g. Bradfield Tower B fit-out"
-            />
-            <Field
-              label="ADDRESS"
-              value={form.address}
-              onChangeText={(v) => update("address", v)}
-              placeholder="Street address"
+              value={form.pastProjectName}
+              onChangeText={(v) => update("pastProjectName", v)}
+              placeholder="e.g. Riverside Apartments fitout"
             />
             <View style={styles.row}>
               <Field
-                value={form.suburb}
-                onChangeText={(v) => update("suburb", v)}
+                value={form.pastSuburb}
+                onChangeText={(v) => update("pastSuburb", v)}
                 placeholder="Suburb"
                 flex={2}
               />
@@ -207,8 +176,8 @@ export default function Step2() {
                 activeOpacity={0.7}
               >
                 <View style={styles.stateBtn}>
-                  <AppText style={[styles.stateBtnText, !form.state && styles.stateBtnPlaceholder]}>
-                    {form.state || "State"}
+                  <AppText style={[styles.stateBtnText, !form.pastState && styles.stateBtnPlaceholder]}>
+                    {form.pastState || "State"}
                   </AppText>
                   <Ionicons name="chevron-down" size={14} color={Colors.grey500} />
                 </View>
@@ -216,8 +185,8 @@ export default function Step2() {
               <View style={[styles.fieldWrap, { flex: 1 }]}>
                 <TextInput
                   style={styles.input}
-                  value={form.postcode}
-                  onChangeText={(v) => update("postcode", v.replace(/\D/g, "").slice(0, 4))}
+                  value={form.pastPostcode}
+                  onChangeText={(v) => update("pastPostcode", v.replace(/\D/g, "").slice(0, 4))}
                   placeholder="Postcode"
                   placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
@@ -226,22 +195,37 @@ export default function Step2() {
                 />
               </View>
             </View>
-            <View style={styles.fieldWrap}>
-              <View style={styles.valueLabelRow}>
-                <AppText style={styles.fieldLabel}>VALUE</AppText>
-                <View style={styles.privateTag}>
-                  <Ionicons name="lock-closed-outline" size={10} color={Colors.grey500} />
-                  <AppText style={styles.privateText}>private</AppText>
-                </View>
+            <View style={styles.row}>
+              <View style={[styles.fieldWrap, { flex: 1 }]}>
+                <AppText style={styles.fieldLabel}>YEAR COMPLETED</AppText>
+                <TextInput
+                  style={styles.input}
+                  value={form.pastMonthYear}
+                  onChangeText={(v) => update("pastMonthYear", v.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="YYYY"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  autoCorrect={false}
+                />
               </View>
-              <TextInput
-                style={styles.input}
-                value={form.value}
-                onChangeText={(v) => update("value", filterDecimal(v))}
-                placeholder="A$ 0"
-                placeholderTextColor={Colors.grey300}
-                keyboardType="decimal-pad"
-              />
+              <View style={[styles.fieldWrap, { flex: 2 }]}>
+                <View style={styles.valueLabelRow}>
+                  <AppText style={styles.fieldLabel}>VALUE</AppText>
+                  <View style={styles.privateTag}>
+                    <Ionicons name="lock-closed-outline" size={10} color={Colors.grey500} />
+                    <AppText style={styles.privateText}>private</AppText>
+                  </View>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={form.pastValue}
+                  onChangeText={(v) => update("pastValue", filterDecimal(v))}
+                  placeholder="A$ approx"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -249,8 +233,8 @@ export default function Step2() {
 
       <StatePickerModal
         visible={statePickerOpen}
-        selected={form.state}
-        onSelect={(s) => update("state", s)}
+        selected={form.pastState}
+        onSelect={(s) => update("pastState", s)}
         onClose={() => setStatePickerOpen(false)}
       />
 
@@ -285,7 +269,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
   heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
   subheading: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginBottom: 24, lineHeight: 20 },
-  section: { gap: 14, marginBottom: 28 },
+  section: { gap: 14 },
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },

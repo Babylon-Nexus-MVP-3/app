@@ -59,6 +59,7 @@ interface RegisterInput {
   mobile?: string;
   abn?: string;
   businessName?: string;
+  businessTrade?: string;
 }
 
 interface RegisterResponse {
@@ -102,6 +103,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
     ...(input.mobile ? { mobile: input.mobile } : {}),
     ...(input.abn ? { abn: input.abn } : {}),
     ...(input.businessName ? { businessName: input.businessName } : {}),
+    ...(input.businessTrade ? { businessTrade: input.businessTrade } : {}),
   });
 
   await newUser.save();
@@ -134,6 +136,7 @@ interface SafeUser {
   mobileVerified?: boolean;
   abn?: string;
   businessName?: string;
+  businessTrade?: string;
 }
 
 function toSafeUser(user: User): SafeUser {
@@ -147,6 +150,7 @@ function toSafeUser(user: User): SafeUser {
     mobileVerified: user.mobileVerified ?? false,
     abn: user.abn,
     businessName: user.businessName,
+    businessTrade: user.businessTrade,
   };
 }
 

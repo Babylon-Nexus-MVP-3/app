@@ -296,6 +296,24 @@ export async function notifyProjectDeleted(projectId: string): Promise<void> {
   );
 }
 
+export async function notifyProjectInvited(
+  projectId: string,
+  inviteeEmail: string,
+  projectName: string
+): Promise<void> {
+  const user = await UserModel.findOne({ email: inviteeEmail.toLowerCase() })
+    .select("_id")
+    .lean();
+  if (!user) return;
+
+  await createNotification({
+    recipientUserId: user._id.toString(),
+    projectId,
+    type: NotificationType.ProjectInvited,
+    message: `You've been invited to join project "${projectName}". Check your email for the invite code.`,
+  });
+}
+
 export async function notifyProjectParticipantRemoved(
   projectId: string,
   recipientUserIds: string[]

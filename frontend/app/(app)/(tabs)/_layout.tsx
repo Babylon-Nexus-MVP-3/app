@@ -49,12 +49,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="vouch-my-project"
+        name="projects"
         options={{
-          title: "Project",
+          title: "Projects",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "sync-circle" : "sync-circle-outline"}
+              name={focused ? "briefcase" : "briefcase-outline"}
               size={24}
               color={color}
             />
@@ -70,8 +70,8 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Hidden screen — part of tabs so the tab bar stays visible on the projects list */}
-      <Tabs.Screen name="projects" options={{ href: null }} />
+      {/* Hidden — accessible from home grid's "Vouch my Project" card */}
+      <Tabs.Screen name="vouch-my-project" options={{ href: null }} />
     </Tabs>
   );
 }

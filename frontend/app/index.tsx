@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
@@ -22,24 +22,22 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <AppText style={styles.wordmark}>VOUCHPAY</AppText>
-        <AppText style={styles.tagline}>TRUST PLATFORM · CONSTRUCTION</AppText>
-      </View>
-
       <View style={styles.body}>
-        <AppText style={styles.heading}>{"Sign up so it\ndoesn't happen\nto you."}</AppText>
+        <Image source={require("../assets/appIcon.png")} style={styles.logo} />
 
-        <View style={styles.statCard}>
-          <AppText style={styles.statNumber}>~3,490</AppText>
-          <AppText style={styles.statLabel}>collapses</AppText>
-          <AppText style={styles.statSub}>Australian construction</AppText>
-        </View>
+        <Text style={styles.headline}>
+          <Text style={styles.headlineBlack}>Stop losing money on bad jobs. </Text>
+          <Text style={styles.headlineGreen}>Work with people you trust.</Text>
+        </Text>
 
-        <View style={styles.statCard}>
-          <AppText style={styles.statNumber}>A$3B+</AppText>
-          <AppText style={styles.statLabel}>lost</AppText>
-          <AppText style={styles.statSub}>by subbies, every year</AppText>
+        <View style={styles.nswRow}>
+          <View style={styles.nswLogoBox}>
+            <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
+          </View>
+          <View style={styles.nswTextBlock}>
+            <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
+            <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
+          </View>
         </View>
       </View>
 
@@ -69,57 +67,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  wordmark: {
-    fontSize: 34,
-    fontFamily: Fonts.extraBold,
-    color: Colors.vouchGreen,
-    letterSpacing: 1,
-  },
-  tagline: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.grey700,
-    letterSpacing: 0.5,
-    marginTop: 3,
-  },
   body: {
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "center",
-    gap: 12,
+    gap: 32,
   },
-  heading: {
-    fontSize: 40,
+  logo: {
+    width: 110,
+    height: 110,
+    borderRadius: 22,
+    alignSelf: "flex-start",
+  },
+  headline: {
+    fontSize: 42,
+    lineHeight: 52,
+  },
+  headlineBlack: {
     fontFamily: Fonts.extraBold,
     color: Colors.black,
-    lineHeight: 50,
-    marginBottom: 20,
   },
-  statCard: {
-    backgroundColor: Colors.redBg,
-    borderRadius: 12,
-    padding: 16,
-  },
-  statNumber: {
-    fontSize: 36,
+  headlineGreen: {
     fontFamily: Fonts.extraBold,
-    color: Colors.red,
-    lineHeight: 40,
+    color: Colors.vouchGreen,
   },
-  statLabel: {
+  nswRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  nswLogoBox: {
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 10,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nswLogo: {
+    width: 72,
+    height: 72,
+    resizeMode: "contain",
+  },
+  nswTextBlock: {
+    gap: 2,
+  },
+  nswBacked: {
+    fontSize: 18,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+  },
+  nswGrant: {
     fontSize: 16,
-    fontFamily: Fonts.semiBold,
-    color: Colors.red,
-  },
-  statSub: {
-    fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginTop: 2,
+    color: Colors.black,
   },
   footer: {
     paddingHorizontal: 24,
@@ -142,13 +143,13 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 28,
     borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
+    borderColor: Colors.grey300,
     alignItems: "center",
     justifyContent: "center",
   },
   signInButtonText: {
     fontSize: 17,
     fontFamily: Fonts.bold,
-    color: Colors.vouchGreen,
+    color: Colors.black,
   },
 });
