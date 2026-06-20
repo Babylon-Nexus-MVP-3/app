@@ -61,7 +61,7 @@ export default function GetVouchedSuccess() {
           style={styles.outlineBtn}
           onPress={() => {
             router.dismissAll();
-            router.replace("/(app)/home");
+            router.replace("/(app)/(tabs)/home");
           }}
           activeOpacity={0.8}
         >

@@ -34,7 +34,8 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { firstName, lastName, email, password, mobile, abn, businessName, businessTrade } = req.body;
+    const { firstName, lastName, email, password, mobile, abn, businessName, businessTrade } =
+      req.body;
     if (
       !isNonEmptyString(firstName) ||
       !isNonEmptyString(lastName) ||
@@ -357,7 +358,11 @@ export const updatePushToken = async (req: Request, res: Response, next: NextFun
   }
 };
 
-export const requestEmailChangeHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const requestEmailChangeHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user!.sub;
     const { newEmail } = req.body;

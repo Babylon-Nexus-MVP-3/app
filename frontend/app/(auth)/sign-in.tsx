@@ -43,7 +43,7 @@ export default function SignIn() {
       }
       const { accessToken, refreshToken, user } = await res.json();
       await login(accessToken, refreshToken, user);
-      router.replace("/(app)/home");
+      router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         await login("mock-access-token", "mock-refresh-token", {
@@ -53,7 +53,7 @@ export default function SignIn() {
           role: "Subbie" as never,
           status: "Active",
         });
-        router.replace("/(app)/home");
+        router.replace("/(app)/(tabs)/home");
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }

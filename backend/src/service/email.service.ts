@@ -196,7 +196,9 @@ export async function sendVouchedForEmail(
         <p style="margin: 0; color: #1B5C38; font-weight: bold; font-size: 15px;">${giverName} had great things to say about you and your work.</p>
       </div>`;
 
-  const textAttributes = attributes.length ? `\n\nThey vouched for you on: ${attributes.join(", ")}` : "";
+  const textAttributes = attributes.length
+    ? `\n\nThey vouched for you on: ${attributes.join(", ")}`
+    : "";
   const textNote = note ? `\n\nThey said: "${note}"` : "";
 
   await transporter.sendMail({
