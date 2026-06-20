@@ -26,7 +26,7 @@ const STEPS = [
   { n: 3, title: "First vouch", desc: "Someone you've worked with", pct: 20 },
   { n: 4, title: "Second vouch", desc: "Another colleague", pct: 20 },
   { n: 5, title: "Past project", desc: "Previous work experience", pct: 15 },
-  { n: 6, title: "ID verification", desc: "Driver's licence or passport", pct: 10 },
+  { n: 6, title: "ID verification", desc: "Driver's licence, passport or trade licence", pct: 10 },
 ];
 
 const STEP_ROUTES = [
@@ -273,14 +273,14 @@ export default function GetVouchedIntro() {
         <View style={styles.strengthCard}>
           <View style={styles.strengthRow}>
             <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText style={[styles.strengthPct, { color: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.grey500 }]}>
+            <AppText style={[styles.strengthPct, { color: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red }]}>
               {strength}%
             </AppText>
           </View>
           <View style={styles.strengthTrack}>
             <View style={[styles.strengthFill, {
               width: `${strength}%` as any,
-              backgroundColor: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.grey300,
+              backgroundColor: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
             }]} />
           </View>
           <AppText style={styles.strengthHint}>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -6,7 +7,7 @@ export type Step1Data = {
   name: string;
   abn: string;
   trade: string;
-  idType: "passport" | "licence";
+  idType: "passport" | "licence" | "trade-licence";
   idNumber: string;
   idExpiry: string;
   idState: string;
@@ -89,29 +90,70 @@ const emptyStep2: Step2Data = {
   pastValue: "",
 };
 
+const STORAGE_KEY = "wizard_draft";
+
+async function loadDraft(): Promise<{ step1: Step1Data; step2: Step2Data; references: Reference[] } | null> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveDraft(step1: Step1Data, step2: Step2Data, references: Reference[]) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ step1, step2, references }));
+  } catch {}
+}
+
 export function WizardProvider({ children }: { children: React.ReactNode }) {
   const { fetchWithAuth } = useAuth();
-  const [step1, setStep1] = useState<Step1Data>(emptyStep1);
-  const [step2, setStep2] = useState<Step2Data>(emptyStep2);
-  const [references, setReferences] = useState<Reference[]>([emptyRef(), emptyRef()]);
+  const [step1, setStep1Raw] = useState<Step1Data>(emptyStep1);
+  const [step2, setStep2Raw] = useState<Step2Data>(emptyStep2);
+  const [references, setReferencesRaw] = useState<Reference[]>([emptyRef(), emptyRef()]);
 
-  // Pre-populate from any previously saved profile
+  function setStep1(d: Step1Data) {
+    setStep1Raw(d);
+    saveDraft(d, step2, references);
+  }
+
+  function setStep2(d: Step2Data) {
+    setStep2Raw(d);
+    saveDraft(step1, d, references);
+  }
+
+  function setReferences(refs: Reference[]) {
+    setReferencesRaw(refs);
+    saveDraft(step1, step2, refs);
+  }
+
   useEffect(() => {
+    // Load local draft immediately so the UI restores without waiting for network
+    loadDraft().then((draft) => {
+      if (draft) {
+        setStep1Raw(draft.step1);
+        setStep2Raw(draft.step2);
+        setReferencesRaw(draft.references);
+      }
+    });
+
+    // Then fetch from backend — backend data wins (it reflects what was actually saved)
     fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
         if (!p) return;
-        setStep1({
+        const s1: Step1Data = {
           name: p.name ?? "",
           abn: p.abn ?? "",
           trade: p.trade ?? "",
-          idType: p.idType === "licence" ? "licence" : "passport",
+          idType: p.idType === "licence" ? "licence" : p.idType === "trade-licence" ? "trade-licence" : "passport",
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",
           idCountry: p.idCountry ?? "",
-        });
-        setStep2({
+        };
+        const s2: Step2Data = {
           currentProjectName: p.currentProjectName ?? "",
           address: p.address ?? "",
           suburb: p.suburb ?? "",
@@ -124,10 +166,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           pastPostcode: p.pastPostcode ?? "",
           pastMonthYear: p.pastMonthYear ?? "",
           pastValue: p.pastValue ?? "",
-        });
-        if (Array.isArray(p.references) && p.references.length >= 2) {
-          setReferences(
-            p.references.map((r: Record<string, string>) => ({
+        };
+        const refs: Reference[] = Array.isArray(p.references) && p.references.length >= 2
+          ? p.references.map((r: Record<string, string>) => ({
               name: r.name ?? "",
               company: r.company ?? "",
               mobile: r.mobile ?? "",
@@ -135,8 +176,12 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
               relationship: r.relationship ?? "",
               project: r.project ?? r.projectName ?? "",
             }))
-          );
-        }
+          : [emptyRef(), emptyRef()];
+
+        setStep1Raw(s1);
+        setStep2Raw(s2);
+        setReferencesRaw(refs);
+        saveDraft(s1, s2, refs);
       })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
