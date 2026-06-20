@@ -116,4 +116,3 @@ function buildSearchMock(name: string): Array<{ abn: string; entityName: string;
     { abn: "55667788990", entityName: `${name} & Associates`, state: "WA" },
   ];
 }
-
