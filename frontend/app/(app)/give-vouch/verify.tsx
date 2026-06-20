@@ -78,6 +78,11 @@ export default function VerifyScreen() {
       if (abrRes.ok) {
         const data = await abrRes.json();
         if (data.isActive) setAbrData(data);
+      } else if (abrRes.status === 410) {
+        setAbrError(
+          "This ABN has been cancelled. You can only vouch for businesses with an active ABN."
+        );
+        setAbrInactive(true);
       } else if (abrRes.status === 404) {
         setAbrError(
           "This ABN is not currently active. You can only vouch for businesses with an active ABN."
