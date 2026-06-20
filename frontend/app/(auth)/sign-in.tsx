@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -68,7 +69,11 @@ export default function SignIn() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.inner}>
+        <ScrollView
+          contentContainerStyle={styles.inner}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
@@ -144,7 +149,7 @@ export default function SignIn() {
               <AppText style={styles.signUpLink}>Sign up →</AppText>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -156,7 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inner: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 40,
