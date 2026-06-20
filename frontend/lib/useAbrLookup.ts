@@ -47,7 +47,12 @@ export function useAbrLookup(digits: string) {
         if (res.status >= 500) {
           setAbrError("ABN lookup is temporarily unavailable. Please try again later.");
         } else {
-          setAbrError("ABN not found. Check the number and try again.");
+          const errData = await res.json().catch(() => ({}));
+          setAbrError(
+            errData.error === "ABN is not active"
+              ? "This ABN is not currently active."
+              : "ABN not found. Check the number and try again."
+          );
         }
         return;
       }
