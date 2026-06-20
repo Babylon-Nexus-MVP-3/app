@@ -19,7 +19,14 @@ import { API_BASE_URL } from "@/constants/api";
 
 type WizardDraft = {
   step1: { name: string; abn: string; trade: string; idNumber: string };
-  step2: { currentProjectName: string; suburb: string; state: string; pastProjectName: string; pastSuburb: string; pastState: string };
+  step2: {
+    currentProjectName: string;
+    suburb: string;
+    state: string;
+    pastProjectName: string;
+    pastSuburb: string;
+    pastState: string;
+  };
   references: { name: string; company: string; mobile: string; relationship: string }[];
 };
 
@@ -31,13 +38,24 @@ function computeStrength(
   const s1 = draft?.step1;
   const s2 = draft?.step2;
   const refs = draft?.references ?? [];
-  const step1Done = !!(user?.name && user?.abn && (user?.businessTrade || s1?.trade)) ||
+  const step1Done =
+    !!(user?.name && user?.abn && (user?.businessTrade || s1?.trade)) ||
     !!(s1?.name && s1?.abn && s1?.trade);
   const step2Done = !!(s2?.currentProjectName && s2?.suburb && s2?.state);
-  const step3Done = !!(refs[0]?.name && refs[0]?.company && refs[0]?.mobile && refs[0]?.relationship);
-  const step4Done = !!(refs[1]?.name && refs[1]?.company && refs[1]?.mobile && refs[1]?.relationship);
+  const step3Done = !!(
+    refs[0]?.name &&
+    refs[0]?.company &&
+    refs[0]?.mobile &&
+    refs[0]?.relationship
+  );
+  const step4Done = !!(
+    refs[1]?.name &&
+    refs[1]?.company &&
+    refs[1]?.mobile &&
+    refs[1]?.relationship
+  );
   const step5Done = !!(s2?.pastProjectName && s2?.pastSuburb && s2?.pastState);
-  const step6Done = !!(s1?.idNumber);
+  const step6Done = !!s1?.idNumber;
   let pct = 0;
   if (step1Done) pct += 20;
   if (step2Done) pct += 15;
@@ -49,8 +67,7 @@ function computeStrength(
 }
 
 function StrengthBar({ pct }: { pct: number }) {
-  const color =
-    pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
+  const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
   return (
     <View style={sb.wrap}>
       <View style={sb.row}>
@@ -236,35 +253,39 @@ export default function HomeScreen() {
             </AppText>
           </TouchableOpacity>
 
-          {/* Give a Vouch — locked until 2 vouches received */}
+          {/* Give a Vouch — locked until 1 vouch received */}
           <TouchableOpacity
-            style={[styles.card, respondedCount >= 2 ? styles.cardDefault : styles.cardLocked]}
+            style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             onPress={() => {
-              if (respondedCount >= 2) {
+              if (respondedCount >= 1) {
                 router.push("/(app)/give-vouch");
               } else {
                 Alert.alert(
-                  "2 Vouches Required",
-                  "You need at least 2 people to vouch for you before you can vouch for others. Head to Get Vouched to request your vouches.",
+                  "1 Vouch Required",
+                  "You need at least 1 person to vouch for you before you can vouch for others. Head to Get Vouched to request your first vouch.",
                   [{ text: "Got it" }]
                 );
               }
             }}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="person-outline" size={26} color={respondedCount >= 2 ? Colors.black : Colors.grey500} />
-              {pendingCount > 0 && respondedCount >= 2 && (
+              <Ionicons
+                name="person-outline"
+                size={26}
+                color={respondedCount >= 1 ? Colors.black : Colors.grey500}
+              />
+              {pendingCount > 0 && respondedCount >= 1 && (
                 <View style={styles.dotBadge}>
                   <AppText style={styles.dotBadgeText}>{pendingCount}</AppText>
                 </View>
               )}
             </View>
-            <AppText style={[styles.cardTitle, respondedCount < 2 && styles.cardTitleLocked]}>
+            <AppText style={[styles.cardTitle, respondedCount < 1 && styles.cardTitleLocked]}>
               Give a Vouch
             </AppText>
             <AppText style={styles.cardDesc}>
-              {respondedCount >= 2 ? "Vouch for others" : "Needs 2 vouches"}
+              {respondedCount >= 1 ? "Vouch for others" : "Needs 1 vouch"}
             </AppText>
           </TouchableOpacity>
         </View>
@@ -290,7 +311,9 @@ export default function HomeScreen() {
                 Apply for supplier credit
               </AppText>
             </View>
-            <AppText style={styles.cardDesc}>Submit applications using your VouchPay profile</AppText>
+            <AppText style={styles.cardDesc}>
+              Submit applications using your VouchPay profile
+            </AppText>
           </View>
         </TouchableOpacity>
       </ScrollView>

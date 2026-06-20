@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
@@ -37,6 +37,7 @@ export function InvoiceDetailModal({
   ) => Promise<string | null>;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [confirmAction, setConfirmAction] = useState<InvoiceActionType | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -74,7 +75,7 @@ export function InvoiceDetailModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.detailScreen}>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
+        <View style={{ backgroundColor: Colors.vouchGreen, paddingTop: insets.top }}>
           <View style={styles.detailHeader}>
             <View style={styles.headerTopRow}>
               <TouchableOpacity
@@ -102,7 +103,7 @@ export function InvoiceDetailModal({
               </View>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         <ScrollView
           style={styles.detailBody}

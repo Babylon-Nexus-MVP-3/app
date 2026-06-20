@@ -53,11 +53,7 @@ export default function TabsLayout() {
         options={{
           title: "Projects",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "briefcase" : "briefcase-outline"}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? "briefcase" : "briefcase-outline"} size={24} color={color} />
           ),
         }}
       />

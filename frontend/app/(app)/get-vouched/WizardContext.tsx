@@ -92,7 +92,11 @@ const emptyStep2: Step2Data = {
 
 const STORAGE_KEY = "wizard_draft";
 
-async function loadDraft(): Promise<{ step1: Step1Data; step2: Step2Data; references: Reference[] } | null> {
+async function loadDraft(): Promise<{
+  step1: Step1Data;
+  step2: Step2Data;
+  references: Reference[];
+} | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -147,7 +151,12 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           name: p.name ?? "",
           abn: p.abn ?? "",
           trade: p.trade ?? "",
-          idType: p.idType === "licence" ? "licence" : p.idType === "trade-licence" ? "trade-licence" : "passport",
+          idType:
+            p.idType === "licence"
+              ? "licence"
+              : p.idType === "trade-licence"
+                ? "trade-licence"
+                : "passport",
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",
@@ -167,16 +176,17 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           pastMonthYear: p.pastMonthYear ?? "",
           pastValue: p.pastValue ?? "",
         };
-        const refs: Reference[] = Array.isArray(p.references) && p.references.length >= 2
-          ? p.references.map((r: Record<string, string>) => ({
-              name: r.name ?? "",
-              company: r.company ?? "",
-              mobile: r.mobile ?? "",
-              email: r.email ?? "",
-              relationship: r.relationship ?? "",
-              project: r.project ?? r.projectName ?? "",
-            }))
-          : [emptyRef(), emptyRef()];
+        const refs: Reference[] =
+          Array.isArray(p.references) && p.references.length >= 2
+            ? p.references.map((r: Record<string, string>) => ({
+                name: r.name ?? "",
+                company: r.company ?? "",
+                mobile: r.mobile ?? "",
+                email: r.email ?? "",
+                relationship: r.relationship ?? "",
+                project: r.project ?? r.projectName ?? "",
+              }))
+            : [emptyRef(), emptyRef()];
 
         setStep1Raw(s1);
         setStep2Raw(s2);

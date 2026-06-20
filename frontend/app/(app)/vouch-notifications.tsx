@@ -103,7 +103,9 @@ export default function VouchNotifications() {
 
   async function markOneRead(id: string) {
     setNotifications((prev) => prev.filter((n) => n._id !== id));
-    fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
+    fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${id}/read`, { method: "PATCH" }).catch(
+      () => {}
+    );
   }
 
   async function markAllRead() {

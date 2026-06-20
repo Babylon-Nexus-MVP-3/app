@@ -95,7 +95,9 @@ export default function MeScreen() {
       const fetches: Promise<void>[] = [
         fetchWithAuth(`${API_BASE_URL}/vouch/given`)
           .then((r) => (r.ok ? r.json() : null))
-          .then((d) => { if (d) setVouchesSent(d.vouches?.length ?? 0); }),
+          .then((d) => {
+            if (d) setVouchesSent(d.vouches?.length ?? 0);
+          }),
       ];
       if (abn) {
         fetches.push(
@@ -108,7 +110,10 @@ export default function MeScreen() {
                 setTopAttributes(vd.attributes.slice(0, 3));
               } else if (vd.attributeSummary) {
                 setTopAttributes(
-                  vd.attributeSummary.split(" · ").filter(Boolean).map((attr: string) => ({ attr, count: 0 }))
+                  vd.attributeSummary
+                    .split(" · ")
+                    .filter(Boolean)
+                    .map((attr: string) => ({ attr, count: 0 }))
                 );
               }
             })
@@ -210,7 +215,12 @@ export default function MeScreen() {
         </TouchableOpacity>
 
         {/* Expanded profile card modal */}
-        <Modal visible={cardModalVisible} transparent animationType="none" onRequestClose={closeCardModal}>
+        <Modal
+          visible={cardModalVisible}
+          transparent
+          animationType="none"
+          onRequestClose={closeCardModal}
+        >
           <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropAnim }]}>
             <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
             <View style={styles.modalBackdrop} />
@@ -220,7 +230,9 @@ export default function MeScreen() {
           </TouchableWithoutFeedback>
 
           <View style={styles.modalContent} pointerEvents="box-none">
-            <Animated.View style={{ transform: [{ scale: cardAnim }], opacity: backdropAnim, width: "100%" }}>
+            <Animated.View
+              style={{ transform: [{ scale: cardAnim }], opacity: backdropAnim, width: "100%" }}
+            >
               {/* Card to capture */}
               <View ref={cardRef} style={styles.expandedCard} collapsable={false}>
                 <View style={styles.vpCardTop}>

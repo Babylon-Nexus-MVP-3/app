@@ -95,7 +95,10 @@ export default function Step1() {
         <View style={[styles.progressEmpty, { flex: 5 }]} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <AppText style={styles.heading}>Your details</AppText>
           <AppText style={styles.subheading}>
@@ -115,7 +118,9 @@ export default function Step1() {
             <InfoRow label="BUSINESS NAME" value={user?.businessName ?? ""} />
             <View style={styles.lockNote}>
               <Ionicons name="lock-closed-outline" size={12} color={Colors.grey500} />
-              <AppText style={styles.lockText}>Name and ABN are locked to your account details.</AppText>
+              <AppText style={styles.lockText}>
+                Name and ABN are locked to your account details.
+              </AppText>
             </View>
           </View>
 
@@ -165,7 +170,13 @@ const styles = StyleSheet.create({
   progressEmpty: { backgroundColor: Colors.grey300 },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
   heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
-  subheading: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginBottom: 24, lineHeight: 20 },
+  subheading: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
   detailsCard: {
     backgroundColor: Colors.offWhite,
     borderRadius: 14,
@@ -174,12 +185,24 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   infoRow: { paddingVertical: 10 },
-  infoLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.grey500, letterSpacing: 0.8, marginBottom: 4 },
+  infoLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
   infoValue: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
   divider: { height: 1, backgroundColor: Colors.grey300, marginVertical: 4 },
   lockNote: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
   lockText: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
-  fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8, marginBottom: 8 },
+  fieldLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
   input: {
     borderWidth: 1,
     borderColor: Colors.grey300,

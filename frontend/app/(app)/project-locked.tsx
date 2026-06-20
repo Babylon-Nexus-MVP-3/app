@@ -34,7 +34,9 @@ export default function ProjectLocked() {
             <View style={styles.stepNum}>
               <AppText style={styles.stepNumText}>1</AppText>
             </View>
-            <AppText style={styles.stepText}>Complete your Vouch Profile on the home screen</AppText>
+            <AppText style={styles.stepText}>
+              Complete your Vouch Profile on the home screen
+            </AppText>
           </View>
 
           <View style={styles.step}>
@@ -42,7 +44,7 @@ export default function ProjectLocked() {
               <AppText style={styles.stepNumText}>2</AppText>
             </View>
             <AppText style={styles.stepText}>
-              Request a vouch from two people you've worked with
+              {"Request a vouch from two people you've worked with"}
             </AppText>
           </View>
 

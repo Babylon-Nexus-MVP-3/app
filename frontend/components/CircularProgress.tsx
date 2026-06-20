@@ -121,6 +121,7 @@ export default function CircularProgress({ value, size = 68, label, textScale = 
             fontWeight: "700",
             color,
           }}
+          maxFontSizeMultiplier={1}
         >
           {value}%
         </Text>
@@ -132,6 +133,7 @@ export default function CircularProgress({ value, size = 68, label, textScale = 
               color,
               marginTop: 2,
             }}
+            maxFontSizeMultiplier={1}
           >
             {label}
           </Text>

@@ -81,7 +81,9 @@ export default function GetVouchedIntro() {
         .finally(() => {
           if (!cancelled) setLoadingStatus(false);
         });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [fetchWithAuth])
   );
 
@@ -106,7 +108,8 @@ export default function GetVouchedIntro() {
   const pendingRequests = sentRequests.filter((r) => r.status !== "responded");
 
   // ── Step completion ──────────────────────────────────────────────────────
-  const step1Done = !!(user?.name && user?.abn && user?.businessTrade) ||
+  const step1Done =
+    !!(user?.name && user?.abn && user?.businessTrade) ||
     !!(step1.name && step1.abn && step1.trade);
   const step2Done = !!(step2.currentProjectName && step2.suburb && step2.state);
   const ref0 = references[0];
@@ -114,7 +117,7 @@ export default function GetVouchedIntro() {
   const ref1 = references[1];
   const step4Done = !!(ref1?.name && ref1?.company && ref1?.mobile && ref1?.relationship);
   const step5Done = !!(step2.pastProjectName && step2.pastSuburb && step2.pastState);
-  const step6Done = !!(step1.idNumber);
+  const step6Done = !!step1.idNumber;
 
   const stepDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
 
@@ -146,7 +149,10 @@ export default function GetVouchedIntro() {
           <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
           <View style={{ width: 24 }} />
         </View>
-        <ScrollView contentContainerStyle={styles.submittedScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.submittedScroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.iconCircle, styles.iconCircleGreen]}>
             <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
           </View>
@@ -157,12 +163,25 @@ export default function GetVouchedIntro() {
 
           <View style={styles.strengthRow}>
             <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText style={[styles.strengthPct, { color: strength >= 80 ? Colors.vouchGreen : Colors.amber }]}>
+            <AppText
+              style={[
+                styles.strengthPct,
+                { color: strength >= 80 ? Colors.vouchGreen : Colors.amber },
+              ]}
+            >
               {strength}%
             </AppText>
           </View>
           <View style={styles.strengthTrack}>
-            <View style={[styles.strengthFill, { width: `${strength}%` as any, backgroundColor: strength >= 80 ? Colors.vouchGreen : Colors.amber }]} />
+            <View
+              style={[
+                styles.strengthFill,
+                {
+                  width: `${strength}%` as any,
+                  backgroundColor: strength >= 80 ? Colors.vouchGreen : Colors.amber,
+                },
+              ]}
+            />
           </View>
 
           {pendingRequests.length > 0 && (
@@ -198,7 +217,10 @@ export default function GetVouchedIntro() {
           <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
           <View style={{ width: 24 }} />
         </View>
-        <ScrollView contentContainerStyle={styles.submittedScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.submittedScroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.iconCircle, styles.iconCircleAmber]}>
             <Ionicons name="time-outline" size={40} color={Colors.amber} />
           </View>
@@ -211,12 +233,19 @@ export default function GetVouchedIntro() {
 
           <View style={styles.strengthRow}>
             <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText style={[styles.strengthPct, { color: strength >= 40 ? Colors.amber : Colors.red }]}>
+            <AppText
+              style={[styles.strengthPct, { color: strength >= 40 ? Colors.amber : Colors.red }]}
+            >
               {strength}%
             </AppText>
           </View>
           <View style={styles.strengthTrack}>
-            <View style={[styles.strengthFill, { width: `${strength}%` as any, backgroundColor: Colors.amber }]} />
+            <View
+              style={[
+                styles.strengthFill,
+                { width: `${strength}%` as any, backgroundColor: Colors.amber },
+              ]}
+            />
           </View>
 
           <AppText style={[styles.sectionLabel, { marginTop: 24 }]}>YOUR VOUCHES</AppText>
@@ -273,15 +302,29 @@ export default function GetVouchedIntro() {
         <View style={styles.strengthCard}>
           <View style={styles.strengthRow}>
             <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText style={[styles.strengthPct, { color: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red }]}>
+            <AppText
+              style={[
+                styles.strengthPct,
+                {
+                  color:
+                    strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
+                },
+              ]}
+            >
               {strength}%
             </AppText>
           </View>
           <View style={styles.strengthTrack}>
-            <View style={[styles.strengthFill, {
-              width: `${strength}%` as any,
-              backgroundColor: strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
-            }]} />
+            <View
+              style={[
+                styles.strengthFill,
+                {
+                  width: `${strength}%` as any,
+                  backgroundColor:
+                    strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
+                },
+              ]}
+            />
           </View>
           <AppText style={styles.strengthHint}>
             {strength === 100
@@ -296,7 +339,9 @@ export default function GetVouchedIntro() {
           <TouchableOpacity
             style={styles.stepRow}
             activeOpacity={0.7}
-            onPress={() => router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })}
+            onPress={() =>
+              router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })
+            }
           >
             <View style={[styles.stepCircle, styles.stepCircleActive]}>
               <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
@@ -321,20 +366,24 @@ export default function GetVouchedIntro() {
                 onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
                 disabled={!tappable}
               >
-                <View style={[
-                  styles.stepCircle,
-                  state === "done" && styles.stepCircleDone,
-                  state === "active" && styles.stepCircleActive,
-                  state === "locked" && styles.stepCircleLocked,
-                ]}>
+                <View
+                  style={[
+                    styles.stepCircle,
+                    state === "done" && styles.stepCircleDone,
+                    state === "active" && styles.stepCircleActive,
+                    state === "locked" && styles.stepCircleLocked,
+                  ]}
+                >
                   {state === "done" ? (
                     <Ionicons name="checkmark" size={16} color={Colors.white} />
                   ) : (
-                    <AppText style={[
-                      styles.stepNum,
-                      state === "active" && styles.stepNumActive,
-                      state === "locked" && styles.stepNumLocked,
-                    ]}>
+                    <AppText
+                      style={[
+                        styles.stepNum,
+                        state === "active" && styles.stepNumActive,
+                        state === "locked" && styles.stepNumLocked,
+                      ]}
+                    >
                       {n}
                     </AppText>
                   )}
@@ -349,7 +398,11 @@ export default function GetVouchedIntro() {
                 <View style={styles.stepRight}>
                   <AppText style={styles.stepPct}>+{pct}%</AppText>
                   {tappable && (
-                    <Ionicons name="chevron-forward" size={16} color={state === "locked" ? Colors.grey300 : Colors.grey500} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={state === "locked" ? Colors.grey300 : Colors.grey500}
+                    />
                   )}
                 </View>
               </TouchableOpacity>
@@ -446,7 +499,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   stepCircleDone: { backgroundColor: Colors.vouchGreen },
-  stepCircleActive: { backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.vouchGreen },
+  stepCircleActive: {
+    backgroundColor: Colors.white,
+    borderWidth: 2,
+    borderColor: Colors.vouchGreen,
+  },
   stepCircleLocked: { backgroundColor: Colors.grey300 },
   stepNum: { fontSize: 13, fontFamily: Fonts.bold },
   stepNumActive: { color: Colors.vouchGreen },

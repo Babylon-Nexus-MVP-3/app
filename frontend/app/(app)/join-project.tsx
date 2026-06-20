@@ -119,7 +119,13 @@ export default function JoinProject() {
 
           <AppText style={styles.sectionLabel}>DO YOU HOLD A CURRENT LICENCE?</AppText>
           <View style={styles.optionRow}>
-            {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+            {(
+              [
+                ["Yes", true],
+                ["No", false],
+                ["N/A", null],
+              ] as const
+            ).map(([label, val]) => (
               <TouchableOpacity
                 key={label}
                 style={[styles.chip, joinHasLicence === val && styles.chipActive]}
@@ -134,13 +140,21 @@ export default function JoinProject() {
 
           <AppText style={styles.sectionLabel}>DO YOU HOLD PUBLIC LIABILITY INSURANCE?</AppText>
           <View style={styles.optionRow}>
-            {([["Yes", true], ["No", false], ["N/A", null]] as const).map(([label, val]) => (
+            {(
+              [
+                ["Yes", true],
+                ["No", false],
+                ["N/A", null],
+              ] as const
+            ).map(([label, val]) => (
               <TouchableOpacity
                 key={label}
                 style={[styles.chip, joinHasInsurance === val && styles.chipActive]}
                 onPress={() => setJoinHasInsurance(val)}
               >
-                <AppText style={[styles.chipText, joinHasInsurance === val && styles.chipTextActive]}>
+                <AppText
+                  style={[styles.chipText, joinHasInsurance === val && styles.chipTextActive]}
+                >
                   {label}
                 </AppText>
               </TouchableOpacity>
@@ -150,7 +164,10 @@ export default function JoinProject() {
           {joinError && <AppText style={styles.errorText}>{joinError}</AppText>}
 
           <TouchableOpacity
-            style={[styles.primaryBtn, (joinCode.length < 6 || joinLoading) && styles.primaryBtnDisabled]}
+            style={[
+              styles.primaryBtn,
+              (joinCode.length < 6 || joinLoading) && styles.primaryBtnDisabled,
+            ]}
             onPress={handleJoin}
             disabled={joinCode.length < 6 || joinLoading}
             activeOpacity={0.85}

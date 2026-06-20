@@ -35,7 +35,9 @@ export default function EmailStatus() {
         <View style={styles.divider} />
 
         <AppText style={styles.hint}>
-          Want to use a different email? Tap below to change it — we'll send a confirmation code to
+          {
+            "Want to use a different email? Tap below to change it — we'll send a confirmation code to"
+          }
           your new address.
         </AppText>
 

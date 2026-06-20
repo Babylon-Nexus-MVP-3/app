@@ -185,7 +185,10 @@ export default function ChangeEmail() {
               {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
               <TouchableOpacity
-                style={[styles.primaryButton, (!canSend || loading) && styles.primaryButtonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  (!canSend || loading) && styles.primaryButtonDisabled,
+                ]}
                 onPress={handleSendCode}
                 disabled={!canSend || loading}
                 activeOpacity={0.85}
@@ -214,7 +217,9 @@ export default function ChangeEmail() {
                 {digits.map((d, i) => (
                   <TextInput
                     key={i}
-                    ref={(ref) => { inputRefs.current[i] = ref; }}
+                    ref={(ref) => {
+                      inputRefs.current[i] = ref;
+                    }}
                     style={[styles.box, d ? styles.boxFilled : null]}
                     value={d}
                     onChangeText={(v) => handleDigitChange(i, v)}
@@ -243,7 +248,10 @@ export default function ChangeEmail() {
               {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
               <TouchableOpacity
-                style={[styles.primaryButton, (!isComplete || loading) && styles.primaryButtonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  (!isComplete || loading) && styles.primaryButtonDisabled,
+                ]}
                 onPress={handleVerify}
                 disabled={!isComplete || loading}
                 activeOpacity={0.85}

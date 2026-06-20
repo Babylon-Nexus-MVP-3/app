@@ -61,9 +61,20 @@ function StatePickerModal({
             <View style={sp.handle} />
             <AppText style={sp.title}>Select state</AppText>
             {AU_STATES.map((s) => (
-              <TouchableOpacity key={s} style={sp.option} onPress={() => { onSelect(s); onClose(); }}>
-                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>{s}</AppText>
-                {selected === s && <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />}
+              <TouchableOpacity
+                key={s}
+                style={sp.option}
+                onPress={() => {
+                  onSelect(s);
+                  onClose();
+                }}
+              >
+                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
+                  {s}
+                </AppText>
+                {selected === s && (
+                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
+                )}
               </TouchableOpacity>
             ))}
           </Animated.View>
@@ -75,17 +86,55 @@ function StatePickerModal({
 
 const sp = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  sheet: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24, paddingTop: 12 },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.grey300, alignSelf: "center", marginBottom: 16 },
-  title: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black, marginBottom: 8, letterSpacing: 0.5 },
-  option: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.grey300 },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingTop: 12,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey300,
+  },
   optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
   optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, flex }: {
-  label?: string; value: string; onChangeText: (v: string) => void;
-  placeholder?: string; keyboardType?: "default" | "numeric"; flex?: number;
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  flex,
+}: {
+  label?: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  keyboardType?: "default" | "numeric";
+  flex?: number;
 }) {
   return (
     <View style={[styles.fieldWrap, flex !== undefined && { flex }]}>
@@ -135,7 +184,8 @@ export default function Step5() {
     router.back();
   }
 
-  const canContinue = form.pastProjectName.trim() && form.pastSuburb.trim() && form.pastState.trim();
+  const canContinue =
+    form.pastProjectName.trim() && form.pastSuburb.trim() && form.pastState.trim();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -151,10 +201,15 @@ export default function Step5() {
         <View style={[styles.progressEmpty, { flex: 1 }]} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <AppText style={styles.heading}>Past project</AppText>
-          <AppText style={styles.subheading}>Share a completed project to show your track record.</AppText>
+          <AppText style={styles.subheading}>
+            Share a completed project to show your track record.
+          </AppText>
 
           <View style={styles.section}>
             <Field
@@ -176,7 +231,9 @@ export default function Step5() {
                 activeOpacity={0.7}
               >
                 <View style={styles.stateBtn}>
-                  <AppText style={[styles.stateBtnText, !form.pastState && styles.stateBtnPlaceholder]}>
+                  <AppText
+                    style={[styles.stateBtnText, !form.pastState && styles.stateBtnPlaceholder]}
+                  >
                     {form.pastState || "State"}
                   </AppText>
                   <Ionicons name="chevron-down" size={14} color={Colors.grey500} />
@@ -268,7 +325,13 @@ const styles = StyleSheet.create({
   progressEmpty: { backgroundColor: Colors.grey300 },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
   heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
-  subheading: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginBottom: 24, lineHeight: 20 },
+  subheading: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
   section: { gap: 14 },
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
