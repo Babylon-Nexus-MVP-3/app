@@ -183,6 +183,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   scroll: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 48,
