@@ -482,14 +482,30 @@ vouchRouter.get(
         .lean();
       const giverIds = [...new Set(vouches.map((v) => v.fromUserId.toString()))];
       const givers = await UserModel.find({ _id: { $in: giverIds } })
-        .select("name businessName")
+        .select("name businessName abn")
         .lean();
       const giverMap = Object.fromEntries(givers.map((g) => [g._id.toString(), g]));
-      const populated = vouches.map((v) => ({
-        ...v,
-        fromName: giverMap[v.fromUserId.toString()]?.name ?? "Someone",
-        fromBusinessName: giverMap[v.fromUserId.toString()]?.businessName ?? "",
-      }));
+
+      const giverAbns = givers.map((g) => g.abn).filter(Boolean) as string[];
+      const vouchedBackDocs = await GivenVouchModel.find({
+        fromUserId: userId,
+        toAbn: { $in: giverAbns },
+      })
+        .select("toAbn")
+        .lean();
+      const vouchedBackSet = new Set(vouchedBackDocs.map((v) => v.toAbn));
+
+      const populated = vouches.map((v) => {
+        const giver = giverMap[v.fromUserId.toString()];
+        const fromAbn = giver?.abn ?? "";
+        return {
+          ...v,
+          fromName: giver?.name ?? "Someone",
+          fromBusinessName: giver?.businessName ?? "",
+          fromAbn,
+          alreadyVouchedBack: !!(fromAbn && vouchedBackSet.has(fromAbn)),
+        };
+      });
       res.status(200).json({ vouches: populated });
     } catch (err) {
       next(err);

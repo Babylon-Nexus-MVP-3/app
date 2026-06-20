@@ -8,6 +8,7 @@
     "seed:dev": "ts-node -T scripts/seedDev.ts",
     "seed:reset": "ts-node -T scripts/resetAndSeed.ts",
     "seed:vouched": "ts-node -T scripts/seedVouched.ts",
+    "seed:vouchback": "ts-node -T scripts/seedVouchBack.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint-fix": "eslint --fix 'src/**/*.{ts,js}'",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand"
