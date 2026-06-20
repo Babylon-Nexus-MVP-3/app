@@ -149,8 +149,12 @@ export default function GiveAVouchScreen() {
         fetchWithAuth(`${API_BASE_URL}/vouch/business/${digits}`).catch(() => null),
       ]);
       if (!abrRes.ok) {
-        setAbnError("ABN not found. Check the number and try again.");
-        canProceed = false;
+        if (abrRes.status >= 500) {
+          // ABR service down — ABN format is valid, let verify screen handle the rest
+        } else {
+          setAbnError("ABN not found. Check the number and try again.");
+          canProceed = false;
+        }
       } else {
         const abrData = await abrRes.json();
         if (!abrData.isActive) {

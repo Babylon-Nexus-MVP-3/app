@@ -16,8 +16,7 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
   const guid = process.env.ABR_GUID;
 
   if (!guid) {
-    // Dev/test fallback — return plausible mock so UI works without a real key
-    res.status(200).json(buildMock(abn));
+    res.status(503).json({ error: "ABN lookup not configured" });
     return;
   }
 
@@ -59,7 +58,7 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
       isActive: true,
     });
   } catch {
-    res.status(404).json({ error: "ABN not found" });
+    res.status(503).json({ error: "ABR lookup temporarily unavailable" });
   }
 });
 
@@ -116,20 +115,3 @@ function buildSearchMock(name: string): Array<{ abn: string; entityName: string;
   ];
 }
 
-function buildMock(abn: string): {
-  entityName: string;
-  tradingName: string | undefined;
-  businessType: string;
-  state: string;
-  activeYears: number;
-  isActive: boolean;
-} {
-  return {
-    entityName: `Business ${abn.slice(-4)} Pty Ltd`,
-    tradingName: undefined,
-    businessType: "Australian Private Company",
-    state: "NSW",
-    activeYears: 5,
-    isActive: true,
-  };
-}
