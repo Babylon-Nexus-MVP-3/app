@@ -486,10 +486,7 @@ export default function ProjectDetail() {
 
       {/* ── Raise Invoice modal ── */}
       <Modal visible={invoiceVisible} animationType="slide" presentationStyle="fullScreen">
-        <SafeAreaView
-          style={{ flex: 1, backgroundColor: Colors.grey100 }}
-          edges={["top", "bottom"]}
-        >
+        <View style={{ flex: 1, backgroundColor: Colors.grey100 }}>
           {invoiceSuccess ? (
             <View style={{ flex: 1, justifyContent: "space-between", paddingHorizontal: 24 }}>
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
@@ -512,7 +509,7 @@ export default function ProjectDetail() {
             </View>
           ) : (
             <>
-              <View style={styles.raiseFixedHeader}>
+              <View style={[styles.raiseFixedHeader, { paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity
                   onPress={() => setInvoiceVisible(false)}
                   style={styles.raiseBack}
@@ -594,7 +591,7 @@ export default function ProjectDetail() {
               </KeyboardAvoidingView>
             </>
           )}
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── Invite modal ── */}
