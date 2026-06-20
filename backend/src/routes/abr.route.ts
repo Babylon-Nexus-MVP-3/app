@@ -31,8 +31,12 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
     const raw = JSON.parse(jsonStr);
 
     // The ABR JSON API returns EntityTypeCode + EntityTypeName, main + trading names
+    if (raw.AbnStatus === "Cancelled") {
+      res.status(410).json({ error: "ABN cancelled" });
+      return;
+    }
     if (raw.AbnStatus !== "Active") {
-      res.status(404).json({ error: "ABN is not active" });
+      res.status(404).json({ error: "ABN not found" });
       return;
     }
 

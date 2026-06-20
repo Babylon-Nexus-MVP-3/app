@@ -151,6 +151,11 @@ export default function GiveAVouchScreen() {
       if (!abrRes.ok) {
         if (abrRes.status >= 500) {
           // ABR service down — ABN format is valid, let verify screen handle the rest
+        } else if (abrRes.status === 410) {
+          setAbnError(
+            "This ABN has been cancelled. You can only vouch for businesses with an active ABN."
+          );
+          canProceed = false;
         } else {
           setAbnError("ABN not found. Check the number and try again.");
           canProceed = false;
