@@ -34,7 +34,7 @@ jobs:
 
       - name: Run frontend lint
         working-directory: ./frontend
-        run: npx eslint .
+        run: npx expo lint
 
       - name: Install backend dependencies
         working-directory: ./backend
