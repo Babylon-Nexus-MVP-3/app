@@ -84,7 +84,9 @@ abrRouter.get("/search", async (req: Request, res: Response) => {
     const upstream = await fetch(url);
     if (!upstream.ok) throw new Error("ABR upstream error");
 
-    const raw = await upstream.json();
+    const text = await upstream.text();
+    const jsonStr = text.replace(/^[^(]+\(/, "").replace(/\)\s*$/, "");
+    const raw = JSON.parse(jsonStr);
 
     const names: Array<{
       Abn: string;
@@ -102,7 +104,7 @@ abrRouter.get("/search", async (req: Request, res: Response) => {
 
     res.status(200).json({ results });
   } catch {
-    res.status(404).json({ error: "Search failed" });
+    res.status(503).json({ error: "ABR search temporarily unavailable" });
   }
 });
 

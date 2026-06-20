@@ -71,7 +71,7 @@ export default function GiveAVouchScreen() {
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
   const [checking, setChecking] = useState(false);
-  const [showNameSearch, setShowNameSearch] = useState(false);
+  const [activeTab, setActiveTab] = useState<"abn" | "name">("abn");
   const [nameQuery, setNameQuery] = useState("");
   const [nameResults, setNameResults] = useState<SearchResult[]>([]);
   const [nameSearching, setNameSearching] = useState(false);
@@ -179,13 +179,6 @@ export default function GiveAVouchScreen() {
     }
   }
 
-  function toggleNameSearch() {
-    setShowNameSearch((prev) => !prev);
-    setNameQuery("");
-    setNameResults([]);
-    setNameError("");
-  }
-
   async function onNameSearch() {
     const q = nameQuery.trim();
     if (q.length < 3) {
@@ -197,6 +190,14 @@ export default function GiveAVouchScreen() {
     setNameResults([]);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        setNameError(
+          res.status >= 500
+            ? "Business search is temporarily unavailable. Try searching by ABN."
+            : "Search failed. Please try again."
+        );
+        return;
+      }
       const data = await res.json();
       const results: SearchResult[] = data.results ?? [];
       if (results.length === 0) {
@@ -284,15 +285,22 @@ export default function GiveAVouchScreen() {
 
         <View style={styles.divider} />
 
-        {/* Vouch a new business */}
-        <AppText style={styles.newTitle}>Vouch a new business</AppText>
+        {/* Vouch a business */}
+        <AppText style={styles.newTitle}>Vouch a business</AppText>
         <AppText style={styles.newSubtitle}>
-          {"Enter their ABN. We'll verify it instantly."}
+          {activeTab === "abn"
+            ? "Enter their ABN. We'll verify it instantly."
+            : "Search by business name to find their ABN."}
         </AppText>
 
-        {!showNameSearch && (
+        {activeTab === "abn" && (
           <>
-            <AppText style={styles.abnLabel}>ABN</AppText>
+            <View style={styles.labelRow}>
+              <AppText style={styles.abnLabel}>ABN</AppText>
+              <TouchableOpacity onPress={() => setActiveTab("name")} hitSlop={8}>
+                <AppText style={styles.switchLink}>Search by name →</AppText>
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={[styles.abnInput, abnError ? styles.abnInputError : null]}
               value={abn}
@@ -327,9 +335,14 @@ export default function GiveAVouchScreen() {
           </>
         )}
 
-        {showNameSearch && (
+        {activeTab === "name" && (
           <>
-            <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
+            <View style={styles.labelRow}>
+              <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
+              <TouchableOpacity onPress={() => setActiveTab("abn")} hitSlop={8}>
+                <AppText style={styles.switchLink}>← Enter ABN instead</AppText>
+              </TouchableOpacity>
+            </View>
             <View style={styles.nameSearchRow}>
               <TextInput
                 style={styles.nameInput}
@@ -370,10 +383,7 @@ export default function GiveAVouchScreen() {
                       idx < nameResults.length - 1 && styles.resultRowBorder,
                     ]}
                     activeOpacity={0.7}
-                    onPress={() => {
-                      setShowNameSearch(false);
-                      proceedWithAbn(item.abn);
-                    }}
+                    onPress={() => proceedWithAbn(item.abn)}
                   >
                     <View style={{ flex: 1, gap: 2 }}>
                       <AppText style={styles.resultName} numberOfLines={1}>
@@ -391,23 +401,6 @@ export default function GiveAVouchScreen() {
           </>
         )}
       </ScrollView>
-
-      <TouchableOpacity
-        onPress={toggleNameSearch}
-        style={styles.toggleSearchLink}
-        activeOpacity={0.7}
-      >
-        {showNameSearch ? (
-          <AppText style={styles.toggleSearchText}>
-            <AppText style={styles.toggleSearchUnderline}>Search by ABN instead</AppText>
-          </AppText>
-        ) : (
-          <AppText style={styles.toggleSearchText}>
-            {"Don't have their ABN? "}
-            <AppText style={styles.toggleSearchUnderline}>Add it manually</AppText>
-          </AppText>
-        )}
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -573,20 +566,15 @@ const styles = StyleSheet.create({
     color: Colors.grey500,
     lineHeight: 18,
   },
-  toggleSearchLink: {
+  labelRow: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    backgroundColor: Colors.white,
+    justifyContent: "space-between",
   },
-  toggleSearchText: {
-    fontSize: 13,
-    color: Colors.grey500,
-    fontWeight: "400",
-  },
-  toggleSearchUnderline: {
+  switchLink: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
-    fontWeight: "600",
-    textDecorationLine: "underline",
   },
   nameSearchRow: {
     flexDirection: "row",
@@ -601,6 +589,7 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 16,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
   },
@@ -632,11 +621,12 @@ const styles = StyleSheet.create({
   },
   resultName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     color: Colors.black,
   },
   resultMeta: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
 });
