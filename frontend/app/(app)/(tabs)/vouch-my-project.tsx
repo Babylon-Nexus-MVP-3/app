@@ -9,21 +9,41 @@ import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
+function computeStrength(
+  user: { name?: string; abn?: string; businessTrade?: string } | null,
+  vouchProfile: Record<string, string> | null,
+  respondedCount: number
+): number {
+  let pct = 0;
+  const hasTrade = !!(user?.businessTrade || vouchProfile?.trade);
+  if (user?.name && user?.abn && hasTrade) pct += 20;
+  if (vouchProfile?.currentProjectName) pct += 15;
+  if (respondedCount >= 1) pct += 20;
+  if (respondedCount >= 2) pct += 20;
+  if (vouchProfile?.pastProjectName) pct += 15;
+  if (vouchProfile?.idNumber) pct += 10;
+  return pct;
+}
+
 export default function VouchMyProjectScreen() {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const [respondedCount, setRespondedCount] = useState(0);
+  const [vouchProfile, setVouchProfile] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       setLoading(true);
-      fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
+      Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
+      ])
+        .then(([sentData, profileData]) => {
           if (!cancelled) {
-            const requests: { status: string }[] = data?.requests ?? [];
+            const requests: { status: string }[] = sentData?.requests ?? [];
             setRespondedCount(requests.filter((r) => r.status === "responded").length);
+            if (profileData) setVouchProfile(profileData);
           }
         })
         .catch(() => {})
@@ -36,7 +56,8 @@ export default function VouchMyProjectScreen() {
     }, [fetchWithAuth])
   );
 
-  const isUnlocked = respondedCount >= 2;
+  const strength = computeStrength(user, vouchProfile, respondedCount);
+  const isUnlocked = strength === 100;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -46,7 +67,7 @@ export default function VouchMyProjectScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle} numberOfLines={1}>
-          VOUCH MY PROJECT
+          CREATE MY PROJECT
         </AppText>
         <TouchableOpacity hitSlop={8}>
           <Ionicons name="help-circle-outline" size={24} color={Colors.grey500} />
@@ -94,12 +115,12 @@ export default function VouchMyProjectScreen() {
             />
             <View style={styles.gateText}>
               <AppText style={styles.gateTitle}>
-                {isUnlocked ? "Vouch profile complete" : "Complete your vouch profile to unlock"}
+                {isUnlocked ? "Profile complete" : "Complete your profile to unlock"}
               </AppText>
               <AppText style={styles.gateDesc}>
                 {isUnlocked
-                  ? "You have 2 references — you can now set up your project."
-                  : `${respondedCount}/2 references have responded. Once 2 people vouch for you, this feature unlocks.`}
+                  ? "Your profile is 100% — you can now set up your project."
+                  : `Your profile is ${strength}% complete. Finish all 6 steps to unlock project creation.`}
               </AppText>
             </View>
           </View>

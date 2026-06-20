@@ -55,3 +55,7 @@ authRouter.post(
   otpVerifyLimiter,
   AuthController.verifyMobileOtpHandler
 );
+
+// Email change (authenticated)
+authRouter.post("/request-email-change", requireAuth, AuthController.requestEmailChangeHandler);
+authRouter.post("/verify-email-change", requireAuth, AuthController.verifyEmailChangeHandler);

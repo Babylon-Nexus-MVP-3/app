@@ -83,7 +83,6 @@ export default function HomeScreen() {
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [vouchMyProjectUnlocked, setVouchMyProjectUnlocked] = useState(false);
   const [respondedCount, setRespondedCount] = useState(0);
   const [vouchProfile, setVouchProfile] = useState<Record<string, string> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,7 +108,6 @@ export default function HomeScreen() {
         (r: { status: string }) => r.status === "responded"
       ).length;
       setRespondedCount(responded);
-      setVouchMyProjectUnlocked(responded >= 2);
       if (profileData) setVouchProfile(profileData);
     } catch {}
   }, [fetchWithAuth]);
@@ -202,9 +200,9 @@ export default function HomeScreen() {
             <AppText style={styles.cardDesc}>Enter invite code</AppText>
           </TouchableOpacity>
 
-          {/* Vouch my Project */}
+          {/* Create my Project */}
           <TouchableOpacity
-            style={[styles.card, vouchMyProjectUnlocked ? styles.cardDefault : styles.cardLocked]}
+            style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/vouch-my-project")}
           >
@@ -212,14 +210,14 @@ export default function HomeScreen() {
               <Ionicons
                 name="sync-circle-outline"
                 size={26}
-                color={vouchMyProjectUnlocked ? Colors.black : Colors.grey500}
+                color={strength === 100 ? Colors.black : Colors.grey500}
               />
             </View>
-            <AppText style={[styles.cardTitle, !vouchMyProjectUnlocked && styles.cardTitleLocked]}>
-              Vouch my Project
+            <AppText style={[styles.cardTitle, strength < 100 && styles.cardTitleLocked]}>
+              Create my Project
             </AppText>
             <AppText style={styles.cardDesc}>
-              {vouchMyProjectUnlocked ? "Track payment health" : "Needs 2 vouches"}
+              {strength === 100 ? "Set up your project" : "Complete profile first"}
             </AppText>
           </TouchableOpacity>
 
@@ -262,8 +260,8 @@ export default function HomeScreen() {
           activeOpacity={0.7}
           onPress={() =>
             Alert.alert(
-              "2 Vouches Required",
-              "You need at least 2 people to vouch for you before you can apply for supplier credit. Head to Get Vouched to request your vouches.",
+              "Supplier Credit",
+              "Supplier Credit will unlock as your trust signals grow. Keep building your profile on VouchPay.",
               [{ text: "Got it" }]
             )
           }
@@ -276,9 +274,6 @@ export default function HomeScreen() {
               <AppText style={[styles.cardTitle, styles.cardTitleLocked]}>
                 Apply for supplier credit
               </AppText>
-              <View style={styles.lockedBadge}>
-                <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
-              </View>
             </View>
             <AppText style={styles.cardDesc}>Submit applications using your VouchPay profile</AppText>
           </View>

@@ -39,7 +39,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function NotifCard({ item }: { item: VouchNotif }) {
+function NotifCard({ item, onRead }: { item: VouchNotif; onRead: (id: string) => void }) {
   const isReceived = item.type === "vouch_received";
   const message = isReceived
     ? `${item.fromName} vouched for ${item.toBusinessName ?? "your business"}.`
@@ -49,7 +49,10 @@ function NotifCard({ item }: { item: VouchNotif }) {
     <TouchableOpacity
       style={[styles.card, !item.read && styles.cardUnread]}
       activeOpacity={0.7}
-      onPress={() => router.push("/(app)/vouches")}
+      onPress={() => {
+        onRead(item._id);
+        router.push("/(app)/vouches");
+      }}
     >
       <View style={styles.iconWrap}>
         <Ionicons
@@ -98,9 +101,14 @@ export default function VouchNotifications() {
     setRefreshing(false);
   }
 
+  async function markOneRead(id: string) {
+    setNotifications((prev) => prev.filter((n) => n._id !== id));
+    fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
+  }
+
   async function markAllRead() {
     await fetchWithAuth(`${API_BASE_URL}/vouch/notifications/read-all`, { method: "PATCH" });
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications([]);
   }
 
   return (
@@ -137,7 +145,7 @@ export default function VouchNotifications() {
               tintColor={Colors.vouchGreen}
             />
           }
-          renderItem={({ item }) => <NotifCard item={item} />}
+          renderItem={({ item }) => <NotifCard item={item} onRead={markOneRead} />}
           ListEmptyComponent={
             <View style={styles.centered}>
               <Ionicons name="notifications-off-outline" size={48} color={Colors.grey300} />

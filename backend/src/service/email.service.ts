@@ -288,3 +288,28 @@ export async function sendResendResetCodeEmail(to: string, resetCode: string): P
     `,
   });
 }
+
+export async function sendEmailChangeCode(to: string, code: string): Promise<void> {
+  await transporter.sendMail({
+    from: `"VouchPay" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: "Confirm your new email address",
+    text: `You requested to change your email address.\n\nYour confirmation code is: ${code}\n\nThis code expires in 15 minutes.\n\nIf you didn't request this, you can safely ignore this email.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5;">
+        ${emailHeader}
+        <div style="padding: 24px;">
+          <h2>Confirm your new email</h2>
+          <p>We received a request to change your VouchPay email address to <strong>${to}</strong>.</p>
+          <p>Enter the code below in the app to confirm:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f4f4f4; border-radius: 8px; text-align: center;">
+            ${code}
+          </div>
+          <p style="margin-top: 16px; color: #888; font-size: 13px;">This code expires in 15 minutes.</p>
+          <p style="color: #888; font-size: 12px;">If you didn't request this change, you can safely ignore this email.</p>
+          ${emailSignature}
+        </div>
+      </div>
+    `,
+  });
+}

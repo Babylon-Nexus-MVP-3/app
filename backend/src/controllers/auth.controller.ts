@@ -22,6 +22,8 @@ import {
   verifyMobileOtp,
   verifyOtp,
   verifyResetCodeService,
+  requestEmailChange,
+  verifyEmailChange,
 } from "../service/auth.service";
 
 import validator from "validator";
@@ -352,5 +354,33 @@ export const updatePushToken = async (req: Request, res: Response, next: NextFun
     res.status(200).json(result);
   } catch (error) {
     next(error);
+  }
+};
+
+export const requestEmailChangeHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.sub;
+    const { newEmail } = req.body;
+    if (!newEmail || typeof newEmail !== "string") {
+      return res.status(400).json({ error: "newEmail is required." });
+    }
+    await requestEmailChange(userId, newEmail.trim().toLowerCase());
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyEmailChangeHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.sub;
+    const { code } = req.body;
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({ error: "code is required." });
+    }
+    const user = await verifyEmailChange(userId, code.trim());
+    res.status(200).json({ ok: true, user });
+  } catch (err) {
+    next(err);
   }
 };

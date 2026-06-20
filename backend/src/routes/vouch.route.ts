@@ -298,6 +298,24 @@ vouchRouter.patch(
   }
 );
 
+// PATCH /vouch/notifications/:id/read — mark a single notification as read
+vouchRouter.patch(
+  "/notifications/:id/read",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      await VouchNotificationModel.updateOne(
+        { _id: req.params.id, recipientUserId: userId },
+        { $set: { read: true } }
+      );
+      res.status(200).json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /vouch/give — record a vouch and mark the originating request as responded
 vouchRouter.post(
   "/give",
