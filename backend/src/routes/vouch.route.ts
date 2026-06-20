@@ -335,13 +335,21 @@ vouchRouter.post(
         recipientMobile,
       } = req.body;
 
+      const giver = await UserModel.findById(userId)
+        .select("email mobile abn name businessName")
+        .lean();
+
+      if (giver?.abn && giver.abn === toAbn) {
+        res.status(400).json({ error: "You cannot vouch for your own business." });
+        return;
+      }
+
       if (requestId !== undefined) {
         if (!mongoose.isValidObjectId(requestId)) {
           res.status(400).json({ error: "Invalid requestId" });
           return;
         }
         // Verify the request was actually sent to this user
-        const giver = await UserModel.findById(userId).select("email mobile").lean();
         const request = await VouchRequestModel.findById(requestId)
           .select("toEmail toMobile")
           .lean();
@@ -363,7 +371,6 @@ vouchRouter.post(
         return;
       }
 
-      const giver = await UserModel.findById(userId).select("name businessName").lean();
       const giverName = giver?.name ?? "Someone";
       const giverCompany = giver?.businessName ?? "";
 

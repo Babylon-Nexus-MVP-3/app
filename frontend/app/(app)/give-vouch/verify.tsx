@@ -40,7 +40,7 @@ export default function VerifyScreen() {
     recipientEmail?: string;
     recipientMobile?: string;
   }>();
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
 
   const [abrData, setAbrData] = useState<AbrResult | null>(null);
   const [abrError, setAbrError] = useState("");
@@ -64,6 +64,13 @@ export default function VerifyScreen() {
 
   async function lookupAbn() {
     setLoading(true);
+    if (abn === user?.abn) {
+      setAbrError("You can't vouch for your own business.");
+      setAbrInactive(true);
+      setVouchStatus({ isOnVouch: false, vouchCount: 0 });
+      setLoading(false);
+      return;
+    }
     try {
       const [statusRes, abrRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`),
