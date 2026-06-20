@@ -22,6 +22,7 @@ import {
   sendOnboardingEmail,
   sendResendResetCodeEmail,
   sendResendVerificationEmail,
+  sendEmailChangeCode,
 } from "./email.service";
 import { JwtPayload } from "../middleware";
 import { VouchRequestModel } from "../models/vouchRequestModel";
@@ -791,4 +792,49 @@ export async function resendOtp(mobile: string): Promise<{ code?: string }> {
   }
 
   return process.env.NODE_ENV === "test" ? { code } : {};
+}
+
+export async function requestEmailChange(userId: string, newEmail: string): Promise<void> {
+  const normalised = validateEmailFormat(newEmail);
+
+  const existing = await UserModel.findOne({ email: normalised });
+  if (existing) throw new AuthError("That email address is already in use.");
+
+  const { code, expiry } = generateCode();
+  const hashedCode = hashCode(code);
+
+  await UserModel.findByIdAndUpdate(userId, {
+    $set: { pendingEmail: normalised, emailChangeCode: hashedCode, emailChangeCodeExpiry: expiry },
+  });
+
+  if (process.env.NODE_ENV !== "test") {
+    await sendEmailChangeCode(normalised, code).catch(() => {});
+  }
+}
+
+export async function verifyEmailChange(userId: string, code: string): Promise<SafeUser> {
+  const user = await UserModel.findById(userId);
+  if (!user || !user.pendingEmail || !user.emailChangeCode || !user.emailChangeCodeExpiry) {
+    throw new AuthError("No pending email change found.");
+  }
+
+  if (user.emailChangeCodeExpiry < new Date()) {
+    throw new AuthError("Code has expired. Please request a new one.");
+  }
+
+  const hashedCode = hashCode(code);
+  if (hashedCode !== user.emailChangeCode) {
+    throw new AuthError("Incorrect code. Please try again.");
+  }
+
+  const updated = await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      $set: { email: user.pendingEmail },
+      $unset: { pendingEmail: 1, emailChangeCode: 1, emailChangeCodeExpiry: 1 },
+    },
+    { new: true }
+  );
+
+  return toSafeUser(updated!);
 }

@@ -162,7 +162,11 @@ export default function MeScreen() {
         <AppText style={styles.sectionLabel}>CREDENTIALS</AppText>
         <View style={styles.credCard}>
           {/* Email */}
-          <View style={styles.credRow}>
+          <TouchableOpacity
+            style={styles.credRow}
+            onPress={() => router.push("/(app)/email-status" as any)}
+            activeOpacity={0.7}
+          >
             <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
               <Ionicons name="mail-outline" size={18} color={Colors.vouchGreen} />
             </View>
@@ -171,7 +175,8 @@ export default function MeScreen() {
               <AppText style={styles.credValue}>{user?.email ?? "—"}</AppText>
             </View>
             <VerifiedBadge />
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+          </TouchableOpacity>
 
           <View style={styles.credDivider} />
 
@@ -204,11 +209,9 @@ export default function MeScreen() {
             {user?.mobileVerified ? (
               <VerifiedBadge />
             ) : (
-              <>
-                <UnverifiedBadge label={displayMobile ? "Verify" : "Add"} />
-                <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
-              </>
+              <UnverifiedBadge label={displayMobile ? "Verify" : "Add"} />
             )}
+            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
           </TouchableOpacity>
 
           <View style={styles.credDivider} />

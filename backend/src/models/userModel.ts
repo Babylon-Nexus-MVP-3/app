@@ -34,6 +34,9 @@ export interface User extends Document {
   accountLocked: boolean;
   verificationCode?: string | null;
   verificationCodeExpiry?: Date | null;
+  pendingEmail?: string | null;
+  emailChangeCode?: string | null;
+  emailChangeCodeExpiry?: Date | null;
   resetCode?: string | null;
   resetCodeExpiry?: Date | null;
   emailVerified: boolean;
@@ -76,6 +79,9 @@ const userSchema = new Schema<User>(
     accountLocked: { type: Boolean, default: false },
     verificationCode: { type: String, unique: true, sparse: true },
     verificationCodeExpiry: { type: Date },
+    pendingEmail: { type: String, default: null },
+    emailChangeCode: { type: String, default: null },
+    emailChangeCodeExpiry: { type: Date, default: null },
     resetCode: { type: String },
     resetCodeExpiry: { type: Date },
     emailVerified: { type: Boolean, default: false },
