@@ -51,7 +51,7 @@ function NotifCard({ item, onRead }: { item: VouchNotif; onRead: (id: string) =>
       activeOpacity={0.7}
       onPress={() => {
         onRead(item._id);
-        router.push("/(app)/vouches");
+        router.push("/(app)/(tabs)/vouches");
       }}
     >
       <View style={styles.iconWrap}>

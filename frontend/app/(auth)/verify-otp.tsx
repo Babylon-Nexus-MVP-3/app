@@ -103,7 +103,7 @@ export default function VerifyOtp() {
       }
       const { accessToken, refreshToken, user } = await res.json();
       await login(accessToken, refreshToken, user);
-      router.replace("/(app)/home");
+      router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         // Network error — backend not live, mock login for dev
@@ -114,7 +114,7 @@ export default function VerifyOtp() {
           role: "Subbie" as never,
           status: "Active",
         });
-        router.replace("/(app)/home");
+        router.replace("/(app)/(tabs)/home");
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }

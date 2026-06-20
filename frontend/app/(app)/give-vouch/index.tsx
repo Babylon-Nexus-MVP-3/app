@@ -64,7 +64,7 @@ type SearchResult = {
 };
 
 export default function GiveAVouchScreen() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const [requests, setRequests] = useState<VouchRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [ignoring, setIgnoring] = useState<string | null>(null);
@@ -117,6 +117,10 @@ export default function GiveAVouchScreen() {
   }
 
   async function proceedWithAbn(digits: string) {
+    if (digits === user?.abn) {
+      setAbnError("You can't vouch for your own business.");
+      return;
+    }
     setChecking(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${digits}`);
@@ -139,6 +143,10 @@ export default function GiveAVouchScreen() {
     const digits = abn.replace(/\D/g, "");
     if (digits.length !== 11) {
       setAbnError("Please enter a valid 11-digit ABN");
+      return;
+    }
+    if (digits === user?.abn) {
+      setAbnError("You can't vouch for your own business.");
       return;
     }
     setChecking(true);
