@@ -124,7 +124,6 @@ export default function MeScreen() {
           {/* Card top row */}
           <View style={styles.vpCardTop}>
             <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
-            <Ionicons name="shield-checkmark" size={22} color="rgba(255,255,255,0.3)" />
           </View>
 
           {/* Avatar + name */}

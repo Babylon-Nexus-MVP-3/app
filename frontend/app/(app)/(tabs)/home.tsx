@@ -16,32 +16,101 @@ import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
+function computeStrength(
+  user: { name?: string; abn?: string; businessTrade?: string } | null,
+  vouchProfile: Record<string, string> | null,
+  respondedCount: number
+): number {
+  let pct = 0;
+  const hasTrade = !!(user?.businessTrade || vouchProfile?.trade);
+  if (user?.name && user?.abn && hasTrade) pct += 20;
+  if (vouchProfile?.currentProjectName) pct += 15;
+  if (respondedCount >= 1) pct += 20;
+  if (respondedCount >= 2) pct += 20;
+  if (vouchProfile?.pastProjectName) pct += 15;
+  if (vouchProfile?.idNumber) pct += 10;
+  return pct;
+}
+
+function StrengthBar({ pct }: { pct: number }) {
+  const color =
+    pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
+  return (
+    <View style={sb.wrap}>
+      <View style={sb.row}>
+        <AppText style={sb.label}>Profile strength</AppText>
+        <AppText style={[sb.pct, { color }]}>{pct}%</AppText>
+      </View>
+      <View style={sb.track}>
+        <View style={[sb.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
+      </View>
+      {pct < 100 && (
+        <AppText style={sb.hint}>
+          {pct === 0
+            ? "Complete your profile to unlock all features."
+            : pct < 60
+              ? "Keep going — add vouches to strengthen your profile."
+              : "Almost there! Verify your ID for 100%."}
+        </AppText>
+      )}
+    </View>
+  );
+}
+
+const sb = StyleSheet.create({
+  wrap: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 24,
+  },
+  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  label: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
+  pct: { fontSize: 13, fontFamily: Fonts.bold },
+  track: {
+    height: 6,
+    backgroundColor: Colors.grey300,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  fill: { height: 6, borderRadius: 3 },
+  hint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
+});
+
 export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [vouchMyProjectUnlocked, setVouchMyProjectUnlocked] = useState(false);
+  const [respondedCount, setRespondedCount] = useState(0);
+  const [vouchProfile, setVouchProfile] = useState<Record<string, string> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, notifRes, sentRes] = await Promise.all([
+      const [vouchRes, notifRes, sentRes, profileRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
       ]);
       const vouchData = await vouchRes.json();
       const notifData = await notifRes.json();
       const sentData = sentRes.ok ? await sentRes.json() : null;
+      const profileData = profileRes.ok ? await profileRes.json() : null;
+
       setPendingCount(vouchData.requests?.length ?? 0);
       setUnreadCount(
         (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
       );
-      const respondedCount = (sentData?.requests ?? []).filter(
+      const responded = (sentData?.requests ?? []).filter(
         (r: { status: string }) => r.status === "responded"
       ).length;
-      setVouchMyProjectUnlocked(respondedCount >= 2);
+      setRespondedCount(responded);
+      setVouchMyProjectUnlocked(responded >= 2);
+      if (profileData) setVouchProfile(profileData);
     } catch {}
   }, [fetchWithAuth]);
 
@@ -56,6 +125,8 @@ export default function HomeScreen() {
     await fetchData();
     setRefreshing(false);
   }
+
+  const strength = computeStrength(user, vouchProfile, respondedCount);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -89,12 +160,22 @@ export default function HomeScreen() {
 
         {/* Greeting */}
         <View style={styles.greetingSection}>
-          <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
-          <AppText style={styles.subtitle}>What do you want to do today?</AppText>
+          <View style={styles.greetingRow}>
+            <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
+            {strength === 100 && (
+              <Ionicons name="shield-checkmark" size={30} color={Colors.vouchGreen} />
+            )}
+          </View>
+          <AppText style={styles.subtitle}>
+            {strength === 100 ? "Profile fully verified." : "What do you want to do today?"}
+          </AppText>
         </View>
 
-        {/* Cards */}
-        <View style={styles.cards}>
+        {/* Profile Strength — hidden once fully complete */}
+        {strength < 100 && <StrengthBar pct={strength} />}
+
+        {/* 2x2 Card Grid */}
+        <View style={styles.grid}>
           {/* Get Vouched */}
           <TouchableOpacity
             style={[styles.card, styles.cardGetVouched]}
@@ -102,62 +183,23 @@ export default function HomeScreen() {
             onPress={() => router.push("/(app)/get-vouched")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="shield-checkmark-outline" size={28} color={Colors.vouchGreen} />
+              <Ionicons name="shield-checkmark-outline" size={26} color={Colors.vouchGreen} />
             </View>
-            <View style={styles.cardContent}>
-              <AppText style={styles.cardTitle}>Get Vouched</AppText>
-              <AppText style={styles.cardDesc}>
-                Build your Vouch profile. Apply for supplier credit accounts faster.
-              </AppText>
-            </View>
+            <AppText style={styles.cardTitle}>Get Vouched</AppText>
+            <AppText style={styles.cardDesc}>Build your profile</AppText>
           </TouchableOpacity>
 
-          {/* Give a Vouch */}
+          {/* Join a Project */}
           <TouchableOpacity
             style={[styles.card, styles.cardDefault]}
             activeOpacity={0.7}
-            onPress={() => router.push("/(app)/give-vouch")}
+            onPress={() => router.push("/(app)/join-project")}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="person-outline" size={28} color={Colors.black} />
+              <Ionicons name="enter-outline" size={26} color={Colors.black} />
             </View>
-            <View style={styles.cardContent}>
-              <View style={styles.cardTitleRow}>
-                <AppText style={styles.cardTitle}>Give a Vouch</AppText>
-                {pendingCount > 0 && (
-                  <View style={styles.newBadge}>
-                    <AppText style={styles.newBadgeText}>{pendingCount} NEW</AppText>
-                  </View>
-                )}
-              </View>
-              <AppText style={styles.cardDesc}>
-                {"Vouch a person or business you've worked with. Or respond to a request."}
-              </AppText>
-            </View>
-          </TouchableOpacity>
-
-          {/* Apply for supplier credit — locked */}
-          <TouchableOpacity
-            style={[styles.card, styles.cardLocked]}
-            activeOpacity={0.7}
-            onPress={() =>
-              Alert.alert("Locked", "Complete your vouch profile to unlock.", [{ text: "OK" }])
-            }
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name="card-outline" size={28} color={Colors.grey500} />
-            </View>
-            <View style={styles.cardContent}>
-              <View style={styles.cardTitleRow}>
-                <AppText style={styles.cardTitle}>Apply for supplier credit</AppText>
-                <View style={styles.lockedBadge}>
-                  <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
-                </View>
-              </View>
-              <AppText style={styles.cardDesc}>
-                {"Instant multiple applications with Vouchpay"}
-              </AppText>
-            </View>
+            <AppText style={styles.cardTitle}>Join a Project</AppText>
+            <AppText style={styles.cardDesc}>Enter invite code</AppText>
           </TouchableOpacity>
 
           {/* Vouch my Project */}
@@ -169,23 +211,78 @@ export default function HomeScreen() {
             <View style={styles.cardIcon}>
               <Ionicons
                 name="sync-circle-outline"
-                size={28}
+                size={26}
                 color={vouchMyProjectUnlocked ? Colors.black : Colors.grey500}
               />
             </View>
-            <View style={styles.cardContent}>
-              <View style={styles.cardTitleRow}>
-                <AppText style={styles.cardTitle}>Vouch my Project</AppText>
-                {!vouchMyProjectUnlocked && (
-                  <View style={styles.lockedBadge}>
-                    <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
-                  </View>
-                )}
-              </View>
-              <AppText style={styles.cardDesc}>{"See your project's payment health."}</AppText>
+            <AppText style={[styles.cardTitle, !vouchMyProjectUnlocked && styles.cardTitleLocked]}>
+              Vouch my Project
+            </AppText>
+            <AppText style={styles.cardDesc}>
+              {vouchMyProjectUnlocked ? "Track payment health" : "Needs 2 vouches"}
+            </AppText>
+          </TouchableOpacity>
+
+          {/* Give a Vouch — locked until 2 vouches received */}
+          <TouchableOpacity
+            style={[styles.card, respondedCount >= 2 ? styles.cardDefault : styles.cardLocked]}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (respondedCount >= 2) {
+                router.push("/(app)/give-vouch");
+              } else {
+                Alert.alert(
+                  "2 Vouches Required",
+                  "You need at least 2 people to vouch for you before you can vouch for others. Head to Get Vouched to request your vouches.",
+                  [{ text: "Got it" }]
+                );
+              }
+            }}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="person-outline" size={26} color={respondedCount >= 2 ? Colors.black : Colors.grey500} />
+              {pendingCount > 0 && respondedCount >= 2 && (
+                <View style={styles.dotBadge}>
+                  <AppText style={styles.dotBadgeText}>{pendingCount}</AppText>
+                </View>
+              )}
             </View>
+            <AppText style={[styles.cardTitle, respondedCount < 2 && styles.cardTitleLocked]}>
+              Give a Vouch
+            </AppText>
+            <AppText style={styles.cardDesc}>
+              {respondedCount >= 2 ? "Vouch for others" : "Needs 2 vouches"}
+            </AppText>
           </TouchableOpacity>
         </View>
+
+        {/* Apply for supplier credit — full width, locked */}
+        <TouchableOpacity
+          style={[styles.wideCard, styles.cardLocked]}
+          activeOpacity={0.7}
+          onPress={() =>
+            Alert.alert(
+              "2 Vouches Required",
+              "You need at least 2 people to vouch for you before you can apply for supplier credit. Head to Get Vouched to request your vouches.",
+              [{ text: "Got it" }]
+            )
+          }
+        >
+          <View style={styles.wideCardLeft}>
+            <Ionicons name="card-outline" size={26} color={Colors.grey500} />
+          </View>
+          <View style={styles.wideCardContent}>
+            <View style={styles.wideTitleRow}>
+              <AppText style={[styles.cardTitle, styles.cardTitleLocked]}>
+                Apply for supplier credit
+              </AppText>
+              <View style={styles.lockedBadge}>
+                <AppText style={styles.lockedBadgeText}>LOCKED</AppText>
+              </View>
+            </View>
+            <AppText style={styles.cardDesc}>Submit applications using your VouchPay profile</AppText>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -213,28 +310,36 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   greetingSection: {
-    marginBottom: 32,
+    marginBottom: 20,
+  },
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
   },
   greeting: {
     fontSize: 36,
     fontFamily: Fonts.bold,
     color: Colors.black,
-    marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
-  cards: {
-    gap: 16,
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+    marginBottom: 14,
   },
   card: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    width: "47%",
     borderRadius: 16,
-    padding: 24,
-    gap: 16,
+    padding: 18,
+    gap: 8,
+    minHeight: 130,
   },
   cardGetVouched: {
     backgroundColor: Colors.white,
@@ -248,50 +353,65 @@ const styles = StyleSheet.create({
   },
   cardLocked: {
     backgroundColor: Colors.beige,
-    borderWidth: 0,
   },
   cardIcon: {
-    marginTop: 2,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 4,
   },
+  dotBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.red,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  dotBadgeText: {
+    fontSize: 9,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+  },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 15,
     fontFamily: Fonts.bold,
     color: Colors.black,
-    flex: 1,
+  },
+  cardTitleLocked: {
+    color: Colors.grey700,
   },
   cardDesc: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.grey700,
-    lineHeight: 23,
+    color: Colors.grey500,
   },
-  newBadge: {
-    backgroundColor: "#FDECEA",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginLeft: 8,
+  wideCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    padding: 18,
+    gap: 14,
   },
-  newBadgeText: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.red,
+  wideCardLeft: {
+    marginTop: 2,
+  },
+  wideCardContent: {
+    flex: 1,
+  },
+  wideTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
   },
   lockedBadge: {
     backgroundColor: Colors.amberBg,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    marginLeft: 8,
   },
   lockedBadgeText: {
     fontSize: 11,

@@ -26,6 +26,7 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState("");
+  const [trade, setTrade] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -77,6 +78,7 @@ export default function SignUp() {
     firstName.length > 0 &&
     email.includes("@") &&
     passwordValid &&
+    trade.trim().length > 0 &&
     abnDigits.length === 11 &&
     !abrLoading &&
     !abrError &&
@@ -99,6 +101,7 @@ export default function SignUp() {
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
           ...(businessName.trim() ? { businessName: businessName.trim() } : {}),
+          ...(trade.trim() ? { businessTrade: trade.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -237,6 +240,19 @@ export default function SignUp() {
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
           />
+
+
+          <AppText style={styles.label}>TRADE / BUSINESS TYPE</AppText>
+          <TextInput
+            style={styles.input}
+            value={trade}
+            onChangeText={setTrade}
+            placeholder="e.g. Plumbing, Electrical, Carpentry"
+            placeholderTextColor={Colors.grey300}
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 

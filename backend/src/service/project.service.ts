@@ -4,7 +4,7 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
-import { notifyProjectPendingApproval } from "./notification.service";
+import { notifyProjectPendingApproval, notifyProjectInvited } from "./notification.service";
 import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
 import { notifySafely } from "./notificationScheduler.service";
@@ -263,6 +263,7 @@ export async function inviteParticipant(
     await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
       console.error(`Failed to send invite email to ${participant.email}:`, err);
     });
+    notifyProjectInvited(project._id.toString(), participant.email, project.name).catch(() => {});
   }
 
   const safeParticipant = {

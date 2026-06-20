@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -119,13 +119,11 @@ function isRefComplete(ref: Reference) {
 function formatMobile(v: string) { return v.replace(/\D/g, "").slice(0, 10); }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function Step3() {
-  const { fresh } = useLocalSearchParams<{ fresh?: string }>();
-  const isFresh = fresh === "true";
+export default function Step4() {
   const { step1, step2, references, setReferences } = useWizard();
-  const { fetchWithAuth, updateUser } = useAuth();
+  const { fetchWithAuth } = useAuth();
 
-  const [ref, setRef] = useState<Reference>(isFresh ? emptyRef() : (references[0] ?? emptyRef()));
+  const [ref, setRef] = useState<Reference>(references[1] ?? emptyRef());
   const [emailTouched, setEmailTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -138,7 +136,7 @@ export default function Step3() {
 
   async function onSubmit() {
     setSubmitting(true);
-    const updatedRefs = isFresh ? [...references, ref] : [ref, ...(references.slice(1))];
+    const updatedRefs = [references[0] ?? emptyRef(), ref, ...references.slice(2)];
     setReferences(updatedRefs);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
@@ -160,19 +158,12 @@ export default function Step3() {
         setSubmitting(false);
         return;
       }
-      if (res.ok) {
-        await updateUser({ abn: step1.abn }).catch(() => {});
-      }
     } catch {
       // Network error — continue
     } finally {
       setSubmitting(false);
     }
-    if (isFresh) {
-      router.back();
-    } else {
-      router.replace("/(app)/get-vouched/success" as any);
-    }
+    router.replace("/(app)/get-vouched/success" as any);
   }
 
   return (
@@ -181,21 +172,19 @@ export default function Step3() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>{isFresh ? "REQUEST A VOUCH" : "STEP 3 OF 6"}</AppText>
+        <AppText style={styles.headerTitle}>STEP 4 OF 6</AppText>
         <View style={{ width: 24 }} />
       </View>
-      {!isFresh && (
-        <View style={styles.progressWrap}>
-          <View style={[styles.progressFill, { flex: 3 }]} />
-          <View style={[styles.progressEmpty, { flex: 3 }]} />
-        </View>
-      )}
+      <View style={styles.progressWrap}>
+        <View style={[styles.progressFill, { flex: 4 }]} />
+        <View style={[styles.progressEmpty, { flex: 2 }]} />
+      </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>First vouch</AppText>
+          <AppText style={styles.heading}>Second vouch</AppText>
           <AppText style={styles.subtitle}>
-            Someone you've worked with who can speak to your character and work quality.
+            Add a second person who can vouch for your work. This unlocks your full profile.
           </AppText>
 
           <View style={styles.refCard}>

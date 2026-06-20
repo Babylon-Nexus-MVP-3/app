@@ -1,9 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { AbrCard } from "@/components/AbrCard";
-import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
+import { useEffect, useState } from "react";
 import {
-  Animated,
-  Modal,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -19,150 +15,16 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
+import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 
-const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
-
-function StatePickerModal({
-  visible,
-  selected,
-  onSelect,
-  onClose,
-}: {
-  visible: boolean;
-  selected: string;
-  onSelect: (s: string) => void;
-  onClose: () => void;
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
-
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, sp.overlay, { opacity: fadeAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        </Animated.View>
-        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
-          <Animated.View style={[sp.sheet, { transform: [{ translateY: slideAnim }] }]}>
-            <View style={sp.handle} />
-            <AppText style={sp.title}>Select state</AppText>
-            {AU_STATES.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={sp.option}
-                onPress={() => {
-                  onSelect(s);
-                  onClose();
-                }}
-              >
-                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
-                  {s}
-                </AppText>
-                {selected === s && (
-                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const sp = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  sheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    paddingTop: 12,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.grey300,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey300,
-  },
-  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
-  optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
-});
-
-function ProgressBar({ step }: { step: number }) {
-  return (
-    <View style={pb.wrap}>
-      <View style={[pb.fill, { flex: step }]} />
-      <View style={[pb.empty, { flex: 3 - step }]} />
-    </View>
-  );
-}
-
-const pb = StyleSheet.create({
-  wrap: { flexDirection: "row", height: 3, marginTop: 10 },
-  fill: { backgroundColor: Colors.vouchGreen },
-  empty: { backgroundColor: Colors.grey300 },
-});
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "numeric" | "phone-pad" | "email-address";
-}) {
-  return (
-    <View style={styles.fieldWrap}>
-      <AppText style={styles.fieldLabel}>{label}</AppText>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder ?? ""}
-        placeholderTextColor={Colors.grey300}
-        keyboardType={keyboardType ?? "default"}
-        autoCorrect={false}
-      />
+    <View style={styles.infoRow}>
+      <AppText style={styles.infoLabel}>{label}</AppText>
+      <AppText style={styles.infoValue}>{value || "—"}</AppText>
     </View>
   );
 }
@@ -171,79 +33,35 @@ export default function Step1() {
   const { user, fetchWithAuth } = useAuth();
   const { step1, setStep1 } = useWizard();
 
-  const [form, setForm] = useState(step1);
-  const [abnDisplay, setAbnDisplay] = useState(formatAbn(step1.abn));
-  const [statePickerOpen, setStatePickerOpen] = useState(false);
-  const { abrResult, abrLoading, abrError } = useAbrLookup(form.abn);
+  const hasAccountDetails = !!(user?.name && user?.abn && user?.businessTrade);
 
-  const hasAccountAbn = !!user?.abn;
+  const [trade, setTrade] = useState(user?.businessTrade || step1.trade || "");
 
+  // Sync once WizardContext finishes fetching from the backend
   useEffect(() => {
-    if (!form.name && user?.name) {
-      setForm((f) => ({ ...f, name: user.name }));
-    }
-  }, [user, form.name]);
+    if (!trade && step1.trade) setTrade(step1.trade);
+  }, [step1.trade]);
 
-  useEffect(() => {
-    if (!form.abn && user?.abn) {
-      const digits = user.abn.replace(/\D/g, "").slice(0, 11);
-      setAbnDisplay(formatAbn(digits));
-      setForm((f) => ({ ...f, abn: digits }));
-    }
-  }, [user, form.abn]);
+  const { abrResult, abrLoading, abrError } = useAbrLookup(
+    user?.abn?.replace(/\D/g, "") ?? step1.abn
+  );
 
-  function onAbnChange(text: string) {
-    const digits = text.replace(/\D/g, "").slice(0, 11);
-    setAbnDisplay(formatAbn(digits));
-    update("abn", digits);
-  }
-
-  function update(key: keyof typeof form, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  function formatExpiry(raw: string) {
-    const digits = raw.replace(/\D/g, "");
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
-  }
-
-  function isExpiryValid(expiry: string): boolean {
-    const parts = expiry.split("/");
-    if (parts.length !== 3 || parts[2].length !== 4) return false;
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const year = parseInt(parts[2], 10);
-    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
-    if (day < 1 || day > 31 || month < 1 || month > 12) return false;
-    const now = new Date();
-    return (
-      new Date(year, month - 1, day) >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    );
-  }
-
-  const expiryInvalid = form.idExpiry.length >= 10 && !isExpiryValid(form.idExpiry);
-
-  async function onContinue() {
-    setStep1(form);
+  async function onSave() {
+    const updatedStep1 = {
+      ...step1,
+      name: user?.name ?? step1.name,
+      abn: (user?.abn ?? step1.abn).replace(/\D/g, ""),
+      trade,
+    };
+    setStep1(updatedStep1);
     fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
       method: "POST",
-      body: JSON.stringify({ ...form, references: [] }),
+      body: JSON.stringify({ ...updatedStep1, references: [] }),
     }).catch(() => {});
     router.back();
   }
 
-  const canContinue =
-    form.name.trim() &&
-    form.abn.length === 11 &&
-    !abrLoading &&
-    !abrError &&
-    form.trade.trim() &&
-    form.idNumber.trim() &&
-    form.idExpiry.length === 10 &&
-    !expiryInvalid &&
-    (form.idType === "licence" ? !!form.idState.trim() : !!form.idCountry.trim());
+  const canSave = trade.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -251,168 +69,60 @@ export default function Step1() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>STEP 1 OF 3</AppText>
+        <AppText style={styles.headerTitle}>STEP 1 OF 6</AppText>
         <View style={{ width: 24 }} />
       </View>
-      <ProgressBar step={1} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={styles.progressWrap}>
+        <View style={[styles.progressFill, { flex: 1 }]} />
+        <View style={[styles.progressEmpty, { flex: 5 }]} />
+      </View>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <AppText style={styles.heading}>Your details</AppText>
+          <AppText style={styles.subheading}>
+            {hasAccountDetails
+              ? "These details come from your account. Confirm or update your trade type."
+              : "Confirm your details from your account."}
+          </AppText>
 
-          <View style={styles.section}>
-            <Field
-              label="NAME"
-              value={form.name}
-              onChangeText={(v) => update("name", v)}
-              placeholder="Full name"
-            />
-            <View style={styles.fieldWrap}>
-              <AppText style={styles.fieldLabel}>ABN</AppText>
-              {hasAccountAbn ? (
-                <View style={[styles.input, styles.inputLocked]}>
-                  <AppText style={styles.lockedValue}>{abnDisplay || "—"}</AppText>
-                  <Ionicons name="lock-closed-outline" size={14} color={Colors.grey500} />
-                </View>
-              ) : (
-                <>
-                  <TextInput
-                    style={[styles.input, abrError ? styles.inputError : null]}
-                    value={abnDisplay}
-                    onChangeText={onAbnChange}
-                    placeholder="XX XXX XXX XXX"
-                    placeholderTextColor={Colors.grey300}
-                    keyboardType="numeric"
-                    autoCorrect={false}
-                  />
-                  <AppText style={styles.abnMissingHint}>
-                    No ABN on your account — add one via Me tab after submitting.
-                  </AppText>
-                </>
-              )}
+          <View style={styles.detailsCard}>
+            <InfoRow label="NAME" value={user?.name ?? step1.name} />
+            <View style={styles.divider} />
+            <InfoRow label="ABN" value={formatAbn((user?.abn ?? step1.abn).replace(/\D/g, ""))} />
+            {(abrResult || abrLoading || abrError) && (
               <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
-            </View>
-            <Field
-              label="TRADE / BUSINESS TYPE"
-              value={form.trade}
-              onChangeText={(v) => update("trade", v)}
-              placeholder="e.g. Plumbing, Electrical"
-            />
-          </View>
-
-          {/* ID Verification */}
-          <AppText style={styles.sectionLabel}>ID VERIFICATION</AppText>
-
-          <View style={styles.idTypeRow}>
-            <TouchableOpacity
-              style={[styles.chip, form.idType === "licence" && styles.chipSelected]}
-              onPress={() => update("idType", "licence")}
-            >
-              <Ionicons
-                name="card-outline"
-                size={15}
-                color={form.idType === "licence" ? Colors.white : Colors.grey700}
-              />
-              <AppText
-                style={[styles.chipText, form.idType === "licence" && styles.chipTextSelected]}
-              >
-                {"Driver's licence"}
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.chip, form.idType === "passport" && styles.chipSelected]}
-              onPress={() => update("idType", "passport")}
-            >
-              <Ionicons
-                name="document-outline"
-                size={15}
-                color={form.idType === "passport" ? Colors.white : Colors.grey700}
-              />
-              <AppText
-                style={[styles.chipText, form.idType === "passport" && styles.chipTextSelected]}
-              >
-                Passport
-              </AppText>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Field
-              label="DOCUMENT NUMBER"
-              value={form.idNumber}
-              onChangeText={(v) => update("idNumber", v)}
-              placeholder={form.idType === "licence" ? "e.g. 12345678" : "e.g. PA1234567"}
-            />
-
-            {form.idType === "licence" ? (
-              <View style={styles.fieldWrap}>
-                <AppText style={styles.fieldLabel}>STATE</AppText>
-                <TouchableOpacity
-                  style={[styles.input, styles.inputSelect]}
-                  onPress={() => setStatePickerOpen(true)}
-                  activeOpacity={0.7}
-                >
-                  <AppText
-                    style={form.idState ? styles.inputSelectValue : styles.inputSelectPlaceholder}
-                  >
-                    {form.idState || "Select state"}
-                  </AppText>
-                  <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Field
-                label="COUNTRY"
-                value={form.idCountry}
-                onChangeText={(v) => update("idCountry", v)}
-                placeholder="e.g. Australia"
-              />
             )}
-
-            <View style={styles.fieldWrap}>
-              <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
-              <TextInput
-                style={[styles.input, expiryInvalid ? styles.inputError : null]}
-                value={form.idExpiry}
-                onChangeText={(v) => update("idExpiry", formatExpiry(v))}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor={Colors.grey300}
-                keyboardType="numeric"
-                autoCorrect={false}
-              />
-              {expiryInvalid && (
-                <AppText style={styles.expiryError}>
-                  This document has expired — enter a valid expiry date.
-                </AppText>
-              )}
+            <View style={styles.divider} />
+            <InfoRow label="BUSINESS NAME" value={user?.businessName ?? ""} />
+            <View style={styles.lockNote}>
+              <Ionicons name="lock-closed-outline" size={12} color={Colors.grey500} />
+              <AppText style={styles.lockText}>Name and ABN are locked to your account details.</AppText>
             </View>
           </View>
 
-          <StatePickerModal
-            visible={statePickerOpen}
-            selected={form.idState}
-            onSelect={(s) => update("idState", s)}
-            onClose={() => setStatePickerOpen(false)}
+          <AppText style={styles.fieldLabel}>TRADE / BUSINESS TYPE</AppText>
+          <TextInput
+            style={styles.input}
+            value={trade}
+            onChangeText={setTrade}
+            placeholder="e.g. Plumbing, Electrical, Carpentry"
+            placeholderTextColor={Colors.grey300}
+            autoCapitalize="words"
+            autoCorrect={false}
           />
-
-          <View style={styles.privacyNote}>
-            <Ionicons name="lock-closed-outline" size={13} color={Colors.grey500} />
-            <AppText style={styles.privacyText}>
-              Your ID is used for verification only and is never shared publicly.
-            </AppText>
-          </View>
+          <AppText style={styles.fieldHint}>
+            This helps people understand what you do when they view your vouch profile.
+          </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-          onPress={onContinue}
-          disabled={!canContinue}
+          style={[styles.primaryBtn, !canSave && styles.primaryBtnDisabled]}
+          onPress={onSave}
+          disabled={!canSave}
           activeOpacity={0.85}
         >
           <AppText style={styles.primaryBtnText}>Save &amp; continue</AppText>
@@ -432,17 +142,27 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 4,
   },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
+  headerTitle: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black, letterSpacing: 1 },
+  progressWrap: { flexDirection: "row", height: 3, marginTop: 10 },
+  progressFill: { backgroundColor: Colors.vouchGreen },
+  progressEmpty: { backgroundColor: Colors.grey300 },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
-  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 24 },
-  section: { gap: 16, marginBottom: 28 },
-  fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
+  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
+  subheading: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginBottom: 24, lineHeight: 20 },
+  detailsCard: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 28,
+    gap: 4,
+  },
+  infoRow: { paddingVertical: 10 },
+  infoLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.grey500, letterSpacing: 0.8, marginBottom: 4 },
+  infoValue: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
+  divider: { height: 1, backgroundColor: Colors.grey300, marginVertical: 4 },
+  lockNote: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
+  lockText: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
+  fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8, marginBottom: 8 },
   input: {
     borderWidth: 1,
     borderColor: Colors.grey300,
@@ -453,64 +173,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.black,
     backgroundColor: Colors.white,
+    marginBottom: 8,
   },
-  inputError: { borderColor: Colors.red },
-  inputSelect: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-  },
-  inputSelectValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
-  inputSelectPlaceholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey300 },
-  inputLocked: {
-    backgroundColor: Colors.grey100,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-  },
-  lockedValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey700 },
-  abnMissingHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.amber, marginTop: 4 },
-  expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
-  sectionLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.bold,
-    color: Colors.vouchGreen,
-    letterSpacing: 0.8,
-    marginBottom: 14,
-  },
-  idTypeRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    backgroundColor: Colors.white,
-  },
-  chipSelected: {
-    backgroundColor: Colors.vouchGreen,
-    borderColor: Colors.vouchGreen,
-  },
-  chipText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.grey700 },
-  chipTextSelected: { color: Colors.white },
-  privacyNote: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 10,
-    padding: 12,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    lineHeight: 17,
-  },
+  fieldHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, lineHeight: 18 },
   footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,

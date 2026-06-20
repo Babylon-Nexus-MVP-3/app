@@ -14,6 +14,7 @@ export const NotificationType = {
   InvoiceOverdue14: "InvoiceOverdue14",
   InvoiceOverdue21: "InvoiceOverdue21",
   InvoiceOverdue28: "InvoiceOverdue28",
+  ProjectInvited: "ProjectInvited",
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
