@@ -241,7 +241,6 @@ export default function SignUp() {
             onSubmitEditing={handleSubmit}
           />
 
-
           <AppText style={styles.label}>TRADE / BUSINESS TYPE</AppText>
           <TextInput
             style={styles.input}
@@ -252,7 +251,6 @@ export default function SignUp() {
             autoCapitalize="words"
             returnKeyType="next"
           />
-
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 

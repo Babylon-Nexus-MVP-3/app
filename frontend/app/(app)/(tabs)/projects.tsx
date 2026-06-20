@@ -186,8 +186,14 @@ export default function Projects() {
                 }
               }}
             >
-              <Ionicons name="add" size={15} color={canCreateProject ? Colors.vouchGreen : Colors.grey500} />
-              <AppText style={[styles.actionBtnText, !canCreateProject && styles.actionBtnTextDisabled]}>
+              <Ionicons
+                name="add"
+                size={15}
+                color={canCreateProject ? Colors.vouchGreen : Colors.grey500}
+              />
+              <AppText
+                style={[styles.actionBtnText, !canCreateProject && styles.actionBtnTextDisabled]}
+              >
                 New Project
               </AppText>
             </TouchableOpacity>

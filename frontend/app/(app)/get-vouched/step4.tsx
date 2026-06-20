@@ -63,7 +63,9 @@ function PickerModal({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, modal.overlay, { opacity: fadeAnim }]}>
+        <Animated.View
+          style={[StyleSheet.absoluteFillObject, modal.overlay, { opacity: fadeAnim }]}
+        >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
         </Animated.View>
         <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
@@ -73,7 +75,13 @@ function PickerModal({
               data={options}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
-                <TouchableOpacity style={modal.option} onPress={() => { onSelect(item); onClose(); }}>
+                <TouchableOpacity
+                  style={modal.option}
+                  onPress={() => {
+                    onSelect(item);
+                    onClose();
+                  }}
+                >
                   <AppText style={modal.optionText}>{item}</AppText>
                 </TouchableOpacity>
               )}
@@ -87,13 +95,42 @@ function PickerModal({
 
 const modal = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)" },
-  sheet: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40, paddingTop: 12, maxHeight: "50%" },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.grey300, alignSelf: "center", marginBottom: 16 },
-  option: { paddingVertical: 16, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: Colors.grey100 },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+    paddingTop: 12,
+    maxHeight: "50%",
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  option: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey100,
+  },
   optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
 });
 
-function Dropdown({ label, value, options, onSelect }: { label: string; value: string; options: string[]; onSelect: (v: string) => void }) {
+function Dropdown({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onSelect: (v: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -103,20 +140,39 @@ function Dropdown({ label, value, options, onSelect }: { label: string; value: s
         </AppText>
         <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
       </TouchableOpacity>
-      <PickerModal visible={open} options={options} onSelect={onSelect} onClose={() => setOpen(false)} />
+      <PickerModal
+        visible={open}
+        options={options}
+        onSelect={onSelect}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }
 
-const emptyRef = (): Reference => ({ name: "", company: "", mobile: "", email: "", relationship: "", project: "" });
+const emptyRef = (): Reference => ({
+  name: "",
+  company: "",
+  mobile: "",
+  email: "",
+  relationship: "",
+  project: "",
+});
 
 function isRefComplete(ref: Reference) {
   const needsProject = ref.relationship === "From another project";
-  return ref.name.trim() && ref.company.trim() && ref.mobile.trim() && ref.relationship.trim() &&
-    (!needsProject || ref.project.trim());
+  return (
+    ref.name.trim() &&
+    ref.company.trim() &&
+    ref.mobile.trim() &&
+    ref.relationship.trim() &&
+    (!needsProject || ref.project.trim())
+  );
 }
 
-function formatMobile(v: string) { return v.replace(/\D/g, "").slice(0, 10); }
+function formatMobile(v: string) {
+  return v.replace(/\D/g, "").slice(0, 10);
+}
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Step4() {
@@ -142,19 +198,33 @@ export default function Step4() {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
         body: JSON.stringify({
-          name: step1.name, abn: step1.abn, trade: step1.trade,
-          idType: step1.idType, idNumber: step1.idNumber, idExpiry: step1.idExpiry,
-          currentProjectName: step2.currentProjectName, address: step2.address,
-          suburb: step2.suburb, state: step2.state, postcode: step2.postcode, value: step2.value,
-          pastProjectName: step2.pastProjectName, pastSuburb: step2.pastSuburb,
-          pastPostcode: step2.pastPostcode, pastMonthYear: step2.pastMonthYear,
-          pastState: step2.pastState, pastValue: step2.pastValue,
+          name: step1.name,
+          abn: step1.abn,
+          trade: step1.trade,
+          idType: step1.idType,
+          idNumber: step1.idNumber,
+          idExpiry: step1.idExpiry,
+          currentProjectName: step2.currentProjectName,
+          address: step2.address,
+          suburb: step2.suburb,
+          state: step2.state,
+          postcode: step2.postcode,
+          value: step2.value,
+          pastProjectName: step2.pastProjectName,
+          pastSuburb: step2.pastSuburb,
+          pastPostcode: step2.pastPostcode,
+          pastMonthYear: step2.pastMonthYear,
+          pastState: step2.pastState,
+          pastValue: step2.pastValue,
           references: updatedRefs.filter((r) => r.name.trim()),
         }),
       });
       if (res.status === 400) {
         const data = await res.json().catch(() => ({}));
-        Alert.alert("Cannot send request", data.error ?? "This person has already vouched for you.");
+        Alert.alert(
+          "Cannot send request",
+          data.error ?? "This person has already vouched for you."
+        );
         setSubmitting(false);
         return;
       }
@@ -180,7 +250,10 @@ export default function Step4() {
         <View style={[styles.progressEmpty, { flex: 2 }]} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <AppText style={styles.heading}>Second vouch</AppText>
           <AppText style={styles.subtitle}>
@@ -226,7 +299,9 @@ export default function Step4() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              {emailInvalid ? <AppText style={styles.fieldError}>Enter a valid email address</AppText> : null}
+              {emailInvalid ? (
+                <AppText style={styles.fieldError}>Enter a valid email address</AppText>
+              ) : null}
             </View>
 
             <AppText style={styles.dropdownLabel}>HOW DO YOU KNOW THEM?</AppText>

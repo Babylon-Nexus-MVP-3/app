@@ -1,5 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -200,7 +207,9 @@ export default function VouchesScreen() {
                     <AppText style={styles.businessName}>
                       {v.fromName || "Someone"}
                       {v.fromBusinessName ? (
-                        <AppText style={styles.fromBusiness}>{`  ·  ${v.fromBusinessName}`}</AppText>
+                        <AppText
+                          style={styles.fromBusiness}
+                        >{`  ·  ${v.fromBusinessName}`}</AppText>
                       ) : null}
                     </AppText>
                     <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>

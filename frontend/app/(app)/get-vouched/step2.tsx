@@ -64,10 +64,17 @@ function StatePickerModal({
               <TouchableOpacity
                 key={s}
                 style={sp.option}
-                onPress={() => { onSelect(s); onClose(); }}
+                onPress={() => {
+                  onSelect(s);
+                  onClose();
+                }}
               >
-                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>{s}</AppText>
-                {selected === s && <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />}
+                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
+                  {s}
+                </AppText>
+                {selected === s && (
+                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
+                )}
               </TouchableOpacity>
             ))}
           </Animated.View>
@@ -87,9 +94,29 @@ const sp = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 40 : 24,
     paddingTop: 12,
   },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.grey300, alignSelf: "center", marginBottom: 16 },
-  title: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black, marginBottom: 8, letterSpacing: 0.5 },
-  option: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.grey300 },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey300,
+  },
   optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
   optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });
@@ -157,10 +184,7 @@ export default function Step2() {
     router.back();
   }
 
-  const canContinue =
-    form.currentProjectName.trim() &&
-    form.suburb.trim() &&
-    form.state.trim();
+  const canContinue = form.currentProjectName.trim() && form.suburb.trim() && form.state.trim();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -176,10 +200,15 @@ export default function Step2() {
         <View style={[styles.progressEmpty, { flex: 4 }]} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <AppText style={styles.heading}>Current project</AppText>
-          <AppText style={styles.subheading}>Tell us about the project you're working on right now.</AppText>
+          <AppText style={styles.subheading}>
+            {"Tell us about the project you're working on right now."}
+          </AppText>
 
           <View style={styles.section}>
             <Field
@@ -284,7 +313,13 @@ const styles = StyleSheet.create({
   progressEmpty: { backgroundColor: Colors.grey300 },
   scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
   heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
-  subheading: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, marginBottom: 24, lineHeight: 20 },
+  subheading: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
   section: { gap: 14, marginBottom: 28 },
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
