@@ -10,25 +10,41 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
+type WizardDraft = {
+  step1: { name: string; abn: string; trade: string; idNumber: string };
+  step2: { currentProjectName: string; suburb: string; state: string; pastProjectName: string; pastSuburb: string; pastState: string };
+  references: { name: string; company: string; mobile: string; relationship: string }[];
+};
+
 function computeStrength(
   user: { name?: string; abn?: string; businessTrade?: string } | null,
-  vouchProfile: Record<string, string> | null,
+  draft: WizardDraft | null,
   respondedCount: number
 ): number {
+  const s1 = draft?.step1;
+  const s2 = draft?.step2;
+  const refs = draft?.references ?? [];
+  const step1Done = !!(user?.name && user?.abn && (user?.businessTrade || s1?.trade)) ||
+    !!(s1?.name && s1?.abn && s1?.trade);
+  const step2Done = !!(s2?.currentProjectName && s2?.suburb && s2?.state);
+  const step3Done = !!(refs[0]?.name && refs[0]?.company && refs[0]?.mobile && refs[0]?.relationship);
+  const step4Done = !!(refs[1]?.name && refs[1]?.company && refs[1]?.mobile && refs[1]?.relationship);
+  const step5Done = !!(s2?.pastProjectName && s2?.pastSuburb && s2?.pastState);
+  const step6Done = !!(s1?.idNumber);
   let pct = 0;
-  const hasTrade = !!(user?.businessTrade || vouchProfile?.trade);
-  if (user?.name && user?.abn && hasTrade) pct += 20;
-  if (vouchProfile?.currentProjectName) pct += 15;
-  if (respondedCount >= 1) pct += 20;
-  if (respondedCount >= 2) pct += 20;
-  if (vouchProfile?.pastProjectName) pct += 15;
-  if (vouchProfile?.idNumber) pct += 10;
+  if (step1Done) pct += 20;
+  if (step2Done) pct += 15;
+  if (step3Done || respondedCount >= 1) pct += 20;
+  if (step4Done || respondedCount >= 2) pct += 20;
+  if (step5Done) pct += 15;
+  if (step6Done) pct += 10;
   return pct;
 }
 
@@ -84,21 +100,20 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [respondedCount, setRespondedCount] = useState(0);
-  const [vouchProfile, setVouchProfile] = useState<Record<string, string> | null>(null);
+  const [wizardDraft, setWizardDraft] = useState<WizardDraft | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, notifRes, sentRes, profileRes] = await Promise.all([
+      const [vouchRes, notifRes, sentRes, raw] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
+        AsyncStorage.getItem("wizard_draft"),
       ]);
       const vouchData = await vouchRes.json();
       const notifData = await notifRes.json();
       const sentData = sentRes.ok ? await sentRes.json() : null;
-      const profileData = profileRes.ok ? await profileRes.json() : null;
 
       setPendingCount(vouchData.requests?.length ?? 0);
       setUnreadCount(
@@ -108,7 +123,7 @@ export default function HomeScreen() {
         (r: { status: string }) => r.status === "responded"
       ).length;
       setRespondedCount(responded);
-      if (profileData) setVouchProfile(profileData);
+      if (raw) setWizardDraft(JSON.parse(raw));
     } catch {}
   }, [fetchWithAuth]);
 
@@ -124,7 +139,7 @@ export default function HomeScreen() {
     setRefreshing(false);
   }
 
-  const strength = computeStrength(user, vouchProfile, respondedCount);
+  const strength = computeStrength(user, wizardDraft, respondedCount);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

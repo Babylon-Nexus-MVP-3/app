@@ -1,6 +1,21 @@
-import { useCallback, useState } from "react";
-import { Alert, Linking, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  Share,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
@@ -29,6 +44,42 @@ function UnverifiedBadge({ label }: { label: string }) {
 export default function MeScreen() {
   const { user, logout, fetchWithAuth } = useAuth();
   const [vouchCount, setVouchCount] = useState<number | null>(null);
+  const [vouchesSent, setVouchesSent] = useState<number | null>(null);
+  const [topAttributes, setTopAttributes] = useState<{ attr: string; count: number }[]>([]);
+  const [cardModalVisible, setCardModalVisible] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const cardRef = useRef<View>(null);
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim = useRef(new Animated.Value(0.85)).current;
+
+  function openCardModal() {
+    setCardModalVisible(true);
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(cardAnim, { toValue: 1, useNativeDriver: true, bounciness: 6 }),
+    ]).start();
+  }
+
+  function closeCardModal() {
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(cardAnim, { toValue: 0.85, duration: 160, useNativeDriver: true }),
+    ]).start(() => setCardModalVisible(false));
+  }
+
+  async function handleShare() {
+    if (!cardRef.current) return;
+    setSharing(true);
+    try {
+      const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png" });
+      } else {
+        await Share.share({ url: uri });
+      }
+    } catch {}
+    setSharing(false);
+  }
 
   const initials =
     user?.name
@@ -40,18 +91,30 @@ export default function MeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchWithAuth(`${API_BASE_URL}/auth/me`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          const abn = data?.user?.abn ?? user?.abn;
-          if (!abn) return;
-          return fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`)
+      const abn = user?.abn;
+      const fetches: Promise<void>[] = [
+        fetchWithAuth(`${API_BASE_URL}/vouch/given`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => { if (d) setVouchesSent(d.vouches?.length ?? 0); }),
+      ];
+      if (abn) {
+        fetches.push(
+          fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`)
             .then((r) => (r.ok ? r.json() : null))
             .then((vd) => {
-              if (vd) setVouchCount(vd.vouchCount ?? 0);
-            });
-        })
-        .catch(() => {});
+              if (!vd) return;
+              setVouchCount(vd.vouchCount ?? 0);
+              if (vd.attributes?.length) {
+                setTopAttributes(vd.attributes.slice(0, 3));
+              } else if (vd.attributeSummary) {
+                setTopAttributes(
+                  vd.attributeSummary.split(" · ").filter(Boolean).map((attr: string) => ({ attr, count: 0 }))
+                );
+              }
+            })
+        );
+      }
+      Promise.all(fetches).catch(() => {});
     }, [fetchWithAuth, user?.abn])
   );
 
@@ -119,44 +182,137 @@ export default function MeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.scroll}>
-        {/* VouchPay credential card */}
-        <View style={styles.vpCard}>
-          {/* Card top row */}
-          <View style={styles.vpCardTop}>
-            <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
+        {/* VouchPay credential card — tap to expand */}
+        <TouchableOpacity activeOpacity={0.9} onPress={openCardModal}>
+          <View style={styles.vpCard}>
+            <View style={styles.vpCardTop}>
+              <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
+              <Ionicons name="expand-outline" size={16} color="rgba(255,255,255,0.5)" />
+            </View>
+            <View style={styles.vpIdentity}>
+              <View style={styles.vpAvatar}>
+                <AppText style={styles.vpAvatarText}>{initials}</AppText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.vpName}>{user?.name}</AppText>
+                {user?.businessName ? (
+                  <AppText style={styles.vpBusiness}>{user.businessName}</AppText>
+                ) : null}
+              </View>
+            </View>
+            <View style={styles.vpCardBottom}>
+              <View style={styles.vpStat}>
+                <AppText style={styles.vpStatLabel}>VOUCHES RECEIVED</AppText>
+                <AppText style={styles.vpStatValue}>{vouchCount ?? 0}</AppText>
+              </View>
+            </View>
           </View>
+        </TouchableOpacity>
 
-          {/* Avatar + name */}
-          <View style={styles.vpIdentity}>
-            <View style={styles.vpAvatar}>
-              <AppText style={styles.vpAvatarText}>{initials}</AppText>
-            </View>
-            <View style={{ flex: 1 }}>
-              <AppText style={styles.vpName}>{user?.name}</AppText>
-              {user?.businessName ? (
-                <AppText style={styles.vpBusiness}>{user.businessName}</AppText>
-              ) : null}
-            </View>
+        {/* Expanded profile card modal */}
+        <Modal visible={cardModalVisible} transparent animationType="none" onRequestClose={closeCardModal}>
+          <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropAnim }]}>
+            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
+            <View style={styles.modalBackdrop} />
+          </Animated.View>
+          <TouchableWithoutFeedback onPress={closeCardModal}>
+            <View style={StyleSheet.absoluteFillObject} />
+          </TouchableWithoutFeedback>
+
+          <View style={styles.modalContent} pointerEvents="box-none">
+            <Animated.View style={{ transform: [{ scale: cardAnim }], opacity: backdropAnim, width: "100%" }}>
+              {/* Card to capture */}
+              <View ref={cardRef} style={styles.expandedCard} collapsable={false}>
+                <View style={styles.vpCardTop}>
+                  <Image
+                    source={require("../../../assets/appIcon.png")}
+                    style={styles.expandedLogo}
+                  />
+                  <Ionicons name="shield-checkmark" size={20} color={Colors.vouchGreen} />
+                </View>
+
+                <View style={styles.expandedIdentity}>
+                  <AppText style={styles.expandedName}>{user?.name}</AppText>
+                  {user?.businessName ? (
+                    <AppText style={styles.expandedBusiness}>{user.businessName}</AppText>
+                  ) : null}
+                  {user?.businessTrade ? (
+                    <AppText style={styles.expandedTrade}>{user.businessTrade}</AppText>
+                  ) : null}
+                  {displayAbn ? (
+                    <AppText style={styles.expandedAbn}>ABN {displayAbn}</AppText>
+                  ) : null}
+                </View>
+
+                <View style={styles.expandedStats}>
+                  <View style={styles.expandedStat}>
+                    <AppText style={styles.expandedStatValue}>{vouchCount ?? 0}</AppText>
+                    <AppText style={styles.expandedStatLabel}>VOUCHES</AppText>
+                  </View>
+                  <View style={styles.expandedStatDivider} />
+                  <View style={styles.expandedStat}>
+                    <AppText style={styles.expandedStatValue}>{vouchesSent ?? 0}</AppText>
+                    <AppText style={styles.expandedStatLabel}>VOUCHED</AppText>
+                  </View>
+                </View>
+
+                {topAttributes.length > 0 && (
+                  <View style={styles.expandedAttributes}>
+                    <AppText style={styles.expandedAttributesLabel}>TOP VOUCHES</AppText>
+                    <View style={styles.expandedAttributeChips}>
+                      {topAttributes.map(({ attr, count }) => (
+                        <View key={attr} style={styles.attributeChip}>
+                          <AppText style={styles.attributeChipText}>{attr}</AppText>
+                          {count > 0 && (
+                            <View style={styles.attributeChipCount}>
+                              <AppText style={styles.attributeChipCountText}>{count}</AppText>
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                <View style={styles.expandedDivider} />
+
+                <View style={styles.taglineRow}>
+                  <AppText style={styles.taglineBlack}>Stop losing money on bad jobs. </AppText>
+                  <AppText style={styles.taglineGreen}>Work with people you trust.</AppText>
+                </View>
+
+                <View style={styles.nswRow}>
+                  <View style={styles.nswLogoBox}>
+                    <Image
+                      source={require("../../../assets/nsw-government-logo.png")}
+                      style={styles.nswLogo}
+                    />
+                  </View>
+                  <View style={styles.nswTextBlock}>
+                    <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
+                    <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Share button — outside capture ref */}
+              <TouchableOpacity
+                style={styles.shareBtn}
+                onPress={handleShare}
+                disabled={sharing}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="share-outline" size={20} color={Colors.vouchGreen} />
+                <AppText style={styles.shareBtnText}>
+                  {sharing ? "Preparing..." : "Share my VouchPay card"}
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={closeCardModal} style={styles.closeHint}>
+                <AppText style={styles.closeHintText}>Tap outside to close</AppText>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
-
-          {/* Bottom row — vouch count */}
-          <TouchableOpacity
-            style={styles.vpCardBottom}
-            activeOpacity={0.75}
-            onPress={() =>
-              router.push({
-                pathname: "/(app)/(tabs)/vouches",
-                params: { tab: "received" },
-              } as any)
-            }
-          >
-            <View style={styles.vpStat}>
-              <AppText style={styles.vpStatLabel}>VOUCHES RECEIVED</AppText>
-              <AppText style={styles.vpStatValue}>{vouchCount ?? 0}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
-          </TouchableOpacity>
-        </View>
+        </Modal>
 
         {/* Credentials */}
         <AppText style={styles.sectionLabel}>CREDENTIALS</AppText>
@@ -445,5 +601,207 @@ const styles = StyleSheet.create({
     width: "100%",
     textAlign: "center",
     marginTop: 2,
+  },
+
+  // Modal
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modalContent: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  expandedCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    gap: 20,
+  },
+  expandedIdentity: {
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+  },
+  expandedLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+  },
+  expandedName: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.black },
+  expandedBusiness: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.grey700,
+  },
+  expandedTrade: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.grey500,
+    marginTop: 1,
+  },
+  expandedAbn: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 2,
+  },
+  expandedAttributes: {
+    gap: 8,
+  },
+  expandedAttributesLabel: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+  },
+  expandedAttributeChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  attributeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: Colors.vouchGreen,
+  },
+  attributeChipText: {
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+  },
+  attributeChipCount: {
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  attributeChipCountText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+  },
+  expandedStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  expandedStat: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  expandedStatDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: Colors.grey300,
+  },
+  expandedStatValue: {
+    fontSize: 32,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
+  },
+  expandedStatLabel: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 14,
+  },
+  shareBtnText: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+  },
+  closeHint: {
+    alignItems: "center",
+    marginTop: 12,
+    paddingVertical: 4,
+  },
+  closeHintText: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: "rgba(255,255,255,0.45)",
+  },
+
+  expandedDivider: {
+    height: 1,
+    backgroundColor: Colors.grey300,
+  },
+
+  taglineRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  taglineBlack: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    lineHeight: 20,
+  },
+  taglineGreen: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.vouchGreen,
+    lineHeight: 20,
+  },
+
+  nswRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 12,
+    padding: 12,
+  },
+  nswLogoBox: {
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+  },
+  nswLogo: {
+    width: 44,
+    height: 44,
+    resizeMode: "contain",
+  },
+  nswTextBlock: { gap: 1 },
+  nswBacked: {
+    fontSize: 13,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+  },
+  nswGrant: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
   },
 });

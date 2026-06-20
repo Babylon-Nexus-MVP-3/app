@@ -168,6 +168,15 @@ export default function Step6() {
 
           <View style={styles.idTypeRow}>
             <TouchableOpacity
+              style={[styles.chip, form.idType === "trade-licence" && styles.chipSelected]}
+              onPress={() => update("idType", "trade-licence")}
+            >
+              <Ionicons name="construct-outline" size={15} color={form.idType === "trade-licence" ? Colors.white : Colors.grey700} />
+              <AppText style={[styles.chipText, form.idType === "trade-licence" && styles.chipTextSelected]}>
+                Trade licence
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.chip, form.idType === "licence" && styles.chipSelected]}
               onPress={() => update("idType", "licence")}
             >
@@ -192,10 +201,10 @@ export default function Step6() {
               label="DOCUMENT NUMBER"
               value={form.idNumber}
               onChangeText={(v) => update("idNumber", v)}
-              placeholder={form.idType === "licence" ? "e.g. 12345678" : "e.g. PA1234567"}
+              placeholder={form.idType === "licence" ? "e.g. 12345678" : form.idType === "trade-licence" ? "e.g. BLD123456" : "e.g. PA1234567"}
             />
 
-            {form.idType === "licence" ? (
+            {form.idType === "licence" || form.idType === "trade-licence" ? (
               <View style={styles.fieldWrap}>
                 <AppText style={styles.fieldLabel}>STATE</AppText>
                 <TouchableOpacity
@@ -227,6 +236,7 @@ export default function Step6() {
                 placeholder="DD/MM/YYYY"
                 placeholderTextColor={Colors.grey300}
                 keyboardType="numeric"
+                maxLength={10}
                 autoCorrect={false}
               />
               {expiryInvalid && (
@@ -260,7 +270,7 @@ export default function Step6() {
           disabled={!canContinue}
           activeOpacity={0.85}
         >
-          <AppText style={styles.primaryBtnText}>Save — reach 100%</AppText>
+          <AppText style={styles.primaryBtnText}>Save</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -301,7 +311,7 @@ const styles = StyleSheet.create({
   inputSelectValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
   inputSelectPlaceholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey300 },
   expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
-  idTypeRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  idTypeRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
   chip: {
     flexDirection: "row",
     alignItems: "center",

@@ -543,16 +543,16 @@ vouchRouter.get(
           tally[attr] = (tally[attr] ?? 0) + 1;
         }
       }
-      const top = Object.entries(tally)
+      const attributes = Object.entries(tally)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([attr]) => attr);
+        .map(([attr, count]) => ({ attr, count }));
 
       res.status(200).json({
         isOnVouch: true,
         vouchCount,
         alreadyVouched: !!alreadyVouched,
-        attributeSummary: top.length > 0 ? top.join(" · ") : undefined,
+        attributeSummary: attributes.length > 0 ? attributes.slice(0, 3).map(a => a.attr).join(" · ") : undefined,
+        attributes,
       });
     } catch (err) {
       next(err);

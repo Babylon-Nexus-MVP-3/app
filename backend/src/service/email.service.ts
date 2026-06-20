@@ -1,15 +1,47 @@
 import nodemailer from "nodemailer";
 
-const LOGO_URL = "https://api.babylon-nexus.com/assets/appIcon.png";
-const NSW_LOGO_URL = "https://api.babylon-nexus.com/assets/nsw-government-logo.png";
+const BASE_URL = "https://api.babylon-nexus.com";
+const LOGO_URL = `${BASE_URL}/assets/appIcon.png`;
+const NSW_LOGO_URL = `${BASE_URL}/assets/nsw-government-logo.png`;
+const APP_STORE_BADGE_URL = `${BASE_URL}/assets/app-store-badge.png`;
+const GOOGLE_PLAY_BADGE_URL = `${BASE_URL}/assets/google-play-badge.png`;
 
 const emailSignature = `
-  <div style="margin-top: 40px; padding-top: 28px; border-top: 2px solid #134A2F; text-align: center;">
+  <div style="margin-top: 32px;">
+    <table style="margin: 0 auto 32px; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 4px;">
+          <a href="https://apps.apple.com/au/app/vouchpay/id6746705191">
+            <img src="${APP_STORE_BADGE_URL}" alt="Download on the App Store" height="40" style="display: block;" />
+          </a>
+        </td>
+        <td style="padding: 4px;">
+          <a href="https://play.google.com/store/apps/details?id=com.babylonnexus.vouchpay">
+            <img src="${GOOGLE_PLAY_BADGE_URL}" alt="Get it on Google Play" height="60" style="display: block;" />
+          </a>
+        </td>
+      </tr>
+    </table>
+
+  </div>
+
+  <div style="padding-top: 28px; border-top: 2px solid #134A2F; text-align: center;">
     <p style="margin: 0 0 6px; font-size: 20px; font-weight: 800; color: #134A2F; letter-spacing: -0.3px;">Stop losing money on bad jobs.</p>
-    <p style="margin: 0 0 28px; font-size: 20px; font-weight: 800; color: #134A2F; letter-spacing: -0.3px;">Work with people you trust.</p>
-    <img src="${NSW_LOGO_URL}" alt="NSW Government" width="72" style="display: block; margin: 0 auto 16px;" />
-    <p style="margin: 0; font-size: 20px; font-weight: 800; color: #134A2F; letter-spacing: -0.3px;">Backed by</p>
-    <p style="margin: 0; font-size: 20px; font-weight: 800; color: #134A2F; letter-spacing: -0.3px;">NSW Government MVP Innovation Grant</p>
+    <p style="margin: 0 0 24px; font-size: 20px; font-weight: 800; color: #134A2F; letter-spacing: -0.3px;">Work with people you trust.</p>
+
+    <table style="margin: 0 auto; border-collapse: collapse; background: #f4f4f4; border-radius: 12px; width: 100%; max-width: 340px;">
+      <tr>
+        <td style="width: 72px; padding: 14px 6px 14px 14px; vertical-align: middle;">
+          <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px; display: inline-block;">
+            <img src="${NSW_LOGO_URL}" alt="NSW Government" width="52" height="52" style="display: block;" />
+          </div>
+        </td>
+        <td style="padding: 14px 14px 14px 8px; vertical-align: middle; text-align: left;">
+          <div style="font-size: 14px; font-weight: 700; color: #111; margin-bottom: 3px;">Backed by NSW Government</div>
+          <div style="font-size: 13px; color: #666;">MVP Innovation Grant</div>
+        </td>
+      </tr>
+    </table>
   </div>
 `;
 

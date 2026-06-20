@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -30,30 +30,47 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function Step1() {
-  const { user, fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth, updateUser } = useAuth();
   const { step1, setStep1 } = useWizard();
 
   const hasAccountDetails = !!(user?.name && user?.abn && user?.businessTrade);
 
-  const [trade, setTrade] = useState(user?.businessTrade || step1.trade || "");
+  const [trade, setTrade] = useState(step1.trade || user?.businessTrade || "");
+  const syncedRef = useRef(false);
 
-  // Sync once WizardContext finishes fetching from the backend
+  // WizardContext fetch is async — sync once it resolves, preferring the saved vouch profile value
   useEffect(() => {
-    if (!trade && step1.trade) setTrade(step1.trade);
+    if (!syncedRef.current && step1.trade) {
+      setTrade(step1.trade);
+      syncedRef.current = true;
+    }
   }, [step1.trade]);
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(
     user?.abn?.replace(/\D/g, "") ?? step1.abn
   );
 
-  async function onSave() {
+  function persistTrade(currentTrade: string) {
     const updatedStep1 = {
       ...step1,
       name: user?.name ?? step1.name,
       abn: (user?.abn ?? step1.abn).replace(/\D/g, ""),
-      trade,
+      trade: currentTrade,
     };
     setStep1(updatedStep1);
+    if (currentTrade !== user?.businessTrade) {
+      updateUser({ businessTrade: currentTrade });
+    }
+    return updatedStep1;
+  }
+
+  function handleBack() {
+    if (trade.trim()) persistTrade(trade);
+    router.back();
+  }
+
+  async function onSave() {
+    const updatedStep1 = persistTrade(trade);
     fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
       method: "POST",
       body: JSON.stringify({ ...updatedStep1, references: [] }),
@@ -66,7 +83,7 @@ export default function Step1() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={handleBack} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>STEP 1 OF 6</AppText>
