@@ -14,7 +14,7 @@ export default function Index() {
   useEffect(() => {
     if (isLoading) return;
     if (user) {
-      router.replace(user.role === UserRole.Admin ? "/(admin)/projects" : "/(app)/home");
+      router.replace(user.role === UserRole.Admin ? "/(admin)/projects" : "/(app)/(tabs)/home");
     }
   }, [isLoading, user]);
 

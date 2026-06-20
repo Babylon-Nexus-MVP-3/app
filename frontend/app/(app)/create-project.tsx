@@ -166,7 +166,7 @@ export default function CreateProject() {
             </AppText>
           </View>
           <TouchableOpacity
-            onPress={() => router.replace("/(app)/projects")}
+            onPress={() => router.replace("/(app)/(tabs)/projects")}
             style={authStyles.primaryButton}
             activeOpacity={0.85}
           >

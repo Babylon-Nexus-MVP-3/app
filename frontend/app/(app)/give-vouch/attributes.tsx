@@ -124,7 +124,7 @@ export default function AttributesScreen() {
 
           <TouchableOpacity
             style={styles.primarySuccessBtn}
-            onPress={() => router.replace("/(app)/vouches")}
+            onPress={() => router.replace("/(app)/(tabs)/vouches")}
             activeOpacity={0.85}
           >
             <AppText style={styles.primarySuccessBtnText}>Vouch another business</AppText>
@@ -132,7 +132,7 @@ export default function AttributesScreen() {
 
           <TouchableOpacity
             style={styles.secondarySuccessBtn}
-            onPress={() => router.replace("/(app)/home")}
+            onPress={() => router.replace("/(app)/(tabs)/home")}
             activeOpacity={0.7}
           >
             <AppText style={styles.secondarySuccessBtnText}>Back to home</AppText>

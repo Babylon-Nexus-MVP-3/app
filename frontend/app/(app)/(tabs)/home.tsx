@@ -204,7 +204,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
-            onPress={() => router.push("/(app)/vouch-my-project")}
+            onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
           >
             <View style={styles.cardIcon}>
               <Ionicons

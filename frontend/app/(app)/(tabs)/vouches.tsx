@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -22,6 +22,8 @@ type ReceivedVouch = {
   _id: string;
   fromName: string;
   fromBusinessName: string;
+  fromAbn: string;
+  alreadyVouchedBack: boolean;
   attributes: string[];
   note?: string;
   createdAt: string;
@@ -57,6 +59,7 @@ export default function VouchesScreen() {
   const [tab, setTab] = useState<"given" | "received">("given");
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
+  const [respondedCount, setRespondedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const hasLoaded = useRef(false);
 
@@ -68,11 +71,16 @@ export default function VouchesScreen() {
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
       ])
-        .then(([givenData, receivedData]) => {
+        .then(([givenData, receivedData, sentData]) => {
           if (cancelled) return;
           setGiven(givenData?.vouches ?? []);
           setReceived(receivedData?.vouches ?? []);
+          const responded = (sentData?.requests ?? []).filter(
+            (r: { status: string }) => r.status === "responded"
+          ).length;
+          setRespondedCount(responded);
           hasLoaded.current = true;
         })
         .catch(() => {})
@@ -161,26 +169,71 @@ export default function VouchesScreen() {
           <AppText style={styles.countLabel}>
             {received.length} {received.length === 1 ? "vouch" : "vouches"} received
           </AppText>
-          {received.map((v) => (
-            <View key={v._id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={styles.iconBadge}>
-                  <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
+          {received.map((v) => {
+            const canVouchBack = respondedCount >= 2;
+            const displayName = v.fromBusinessName || v.fromName || "this business";
+
+            function onVouchBack() {
+              if (!v.fromAbn) return;
+              if (v.alreadyVouchedBack) return;
+              if (!canVouchBack) {
+                Alert.alert(
+                  "Not yet unlocked",
+                  "You need at least 2 people to vouch for you before you can vouch for others.",
+                  [{ text: "OK" }]
+                );
+                return;
+              }
+              router.push({
+                pathname: "/(app)/give-vouch/attributes",
+                params: { abn: v.fromAbn, businessName: displayName },
+              });
+            }
+
+            return (
+              <View key={v._id} style={styles.card}>
+                <View style={styles.cardTop}>
+                  <View style={styles.iconBadge}>
+                    <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.businessName}>
+                      {v.fromName || "Someone"}
+                      {v.fromBusinessName ? (
+                        <AppText style={styles.fromBusiness}>{`  ·  ${v.fromBusinessName}`}</AppText>
+                      ) : null}
+                    </AppText>
+                    <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                  </View>
+                  {v.fromAbn ? (
+                    v.alreadyVouchedBack ? (
+                      <View style={styles.vouchBackDone}>
+                        <Ionicons name="checkmark" size={12} color={Colors.vouchGreen} />
+                        <AppText style={styles.vouchBackDoneText}>Vouched</AppText>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.vouchBackBtn, !canVouchBack && styles.vouchBackBtnDisabled]}
+                        onPress={onVouchBack}
+                        activeOpacity={0.75}
+                      >
+                        <AppText
+                          style={[
+                            styles.vouchBackBtnText,
+                            !canVouchBack && styles.vouchBackBtnTextDisabled,
+                          ]}
+                        >
+                          Vouch back
+                        </AppText>
+                      </TouchableOpacity>
+                    )
+                  ) : null}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText style={styles.businessName}>
-                    {v.fromName || "Someone"}
-                    {v.fromBusinessName ? (
-                      <AppText style={styles.fromBusiness}>{`  ·  ${v.fromBusinessName}`}</AppText>
-                    ) : null}
-                  </AppText>
-                  <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
-                </View>
+                <AttributeChips attributes={v.attributes} />
+                {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
               </View>
-              <AttributeChips attributes={v.attributes} />
-              {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -317,6 +370,40 @@ const styles = StyleSheet.create({
     color: Colors.grey700,
     lineHeight: 19,
     fontStyle: "italic",
+  },
+
+  // Vouch back
+  vouchBackBtn: {
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  vouchBackBtnDisabled: {
+    borderColor: Colors.grey300,
+  },
+  vouchBackBtnText: {
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+  },
+  vouchBackBtnTextDisabled: {
+    color: Colors.grey300,
+  },
+  vouchBackDone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 20,
+  },
+  vouchBackDoneText: {
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
 
   // Empty state

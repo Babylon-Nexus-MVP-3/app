@@ -186,7 +186,7 @@ export default function VouchMyProjectScreen() {
           style={[styles.ctaButton, (!isUnlocked || loading) && styles.ctaButtonLocked]}
           activeOpacity={isUnlocked ? 0.85 : 1}
           onPress={() => {
-            if (isUnlocked) router.push("/(app)/projects");
+            if (isUnlocked) router.push("/(app)/(tabs)/projects");
           }}
         >
           {loading ? (

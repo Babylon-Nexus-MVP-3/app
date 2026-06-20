@@ -301,9 +301,7 @@ export async function notifyProjectInvited(
   inviteeEmail: string,
   projectName: string
 ): Promise<void> {
-  const user = await UserModel.findOne({ email: inviteeEmail.toLowerCase() })
-    .select("_id")
-    .lean();
+  const user = await UserModel.findOne({ email: inviteeEmail.toLowerCase() }).select("_id").lean();
   if (!user) return;
 
   await createNotification({

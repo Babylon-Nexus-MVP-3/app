@@ -335,13 +335,21 @@ vouchRouter.post(
         recipientMobile,
       } = req.body;
 
+      const giver = await UserModel.findById(userId)
+        .select("email mobile abn name businessName")
+        .lean();
+
+      if (giver?.abn && giver.abn === toAbn) {
+        res.status(400).json({ error: "You cannot vouch for your own business." });
+        return;
+      }
+
       if (requestId !== undefined) {
         if (!mongoose.isValidObjectId(requestId)) {
           res.status(400).json({ error: "Invalid requestId" });
           return;
         }
         // Verify the request was actually sent to this user
-        const giver = await UserModel.findById(userId).select("email mobile").lean();
         const request = await VouchRequestModel.findById(requestId)
           .select("toEmail toMobile")
           .lean();
@@ -363,7 +371,6 @@ vouchRouter.post(
         return;
       }
 
-      const giver = await UserModel.findById(userId).select("name businessName").lean();
       const giverName = giver?.name ?? "Someone";
       const giverCompany = giver?.businessName ?? "";
 
@@ -475,14 +482,30 @@ vouchRouter.get(
         .lean();
       const giverIds = [...new Set(vouches.map((v) => v.fromUserId.toString()))];
       const givers = await UserModel.find({ _id: { $in: giverIds } })
-        .select("name businessName")
+        .select("name businessName abn")
         .lean();
       const giverMap = Object.fromEntries(givers.map((g) => [g._id.toString(), g]));
-      const populated = vouches.map((v) => ({
-        ...v,
-        fromName: giverMap[v.fromUserId.toString()]?.name ?? "Someone",
-        fromBusinessName: giverMap[v.fromUserId.toString()]?.businessName ?? "",
-      }));
+
+      const giverAbns = givers.map((g) => g.abn).filter(Boolean) as string[];
+      const vouchedBackDocs = await GivenVouchModel.find({
+        fromUserId: userId,
+        toAbn: { $in: giverAbns },
+      })
+        .select("toAbn")
+        .lean();
+      const vouchedBackSet = new Set(vouchedBackDocs.map((v) => v.toAbn));
+
+      const populated = vouches.map((v) => {
+        const giver = giverMap[v.fromUserId.toString()];
+        const fromAbn = giver?.abn ?? "";
+        return {
+          ...v,
+          fromName: giver?.name ?? "Someone",
+          fromBusinessName: giver?.businessName ?? "",
+          fromAbn,
+          alreadyVouchedBack: !!(fromAbn && vouchedBackSet.has(fromAbn)),
+        };
+      });
       res.status(200).json({ vouches: populated });
     } catch (err) {
       next(err);
