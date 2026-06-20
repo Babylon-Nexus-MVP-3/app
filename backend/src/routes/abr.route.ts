@@ -26,7 +26,10 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
     const upstream = await fetch(url);
     if (!upstream.ok) throw new Error("ABR upstream error");
 
-    const raw = await upstream.json();
+    // ABR returns JSONP: `allback({...})` — strip the wrapper before parsing
+    const text = await upstream.text();
+    const jsonStr = text.replace(/^[^(]+\(/, "").replace(/\)\s*$/, "");
+    const raw = JSON.parse(jsonStr);
 
     // The ABR JSON API returns EntityTypeCode + EntityTypeName, main + trading names
     if (raw.AbnStatus !== "Active") {

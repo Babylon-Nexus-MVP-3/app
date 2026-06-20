@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { AbrCard } from "@/components/AbrCard";
+import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 import {
-  ActivityIndicator,
   Animated,
   Modal,
   View,
@@ -20,23 +21,6 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
-
-type AbrResult = {
-  entityName: string;
-  tradingName?: string;
-  businessType: string;
-  state: string;
-  activeYears: number;
-  isActive: boolean;
-};
-
-function formatAbn(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
-}
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
 
@@ -190,10 +174,7 @@ export default function Step1() {
   const [form, setForm] = useState(step1);
   const [abnDisplay, setAbnDisplay] = useState(formatAbn(step1.abn));
   const [statePickerOpen, setStatePickerOpen] = useState(false);
-  const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
-  const [abrLoading, setAbrLoading] = useState(false);
-  const [abrError, setAbrError] = useState("");
-  const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { abrResult, abrLoading, abrError } = useAbrLookup(form.abn);
 
   const hasAccountAbn = !!user?.abn;
 
@@ -210,36 +191,6 @@ export default function Step1() {
       setForm((f) => ({ ...f, abn: digits }));
     }
   }, [user, form.abn]);
-
-  useEffect(() => {
-    if (form.abn.length !== 11) {
-      setAbrResult(null);
-      setAbrError("");
-      return;
-    }
-    if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    abrTimeout.current = setTimeout(() => lookupAbn(form.abn), 400);
-    return () => {
-      if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    };
-  }, [form.abn]);
-
-  async function lookupAbn(digits: string) {
-    setAbrLoading(true);
-    setAbrError("");
-    setAbrResult(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`);
-      if (!res.ok) throw new Error("ABN not found");
-      const data: AbrResult = await res.json();
-      if (!data.isActive) throw new Error("This ABN is not active");
-      setAbrResult(data);
-    } catch {
-      setAbrError("ABN not found. Check the number and try again.");
-    } finally {
-      setAbrLoading(false);
-    }
-  }
 
   function onAbnChange(text: string) {
     const digits = text.replace(/\D/g, "").slice(0, 11);
@@ -342,14 +293,7 @@ export default function Step1() {
                   </AppText>
                 </>
               )}
-              {abrLoading && (
-                <View style={styles.abrRow}>
-                  <ActivityIndicator size="small" color={Colors.vouchGreen} />
-                  <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
-                </View>
-              )}
-              {/* abrConfirmed card hidden until ABR_GUID is configured — restore the block below when ready */}
-              {abrError && !abrLoading && <AppText style={styles.abrError}>{abrError}</AppText>}
+              <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
             </View>
             <Field
               label="TRADE / BUSINESS TYPE"
@@ -526,25 +470,6 @@ const styles = StyleSheet.create({
   },
   lockedValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey700 },
   abnMissingHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.amber, marginTop: 4 },
-  abrRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
-  abrLoadingText: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
-  abrConfirmed: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 6,
-  },
-  abrConfirmedText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
-    lineHeight: 18,
-  },
-  abrError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 6 },
   expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   sectionLabel: {
     fontSize: 12,

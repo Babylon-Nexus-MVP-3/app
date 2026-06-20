@@ -16,15 +16,9 @@ import { API_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AbrCard } from "@/components/AbrCard";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
-
-function formatAbn(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
-}
+import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 
 export default function SignUp() {
   const [name, setName] = useState("");
@@ -34,6 +28,8 @@ export default function SignUp() {
   const [mobile, setMobile] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
+
+  const { abrResult, abrLoading, abrError } = useAbrLookup(abnDigits);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -69,7 +65,13 @@ export default function SignUp() {
   const passwordValid = pwChecks.length && complexityMet;
 
   const canSubmit =
-    firstName.length > 0 && email.includes("@") && passwordValid && abnDigits.length === 11;
+    firstName.length > 0 &&
+    email.includes("@") &&
+    passwordValid &&
+    abnDigits.length === 11 &&
+    !abrLoading &&
+    !abrError &&
+    !!abrResult;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -86,7 +88,7 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
-          // When ABR_GUID is configured: add ABR lookup here and include businessName in this body
+          ...(abrResult ? { businessName: abrResult.tradingName || abrResult.entityName } : {}),
         }),
       });
       if (!res.ok) {
@@ -190,23 +192,26 @@ export default function SignUp() {
           />
 
           <AppText style={styles.label}>ABN</AppText>
-          <TextInput
-            style={styles.input}
-            value={abn}
-            onChangeText={onAbnChange}
-            placeholder="XX XXX XXX XXX"
-            placeholderTextColor={Colors.grey300}
-            keyboardType="numeric"
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-          />
-          <View style={styles.abnWarning}>
-            <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
-            <AppText style={styles.abnWarningText}>
-              {
-                "You cannot change your ABN after creating your account — please make sure it's correct."
-              }
-            </AppText>
+          <View style={styles.abnSection}>
+            <TextInput
+              style={[styles.input, styles.abnInput]}
+              value={abn}
+              onChangeText={onAbnChange}
+              placeholder="XX XXX XXX XXX"
+              placeholderTextColor={Colors.grey300}
+              keyboardType="numeric"
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
+            <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
+            <View style={styles.abnWarning}>
+              <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
+              <AppText style={styles.abnWarningText}>
+                {
+                  "You cannot change your ABN after creating your account — please make sure it's correct."
+                }
+              </AppText>
+            </View>
           </View>
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
@@ -304,12 +309,17 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 14,
   },
+  abnSection: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  abnInput: {
+    marginBottom: 0,
+  },
   abnWarning: {
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
     gap: 6,
-    marginTop: -14,
-    marginBottom: 16,
   },
   abnWarningText: {
     flex: 1,

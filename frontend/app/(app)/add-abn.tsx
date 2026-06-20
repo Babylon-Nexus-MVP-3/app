@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,23 +16,8 @@ import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
-
-type AbrResult = {
-  entityName: string;
-  tradingName?: string;
-  businessType: string;
-  state: string;
-  activeYears: number;
-  isActive: boolean;
-};
-
-function formatAbn(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
-}
+import { AbrCard } from "@/components/AbrCard";
+import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 
 export default function AddAbn() {
   const { user, fetchWithAuth, updateUser } = useAuth();
@@ -40,43 +25,10 @@ export default function AddAbn() {
   const isLocked = !!user?.abn;
   const [abn, setAbn] = useState(user?.abn ? formatAbn(user.abn) : "");
   const [abnDigits, setAbnDigits] = useState(user?.abn?.replace(/\D/g, "") ?? "");
-  const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
-  const [abrLoading, setAbrLoading] = useState(false);
-  const [abrError, setAbrError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const abrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (abnDigits.length !== 11) {
-      setAbrResult(null);
-      setAbrError("");
-      return;
-    }
-    if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    abrTimeout.current = setTimeout(() => lookupAbn(abnDigits), 400);
-    return () => {
-      if (abrTimeout.current) clearTimeout(abrTimeout.current);
-    };
-  }, [abnDigits]);
-
-  async function lookupAbn(digits: string) {
-    setAbrLoading(true);
-    setAbrError("");
-    setAbrResult(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${digits}`);
-      if (!res.ok) throw new Error("ABN not found");
-      const data: AbrResult = await res.json();
-      if (!data.isActive) throw new Error("This ABN is not active");
-      setAbrResult(data);
-    } catch {
-      setAbrError("ABN not found. Check the number and try again.");
-    } finally {
-      setAbrLoading(false);
-    }
-  }
+  const { abrResult, abrLoading, abrError } = useAbrLookup(isLocked ? "" : abnDigits);
 
   function onAbnChange(text: string) {
     const digits = text.replace(/\D/g, "").slice(0, 11);
@@ -91,21 +43,21 @@ export default function AddAbn() {
     setLoading(true);
     setError("");
     try {
-      // When ABR_GUID is configured: uncomment businessName below and in updateUser calls
-      // const businessName = abrResult?.tradingName || abrResult?.entityName;
+      const businessName = abrResult?.tradingName || abrResult?.entityName;
       const res = await fetchWithAuth(`${API_BASE_URL}/auth/profile`, {
         method: "PATCH",
-        body: JSON.stringify({ abn: abnDigits /*, businessName */ }),
+        body: JSON.stringify({ abn: abnDigits, businessName }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Failed to save. Please try again.");
       }
-      await updateUser({ abn: abnDigits /*, businessName */ });
+      await updateUser({ abn: abnDigits, businessName });
       router.push("/(app)/me" as any);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
-        await updateUser({ abn: abnDigits /*, businessName */ });
+        const businessName = abrResult?.tradingName || abrResult?.entityName;
+        await updateUser({ abn: abnDigits, businessName });
         router.push("/(app)/me" as any);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -157,14 +109,7 @@ export default function AddAbn() {
             />
           )}
 
-          {abrLoading && (
-            <View style={styles.abrLoading}>
-              <ActivityIndicator size="small" color={Colors.vouchGreen} />
-              <AppText style={styles.abrLoadingText}>Looking up ABN…</AppText>
-            </View>
-          )}
-          {/* abrConfirmed card hidden until ABR_GUID is configured */}
-          {abrError && !abrLoading && <AppText style={styles.fieldError}>{abrError}</AppText>}
+          <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 
@@ -256,39 +201,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between" as const,
   },
   lockedValue: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.grey700 },
-  abrLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  abrLoadingText: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-  },
-  abrConfirmed: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-  },
-  abrConfirmedText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
-    lineHeight: 18,
-  },
-  fieldError: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.red,
-    marginBottom: 16,
-  },
   errorText: {
     fontSize: 13,
     fontFamily: Fonts.semiBold,

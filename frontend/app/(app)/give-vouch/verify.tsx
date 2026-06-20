@@ -17,15 +17,7 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-
-type AbrResult = {
-  entityName: string;
-  tradingName?: string;
-  state: string;
-  businessType: string;
-  activeYears: number;
-  isActive: boolean;
-};
+import { formatAbn, type AbrResult } from "@/lib/useAbrLookup";
 
 type VouchStatus = {
   isOnVouch: boolean;
@@ -33,12 +25,6 @@ type VouchStatus = {
   alreadyVouched?: boolean;
   attributeSummary?: string;
 };
-
-function formatDisplayAbn(digits: string): string {
-  const d = digits.replace(/\D/g, "");
-  if (d.length !== 11) return digits;
-  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
-}
 
 export default function VerifyScreen() {
   const {
@@ -59,7 +45,7 @@ export default function VerifyScreen() {
   const [abrData, setAbrData] = useState<AbrResult | null>(null);
   const [vouchStatus, setVouchStatus] = useState<VouchStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recipientName, setRecipientName] = useState(recipientNameParam ?? "");
+  const recipientName = recipientNameParam ?? "";
   const [recipientEmail, setRecipientEmail] = useState(recipientEmailParam ?? "");
   const [recipientMobile, setRecipientMobile] = useState(recipientMobileParam ?? "");
   const [contactError, setContactError] = useState("");
@@ -75,12 +61,19 @@ export default function VerifyScreen() {
   async function lookupAbn() {
     setLoading(true);
     try {
-      const statusRes = await fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`);
+      const [statusRes, abrRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/business/${abn}`),
+        fetch(`${API_BASE_URL}/abr/lookup?abn=${abn}`),
+      ]);
       if (statusRes.ok) {
         const statusData = await statusRes.json();
         setVouchStatus(statusData);
       } else {
         setVouchStatus({ isOnVouch: false, vouchCount: 0 });
+      }
+      if (abrRes.ok) {
+        const abrData = await abrRes.json();
+        if (abrData.isActive) setAbrData(abrData);
       }
     } catch {
       setVouchStatus({ isOnVouch: false, vouchCount: 0 });
@@ -100,10 +93,6 @@ export default function VerifyScreen() {
 
   function onPressVouch() {
     if (!isOnVouch && !requestId) {
-      if (!recipientName.trim()) {
-        setContactError("Please enter their name.");
-        return;
-      }
       if (!recipientEmail.trim() || !recipientEmail.includes("@")) {
         setContactError("Please enter a valid email address.");
         return;
@@ -146,7 +135,7 @@ export default function VerifyScreen() {
           {/* ABN confirmed row */}
           <AppText style={styles.fieldLabel}>ABN</AppText>
           <View style={styles.abnConfirmed}>
-            <AppText style={styles.abnConfirmedText}>{formatDisplayAbn(abn ?? "")}</AppText>
+            <AppText style={styles.abnConfirmedText}>{formatAbn(abn ?? "")}</AppText>
             {!loading && <Ionicons name="checkmark" size={20} color={Colors.vouchGreen} />}
           </View>
 
@@ -191,7 +180,7 @@ export default function VerifyScreen() {
                 <View style={styles.activeCard}>
                   <View style={styles.statusRow}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={Colors.vouchGreen} />
-                    <AppText style={styles.activeLabel}>ACTIVE ON VOUCH</AppText>
+                    <AppText style={styles.activeLabel}>ACTIVE ON VOUCHPAY</AppText>
                   </View>
                   <AppText style={styles.vouchCount}>
                     <AppText style={styles.vouchCountNum}>{vouchStatus!.vouchCount}</AppText>
@@ -218,25 +207,12 @@ export default function VerifyScreen() {
                 <View style={styles.pendingCard}>
                   <View style={styles.statusRow}>
                     <Ionicons name="shield-outline" size={16} color={Colors.amber} />
-                    <AppText style={styles.pendingLabel}>NOT YET ON VOUCH</AppText>
+                    <AppText style={styles.pendingLabel}>NOT YET ON VOUCHPAY</AppText>
                   </View>
                   <AppText style={styles.pendingTitle}>Be the first to vouch them.</AppText>
                   <AppText style={styles.pendingDesc}>
-                    {"Add their contact details and we'll email them to claim it."}
+                    {"Add their email and we'll send them an invite to claim it."}
                   </AppText>
-
-                  <AppText style={styles.contactLabel}>NAME</AppText>
-                  <TextInput
-                    style={styles.contactInput}
-                    value={recipientName}
-                    onChangeText={(v) => {
-                      setRecipientName(v);
-                      setContactError("");
-                    }}
-                    placeholder="Business owner's name"
-                    placeholderTextColor={Colors.grey300}
-                    autoCapitalize="words"
-                  />
 
                   <AppText style={styles.contactLabel}>EMAIL</AppText>
                   <TextInput

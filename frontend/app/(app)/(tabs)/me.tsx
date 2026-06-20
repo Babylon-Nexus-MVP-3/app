@@ -214,31 +214,35 @@ export default function MeScreen() {
 
           <View style={styles.credDivider} />
 
-          {/* ABN */}
-          <TouchableOpacity
-            style={styles.credRow}
-            onPress={() => router.push("/(app)/add-abn")}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.credIcon,
-                { backgroundColor: user?.abn ? Colors.vouchGreenLight : Colors.amberBg },
-              ]}
+          {/* ABN — display only if set (write-once), tappable only to add */}
+          {user?.abn ? (
+            <View style={styles.credRow}>
+              <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
+                <Ionicons name="business-outline" size={18} color={Colors.vouchGreen} />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>ABN</AppText>
+                <AppText style={styles.credValue}>{displayAbn}</AppText>
+              </View>
+              <VerifiedBadge />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.credRow}
+              onPress={() => router.push("/(app)/add-abn")}
+              activeOpacity={0.7}
             >
-              <Ionicons
-                name="business-outline"
-                size={18}
-                color={user?.abn ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <View style={styles.credBody}>
-              <AppText style={styles.credTitle}>ABN</AppText>
-              <AppText style={styles.credValue}>{displayAbn ?? "Not added"}</AppText>
-            </View>
-            {user?.abn ? <VerifiedBadge /> : <UnverifiedBadge label="Add" />}
-            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
-          </TouchableOpacity>
+              <View style={[styles.credIcon, { backgroundColor: Colors.amberBg }]}>
+                <Ionicons name="business-outline" size={18} color={Colors.amber} />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>ABN</AppText>
+                <AppText style={styles.credValue}>Not added</AppText>
+              </View>
+              <UnverifiedBadge label="Add" />
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Settings */}
