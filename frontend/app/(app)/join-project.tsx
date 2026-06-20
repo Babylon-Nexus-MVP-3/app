@@ -17,7 +17,6 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-import { appStyles } from "@/constants/appStyles";
 
 const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
 function displayRole(role: string): string {

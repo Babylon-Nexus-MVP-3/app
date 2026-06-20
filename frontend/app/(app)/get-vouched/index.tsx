@@ -152,7 +152,7 @@ export default function GetVouchedIntro() {
           </View>
           <AppText style={styles.title}>{"You're vouched."}</AppText>
           <AppText style={styles.subtitle}>
-            {`${respondedCount} ${respondedCount === 1 ? "person has" : "people have"} vouched for you.`}
+            {`${respondedCount} people have vouched for you.`}
           </AppText>
 
           <View style={styles.strengthRow}>
