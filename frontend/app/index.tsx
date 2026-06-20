@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
@@ -22,42 +22,50 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.body}>
-        <Image source={require("../assets/appIcon.png")} style={styles.logo} />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.body}>
+          <Image source={require("../assets/appIcon.png")} style={styles.logo} />
 
-        <Text style={styles.headline}>
-          <Text style={styles.headlineBlack}>Stop losing money on bad jobs. </Text>
-          <Text style={styles.headlineGreen}>Work with people you trust.</Text>
-        </Text>
+          <AppText style={styles.headlineBlack} maxFontSizeMultiplier={1}>
+            {"Stop losing money on bad jobs. "}
+            <AppText style={styles.headlineGreen} maxFontSizeMultiplier={1}>
+              Work with people you trust.
+            </AppText>
+          </AppText>
 
-        <View style={styles.nswRow}>
-          <View style={styles.nswLogoBox}>
-            <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
-          </View>
-          <View style={styles.nswTextBlock}>
-            <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
-            <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
+          <View style={styles.nswRow}>
+            <View style={styles.nswLogoBox}>
+              <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
+            </View>
+            <View style={styles.nswTextBlock}>
+              <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
+              <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.signInButton}
-          onPress={() => router.push("/(auth)/sign-in")}
-          activeOpacity={0.85}
-        >
-          <AppText style={styles.signInButtonText}>Sign in</AppText>
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.signInButton}
+            onPress={() => router.push("/(auth)/sign-in")}
+            activeOpacity={0.85}
+          >
+            <AppText style={styles.signInButtonText}>Sign in</AppText>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.signUpButton}
-          onPress={() => router.push("/(auth)/sign-up")}
-          activeOpacity={0.85}
-        >
-          <AppText style={styles.signUpText}>Sign up</AppText>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.signUpButton}
+            onPress={() => router.push("/(auth)/sign-up")}
+            activeOpacity={0.85}
+          >
+            <AppText style={styles.signUpText}>Sign up</AppText>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -67,10 +75,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "space-between",
+  },
   body: {
-    flex: 1,
     paddingHorizontal: 24,
-    justifyContent: "center",
+    paddingTop: 48,
     gap: 32,
   },
   logo: {
@@ -79,15 +90,15 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignSelf: "flex-start",
   },
-  headline: {
+  headlineBlack: {
     fontSize: 42,
     lineHeight: 52,
-  },
-  headlineBlack: {
     fontFamily: Fonts.extraBold,
     color: Colors.black,
   },
   headlineGreen: {
+    fontSize: 42,
+    lineHeight: 52,
     fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
   },
@@ -124,6 +135,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
+    paddingTop: 32,
     paddingBottom: 48,
     gap: 16,
   },

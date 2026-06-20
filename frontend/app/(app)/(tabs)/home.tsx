@@ -236,35 +236,35 @@ export default function HomeScreen() {
             </AppText>
           </TouchableOpacity>
 
-          {/* Give a Vouch — locked until 2 vouches received */}
+          {/* Give a Vouch — locked until 1 vouch received */}
           <TouchableOpacity
-            style={[styles.card, respondedCount >= 2 ? styles.cardDefault : styles.cardLocked]}
+            style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             onPress={() => {
-              if (respondedCount >= 2) {
+              if (respondedCount >= 1) {
                 router.push("/(app)/give-vouch");
               } else {
                 Alert.alert(
-                  "2 Vouches Required",
-                  "You need at least 2 people to vouch for you before you can vouch for others. Head to Get Vouched to request your vouches.",
+                  "1 Vouch Required",
+                  "You need at least 1 person to vouch for you before you can vouch for others. Head to Get Vouched to request your first vouch.",
                   [{ text: "Got it" }]
                 );
               }
             }}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="person-outline" size={26} color={respondedCount >= 2 ? Colors.black : Colors.grey500} />
-              {pendingCount > 0 && respondedCount >= 2 && (
+              <Ionicons name="person-outline" size={26} color={respondedCount >= 1 ? Colors.black : Colors.grey500} />
+              {pendingCount > 0 && respondedCount >= 1 && (
                 <View style={styles.dotBadge}>
                   <AppText style={styles.dotBadgeText}>{pendingCount}</AppText>
                 </View>
               )}
             </View>
-            <AppText style={[styles.cardTitle, respondedCount < 2 && styles.cardTitleLocked]}>
+            <AppText style={[styles.cardTitle, respondedCount < 1 && styles.cardTitleLocked]}>
               Give a Vouch
             </AppText>
             <AppText style={styles.cardDesc}>
-              {respondedCount >= 2 ? "Vouch for others" : "Needs 2 vouches"}
+              {respondedCount >= 1 ? "Vouch for others" : "Needs 1 vouch"}
             </AppText>
           </TouchableOpacity>
         </View>
