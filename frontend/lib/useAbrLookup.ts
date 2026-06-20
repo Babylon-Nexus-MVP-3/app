@@ -43,12 +43,27 @@ export function useAbrLookup(digits: string) {
     setAbrResult(null);
     try {
       const res = await fetch(`${API_BASE_URL}/abr/lookup?abn=${abn}`);
-      if (!res.ok) throw new Error("ABN not found");
+      if (!res.ok) {
+        if (res.status >= 500) {
+          setAbrError("ABN lookup is temporarily unavailable. Please try again later.");
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setAbrError(
+            errData.error === "ABN is not active"
+              ? "This ABN is not currently active."
+              : "ABN not found. Check the number and try again."
+          );
+        }
+        return;
+      }
       const data: AbrResult = await res.json();
-      if (!data.isActive) throw new Error("This ABN is not active");
+      if (!data.isActive) {
+        setAbrError("This ABN is not currently active.");
+        return;
+      }
       setAbrResult(data);
     } catch {
-      setAbrError("ABN not found. Check the number and try again.");
+      setAbrError("ABN lookup is temporarily unavailable. Please try again later.");
     } finally {
       setAbrLoading(false);
     }

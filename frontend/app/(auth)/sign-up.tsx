@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,8 +28,16 @@ export default function SignUp() {
   const [mobile, setMobile] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessNameLocked, setBusinessNameLocked] = useState(false);
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(abnDigits);
+
+  useEffect(() => {
+    if (!businessNameLocked) {
+      setBusinessName(abrResult ? abrResult.tradingName || abrResult.entityName : "");
+    }
+  }, [abrResult, businessNameLocked]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +54,7 @@ export default function SignUp() {
     const digits = text.replace(/\D/g, "").slice(0, 11);
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
+    setBusinessNameLocked(false);
   }
 
   const trimmedName = name.trim();
@@ -71,7 +80,8 @@ export default function SignUp() {
     abnDigits.length === 11 &&
     !abrLoading &&
     !abrError &&
-    !!abrResult;
+    !!abrResult &&
+    businessName.trim().length > 0;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -88,7 +98,7 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
-          ...(abrResult ? { businessName: abrResult.tradingName || abrResult.entityName } : {}),
+          ...(businessName.trim() ? { businessName: businessName.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -129,6 +139,43 @@ export default function SignUp() {
           <AppText style={styles.title}>Create account.</AppText>
           <AppText style={styles.subtitle}>Enter your details to get started.</AppText>
 
+          <AppText style={styles.label}>ABN</AppText>
+          <View style={styles.abnSection}>
+            <TextInput
+              style={[styles.input, styles.abnInput]}
+              value={abn}
+              onChangeText={onAbnChange}
+              placeholder="XX XXX XXX XXX"
+              placeholderTextColor={Colors.grey300}
+              keyboardType="numeric"
+              returnKeyType="next"
+              autoFocus
+            />
+            <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
+            <View style={styles.abnWarning}>
+              <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
+              <AppText style={styles.abnWarningText}>
+                {
+                  "You cannot change your ABN after creating your account — please make sure it's correct."
+                }
+              </AppText>
+            </View>
+          </View>
+
+          <AppText style={styles.label}>BUSINESS NAME</AppText>
+          <TextInput
+            style={styles.input}
+            value={businessName}
+            onChangeText={(t) => {
+              setBusinessName(t);
+              setBusinessNameLocked(true);
+            }}
+            placeholder="Your business name"
+            placeholderTextColor={Colors.grey300}
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+
           <AppText style={styles.label}>YOUR NAME</AppText>
           <TextInput
             style={styles.input}
@@ -138,7 +185,6 @@ export default function SignUp() {
             placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             returnKeyType="next"
-            autoFocus
           />
 
           <AppText style={styles.label}>EMAIL</AppText>
@@ -188,31 +234,9 @@ export default function SignUp() {
             placeholderTextColor={Colors.grey300}
             keyboardType="number-pad"
             maxLength={12}
-            returnKeyType="next"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
           />
-
-          <AppText style={styles.label}>ABN</AppText>
-          <View style={styles.abnSection}>
-            <TextInput
-              style={[styles.input, styles.abnInput]}
-              value={abn}
-              onChangeText={onAbnChange}
-              placeholder="XX XXX XXX XXX"
-              placeholderTextColor={Colors.grey300}
-              keyboardType="numeric"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-            <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
-            <View style={styles.abnWarning}>
-              <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
-              <AppText style={styles.abnWarningText}>
-                {
-                  "You cannot change your ABN after creating your account — please make sure it's correct."
-                }
-              </AppText>
-            </View>
-          </View>
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
 

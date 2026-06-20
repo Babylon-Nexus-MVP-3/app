@@ -19,6 +19,7 @@ module.exports = {
     android: {
       package: "com.babylonnexus",
       versionCode: 5,
+      softwareKeyboardLayoutMode: "pan",
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       adaptiveIcon: {
         backgroundColor: "#0D3D2B",

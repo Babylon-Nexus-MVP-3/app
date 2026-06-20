@@ -43,6 +43,8 @@ export default function VerifyScreen() {
   const { fetchWithAuth } = useAuth();
 
   const [abrData, setAbrData] = useState<AbrResult | null>(null);
+  const [abrError, setAbrError] = useState("");
+  const [abrInactive, setAbrInactive] = useState(false);
   const [vouchStatus, setVouchStatus] = useState<VouchStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const recipientName = recipientNameParam ?? "";
@@ -53,6 +55,8 @@ export default function VerifyScreen() {
   useEffect(() => {
     if (!abn) return;
     setAbrData(null);
+    setAbrError("");
+    setAbrInactive(false);
     setVouchStatus(null);
     lookupAbn();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,11 +76,19 @@ export default function VerifyScreen() {
         setVouchStatus({ isOnVouch: false, vouchCount: 0 });
       }
       if (abrRes.ok) {
-        const abrData = await abrRes.json();
-        if (abrData.isActive) setAbrData(abrData);
+        const data = await abrRes.json();
+        if (data.isActive) setAbrData(data);
+      } else if (abrRes.status === 404) {
+        setAbrError(
+          "This ABN is not currently active. You can only vouch for businesses with an active ABN."
+        );
+        setAbrInactive(true);
+      } else {
+        setAbrError("Business details temporarily unavailable.");
       }
     } catch {
       setVouchStatus({ isOnVouch: false, vouchCount: 0 });
+      setAbrError("Business details temporarily unavailable.");
     } finally {
       setLoading(false);
     }
@@ -147,12 +159,39 @@ export default function VerifyScreen() {
               {abrData && (
                 <View style={styles.abrCard}>
                   <AppText style={styles.abrFrom}>FROM ABR</AppText>
-                  <AppText style={styles.abrName}>{abrData.entityName}</AppText>
+                  <AppText style={styles.abrName}>
+                    {abrData.tradingName || abrData.entityName}
+                  </AppText>
+                  {abrData.tradingName && abrData.tradingName !== abrData.entityName && (
+                    <AppText style={styles.abrLegalName}>Legal: {abrData.entityName}</AppText>
+                  )}
                   <AppText style={styles.abrMeta}>
                     {abrData.businessType} · {abrData.state} · Active {abrData.activeYears} yrs
                   </AppText>
                 </View>
               )}
+              {!abrData && abrError ? (
+                <View
+                  style={[
+                    styles.abrErrorNote,
+                    { backgroundColor: abrInactive ? Colors.redBg : Colors.amberBg },
+                  ]}
+                >
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={15}
+                    color={abrInactive ? Colors.red : Colors.amber}
+                  />
+                  <AppText
+                    style={[
+                      styles.abrErrorText,
+                      abrInactive ? styles.abrErrorRed : styles.abrErrorAmber,
+                    ]}
+                  >
+                    {abrError}
+                  </AppText>
+                </View>
+              ) : null}
 
               {/* Already vouched */}
               {alreadyVouched ? (
@@ -202,7 +241,7 @@ export default function VerifyScreen() {
                     </AppText>
                   </View>
                 </View>
-              ) : (
+              ) : !abrInactive ? (
                 /* Not yet on Vouch — unified card with contact fields */
                 <View style={styles.pendingCard}>
                   <View style={styles.statusRow}>
@@ -254,7 +293,7 @@ export default function VerifyScreen() {
                     </AppText>
                   </View>
                 </View>
-              )}
+              ) : null}
             </>
           ) : null}
         </ScrollView>
@@ -262,7 +301,12 @@ export default function VerifyScreen() {
 
       {!loading && vouchStatus && !alreadyVouched && (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.vouchBtn} onPress={onPressVouch} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.vouchBtn, abrInactive && { opacity: 0.4 }]}
+            onPress={onPressVouch}
+            activeOpacity={0.85}
+            disabled={abrInactive}
+          >
             <AppText style={styles.vouchBtnText}>{btnLabel}</AppText>
           </TouchableOpacity>
         </View>
@@ -334,6 +378,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Fonts.bold,
     color: Colors.black,
+  },
+  abrLegalName: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 1,
+  },
+  abrErrorNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  abrErrorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.medium,
+  },
+  abrErrorRed: {
+    color: Colors.red,
+  },
+  abrErrorAmber: {
+    color: Colors.amber,
   },
   abrMeta: {
     fontSize: 13,

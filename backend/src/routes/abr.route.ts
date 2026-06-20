@@ -16,8 +16,7 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
   const guid = process.env.ABR_GUID;
 
   if (!guid) {
-    // Dev/test fallback — return plausible mock so UI works without a real key
-    res.status(200).json(buildMock(abn));
+    res.status(503).json({ error: "ABN lookup not configured" });
     return;
   }
 
@@ -59,7 +58,7 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
       isActive: true,
     });
   } catch {
-    res.status(404).json({ error: "ABN not found" });
+    res.status(503).json({ error: "ABR lookup temporarily unavailable" });
   }
 });
 
@@ -85,7 +84,9 @@ abrRouter.get("/search", async (req: Request, res: Response) => {
     const upstream = await fetch(url);
     if (!upstream.ok) throw new Error("ABR upstream error");
 
-    const raw = await upstream.json();
+    const text = await upstream.text();
+    const jsonStr = text.replace(/^[^(]+\(/, "").replace(/\)\s*$/, "");
+    const raw = JSON.parse(jsonStr);
 
     const names: Array<{
       Abn: string;
@@ -103,7 +104,7 @@ abrRouter.get("/search", async (req: Request, res: Response) => {
 
     res.status(200).json({ results });
   } catch {
-    res.status(404).json({ error: "Search failed" });
+    res.status(503).json({ error: "ABR search temporarily unavailable" });
   }
 });
 
@@ -114,22 +115,4 @@ function buildSearchMock(name: string): Array<{ abn: string; entityName: string;
     { abn: "11223344556", entityName: `${name} Services Pty Ltd`, state: "QLD" },
     { abn: "55667788990", entityName: `${name} & Associates`, state: "WA" },
   ];
-}
-
-function buildMock(abn: string): {
-  entityName: string;
-  tradingName: string | undefined;
-  businessType: string;
-  state: string;
-  activeYears: number;
-  isActive: boolean;
-} {
-  return {
-    entityName: `Business ${abn.slice(-4)} Pty Ltd`,
-    tradingName: undefined,
-    businessType: "Australian Private Company",
-    state: "NSW",
-    activeYears: 5,
-    isActive: true,
-  };
 }
