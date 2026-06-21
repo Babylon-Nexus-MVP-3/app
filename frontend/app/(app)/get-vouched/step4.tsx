@@ -255,7 +255,6 @@ export default function Step4() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>Second vouch</AppText>
           <AppText style={styles.subtitle}>
             Add a second person who can vouch for your work. This unlocks your full profile.
           </AppText>
@@ -293,7 +292,7 @@ export default function Step4() {
                 value={ref.email}
                 onChangeText={(v) => update("email", v)}
                 onBlur={() => setEmailTouched(true)}
-                placeholder="Email (optional)"
+                placeholder="Email"
                 placeholderTextColor={Colors.grey300}
                 keyboardType="email-address"
                 autoCapitalize="none"

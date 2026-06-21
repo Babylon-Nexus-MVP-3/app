@@ -34,9 +34,7 @@ export default function ProjectLocked() {
             <View style={styles.stepNum}>
               <AppText style={styles.stepNumText}>1</AppText>
             </View>
-            <AppText style={styles.stepText}>
-              Go to Build your profile on the home screen
-            </AppText>
+            <AppText style={styles.stepText}>Go to Build your profile on the home screen</AppText>
           </View>
 
           <View style={styles.step}>
