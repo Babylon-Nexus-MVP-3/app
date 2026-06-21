@@ -249,7 +249,7 @@ export async function notifyProjectApproved(projectId: string, projectName: stri
     recipientUserId: creatorParticipant.userId.toString(),
     projectId,
     type: NotificationType.ProjectApproved,
-    message: `Project "${projectName}" has been approved by the admin.`,
+    message: `Project "${projectName}" is now active.`,
   });
 }
 

@@ -12,12 +12,12 @@ const emailSignature = `
       <tr>
         <td style="padding: 4px;">
           <a href="https://apps.apple.com/au/app/vouchpay/id6746705191">
-            <img src="${APP_STORE_BADGE_URL}" alt="Download on the App Store" height="40" style="display: block;" />
+            <img src="${APP_STORE_BADGE_URL}" alt="Download on the App Store" height="44" style="display: block;" />
           </a>
         </td>
         <td style="padding: 4px;">
           <a href="https://play.google.com/store/apps/details?id=com.babylonnexus.vouchpay">
-            <img src="${GOOGLE_PLAY_BADGE_URL}" alt="Get it on Google Play" height="60" style="display: block;" />
+            <img src="${GOOGLE_PLAY_BADGE_URL}" alt="Get it on Google Play" height="44" style="display: block;" />
           </a>
         </td>
       </tr>

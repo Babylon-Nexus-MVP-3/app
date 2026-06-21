@@ -47,6 +47,34 @@ type ApiProject = {
   overdueInvoiceCount?: number;
 };
 
+type VouchProfileApi = {
+  name?: string;
+  abn?: string;
+  trade?: string;
+  idNumber?: string;
+  currentProjectName?: string;
+  suburb?: string;
+  state?: string;
+  pastProjectName?: string;
+  pastSuburb?: string;
+  pastState?: string;
+  references?: { name?: string; company?: string; mobile?: string; relationship?: string }[];
+};
+
+// Mirrors the 6 steps of the "Build your profile" wizard — all 6 must be
+// completed (not just 2 vouches responded) before a user can create a project.
+function isProfileComplete(profile: VouchProfileApi | null): boolean {
+  if (!profile) return false;
+  const refs = profile.references ?? [];
+  const step1 = !!(profile.name && profile.abn && profile.trade);
+  const step2 = !!(profile.currentProjectName && profile.suburb && profile.state);
+  const step3 = !!(refs[0]?.name && refs[0]?.company && refs[0]?.mobile && refs[0]?.relationship);
+  const step4 = !!(refs[1]?.name && refs[1]?.company && refs[1]?.mobile && refs[1]?.relationship);
+  const step5 = !!(profile.pastProjectName && profile.pastSuburb && profile.pastState);
+  const step6 = !!profile.idNumber;
+  return step1 && step2 && step3 && step4 && step5 && step6;
+}
+
 export default function Projects() {
   const { fetchWithAuth } = useAuth();
   const insets = useSafeAreaInsets();
@@ -69,9 +97,9 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, sentRes] = await Promise.all([
+      const [projectsRes, profileRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/projects`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
       ]);
       const data = await projectsRes.json();
       if (!projectsRes.ok) {
@@ -89,11 +117,8 @@ export default function Projects() {
       }));
       setProjects(mapped);
 
-      const sentData = sentRes.ok ? await sentRes.json() : null;
-      const respondedCount = (sentData?.requests ?? []).filter(
-        (r: { status: string }) => r.status === "responded"
-      ).length;
-      setCanCreateProject(respondedCount >= 2);
+      const profileData = profileRes.ok ? ((await profileRes.json()) as VouchProfileApi) : null;
+      setCanCreateProject(isProfileComplete(profileData));
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {

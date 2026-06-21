@@ -27,9 +27,20 @@ vouchRouter.post(
       const fromName = dbUser?.name ?? "";
       const fromAbn = dbUser?.abn ?? body.abn ?? "";
 
+      // Each wizard step only sends the fields it owns, so this must be a partial
+      // $set merge rather than a full-document replace — otherwise saving any one
+      // step wipes out the fields collected by every other step. Steps that don't
+      // own references (1, 2, 5, 6) send `references: []`; skip that field rather
+      // than letting it clobber references already saved by steps 3/4.
+      const { references: referencesField, ...rest } = body;
+      const setFields: Record<string, unknown> = { ...rest, userId, submittedAt: new Date() };
+      if (Array.isArray(referencesField) && referencesField.length > 0) {
+        setFields.references = referencesField;
+      }
+
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
-        { ...body, userId, submittedAt: new Date() },
+        { $set: setFields },
         { upsert: true, returnDocument: "after", runValidators: true }
       );
 
