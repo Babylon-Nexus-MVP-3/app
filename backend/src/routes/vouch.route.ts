@@ -31,9 +31,18 @@ vouchRouter.post(
       // $set merge rather than a full-document replace — otherwise saving any one
       // step wipes out the fields collected by every other step. Steps that don't
       // own references (1, 2, 5, 6) send `references: []`; skip that field rather
-      // than letting it clobber references already saved by steps 3/4.
+      // than letting it clobber references already saved by steps 3/4. Likewise,
+      // a step that bundles in another step's not-yet-filled fields (e.g. step 1
+      // always includes idNumber/idExpiry from the same local object, empty until
+      // step 6 is done) sends them as "" — $set'ing an empty string still trips
+      // the schema's `required: true` validator, so drop empty values too.
       const { references: referencesField, ...rest } = body;
-      const setFields: Record<string, unknown> = { ...rest, userId, submittedAt: new Date() };
+      const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
+      for (const [key, value] of Object.entries(rest)) {
+        if (value !== "" && value !== undefined && value !== null) {
+          setFields[key] = value;
+        }
+      }
       if (Array.isArray(referencesField) && referencesField.length > 0) {
         setFields.references = referencesField;
       }
