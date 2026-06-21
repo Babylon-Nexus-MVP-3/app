@@ -551,7 +551,13 @@ vouchRouter.get(
         isOnVouch: true,
         vouchCount,
         alreadyVouched: !!alreadyVouched,
-        attributeSummary: attributes.length > 0 ? attributes.slice(0, 3).map(a => a.attr).join(" · ") : undefined,
+        attributeSummary:
+          attributes.length > 0
+            ? attributes
+                .slice(0, 3)
+                .map((a) => a.attr)
+                .join(" · ")
+            : undefined,
         attributes,
       });
     } catch (err) {
