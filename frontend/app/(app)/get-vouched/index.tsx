@@ -40,26 +40,6 @@ const STEP_ROUTES = [
 
 type StepState = "done" | "active" | "locked";
 
-function RequestCard({ r }: { r: SentRequest }) {
-  const done = r.status === "responded";
-  return (
-    <View style={styles.requestCard}>
-      <View style={[styles.dot, done ? styles.dotDone : styles.dotPending]} />
-      <View style={{ flex: 1 }}>
-        <AppText style={styles.requestContact}>{r.toEmail || r.toMobile}</AppText>
-        <AppText style={styles.requestMeta}>
-          {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
-        </AppText>
-      </View>
-      <View style={[styles.badge, done ? styles.badgeDone : styles.badgePending]}>
-        <AppText style={[styles.badgeText, done ? styles.badgeTextDone : styles.badgeTextPending]}>
-          {done ? "Vouched" : "Pending"}
-        </AppText>
-      </View>
-    </View>
-  );
-}
-
 export default function GetVouchedIntro() {
   const { user, fetchWithAuth } = useAuth();
   const { step1, step2, references } = useWizard();
@@ -104,18 +84,28 @@ export default function GetVouchedIntro() {
     );
   }
 
-  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
-  const pendingRequests = sentRequests.filter((r) => r.status !== "responded");
+  // Requests are created in step3-then-step4 order, so sorted ascending by
+  // createdAt, the first is ref 1's request and the second is ref 2's.
+  const sortedRequests = [...sentRequests].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  const stepRequestStatus: Record<number, "pending" | "responded" | undefined> = {
+    3: sortedRequests[0]?.status,
+    4: sortedRequests[1]?.status,
+  };
 
   // ── Step completion ──────────────────────────────────────────────────────
   const step1Done =
     !!(user?.name && user?.abn && user?.businessTrade) ||
     !!(step1.name && step1.abn && step1.trade);
   const step2Done = !!(step2.currentProjectName && step2.suburb && step2.state);
+  // "Submitted" just means the request was sent — used to unlock navigation
+  // (e.g. step 4) without waiting on a response. "Done" means the vouch was
+  // actually confirmed — that's what counts for profile strength.
   const ref0 = references[0];
-  const step3Done = !!(ref0?.name && ref0?.company && ref0?.mobile && ref0?.relationship);
-  const ref1 = references[1];
-  const step4Done = !!(ref1?.name && ref1?.company && ref1?.mobile && ref1?.relationship);
+  const step3Submitted = !!(ref0?.name && ref0?.company && ref0?.mobile && ref0?.relationship);
+  const step3Done = stepRequestStatus[3] === "responded";
+  const step4Done = stepRequestStatus[4] === "responded";
   const step5Done = !!(step2.pastProjectName && step2.pastSuburb && step2.pastState);
   const step6Done = !!step1.idNumber;
 
@@ -125,7 +115,7 @@ export default function GetVouchedIntro() {
 
   function stepState(n: number): StepState {
     if (stepDone[n - 1]) return "done";
-    if (n === 4 && !step3Done) return "locked";
+    if (n === 4 && !step3Submitted) return "locked";
     if (!mobileVerified && n > 1) return "locked";
     if (!step1Done && n > 1) return "locked";
     return "active";
@@ -133,137 +123,9 @@ export default function GetVouchedIntro() {
 
   function canTap(n: number) {
     if (!mobileVerified) return n === 1;
-    if (n === 4) return step3Done;
+    if (n === 4) return step3Submitted;
     if (n > 1) return step1Done;
     return true;
-  }
-
-  // ── State: Verified (≥ 2 vouches received) ──────────────────────────────
-  if (respondedCount >= 2) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="arrow-back" size={24} color={Colors.black} />
-          </TouchableOpacity>
-          <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
-          <View style={{ width: 24 }} />
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.submittedScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.iconCircle, styles.iconCircleGreen]}>
-            <Ionicons name="shield-checkmark-outline" size={40} color={Colors.vouchGreen} />
-          </View>
-          <AppText style={styles.title}>{"You're vouched."}</AppText>
-          <AppText style={styles.subtitle}>
-            {`${respondedCount} people have vouched for you.`}
-          </AppText>
-
-          <View style={styles.strengthRow}>
-            <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText
-              style={[
-                styles.strengthPct,
-                { color: strength >= 80 ? Colors.vouchGreen : Colors.amber },
-              ]}
-            >
-              {strength}%
-            </AppText>
-          </View>
-          <View style={styles.strengthTrack}>
-            <View
-              style={[
-                styles.strengthFill,
-                {
-                  width: `${strength}%` as any,
-                  backgroundColor: strength >= 80 ? Colors.vouchGreen : Colors.amber,
-                },
-              ]}
-            />
-          </View>
-
-          {pendingRequests.length > 0 && (
-            <>
-              <AppText style={[styles.sectionLabel, { marginTop: 24 }]}>STILL WAITING</AppText>
-              {pendingRequests.map((r) => (
-                <RequestCard key={r._id} r={r} />
-              ))}
-            </>
-          )}
-
-          <TouchableOpacity
-            style={styles.addRefBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push("/(app)/get-vouched/step3?fresh=true" as any)}
-          >
-            <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
-            <AppText style={styles.addRefBtnText}>Request another vouch</AppText>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── State: Requests sent, waiting ──────────────────────────────────────
-  if (sentRequests.length > 0) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="arrow-back" size={24} color={Colors.black} />
-          </TouchableOpacity>
-          <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
-          <View style={{ width: 24 }} />
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.submittedScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.iconCircle, styles.iconCircleAmber]}>
-            <Ionicons name="time-outline" size={40} color={Colors.amber} />
-          </View>
-          <AppText style={styles.title}>Requests sent.</AppText>
-          <AppText style={styles.subtitle}>
-            {respondedCount === 0
-              ? "Waiting on your vouches to respond."
-              : `${respondedCount} of ${sentRequests.length} ${sentRequests.length === 1 ? "person has" : "people have"} responded.`}
-          </AppText>
-
-          <View style={styles.strengthRow}>
-            <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText
-              style={[styles.strengthPct, { color: strength >= 40 ? Colors.amber : Colors.red }]}
-            >
-              {strength}%
-            </AppText>
-          </View>
-          <View style={styles.strengthTrack}>
-            <View
-              style={[
-                styles.strengthFill,
-                { width: `${strength}%` as any, backgroundColor: Colors.amber },
-              ]}
-            />
-          </View>
-
-          <AppText style={[styles.sectionLabel, { marginTop: 24 }]}>YOUR VOUCHES</AppText>
-          {sentRequests.map((r) => (
-            <RequestCard key={r._id} r={r} />
-          ))}
-
-          <TouchableOpacity
-            style={styles.addRefBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push("/(app)/get-vouched/step3?fresh=true" as any)}
-          >
-            <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
-            <AppText style={styles.addRefBtnText}>Request another vouch</AppText>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
   }
 
   // ── State: Build profile wizard ──────────────────────────────────────────
@@ -271,7 +133,7 @@ export default function GetVouchedIntro() {
     ? "Verify mobile to continue"
     : !step1Done
       ? "Start — add your details"
-      : step3Done
+      : step3Submitted
         ? "Request another vouch"
         : "Request a vouch";
 
@@ -393,7 +255,15 @@ export default function GetVouchedIntro() {
                     {title}
                   </AppText>
                   <AppText style={styles.stepDesc}>{desc}</AppText>
-                  {state === "done" && <AppText style={styles.stepDoneTag}>Completed</AppText>}
+                  {(n === 3 || n === 4) && stepRequestStatus[n] === "pending" && (
+                    <AppText style={styles.stepPendingTag}>Pending response</AppText>
+                  )}
+                  {state === "done" &&
+                    (n === 3 || n === 4 ? (
+                      <AppText style={styles.stepDoneTag}>Vouched</AppText>
+                    ) : (
+                      <AppText style={styles.stepDoneTag}>Completed</AppText>
+                    ))}
                 </View>
                 <View style={styles.stepRight}>
                   <AppText style={styles.stepPct}>+{pct}%</AppText>
@@ -444,11 +314,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 32,
     paddingTop: 8,
-  },
-  submittedScroll: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    alignItems: "center",
   },
 
   // Strength card
@@ -512,82 +377,10 @@ const styles = StyleSheet.create({
   stepTitleLocked: { color: Colors.grey700 },
   stepDesc: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
   stepDoneTag: { fontSize: 11, fontFamily: Fonts.medium, color: Colors.vouchGreen, marginTop: 2 },
+  stepPendingTag: { fontSize: 11, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
   stepRight: { flexDirection: "row", alignItems: "center", gap: 4 },
   stepPct: { fontSize: 12, fontFamily: Fonts.semiBold, color: Colors.grey500 },
   prereqHint: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
-
-  // Submitted state
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 32,
-    marginBottom: 24,
-    backgroundColor: Colors.vouchGreenLight,
-  },
-  iconCircleGreen: { backgroundColor: Colors.vouchGreenLight },
-  iconCircleAmber: { backgroundColor: Colors.amberBg },
-  title: {
-    fontSize: 26,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    alignSelf: "flex-start",
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    width: "100%",
-  },
-  requestCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    width: "100%",
-    marginBottom: 8,
-  },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  dotDone: { backgroundColor: Colors.vouchGreen },
-  dotPending: { backgroundColor: Colors.amber },
-  requestContact: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
-  requestMeta: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 2 },
-  badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeDone: { backgroundColor: Colors.vouchGreenLight },
-  badgePending: { backgroundColor: Colors.amberBg },
-  badgeText: { fontSize: 11, fontFamily: Fonts.bold },
-  badgeTextDone: { color: Colors.vouchGreen },
-  badgeTextPending: { color: Colors.amber },
-  addRefBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 52,
-    width: "100%",
-  },
-  addRefBtnText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
   footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,

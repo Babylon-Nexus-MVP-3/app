@@ -90,51 +90,68 @@ const emptyStep2: Step2Data = {
   pastValue: "",
 };
 
-const STORAGE_KEY = "wizard_draft";
+// Scoped per logged-in user — otherwise switching accounts on the same device
+// (e.g. during testing) leaks one account's draft into another's submission.
+function storageKeyFor(userId: string | undefined): string {
+  return `wizard_draft_${userId ?? "anon"}`;
+}
 
-async function loadDraft(): Promise<{
+async function loadDraft(storageKey: string): Promise<{
   step1: Step1Data;
   step2: Step2Data;
   references: Reference[];
 } | null> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const raw = await AsyncStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-async function saveDraft(step1: Step1Data, step2: Step2Data, references: Reference[]) {
+async function saveDraft(
+  storageKey: string,
+  step1: Step1Data,
+  step2: Step2Data,
+  references: Reference[]
+) {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ step1, step2, references }));
+    await AsyncStorage.setItem(storageKey, JSON.stringify({ step1, step2, references }));
   } catch {}
 }
 
 export function WizardProvider({ children }: { children: React.ReactNode }) {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
+  const storageKey = storageKeyFor(user?.id);
   const [step1, setStep1Raw] = useState<Step1Data>(emptyStep1);
   const [step2, setStep2Raw] = useState<Step2Data>(emptyStep2);
   const [references, setReferencesRaw] = useState<Reference[]>([emptyRef(), emptyRef()]);
 
   function setStep1(d: Step1Data) {
     setStep1Raw(d);
-    saveDraft(d, step2, references);
+    saveDraft(storageKey, d, step2, references);
   }
 
   function setStep2(d: Step2Data) {
     setStep2Raw(d);
-    saveDraft(step1, d, references);
+    saveDraft(storageKey, step1, d, references);
   }
 
   function setReferences(refs: Reference[]) {
     setReferencesRaw(refs);
-    saveDraft(step1, step2, refs);
+    saveDraft(storageKey, step1, step2, refs);
   }
 
   useEffect(() => {
-    // Load local draft immediately so the UI restores without waiting for network
-    loadDraft().then((draft) => {
+    // Reset to defaults first — guards against stale in-memory state from a
+    // previous account if this provider doesn't unmount between logins.
+    setStep1Raw(emptyStep1);
+    setStep2Raw(emptyStep2);
+    setReferencesRaw([emptyRef(), emptyRef()]);
+
+    // Load this user's local draft immediately so the UI restores without
+    // waiting for network.
+    loadDraft(storageKey).then((draft) => {
       if (draft) {
         setStep1Raw(draft.step1);
         setStep2Raw(draft.step2);
@@ -191,10 +208,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         setStep1Raw(s1);
         setStep2Raw(s2);
         setReferencesRaw(refs);
-        saveDraft(s1, s2, refs);
+        saveDraft(storageKey, s1, s2, refs);
       })
       .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <WizardContext.Provider value={{ step1, step2, references, setStep1, setStep2, setReferences }}>

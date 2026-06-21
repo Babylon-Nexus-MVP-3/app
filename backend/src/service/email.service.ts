@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
 const BASE_URL = "https://api.babylon-nexus.com";
 const LOGO_URL = `${BASE_URL}/assets/appIcon.png`;
@@ -51,14 +52,10 @@ const emailHeader = `
   </div>
 `;
 
+const sesClient = new SESv2Client({ region: process.env.AWS_REGION ?? "ap-southeast-2" });
+
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  SES: { sesClient, SendEmailCommand },
 });
 
 export async function sendInviteEmail(

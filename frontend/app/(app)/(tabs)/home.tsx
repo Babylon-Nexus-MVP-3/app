@@ -5,8 +5,9 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
+  Modal,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -30,6 +31,16 @@ type WizardDraft = {
   references: { name: string; company: string; mobile: string; relationship: string }[];
 };
 
+type SentRequest = {
+  _id: string;
+  toMobile: string;
+  toEmail?: string;
+  relationship: string;
+  projectName: string;
+  status: "pending" | "responded";
+  createdAt: string;
+};
+
 function computeStrength(
   user: { name?: string; abn?: string; businessTrade?: string } | null,
   draft: WizardDraft | null,
@@ -37,30 +48,20 @@ function computeStrength(
 ): number {
   const s1 = draft?.step1;
   const s2 = draft?.step2;
-  const refs = draft?.references ?? [];
   const step1Done =
     !!(user?.name && user?.abn && (user?.businessTrade || s1?.trade)) ||
     !!(s1?.name && s1?.abn && s1?.trade);
   const step2Done = !!(s2?.currentProjectName && s2?.suburb && s2?.state);
-  const step3Done = !!(
-    refs[0]?.name &&
-    refs[0]?.company &&
-    refs[0]?.mobile &&
-    refs[0]?.relationship
-  );
-  const step4Done = !!(
-    refs[1]?.name &&
-    refs[1]?.company &&
-    refs[1]?.mobile &&
-    refs[1]?.relationship
-  );
+  // Steps 3/4 only count once a vouch is actually confirmed (responded),
+  // not just requested — a sent-but-unanswered reference shouldn't count
+  // toward profile strength.
   const step5Done = !!(s2?.pastProjectName && s2?.pastSuburb && s2?.pastState);
   const step6Done = !!s1?.idNumber;
   let pct = 0;
   if (step1Done) pct += 20;
   if (step2Done) pct += 15;
-  if (step3Done || respondedCount >= 1) pct += 20;
-  if (step4Done || respondedCount >= 2) pct += 20;
+  if (respondedCount >= 1) pct += 20;
+  if (respondedCount >= 2) pct += 20;
   if (step5Done) pct += 15;
   if (step6Done) pct += 10;
   return pct;
@@ -113,10 +114,13 @@ const sb = StyleSheet.create({
 
 export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
+  const insets = useSafeAreaInsets();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [respondedCount, setRespondedCount] = useState(0);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
   const [wizardDraft, setWizardDraft] = useState<WizardDraft | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -126,7 +130,7 @@ export default function HomeScreen() {
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
-        AsyncStorage.getItem("wizard_draft"),
+        AsyncStorage.getItem(`wizard_draft_${user?.id ?? "anon"}`),
       ]);
       const vouchData = await vouchRes.json();
       const notifData = await notifRes.json();
@@ -136,13 +140,12 @@ export default function HomeScreen() {
       setUnreadCount(
         (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
       );
-      const responded = (sentData?.requests ?? []).filter(
-        (r: { status: string }) => r.status === "responded"
-      ).length;
-      setRespondedCount(responded);
+      const requests: SentRequest[] = sentData?.requests ?? [];
+      setSentRequests(requests);
+      setRespondedCount(requests.filter((r) => r.status === "responded").length);
       if (raw) setWizardDraft(JSON.parse(raw));
     } catch {}
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,6 +160,7 @@ export default function HomeScreen() {
   }
 
   const strength = computeStrength(user, wizardDraft, respondedCount);
+  const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -206,50 +210,23 @@ export default function HomeScreen() {
 
         {/* 2x2 Card Grid */}
         <View style={styles.grid}>
-          {/* Get Vouched */}
-          <TouchableOpacity
-            style={[styles.card, styles.cardGetVouched]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(app)/get-vouched")}
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name="shield-checkmark-outline" size={26} color={Colors.vouchGreen} />
-            </View>
-            <AppText style={styles.cardTitle}>Get Vouched</AppText>
-            <AppText style={styles.cardDesc}>Build your profile</AppText>
-          </TouchableOpacity>
-
-          {/* Join a Project */}
+          {/* Request a Vouch — view pending requests / send new ones */}
           <TouchableOpacity
             style={[styles.card, styles.cardDefault]}
             activeOpacity={0.7}
-            onPress={() => router.push("/(app)/join-project")}
+            onPress={() => setRequestModalVisible(true)}
           >
             <View style={styles.cardIcon}>
-              <Ionicons name="enter-outline" size={26} color={Colors.black} />
+              <Ionicons name="person-add-outline" size={26} color={Colors.black} />
+              {pendingSentCount > 0 && (
+                <View style={styles.dotBadge}>
+                  <AppText style={styles.dotBadgeText}>{pendingSentCount}</AppText>
+                </View>
+              )}
             </View>
-            <AppText style={styles.cardTitle}>Join a Project</AppText>
-            <AppText style={styles.cardDesc}>Enter invite code</AppText>
-          </TouchableOpacity>
-
-          {/* Create my Project */}
-          <TouchableOpacity
-            style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons
-                name="sync-circle-outline"
-                size={26}
-                color={strength === 100 ? Colors.black : Colors.grey500}
-              />
-            </View>
-            <AppText style={[styles.cardTitle, strength < 100 && styles.cardTitleLocked]}>
-              Create my Project
-            </AppText>
+            <AppText style={styles.cardTitle}>Request a Vouch</AppText>
             <AppText style={styles.cardDesc}>
-              {strength === 100 ? "Set up your project" : "Complete profile first"}
+              {sentRequests.length === 0 ? "Ask someone to vouch" : "View status"}
             </AppText>
           </TouchableOpacity>
 
@@ -263,7 +240,7 @@ export default function HomeScreen() {
               } else {
                 Alert.alert(
                   "1 Vouch Required",
-                  "You need at least 1 person to vouch for you before you can vouch for others. Head to Get Vouched to request your first vouch.",
+                  "You need at least 1 person to vouch for you before you can vouch for others. Head to Build your profile to request your first vouch.",
                   [{ text: "Got it" }]
                 );
               }
@@ -290,33 +267,169 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Apply for supplier credit — full width, locked */}
-        <TouchableOpacity
-          style={[styles.wideCard, styles.cardLocked]}
-          activeOpacity={0.7}
-          onPress={() =>
-            Alert.alert(
-              "Supplier Credit",
-              "Supplier Credit will unlock as your trust signals grow. Keep building your profile on VouchPay.",
-              [{ text: "Got it" }]
-            )
-          }
-        >
-          <View style={styles.wideCardLeft}>
-            <Ionicons name="card-outline" size={26} color={Colors.grey500} />
-          </View>
-          <View style={styles.wideCardContent}>
-            <View style={styles.wideTitleRow}>
-              <AppText style={[styles.cardTitle, styles.cardTitleLocked]}>
-                Apply for supplier credit
-              </AppText>
+        <View style={styles.grid}>
+          {/* Build your profile */}
+          <TouchableOpacity
+            style={[styles.card, styles.cardGetVouched]}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/get-vouched")}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="shield-checkmark-outline" size={26} color={Colors.vouchGreen} />
             </View>
-            <AppText style={styles.cardDesc}>
-              Submit applications using your VouchPay profile
+            <AppText style={styles.cardTitle}>Build your profile</AppText>
+            <AppText style={styles.cardDesc}>Get vouched</AppText>
+          </TouchableOpacity>
+
+          {/* Join a Project */}
+          <TouchableOpacity
+            style={[styles.card, styles.cardDefault]}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/join-project")}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="enter-outline" size={26} color={Colors.black} />
+            </View>
+            <AppText style={styles.cardTitle}>Join a Project</AppText>
+            <AppText style={styles.cardDesc}>Enter invite code</AppText>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.grid}>
+          {/* Create my Project */}
+          <TouchableOpacity
+            style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons
+                name="sync-circle-outline"
+                size={26}
+                color={strength === 100 ? Colors.black : Colors.grey500}
+              />
+            </View>
+            <AppText style={[styles.cardTitle, strength < 100 && styles.cardTitleLocked]}>
+              Create my Project
             </AppText>
-          </View>
-        </TouchableOpacity>
+            <AppText style={styles.cardDesc}>
+              {strength === 100 ? "Set up your project" : "Complete profile first"}
+            </AppText>
+          </TouchableOpacity>
+
+          {/* Apply for supplier credit — locked */}
+          <TouchableOpacity
+            style={[styles.card, styles.cardLocked]}
+            activeOpacity={0.7}
+            onPress={() =>
+              Alert.alert(
+                "Supplier Credit",
+                "Supplier Credit will unlock as your trust signals grow. Keep building your profile on VouchPay.",
+                [{ text: "Got it" }]
+              )
+            }
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="card-outline" size={26} color={Colors.grey500} />
+            </View>
+            <AppText style={[styles.cardTitle, styles.cardTitleLocked]}>
+              Apply for supplier credit
+            </AppText>
+            <AppText style={styles.cardDesc}>Submit using your profile</AppText>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      <Modal
+        visible={requestModalVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setRequestModalVisible(false)}
+      >
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity hitSlop={8} onPress={() => setRequestModalVisible(false)}>
+              <Ionicons name="arrow-back" size={24} color={Colors.black} />
+            </TouchableOpacity>
+            <AppText style={styles.headerTitle}>VOUCH REQUESTS</AppText>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={[
+                styles.modalIconCircle,
+                respondedCount >= 1 ? styles.modalIconCircleGreen : styles.modalIconCircleAmber,
+              ]}
+            >
+              <Ionicons
+                name={respondedCount >= 1 ? "shield-checkmark-outline" : "person-add-outline"}
+                size={36}
+                color={respondedCount >= 1 ? Colors.vouchGreen : Colors.amber}
+              />
+            </View>
+            <AppText style={styles.modalTitle}>
+              {sentRequests.length === 0
+                ? "No requests yet"
+                : `${respondedCount} of ${sentRequests.length} vouched`}
+            </AppText>
+            <AppText style={styles.modalSubtitle}>
+              {sentRequests.length === 0
+                ? "Ask people you've worked with to vouch for you."
+                : respondedCount === sentRequests.length
+                  ? "Everyone has responded."
+                  : "Waiting on the rest to respond."}
+            </AppText>
+
+            {sentRequests.length > 0 && (
+              <View style={styles.modalListSection}>
+                <AppText style={styles.sectionLabel}>YOUR REQUESTS</AppText>
+                {sentRequests.map((r) => {
+                  const done = r.status === "responded";
+                  return (
+                    <View key={r._id} style={styles.requestCard}>
+                      <View style={[styles.dot, done ? styles.dotDone : styles.dotPending]} />
+                      <View style={{ flex: 1 }}>
+                        <AppText style={styles.requestContact}>{r.toEmail || r.toMobile}</AppText>
+                        <AppText style={styles.requestMeta}>
+                          {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
+                        </AppText>
+                      </View>
+                      <View style={[styles.badge, done ? styles.badgeDone : styles.badgePending]}>
+                        <AppText
+                          style={[
+                            styles.badgeText,
+                            done ? styles.badgeTextDone : styles.badgeTextPending,
+                          ]}
+                        >
+                          {done ? "Vouched" : "Pending"}
+                        </AppText>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.addRefBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                setRequestModalVisible(false);
+                router.push("/(app)/get-vouched/step3?fresh=true" as any);
+              }}
+            >
+              <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
+              <AppText style={styles.addRefBtnText}>
+                {sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"}
+              </AppText>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -340,6 +453,19 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontFamily: Fonts.extraBold,
     color: Colors.vouchGreen,
+    letterSpacing: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  headerTitle: {
+    fontSize: 13,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
     letterSpacing: 1,
   },
   greetingSection: {
@@ -420,37 +546,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
-  wideCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 18,
-    gap: 14,
-  },
-  wideCardLeft: {
-    marginTop: 2,
-  },
-  wideCardContent: {
-    flex: 1,
-  },
-  wideTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-    flexWrap: "wrap",
-  },
-  lockedBadge: {
-    backgroundColor: Colors.amberBg,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  lockedBadgeText: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.amber,
-  },
   bellBadge: {
     position: "absolute",
     top: -4,
@@ -468,4 +563,80 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
+  modalScroll: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
+    alignItems: "center",
+  },
+  modalIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  modalIconCircleGreen: { backgroundColor: Colors.vouchGreenLight },
+  modalIconCircleAmber: { backgroundColor: Colors.amberBg },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  modalListSection: {
+    width: "100%",
+    marginTop: 28,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  requestCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    width: "100%",
+    marginBottom: 8,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  dotDone: { backgroundColor: Colors.vouchGreen },
+  dotPending: { backgroundColor: Colors.amber },
+  requestContact: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
+  requestMeta: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 2 },
+  badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  badgeDone: { backgroundColor: Colors.vouchGreenLight },
+  badgePending: { backgroundColor: Colors.amberBg },
+  badgeText: { fontSize: 11, fontFamily: Fonts.bold },
+  badgeTextDone: { color: Colors.vouchGreen },
+  badgeTextPending: { color: Colors.amber },
+  addRefBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 28,
+    height: 52,
+    width: "100%",
+  },
+  addRefBtnText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });
