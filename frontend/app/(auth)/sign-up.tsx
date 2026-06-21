@@ -20,6 +20,8 @@ import { AbrCard } from "@/components/AbrCard";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 
+type SearchResult = { abn: string; entityName: string; state: string };
+
 export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,6 +33,12 @@ export default function SignUp() {
   const [abnDigits, setAbnDigits] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [businessNameLocked, setBusinessNameLocked] = useState(false);
+
+  const [searchMode, setSearchMode] = useState<"abn" | "name">("abn");
+  const [nameQuery, setNameQuery] = useState("");
+  const [nameResults, setNameResults] = useState<SearchResult[]>([]);
+  const [nameSearching, setNameSearching] = useState(false);
+  const [nameError, setNameError] = useState("");
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(abnDigits);
 
@@ -56,6 +64,50 @@ export default function SignUp() {
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
     setBusinessNameLocked(false);
+  }
+
+  async function onNameSearch() {
+    const q = nameQuery.trim();
+    if (q.length < 3) {
+      setNameError("Enter at least 3 characters");
+      return;
+    }
+    setNameError("");
+    setNameSearching(true);
+    setNameResults([]);
+    try {
+      const res = await fetch(`${API_BASE_URL}/abr/search?name=${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        setNameError(
+          res.status >= 500
+            ? "Search temporarily unavailable. Try entering your ABN directly."
+            : "Search failed. Please try again."
+        );
+        return;
+      }
+      const data = await res.json();
+      const results: SearchResult[] = data.results ?? [];
+      if (results.length === 0) {
+        setNameError("No businesses found. Try a different name.");
+      } else {
+        setNameResults(results);
+      }
+    } catch {
+      setNameError("Search failed. Please try again.");
+    } finally {
+      setNameSearching(false);
+    }
+  }
+
+  function onSelectResult(item: SearchResult) {
+    const digits = item.abn.replace(/\D/g, "");
+    setAbnDigits(digits);
+    setAbn(formatAbn(digits));
+    setBusinessName(item.entityName);
+    setBusinessNameLocked(true);
+    setSearchMode("abn");
+    setNameResults([]);
+    setNameQuery("");
   }
 
   const trimmedName = name.trim();
@@ -144,17 +196,93 @@ export default function SignUp() {
 
           <AppText style={styles.label}>ABN</AppText>
           <View style={styles.abnSection}>
-            <TextInput
-              style={[styles.input, styles.abnInput]}
-              value={abn}
-              onChangeText={onAbnChange}
-              placeholder="XX XXX XXX XXX"
-              placeholderTextColor={Colors.grey300}
-              keyboardType="numeric"
-              returnKeyType="next"
-              autoFocus
-            />
-            <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
+            {searchMode === "abn" ? (
+              <>
+                <TextInput
+                  style={[styles.input, styles.abnInput]}
+                  value={abn}
+                  onChangeText={onAbnChange}
+                  placeholder="XX XXX XXX XXX"
+                  placeholderTextColor={Colors.grey300}
+                  keyboardType="numeric"
+                  returnKeyType="next"
+                  autoFocus
+                />
+                <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchMode("name");
+                    setNameError("");
+                    setNameResults([]);
+                  }}
+                  hitSlop={8}
+                >
+                  <AppText style={styles.searchByNameLink}>
+                    {"Don't know your ABN? Search by name →"}
+                  </AppText>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.nameSearchRow}>
+                  <TextInput
+                    style={styles.nameInput}
+                    value={nameQuery}
+                    onChangeText={(t) => {
+                      setNameQuery(t);
+                      setNameError("");
+                    }}
+                    placeholder="Search by business name"
+                    placeholderTextColor={Colors.grey300}
+                    returnKeyType="search"
+                    onSubmitEditing={onNameSearch}
+                    autoCapitalize="words"
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.nameSearchBtn}
+                    onPress={onNameSearch}
+                    disabled={nameSearching}
+                    activeOpacity={0.85}
+                  >
+                    {nameSearching ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Ionicons name="search" size={18} color={Colors.white} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity onPress={() => setSearchMode("abn")} hitSlop={8}>
+                  <AppText style={styles.searchByNameLink}>{"← Enter ABN instead"}</AppText>
+                </TouchableOpacity>
+                {nameError ? <AppText style={styles.nameErrorText}>{nameError}</AppText> : null}
+                {nameResults.length > 0 && (
+                  <View style={styles.resultsContainer}>
+                    {nameResults.map((item, idx) => (
+                      <TouchableOpacity
+                        key={`${item.abn}-${idx}`}
+                        style={[
+                          styles.resultRow,
+                          idx < nameResults.length - 1 && styles.resultRowBorder,
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => onSelectResult(item)}
+                      >
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <AppText style={styles.resultName} numberOfLines={1}>
+                            {item.entityName}
+                          </AppText>
+                          <AppText style={styles.resultMeta}>
+                            {item.state} · ABN {formatAbn(item.abn)}
+                          </AppText>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
             <View style={styles.abnWarning}>
               <Ionicons name="lock-closed-outline" size={12} color={Colors.amber} />
               <AppText style={styles.abnWarningText}>
@@ -404,5 +532,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
+  },
+  searchByNameLink: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.vouchGreen,
+  },
+  nameSearchRow: {
+    flexDirection: "row" as const,
+    gap: 10,
+    alignItems: "center" as const,
+  },
+  nameInput: {
+    flex: 1,
+    height: 52,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+    backgroundColor: Colors.white,
+  },
+  nameSearchBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: Colors.vouchGreen,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  nameErrorText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.red,
+  },
+  resultsContainer: {
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 14,
+    backgroundColor: Colors.white,
+    overflow: "hidden" as const,
+  },
+  resultRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  resultRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey100,
+  },
+  resultName: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+  },
+  resultMeta: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
   },
 });
