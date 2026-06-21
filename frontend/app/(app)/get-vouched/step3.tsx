@@ -266,7 +266,6 @@ export default function Step3() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>First vouch</AppText>
           <AppText style={styles.subtitle}>
             {"Someone you've worked with who can speak to your character and work quality."}
           </AppText>
@@ -304,7 +303,7 @@ export default function Step3() {
                 value={ref.email}
                 onChangeText={(v) => update("email", v)}
                 onBlur={() => setEmailTouched(true)}
-                placeholder="Email (optional)"
+                placeholder="Email"
                 placeholderTextColor={Colors.grey300}
                 keyboardType="email-address"
                 autoCapitalize="none"

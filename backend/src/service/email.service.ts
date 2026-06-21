@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
 const BASE_URL = "https://api.babylon-nexus.com";
 const LOGO_URL = `${BASE_URL}/assets/appIcon.png`;
@@ -11,13 +12,13 @@ const emailSignature = `
     <table style="margin: 0 auto 32px; border-collapse: collapse;">
       <tr>
         <td style="padding: 4px;">
-          <a href="https://apps.apple.com/au/app/vouchpay/id6746705191">
-            <img src="${APP_STORE_BADGE_URL}" alt="Download on the App Store" height="40" style="display: block;" />
+          <a href="https://apps.apple.com/au/app/vouchpay/id6754034788">
+            <img src="${APP_STORE_BADGE_URL}" alt="Download on the App Store" height="44" style="display: block;" />
           </a>
         </td>
         <td style="padding: 4px;">
-          <a href="https://play.google.com/store/apps/details?id=com.babylonnexus.vouchpay">
-            <img src="${GOOGLE_PLAY_BADGE_URL}" alt="Get it on Google Play" height="60" style="display: block;" />
+          <a href="https://play.google.com/store/apps/details?id=com.babylonnexus&hl=en">
+            <img src="${GOOGLE_PLAY_BADGE_URL}" alt="Get it on Google Play" height="44" style="display: block;" />
           </a>
         </td>
       </tr>
@@ -51,14 +52,10 @@ const emailHeader = `
   </div>
 `;
 
+const sesClient = new SESv2Client({ region: process.env.AWS_REGION ?? "ap-southeast-2" });
+
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  SES: { sesClient, SendEmailCommand },
 });
 
 export async function sendInviteEmail(

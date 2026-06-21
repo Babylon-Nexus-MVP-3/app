@@ -6,7 +6,6 @@ import { NotificationModel, NotificationType } from "../../models/notificationMo
 import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
-import { hashPassword } from "../../utils/authHelper";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 
@@ -94,18 +93,7 @@ describe("POST /project", () => {
     expect(participant?.hasLicence).toBeNull();
   });
 
-  it("returns 200 with notification sent to creator and admins on project creation", async () => {
-    // Create an admin so we can assert they also receive the notification
-    const hashed = await hashPassword(PASSWORD);
-    const admin = await UserModel.create({
-      name: "Admin User",
-      email: "admin@project-test.com",
-      password: hashed,
-      status: "Active",
-      emailVerified: true,
-      role: UserRole.Admin,
-    });
-
+  it("returns 200 with project active and a notification sent to the creator", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
     const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
 
@@ -116,18 +104,20 @@ describe("POST /project", () => {
 
     expect(res.status).toBe(200);
 
-    // Both creator and admin should receive the pending-approval notification
-    for (const recipientId of [creator!._id.toString(), admin._id.toString()]) {
-      const notification = await NotificationModel.findOne({
-        recipientUserId: recipientId,
-        projectId: res.body.projectId,
-        type: NotificationType.ProjectPendingApproval,
-      }).lean();
+    // Project creation is gated on profile completeness on the frontend, so
+    // projects go straight to Active instead of waiting on admin approval.
+    const project = await ProjectModel.findById(res.body.projectId).lean();
+    expect(project?.status).toBe("Active");
 
-      expect(notification).toBeTruthy();
-      expect(notification?.message).toContain("pending admin approval");
-      expect(notification?.read).toBe(false);
-    }
+    const notification = await NotificationModel.findOne({
+      recipientUserId: creator!._id.toString(),
+      projectId: res.body.projectId,
+      type: NotificationType.ProjectApproved,
+    }).lean();
+
+    expect(notification).toBeTruthy();
+    expect(notification?.message).toContain("now active");
+    expect(notification?.read).toBe(false);
   });
 
   it("returns 401 when no Authorization header", async () => {

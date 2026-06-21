@@ -24,7 +24,7 @@ export default function ProjectLocked() {
 
         <AppText style={styles.title}>Project health is locked</AppText>
         <AppText style={styles.subtitle}>
-          You need at least 2 people to vouch for you before you can create and manage a project.
+          Your profile strength needs to be 100% before you can create and manage a project.
         </AppText>
 
         <View style={styles.stepsCard}>
@@ -34,9 +34,7 @@ export default function ProjectLocked() {
             <View style={styles.stepNum}>
               <AppText style={styles.stepNumText}>1</AppText>
             </View>
-            <AppText style={styles.stepText}>
-              Complete your Vouch Profile on the home screen
-            </AppText>
+            <AppText style={styles.stepText}>Go to Build your profile on the home screen</AppText>
           </View>
 
           <View style={styles.step}>
@@ -44,7 +42,7 @@ export default function ProjectLocked() {
               <AppText style={styles.stepNumText}>2</AppText>
             </View>
             <AppText style={styles.stepText}>
-              {"Request a vouch from two people you've worked with"}
+              Reach 100% profile strength — identity, projects, and references
             </AppText>
           </View>
 
@@ -53,7 +51,7 @@ export default function ProjectLocked() {
               <AppText style={[styles.stepNumText, styles.stepNumTextGreen]}>3</AppText>
             </View>
             <AppText style={styles.stepText}>
-              Once 2 vouches are confirmed, you can create your project
+              Once your profile reaches 100%, you can create your project
             </AppText>
           </View>
         </View>

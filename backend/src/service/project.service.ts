@@ -4,7 +4,7 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
-import { notifyProjectPendingApproval, notifyProjectInvited } from "./notification.service";
+import { notifyProjectApproved, notifyProjectInvited } from "./notification.service";
 import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
 import { notifySafely } from "./notificationScheduler.service";
@@ -64,7 +64,9 @@ export async function syncProjectRoleDisplayFields(
 }
 
 /**
- * Creates a new project. Any authenticated user can create a project.
+ * Creates a new project. Any authenticated user can create a project — the frontend
+ * only unlocks project creation once the creator's profile strength hits 100%, so
+ * the project is activated immediately instead of sitting in an admin-approval queue.
  * Emits ProjectCreated event to the immutable event ledger.
  */
 export async function createProject(input: CreateProjectInput): Promise<string> {
@@ -77,7 +79,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
   const hasInsurance = input.hasInsurance;
   const hasLicence = input.hasLicence;
   const invitees = input.invitees ?? [];
-  const status = "Pending";
+  const status = "Active";
 
   if (!creatorId) {
     throw new ProjectError("Authentication Required", 401);
@@ -172,18 +174,7 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     payload: { name: name || location, location, council, daNumber, status },
   });
 
-  const admins = await UserModel.find({ role: UserRole.Admin }).select("_id").lean();
-  const pendingApprovalRecipients = [
-    user._id.toString(),
-    ...admins.map((admin) => admin._id.toString()),
-  ];
-  await Promise.all(
-    pendingApprovalRecipients.map((recipientUserId) =>
-      notifySafely(() =>
-        notifyProjectPendingApproval(project._id.toString(), recipientUserId, project.name)
-      )
-    )
-  );
+  await notifySafely(() => notifyProjectApproved(project._id.toString(), project.name));
 
   return project._id.toString();
 }

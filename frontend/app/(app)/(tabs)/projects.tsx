@@ -47,6 +47,33 @@ type ApiProject = {
   overdueInvoiceCount?: number;
 };
 
+type VouchProfileApi = {
+  name?: string;
+  abn?: string;
+  trade?: string;
+  idNumber?: string;
+  currentProjectName?: string;
+  suburb?: string;
+  state?: string;
+  pastProjectName?: string;
+  pastSuburb?: string;
+  pastState?: string;
+};
+
+// Mirrors the 6 steps of the "Build your profile" wizard. Steps 3/4 require
+// an actually confirmed (responded) vouch, not just a sent-but-unanswered
+// request — a pending reference shouldn't unlock project creation.
+function isProfileComplete(profile: VouchProfileApi | null, respondedCount: number): boolean {
+  if (!profile) return false;
+  const step1 = !!(profile.name && profile.abn && profile.trade);
+  const step2 = !!(profile.currentProjectName && profile.suburb && profile.state);
+  const step3 = respondedCount >= 1;
+  const step4 = respondedCount >= 2;
+  const step5 = !!(profile.pastProjectName && profile.pastSuburb && profile.pastState);
+  const step6 = !!profile.idNumber;
+  return step1 && step2 && step3 && step4 && step5 && step6;
+}
+
 export default function Projects() {
   const { fetchWithAuth } = useAuth();
   const insets = useSafeAreaInsets();
@@ -69,8 +96,9 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, sentRes] = await Promise.all([
+      const [projectsRes, profileRes, sentRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/projects`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
       ]);
       const data = await projectsRes.json();
@@ -89,11 +117,12 @@ export default function Projects() {
       }));
       setProjects(mapped);
 
+      const profileData = profileRes.ok ? ((await profileRes.json()) as VouchProfileApi) : null;
       const sentData = sentRes.ok ? await sentRes.json() : null;
       const respondedCount = (sentData?.requests ?? []).filter(
         (r: { status: string }) => r.status === "responded"
       ).length;
-      setCanCreateProject(respondedCount >= 2);
+      setCanCreateProject(isProfileComplete(profileData, respondedCount));
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
