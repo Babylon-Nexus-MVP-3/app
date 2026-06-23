@@ -193,17 +193,24 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           pastMonthYear: p.pastMonthYear ?? "",
           pastValue: p.pastValue ?? "",
         };
-        const refs: Reference[] =
-          Array.isArray(p.references) && p.references.length >= 2
-            ? p.references.map((r: Record<string, string>) => ({
-                name: r.name ?? "",
-                company: r.company ?? "",
-                mobile: r.mobile ?? "",
-                email: r.email ?? "",
-                relationship: r.relationship ?? "",
-                project: r.project ?? r.projectName ?? "",
-              }))
-            : [emptyRef(), emptyRef()];
+        // A profile with fewer than 2 saved references is still valid (e.g. only
+        // step 3 has been completed) — pad to 2 slots instead of discarding it,
+        // otherwise a real saved reference gets wiped back to blank locally.
+        const loadedRefs: Reference[] = Array.isArray(p.references)
+          ? p.references.map((r: Record<string, string>) => ({
+              name: r.name ?? "",
+              company: r.company ?? "",
+              mobile: r.mobile ?? "",
+              email: r.email ?? "",
+              relationship: r.relationship ?? "",
+              project: r.project ?? r.projectName ?? "",
+            }))
+          : [];
+        const refs: Reference[] = [
+          loadedRefs[0] ?? emptyRef(),
+          loadedRefs[1] ?? emptyRef(),
+          ...loadedRefs.slice(2),
+        ];
 
         setStep1Raw(s1);
         setStep2Raw(s2);
