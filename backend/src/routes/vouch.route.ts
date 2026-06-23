@@ -65,9 +65,21 @@ vouchRouter.post(
       const fromCompany = body.trade ?? body.name ?? "Unknown";
       const userAbn: string = body.abn ?? "";
 
-      // Pre-check: block if any reference has already given a vouch to this user
+      // Pre-check: block if any reference has already given a vouch to this user.
+      // Only applies to references not already requested in a prior submission —
+      // otherwise an old, already-fulfilled reference earlier in the array (e.g.
+      // a previously-vouched colleague) blocks a brand-new reference added later.
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
+
+        const dupConditions: object[] = [{ toMobile: ref.mobile }];
+        if (ref.email) dupConditions.push({ toEmail: ref.email });
+        const alreadyRequested = await VouchRequestModel.exists({
+          fromUserId: userId,
+          $or: dupConditions,
+        });
+        if (alreadyRequested) continue;
+
         const orConditions: object[] = [{ mobile: ref.mobile }];
         if (ref.email) orConditions.push({ email: ref.email });
         const refUser = await UserModel.findOne({ $or: orConditions }).select("_id").lean();
