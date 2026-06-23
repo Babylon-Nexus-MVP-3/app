@@ -195,7 +195,6 @@ export default function Step3() {
   async function onSubmit() {
     setSubmitting(true);
     const updatedRefs = isFresh ? [...references, ref] : [ref, ...references.slice(1)];
-    setReferences(updatedRefs);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
@@ -231,6 +230,7 @@ export default function Step3() {
         return;
       }
       if (res.ok) {
+        setReferences(updatedRefs);
         await updateUser({ abn: step1.abn }).catch(() => {});
       }
     } catch {
