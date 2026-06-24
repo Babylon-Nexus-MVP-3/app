@@ -66,9 +66,11 @@ vouchRouter.post(
       const userAbn: string = body.abn ?? "";
 
       // Pre-check: block if any reference has already given a vouch to this user.
-      // Skip refs with a still-pending request (no vouch yet) — those are old
-      // submissions, not new sends. Refs whose request was responded to (they
-      // already vouched back) must still be caught so the user gets a clear error.
+      // The frontend always resends the full cumulative references array (no flag
+      // distinguishes new vs. previously-submitted refs), so this must skip ANY
+      // reference that already has a request on file, regardless of status —
+      // otherwise an old, already-responded reference earlier in the array blocks
+      // a brand-new reference added later before the loop ever reaches it.
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
@@ -76,7 +78,6 @@ vouchRouter.post(
         if (ref.email) dupConditions.push({ toEmail: ref.email });
         const alreadyRequested = await VouchRequestModel.exists({
           fromUserId: userId,
-          status: "pending",
           $or: dupConditions,
         });
         if (alreadyRequested) continue;
