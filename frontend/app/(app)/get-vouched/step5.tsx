@@ -157,6 +157,8 @@ export default function Step5() {
   const { fetchWithAuth } = useAuth();
   const [form, setForm] = useState(step2);
   const [statePickerOpen, setStatePickerOpen] = useState(false);
+  const [yearTouched, setYearTouched] = useState(false);
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     setForm((f) => {
@@ -184,8 +186,22 @@ export default function Step5() {
     router.back();
   }
 
+  const yearLen = form.pastMonthYear.length;
+  const yearNum = parseInt(form.pastMonthYear, 10);
+  const yearErr =
+    yearLen === 0
+      ? ""
+      : yearLen < 4
+        ? yearTouched
+          ? "Enter a 4-digit year"
+          : ""
+        : yearNum < 1900 || yearNum > currentYear
+          ? `Year must be between 1900 and ${currentYear}`
+          : "";
+  const yearValid = yearLen === 0 || (yearLen === 4 && !yearErr);
+
   const canContinue =
-    form.pastProjectName.trim() && form.pastSuburb.trim() && form.pastState.trim();
+    form.pastProjectName.trim() && form.pastSuburb.trim() && form.pastState.trim() && yearValid;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -256,15 +272,17 @@ export default function Step5() {
               <View style={[styles.fieldWrap, { flex: 1 }]}>
                 <AppText style={styles.fieldLabel}>YEAR COMPLETED</AppText>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, yearErr ? styles.inputError : null]}
                   value={form.pastMonthYear}
                   onChangeText={(v) => update("pastMonthYear", v.replace(/\D/g, "").slice(0, 4))}
+                  onBlur={() => setYearTouched(true)}
                   placeholder="YYYY"
                   placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
                 />
+                {yearErr ? <AppText style={styles.fieldError}>{yearErr}</AppText> : null}
               </View>
               <View style={[styles.fieldWrap, { flex: 2 }]}>
                 <View style={styles.valueLabelRow}>
@@ -360,6 +378,8 @@ const styles = StyleSheet.create({
   },
   stateBtnText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
   stateBtnPlaceholder: { color: Colors.grey300 },
+  inputError: { borderColor: Colors.red },
+  fieldError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red },
   valueLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   privateTag: { flexDirection: "row", alignItems: "center", gap: 3 },
   privateText: { fontSize: 10, fontFamily: Fonts.regular, color: Colors.grey500 },
