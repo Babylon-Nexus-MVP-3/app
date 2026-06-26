@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -46,16 +46,25 @@ export default function GetVouchedIntro() {
   const mobileVerified = user?.mobileVerified ?? false;
 
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [profileStrength, setProfileStrength] = useState<number | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState<3 | 4 | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       setLoadingStatus(true);
-      fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (!cancelled) setSentRequests(data?.requests ?? []);
+      Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
+      ])
+        .then(([sentData, profileData]) => {
+          if (!cancelled) {
+            setSentRequests(sentData?.requests ?? []);
+            if (profileData?.profileStrength !== undefined) {
+              setProfileStrength(profileData.profileStrength);
+            }
+          }
         })
         .catch(() => {})
         .finally(() => {
@@ -71,7 +80,12 @@ export default function GetVouchedIntro() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
           <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
@@ -84,38 +98,40 @@ export default function GetVouchedIntro() {
     );
   }
 
-  // Requests are created in step3-then-step4 order, so sorted ascending by
-  // createdAt, the first is ref 1's request and the second is ref 2's.
-  const sortedRequests = [...sentRequests].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
-  const stepRequestStatus: Record<number, "pending" | "responded" | undefined> = {
-    3: sortedRequests[0]?.status,
-    4: sortedRequests[1]?.status,
-  };
+  // Responded requests always fill the earliest slots so that "First vouch"
+  // and "Second vouch" show the people who actually responded, regardless of
+  // which request they were chronologically. Pending requests fill remaining
+  // slots after that.
+  const sortedRequests = [...sentRequests].sort((a, b) => {
+    if (a.status === "responded" && b.status !== "responded") return -1;
+    if (b.status === "responded" && a.status !== "responded") return 1;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+  const slot3Request = sortedRequests[0];
+  const slot4Request = sortedRequests[1];
+  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
+  const hasAnySentRequest = sentRequests.length >= 1;
 
   // ── Step completion ──────────────────────────────────────────────────────
   const step1Done =
     !!(user?.name && user?.abn && user?.businessTrade) ||
     !!(step1.name && step1.abn && step1.trade);
   const step2Done = !!(step2.currentProjectName && step2.suburb && step2.state);
-  // "Submitted" just means the request was sent — used to unlock navigation
-  // (e.g. step 4) without waiting on a response. "Done" means the vouch was
-  // actually confirmed — that's what counts for profile strength.
-  const ref0 = references[0];
-  const step3Submitted = !!(ref0?.name && ref0?.company && ref0?.mobile && ref0?.relationship);
-  const step3Done = stepRequestStatus[3] === "responded";
-  const step4Done = stepRequestStatus[4] === "responded";
+  const step3Done = respondedCount >= 1;
+  const step4Done = respondedCount >= 2;
   const step5Done = !!(step2.pastProjectName && step2.pastSuburb && step2.pastState);
   const step6Done = !!step1.idNumber;
 
   const stepDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
 
-  const strength = STEPS.reduce((acc, s, i) => acc + (stepDone[i] ? s.pct : 0), 0);
+  // Use server-computed strength as the single source of truth; fall back to
+  // local calculation only while the API response is still loading.
+  const localStrength = STEPS.reduce((acc, s, i) => acc + (stepDone[i] ? s.pct : 0), 0);
+  const strength = profileStrength ?? localStrength;
 
   function stepState(n: number): StepState {
     if (stepDone[n - 1]) return "done";
-    if (n === 4 && !step3Submitted) return "locked";
+    if (n === 4 && !hasAnySentRequest) return "locked";
     if (!mobileVerified && n > 1) return "locked";
     if (!step1Done && n > 1) return "locked";
     return "active";
@@ -123,7 +139,7 @@ export default function GetVouchedIntro() {
 
   function canTap(n: number) {
     if (!mobileVerified) return n === 1;
-    if (n === 4) return step3Submitted;
+    if (n === 4) return hasAnySentRequest;
     if (n > 1) return step1Done;
     return true;
   }
@@ -133,7 +149,7 @@ export default function GetVouchedIntro() {
     ? "Verify mobile to continue"
     : !step1Done
       ? "Start — add your details"
-      : step3Submitted
+      : hasAnySentRequest
         ? "Request another vouch"
         : "Request a vouch";
 
@@ -152,7 +168,12 @@ export default function GetVouchedIntro() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
@@ -204,6 +225,8 @@ export default function GetVouchedIntro() {
             onPress={() =>
               router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })
             }
+            accessibilityRole="button"
+            accessibilityLabel="Verify mobile number"
           >
             <View style={[styles.stepCircle, styles.stepCircleActive]}>
               <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
@@ -225,8 +248,16 @@ export default function GetVouchedIntro() {
                 key={n}
                 style={[styles.stepRow, !tappable && styles.stepRowLocked]}
                 activeOpacity={tappable ? 0.7 : 1}
-                onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
+                onPress={() => {
+                  if (!tappable) return;
+                  if (n === 3 && slot3Request) { setSelectedSlot(3); return; }
+                  if (n === 4 && slot4Request) { setSelectedSlot(4); return; }
+                  router.push(STEP_ROUTES[n - 1]);
+                }}
                 disabled={!tappable}
+                accessibilityRole="button"
+                accessibilityLabel={`${title}: ${stepDone[n - 1] ? "completed" : state === "locked" ? "locked" : "incomplete"}`}
+                accessibilityState={{ disabled: !tappable }}
               >
                 <View
                   style={[
@@ -255,7 +286,10 @@ export default function GetVouchedIntro() {
                     {title}
                   </AppText>
                   <AppText style={styles.stepDesc}>{desc}</AppText>
-                  {(n === 3 || n === 4) && stepRequestStatus[n] === "pending" && (
+                  {n === 3 && slot3Request?.status === "pending" && (
+                    <AppText style={styles.stepPendingTag}>Pending response</AppText>
+                  )}
+                  {n === 4 && slot4Request?.status === "pending" && (
                     <AppText style={styles.stepPendingTag}>Pending response</AppText>
                   )}
                   {state === "done" &&
@@ -286,10 +320,86 @@ export default function GetVouchedIntro() {
           style={[styles.primaryBtn, !mobileVerified && styles.primaryBtnDisabled]}
           activeOpacity={0.85}
           onPress={onPrimaryPress}
+          accessibilityRole="button"
+          accessibilityLabel={btnLabel}
+          accessibilityState={{ disabled: !mobileVerified }}
         >
           <AppText style={styles.primaryBtnText}>{btnLabel}</AppText>
         </TouchableOpacity>
       </View>
+
+      {/* Request detail sheet */}
+      <Modal
+        visible={selectedSlot !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedSlot(null)}
+      >
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedSlot(null)}
+        />
+        {(() => {
+          const req = selectedSlot === 3 ? slot3Request : slot4Request;
+          if (!req) return null;
+          const isResponded = req.status === "responded";
+          return (
+            <View style={styles.sheet}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetBadge}>
+                <Ionicons
+                  name={isResponded ? "shield-checkmark" : "time-outline"}
+                  size={28}
+                  color={isResponded ? Colors.vouchGreen : Colors.amber}
+                />
+              </View>
+              <AppText style={styles.sheetTitle}>
+                {isResponded ? "Vouch received" : "Waiting for response"}
+              </AppText>
+              <AppText style={styles.sheetContact}>{req.toMobile}</AppText>
+              {req.toEmail ? (
+                <AppText style={styles.sheetContactSub}>{req.toEmail}</AppText>
+              ) : null}
+              <View style={styles.sheetRow}>
+                <AppText style={styles.sheetRowLabel}>Relationship</AppText>
+                <AppText style={styles.sheetRowValue}>{req.relationship}</AppText>
+              </View>
+              <View style={styles.sheetRow}>
+                <AppText style={styles.sheetRowLabel}>Project</AppText>
+                <AppText style={styles.sheetRowValue}>{req.projectName}</AppText>
+              </View>
+              <View
+                style={[
+                  styles.sheetStatusBadge,
+                  isResponded ? styles.sheetStatusBadgeGreen : styles.sheetStatusBadgeAmber,
+                ]}
+              >
+                <AppText
+                  style={[
+                    styles.sheetStatusText,
+                    isResponded ? styles.sheetStatusTextGreen : styles.sheetStatusTextAmber,
+                  ]}
+                >
+                  {isResponded ? "Vouched" : "Pending"}
+                </AppText>
+              </View>
+              {!isResponded && (
+                <TouchableOpacity
+                  style={styles.sheetSecondaryBtn}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setSelectedSlot(null);
+                    router.push(STEP_ROUTES[(selectedSlot ?? 3) - 1]);
+                  }}
+                >
+                  <AppText style={styles.sheetSecondaryBtnText}>Send to someone else</AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -391,4 +501,75 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.45 },
   primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
+
+  // Request detail sheet
+  sheetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 48,
+    paddingTop: 12,
+    alignItems: "center",
+    gap: 10,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.grey300,
+    marginBottom: 8,
+  },
+  sheetBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.offWhite,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  sheetTitle: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.black },
+  sheetContact: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.black },
+  sheetContactSub: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: -6 },
+  sheetRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.grey100,
+  },
+  sheetRowLabel: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
+  sheetRowValue: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
+  sheetStatusBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  sheetStatusBadgeGreen: { backgroundColor: Colors.vouchGreenLight },
+  sheetStatusBadgeAmber: { backgroundColor: "#FFF8E7" },
+  sheetStatusText: { fontSize: 13, fontFamily: Fonts.bold },
+  sheetStatusTextGreen: { color: Colors.vouchGreen },
+  sheetStatusTextAmber: { color: Colors.amber },
+  sheetSecondaryBtn: {
+    width: "100%",
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  sheetSecondaryBtnText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });

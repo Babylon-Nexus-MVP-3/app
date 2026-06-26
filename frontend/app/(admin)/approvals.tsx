@@ -135,7 +135,12 @@ export default function AdminApprovals() {
         ) : error ? (
           <View style={styles.centerBox}>
             <AppText style={styles.errorText}>{error}</AppText>
-            <TouchableOpacity onPress={fetchPending} style={styles.retryBtn}>
+            <TouchableOpacity
+              onPress={fetchPending}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading approvals"
+            >
               <AppText style={styles.retryBtnText}>Retry</AppText>
             </TouchableOpacity>
           </View>
@@ -158,6 +163,8 @@ export default function AdminApprovals() {
                 <TouchableOpacity
                   style={styles.cardHeader}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View approval details for ${project.name}`}
                   onPress={() =>
                     router.push({
                       pathname: "/(admin)/approval/[id]",
@@ -190,6 +197,9 @@ export default function AdminApprovals() {
                     onPress={() => handleReject(project._id)}
                     disabled={isActioning}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Reject ${project.name}`}
+                    accessibilityState={{ disabled: isActioning }}
                   >
                     {isActioning ? (
                       <ActivityIndicator size="small" color={Colors.red} />
@@ -206,6 +216,9 @@ export default function AdminApprovals() {
                     onPress={() => handleApprove(project._id)}
                     disabled={isActioning}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Approve ${project.name}`}
+                    accessibilityState={{ disabled: isActioning }}
                   >
                     {isActioning ? (
                       <ActivityIndicator size="small" color={Colors.white} />

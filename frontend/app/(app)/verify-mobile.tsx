@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,6 +14,8 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
+import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 import { useAuth } from "@/context/AuthContext";
 
 const CODE_LENGTH = 6;
@@ -39,7 +40,7 @@ export default function VerifyMobile() {
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
+  const otpRef = useRef<OtpInputRef>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function VerifyMobile() {
     }
     setStep("otp");
     startCountdown();
-    setTimeout(() => inputRefs.current[0]?.focus(), 300);
+    setTimeout(() => otpRef.current?.focusFirst(), 300);
   }
 
   async function handleResend() {
@@ -105,26 +106,6 @@ export default function VerifyMobile() {
     setDigits(Array(CODE_LENGTH).fill(""));
     setError("");
     await handleSendCode();
-  }
-
-  function handleDigitChange(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const next = [...digits];
-    next[index] = digit;
-    setDigits(next);
-    setError("");
-    if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === "Backspace" && !digits[index] && index > 0) {
-      const next = [...digits];
-      next[index - 1] = "";
-      setDigits(next);
-      inputRefs.current[index - 1]?.focus();
-    }
   }
 
   const code = digits.join("");
@@ -169,7 +150,9 @@ export default function VerifyMobile() {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => (step === "otp" ? setStep("enter") : router.back())}
-            hitSlop={14}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
@@ -185,12 +168,11 @@ export default function VerifyMobile() {
               </AppText>
 
               <AppText style={styles.label}>MOBILE NUMBER</AppText>
-              <TextInput
+              <AppInput
                 style={styles.input}
                 value={formatMobileDisplay(mobileDigits)}
                 onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
                 placeholder="0412 345 678"
-                placeholderTextColor={Colors.grey300}
                 keyboardType="number-pad"
                 maxLength={12}
                 returnKeyType="done"
@@ -208,6 +190,9 @@ export default function VerifyMobile() {
                 onPress={handleSendCode}
                 disabled={!canSend || loading}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Send code"
+                accessibilityState={{ disabled: !canSend || loading }}
               >
                 {loading ? (
                   <ActivityIndicator color={Colors.white} />
@@ -224,34 +209,32 @@ export default function VerifyMobile() {
               <AppText style={styles.title}>Enter the code</AppText>
               <View style={styles.sentRow}>
                 <AppText style={styles.sentText}>Sent to {displayMobile} · </AppText>
-                <TouchableOpacity onPress={() => setStep("enter")} hitSlop={8}>
+                <TouchableOpacity
+                  onPress={() => setStep("enter")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit mobile number"
+                >
                   <AppText style={styles.editLink}>Edit</AppText>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.boxRow}>
-                {digits.map((d, i) => (
-                  <TextInput
-                    key={i}
-                    ref={(ref) => {
-                      inputRefs.current[i] = ref;
-                    }}
-                    style={[styles.box, d ? styles.boxFilled : null]}
-                    value={d}
-                    onChangeText={(v) => handleDigitChange(i, v)}
-                    onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-                    keyboardType="numeric"
-                    maxLength={1}
-                    textAlign="center"
-                    selectTextOnFocus
-                  />
-                ))}
-              </View>
+              <OtpInput
+                ref={otpRef}
+                digits={digits}
+                onChange={(d) => { setDigits(d); setError(""); }}
+                style={styles.boxRow}
+              />
 
               <View style={styles.resendRow}>
                 <AppText style={styles.resendBase}>{"Didn't get a code?  "}</AppText>
                 {canResend ? (
-                  <TouchableOpacity onPress={handleResend} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={handleResend}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend code"
+                  >
                     <AppText style={styles.resendLink}>Resend</AppText>
                   </TouchableOpacity>
                 ) : (
@@ -271,6 +254,9 @@ export default function VerifyMobile() {
                 onPress={handleVerify}
                 disabled={!isComplete || loading}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Verify mobile number"
+                accessibilityState={{ disabled: !isComplete || loading }}
               >
                 {loading ? (
                   <ActivityIndicator color={Colors.white} />
@@ -338,15 +324,6 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 20,
   },
   sentRow: {
@@ -365,23 +342,7 @@ const styles = StyleSheet.create({
     color: Colors.vouchGreen,
   },
   boxRow: {
-    flexDirection: "row",
-    gap: 10,
     marginBottom: 24,
-  },
-  box: {
-    width: 48,
-    height: 60,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
-  boxFilled: {
-    borderColor: Colors.vouchGreen,
   },
   resendRow: {
     flexDirection: "row",

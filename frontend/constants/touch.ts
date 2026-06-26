@@ -1,2 +1,2 @@
-/** Expands tappable area for small header/back controls (phones, Expo Go). */
-export const HEADER_HIT_SLOP = { top: 14, bottom: 14, left: 14, right: 14 } as const;
+/** Expands tappable area for small header/back controls to meet 44pt minimum. */
+export const HEADER_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 } as const;

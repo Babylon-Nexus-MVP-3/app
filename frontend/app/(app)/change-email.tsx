@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,6 +14,8 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
+import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 import { useAuth } from "@/context/AuthContext";
 
 const CODE_LENGTH = 6;
@@ -30,7 +31,7 @@ export default function ChangeEmail() {
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
+  const otpRef = useRef<OtpInputRef>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function ChangeEmail() {
     }
     setStep("otp");
     startCountdown();
-    setTimeout(() => inputRefs.current[0]?.focus(), 300);
+    setTimeout(() => otpRef.current?.focusFirst(), 300);
   }
 
   async function handleResend() {
@@ -90,26 +91,6 @@ export default function ChangeEmail() {
     setDigits(Array(CODE_LENGTH).fill(""));
     setError("");
     await handleSendCode();
-  }
-
-  function handleDigitChange(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const next = [...digits];
-    next[index] = digit;
-    setDigits(next);
-    setError("");
-    if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === "Backspace" && !digits[index] && index > 0) {
-      const next = [...digits];
-      next[index - 1] = "";
-      setDigits(next);
-      inputRefs.current[index - 1]?.focus();
-    }
   }
 
   const code = digits.join("");
@@ -152,7 +133,9 @@ export default function ChangeEmail() {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => (step === "otp" ? setStep("enter") : router.back())}
-            hitSlop={14}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
@@ -168,12 +151,11 @@ export default function ChangeEmail() {
               </AppText>
 
               <AppText style={styles.label}>NEW EMAIL ADDRESS</AppText>
-              <TextInput
+              <AppInput
                 style={styles.input}
                 value={newEmail}
                 onChangeText={setNewEmail}
                 placeholder="you@example.com"
-                placeholderTextColor={Colors.grey300}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -192,6 +174,9 @@ export default function ChangeEmail() {
                 onPress={handleSendCode}
                 disabled={!canSend || loading}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Send confirmation code"
+                accessibilityState={{ disabled: !canSend || loading }}
               >
                 {loading ? (
                   <ActivityIndicator color={Colors.white} />
@@ -208,34 +193,32 @@ export default function ChangeEmail() {
               <AppText style={styles.title}>Enter the code</AppText>
               <View style={styles.sentRow}>
                 <AppText style={styles.sentText}>Sent to {trimmedEmail} · </AppText>
-                <TouchableOpacity onPress={() => setStep("enter")} hitSlop={8}>
+                <TouchableOpacity
+                  onPress={() => setStep("enter")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit email address"
+                >
                   <AppText style={styles.editLink}>Edit</AppText>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.boxRow}>
-                {digits.map((d, i) => (
-                  <TextInput
-                    key={i}
-                    ref={(ref) => {
-                      inputRefs.current[i] = ref;
-                    }}
-                    style={[styles.box, d ? styles.boxFilled : null]}
-                    value={d}
-                    onChangeText={(v) => handleDigitChange(i, v)}
-                    onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-                    keyboardType="numeric"
-                    maxLength={1}
-                    textAlign="center"
-                    selectTextOnFocus
-                  />
-                ))}
-              </View>
+              <OtpInput
+                ref={otpRef}
+                digits={digits}
+                onChange={(d) => { setDigits(d); setError(""); }}
+                style={styles.boxRow}
+              />
 
               <View style={styles.resendRow}>
                 <AppText style={styles.resendBase}>{"Didn't get a code?  "}</AppText>
                 {canResend ? (
-                  <TouchableOpacity onPress={handleResend} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={handleResend}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend confirmation code"
+                  >
                     <AppText style={styles.resendLink}>Resend</AppText>
                   </TouchableOpacity>
                 ) : (
@@ -255,6 +238,9 @@ export default function ChangeEmail() {
                 onPress={handleVerify}
                 disabled={!isComplete || loading}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm new email"
+                accessibilityState={{ disabled: !isComplete || loading }}
               >
                 {loading ? (
                   <ActivityIndicator color={Colors.white} />
@@ -315,33 +301,12 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 20,
   },
   sentRow: { flexDirection: "row", alignItems: "center", marginBottom: 32 },
   sentText: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500 },
   editLink: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
-  boxRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
-  box: {
-    width: 48,
-    height: 60,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
-  boxFilled: { borderColor: Colors.vouchGreen },
+  boxRow: { marginBottom: 24 },
   resendRow: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
   resendBase: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500 },
   resendLink: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },

@@ -10,7 +10,12 @@ export default function ProjectLocked() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>NEW PROJECT</AppText>
@@ -60,6 +65,8 @@ export default function ProjectLocked() {
           style={styles.primaryBtn}
           onPress={() => router.push("/(app)/get-vouched")}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Get Vouched"
         >
           <Ionicons name="shield-checkmark-outline" size={18} color={Colors.white} />
           <AppText style={styles.primaryBtnText}>Get Vouched</AppText>
@@ -69,6 +76,8 @@ export default function ProjectLocked() {
           style={styles.secondaryBtn}
           onPress={() => router.back()}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Projects"
         >
           <AppText style={styles.secondaryBtnText}>Back to Projects</AppText>
         </TouchableOpacity>

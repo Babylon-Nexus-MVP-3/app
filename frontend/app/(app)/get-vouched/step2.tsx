@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,6 +15,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useWizard } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -139,12 +139,11 @@ function Field({
   return (
     <View style={[styles.fieldWrap, flex !== undefined && { flex }]}>
       {label ? <AppText style={styles.fieldLabel}>{label}</AppText> : null}
-      <TextInput
+      <AppInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? ""}
-        placeholderTextColor={Colors.grey300}
         keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
       />
@@ -189,7 +188,7 @@ export default function Step2() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>STEP 2 OF 6</AppText>
@@ -243,12 +242,11 @@ export default function Step2() {
                 </View>
               </TouchableOpacity>
               <View style={[styles.fieldWrap, { flex: 1 }]}>
-                <TextInput
+                <AppInput
                   style={styles.input}
                   value={form.postcode}
                   onChangeText={(v) => update("postcode", v.replace(/\D/g, "").slice(0, 4))}
                   placeholder="Postcode"
-                  placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
@@ -263,12 +261,11 @@ export default function Step2() {
                   <AppText style={styles.privateText}>private</AppText>
                 </View>
               </View>
-              <TextInput
+              <AppInput
                 style={styles.input}
                 value={form.value}
                 onChangeText={(v) => update("value", filterDecimal(v))}
                 placeholder="A$ 0"
-                placeholderTextColor={Colors.grey300}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -324,17 +321,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
+  input: {},
   stateBtn: {
     height: 50,
     borderWidth: 1,

@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,6 +16,8 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { AbrCard } from "@/components/AbrCard";
+import { AppInput } from "@/components/AppInput";
+import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
 
@@ -26,7 +27,6 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState("");
   const [trade, setTrade] = useState("");
   const [abn, setAbn] = useState("");
@@ -187,7 +187,13 @@ export default function SignUp() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
@@ -198,12 +204,11 @@ export default function SignUp() {
           <View style={styles.abnSection}>
             {searchMode === "abn" ? (
               <>
-                <TextInput
+                <AppInput
                   style={[styles.input, styles.abnInput]}
                   value={abn}
                   onChangeText={onAbnChange}
                   placeholder="XX XXX XXX XXX"
-                  placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
                   returnKeyType="next"
                   autoFocus
@@ -216,6 +221,8 @@ export default function SignUp() {
                     setNameResults([]);
                   }}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search by business name instead"
                 >
                   <AppText style={styles.searchByNameLink}>
                     {"Don't know your ABN? Search by name →"}
@@ -225,7 +232,7 @@ export default function SignUp() {
             ) : (
               <>
                 <View style={styles.nameSearchRow}>
-                  <TextInput
+                  <AppInput
                     style={styles.nameInput}
                     value={nameQuery}
                     onChangeText={(t) => {
@@ -233,7 +240,6 @@ export default function SignUp() {
                       setNameError("");
                     }}
                     placeholder="Search by business name"
-                    placeholderTextColor={Colors.grey300}
                     returnKeyType="search"
                     onSubmitEditing={onNameSearch}
                     autoCapitalize="words"
@@ -244,6 +250,9 @@ export default function SignUp() {
                     onPress={onNameSearch}
                     disabled={nameSearching}
                     activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search"
+                    accessibilityState={{ disabled: nameSearching }}
                   >
                     {nameSearching ? (
                       <ActivityIndicator size="small" color={Colors.white} />
@@ -252,7 +261,12 @@ export default function SignUp() {
                     )}
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => setSearchMode("abn")} hitSlop={8}>
+                <TouchableOpacity
+                  onPress={() => setSearchMode("abn")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Enter ABN instead"
+                >
                   <AppText style={styles.searchByNameLink}>{"← Enter ABN instead"}</AppText>
                 </TouchableOpacity>
                 {nameError ? <AppText style={styles.nameErrorText}>{nameError}</AppText> : null}
@@ -267,6 +281,8 @@ export default function SignUp() {
                         ]}
                         activeOpacity={0.7}
                         onPress={() => onSelectResult(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${item.entityName}, ABN ${formatAbn(item.abn)}, ${item.state}`}
                       >
                         <View style={{ flex: 1, gap: 2 }}>
                           <AppText style={styles.resultName} numberOfLines={1}>
@@ -294,7 +310,7 @@ export default function SignUp() {
           </View>
 
           <AppText style={styles.label}>BUSINESS NAME</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={businessName}
             onChangeText={(t) => {
@@ -302,29 +318,26 @@ export default function SignUp() {
               setBusinessNameLocked(true);
             }}
             placeholder="Your business name"
-            placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             returnKeyType="next"
           />
 
           <AppText style={styles.label}>YOUR NAME</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={name}
             onChangeText={setName}
             placeholder="Alex Smith"
-            placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             returnKeyType="next"
           />
 
           <AppText style={styles.label}>EMAIL</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={Colors.grey300}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -332,37 +345,21 @@ export default function SignUp() {
           />
 
           <AppText style={styles.label}>PASSWORD</AppText>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Min. 12 characters"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showPassword}
-              returnKeyType="next"
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowPassword((v) => !v)}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Min. 12 characters"
+            returnKeyType="next"
+            containerStyle={styles.passwordRow}
+          />
           <PasswordStrengthHints password={password} />
 
           <AppText style={styles.label}>MOBILE</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={formatMobileDisplay(mobileDigits)}
             onChangeText={(v) => setMobile(v.replace(/\D/g, "").slice(0, 10))}
             placeholder="0412 345 678"
-            placeholderTextColor={Colors.grey300}
             keyboardType="number-pad"
             maxLength={12}
             returnKeyType="done"
@@ -370,12 +367,11 @@ export default function SignUp() {
           />
 
           <AppText style={styles.label}>TRADE / BUSINESS TYPE</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={trade}
             onChangeText={setTrade}
             placeholder="e.g. Plumbing, Electrical, Carpentry"
-            placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             returnKeyType="next"
           />
@@ -387,6 +383,9 @@ export default function SignUp() {
             onPress={handleSubmit}
             disabled={!canSubmit || loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+            accessibilityState={{ disabled: !canSubmit || loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -397,7 +396,12 @@ export default function SignUp() {
 
           <View style={styles.signInRow}>
             <AppText style={styles.signInBase}>Already have an account? </AppText>
-            <TouchableOpacity onPress={() => router.push("/(auth)/sign-in")} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => router.push("/(auth)/sign-in")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+            >
               <AppText style={styles.signInLink}>Sign in →</AppText>
             </TouchableOpacity>
           </View>
@@ -444,36 +448,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 20,
   },
   passwordRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
     marginBottom: 20,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  eyeBtn: {
-    paddingHorizontal: 14,
   },
   abnSection: {
     gap: 8,

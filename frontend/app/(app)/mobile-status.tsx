@@ -17,7 +17,12 @@ export default function MobileStatus() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/(app)/me" as any)} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.push("/(app)/me" as any)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>MOBILE NUMBER</AppText>
@@ -47,6 +52,8 @@ export default function MobileStatus() {
           style={styles.changeBtn}
           onPress={() => router.replace("/(app)/verify-mobile")}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Change mobile number"
         >
           <AppText style={styles.changeBtnText}>Change mobile number</AppText>
         </TouchableOpacity>

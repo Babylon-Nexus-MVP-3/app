@@ -93,6 +93,8 @@ export default function AdminProjects() {
               onPress={handleSignOutPress}
               style={styles.signOutBtn}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
             >
               <Ionicons name="log-out-outline" size={22} color={Colors.white} />
             </TouchableOpacity>
@@ -127,7 +129,12 @@ export default function AdminProjects() {
         ) : error ? (
           <View style={styles.centerBox}>
             <AppText style={styles.errorText}>{error}</AppText>
-            <TouchableOpacity onPress={() => fetchProjects()} style={styles.retryBtn}>
+            <TouchableOpacity
+              onPress={() => fetchProjects()}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading projects"
+            >
               <AppText style={styles.retryBtnText}>Retry</AppText>
             </TouchableOpacity>
           </View>
@@ -145,6 +152,8 @@ export default function AdminProjects() {
                   params: { id: project._id },
                 })
               }
+              accessibilityRole="button"
+              accessibilityLabel={`View project ${project.name}`}
             >
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>

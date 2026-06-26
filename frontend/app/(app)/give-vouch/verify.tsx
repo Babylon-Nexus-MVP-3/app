@@ -144,7 +144,12 @@ export default function VerifyScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>Verify business</AppText>
@@ -318,6 +323,9 @@ export default function VerifyScreen() {
             onPress={onPressVouch}
             activeOpacity={0.85}
             disabled={abrInactive}
+            accessibilityRole="button"
+            accessibilityLabel={btnLabel}
+            accessibilityState={{ disabled: abrInactive }}
           >
             <AppText style={styles.vouchBtnText}>{btnLabel}</AppText>
           </TouchableOpacity>

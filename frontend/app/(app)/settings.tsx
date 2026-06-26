@@ -88,6 +88,8 @@ export default function Settings() {
           style={styles.menuRow}
           onPress={() => router.push("/(app)/change-password" as any)}
           activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Change Password"
         >
           <Ionicons name="lock-closed-outline" size={20} color={Colors.grey500} />
           <AppText style={styles.menuRowText}>Change Password</AppText>
@@ -100,6 +102,8 @@ export default function Settings() {
           style={styles.signOutBtn}
           onPress={handleLogoutPress}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Sign Out"
         >
           <AppText style={styles.signOutText}>Sign Out</AppText>
         </TouchableOpacity>
@@ -107,6 +111,8 @@ export default function Settings() {
           style={styles.deleteBtn}
           onPress={handleDeleteAccountPress}
           activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Delete Account"
         >
           <Ionicons name="trash-outline" size={15} color={Colors.red} />
           <AppText style={styles.deleteBtnText}>Delete Account</AppText>

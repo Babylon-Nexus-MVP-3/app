@@ -17,7 +17,7 @@ import { appStyles } from "@/constants/appStyles";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 
-type NotificationType =
+type ProjectNotifType =
   | "ProjectPendingApproval"
   | "ProjectApproved"
   | "ProjectRejected"
@@ -32,33 +32,25 @@ type NotificationType =
   | "InvoiceOverdue21"
   | "InvoiceOverdue28";
 
-interface AppNotification {
-  id: string;
-  projectId: string;
-  projectName?: string;
-  invoiceId?: string | null;
-  type: NotificationType;
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+type UnifiedNotif = {
+  key: string;
+  source: "project" | "vouch";
   message: string;
   read: boolean;
   createdAt: string;
-}
+  iconName: IoniconName;
+  iconColor: string;
+  // project-specific
+  projectId?: string;
+  invoiceId?: string | null;
+  projectNotifType?: ProjectNotifType;
+  // vouch-specific
+  vouchId?: string;
+};
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
-
-type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
-
-function iconForType(type: NotificationType): { name: IoniconName; color: string } {
+function projectIcon(type: ProjectNotifType): { name: IoniconName; color: string } {
   switch (type) {
     case "ProjectPendingApproval":
       return { name: "time-outline", color: Colors.amber };
@@ -87,20 +79,39 @@ function iconForType(type: NotificationType): { name: IoniconName; color: string
   }
 }
 
-function NotificationCard({ item, onPress }: { item: AppNotification; onPress: () => void }) {
-  const icon = iconForType(item.type);
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+function NotificationCard({
+  item,
+  onPress,
+}: {
+  item: UnifiedNotif;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
       style={[styles.card, !item.read && styles.cardUnread]}
       onPress={onPress}
       activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.read ? "" : "Unread: "}${item.message}`}
     >
-      <View style={[styles.iconWrap, { backgroundColor: icon.color + "18" }]}>
-        <Ionicons name={icon.name} size={22} color={icon.color} />
+      <View style={[styles.iconWrap, { backgroundColor: item.iconColor + "18" }]}>
+        <Ionicons name={item.iconName} size={22} color={item.iconColor} />
       </View>
       <View style={styles.cardBody}>
         <AppText style={styles.cardMessage}>{item.message}</AppText>
-        {!!item.projectName && <AppText style={styles.cardProject}>{item.projectName}</AppText>}
         <AppText style={styles.cardTime}>{timeAgo(item.createdAt)}</AppText>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
@@ -110,40 +121,104 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
 
 export default function Notifications() {
   const { fetchWithAuth } = useAuth();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<UnifiedNotif[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const hasUnread = notifications.some((n) => !n.read);
 
+  function buildUnified(projectData: any, vouchData: any): UnifiedNotif[] {
+    const projectNotifs: UnifiedNotif[] = (projectData?.notifications ?? []).map((n: any) => {
+      const icon = projectIcon(n.type as ProjectNotifType);
+      return {
+        key: `project-${n.id}`,
+        source: "project" as const,
+        message: n.message,
+        read: n.read,
+        createdAt: n.createdAt,
+        iconName: icon.name,
+        iconColor: icon.color,
+        projectId: n.projectId,
+        invoiceId: n.invoiceId,
+        projectNotifType: n.type,
+      };
+    });
+
+    const vouchNotifs: UnifiedNotif[] = (vouchData?.notifications ?? []).map((n: any) => {
+      const isReceived = n.type === "vouch_received";
+      const message = isReceived
+        ? `${n.fromName} vouched for ${n.toBusinessName ?? "your business"}.`
+        : `${n.fromName} from ${n.fromCompany} requested a vouch for ${n.projectName ?? "a project"}.`;
+      return {
+        key: `vouch-${n._id}`,
+        source: "vouch" as const,
+        message,
+        read: n.read,
+        createdAt: n.createdAt,
+        iconName: isReceived ? ("shield-checkmark-outline" as IoniconName) : ("person-add-outline" as IoniconName),
+        iconColor: Colors.vouchGreen,
+        vouchId: n._id,
+      };
+    });
+
+    return [...projectNotifs, ...vouchNotifs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  const load = useCallback(async () => {
+    const [projectRes, vouchRes] = await Promise.all([
+      fetchWithAuth(`${API_BASE_URL}/notifications`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetchWithAuth(`${API_BASE_URL}/vouch/notifications`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]);
+    setNotifications(buildUnified(projectRes, vouchRes));
+  }, [fetchWithAuth]);
+
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchWithAuth(`${API_BASE_URL}/notifications`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) setNotifications(data.notifications ?? []);
-        })
-        .finally(() => setLoading(false));
-    }, [fetchWithAuth])
+      load().finally(() => setLoading(false));
+    }, [load])
   );
 
   async function onRefresh() {
     setRefreshing(true);
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/notifications`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications ?? []);
-      }
-    } finally {
-      setRefreshing(false);
-    }
+    await load();
+    setRefreshing(false);
   }
 
   async function markAllRead() {
-    await fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, { method: "PATCH" });
+    await Promise.all([
+      fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, { method: "PATCH" }).catch(() => {}),
+      fetchWithAuth(`${API_BASE_URL}/vouch/notifications/read-all`, { method: "PATCH" }).catch(() => {}),
+    ]);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
+
+  function handlePress(item: UnifiedNotif) {
+    if (item.source === "vouch") {
+      // Mark individual vouch notif read
+      if (!item.read && item.vouchId) {
+        fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${item.vouchId}/read`, { method: "PATCH" }).catch(() => {});
+        setNotifications((prev) =>
+          prev.map((n) => (n.key === item.key ? { ...n, read: true } : n))
+        );
+      }
+      router.push("/(app)/(tabs)/vouches");
+      return;
+    }
+    // Project notification
+    const nonNavigable: ProjectNotifType[] = [
+      "ProjectPendingApproval",
+      "ProjectRejected",
+      "ProjectDeleted",
+      "ProjectParticipantRemoved",
+    ];
+    if (item.projectNotifType && nonNavigable.includes(item.projectNotifType)) return;
+    const url = item.invoiceId
+      ? `/(app)/project/${item.projectId}?openInvoice=${item.invoiceId}`
+      : `/(app)/project/${item.projectId}`;
+    router.push(url as any);
   }
 
   return (
@@ -152,21 +227,27 @@ export default function Notifications() {
         <SafeAreaView edges={["top"]}>
           <View style={appStyles.headerInner}>
             <TouchableOpacity
-              onPress={() => router.push("/(app)/projects" as any)}
+              onPress={() => router.back()}
               activeOpacity={0.75}
-              style={styles.backBtn}
+              style={styles.headerSide}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
             >
               <Ionicons name="chevron-back" size={24} color={Colors.white} />
             </TouchableOpacity>
-            <AppText style={[appStyles.headerTitle, styles.headerTitleCentered]}>
-              Notifications
-            </AppText>
+            <AppText style={styles.headerTitle}>Notifications</AppText>
             {hasUnread ? (
-              <TouchableOpacity onPress={markAllRead} activeOpacity={0.75}>
+              <TouchableOpacity
+                onPress={markAllRead}
+                activeOpacity={0.75}
+                style={styles.headerSide}
+                accessibilityRole="button"
+                accessibilityLabel="Mark all notifications as read"
+              >
                 <AppText style={styles.markAllText}>Mark all read</AppText>
               </TouchableOpacity>
             ) : (
-              <View style={styles.backBtn} />
+              <View style={styles.headerSide} />
             )}
           </View>
         </SafeAreaView>
@@ -179,7 +260,7 @@ export default function Notifications() {
       ) : (
         <FlatList
           data={notifications}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={
             notifications.length === 0 ? styles.emptyContent : styles.listContent
           }
@@ -191,22 +272,7 @@ export default function Notifications() {
             />
           }
           renderItem={({ item }) => (
-            <NotificationCard
-              item={item}
-              onPress={() => {
-                const nonNavigable: NotificationType[] = [
-                  "ProjectPendingApproval",
-                  "ProjectRejected",
-                  "ProjectDeleted",
-                  "ProjectParticipantRemoved",
-                ];
-                if (nonNavigable.includes(item.type)) return;
-                const url = item.invoiceId
-                  ? `/(app)/project/${item.projectId}?openInvoice=${item.invoiceId}`
-                  : `/(app)/project/${item.projectId}`;
-                router.push(url as any);
-              }}
-            />
+            <NotificationCard item={item} onPress={() => handlePress(item)} />
           )}
           ListEmptyComponent={
             <View style={appStyles.centered}>
@@ -221,25 +287,22 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  backBtn: {
-    width: 32,
-  },
-  headerTitleCentered: {
+  headerSide: { width: 80 },
+  headerTitle: {
     flex: 1,
+    fontSize: 16,
+    fontFamily: Fonts.semiBold,
+    color: Colors.white,
     textAlign: "center",
   },
   markAllText: {
     fontSize: 13,
     fontFamily: Fonts.semiBold,
     color: "rgba(255,255,255,0.85)",
+    textAlign: "right",
   },
-  listContent: {
-    padding: 16,
-    gap: 10,
-  },
-  emptyContent: {
-    flex: 1,
-  },
+  listContent: { padding: 16, gap: 10 },
+  emptyContent: { flex: 1 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 14,
@@ -264,21 +327,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardBody: {
-    flex: 1,
-    gap: 3,
-  },
+  cardBody: { flex: 1, gap: 3 },
   cardMessage: {
     fontSize: 13,
     fontFamily: Fonts.medium,
     color: Colors.black,
     lineHeight: 18,
-  },
-  cardProject: {
-    fontSize: 12,
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
-    marginTop: 1,
   },
   cardTime: {
     fontSize: 11,

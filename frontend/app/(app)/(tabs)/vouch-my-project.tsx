@@ -9,41 +9,20 @@ import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
-function computeStrength(
-  user: { name?: string; abn?: string; businessTrade?: string } | null,
-  vouchProfile: Record<string, string> | null,
-  respondedCount: number
-): number {
-  let pct = 0;
-  const hasTrade = !!(user?.businessTrade || vouchProfile?.trade);
-  if (user?.name && user?.abn && hasTrade) pct += 20;
-  if (vouchProfile?.currentProjectName) pct += 15;
-  if (respondedCount >= 1) pct += 20;
-  if (respondedCount >= 2) pct += 20;
-  if (vouchProfile?.pastProjectName) pct += 15;
-  if (vouchProfile?.idNumber) pct += 10;
-  return pct;
-}
-
 export default function VouchMyProjectScreen() {
-  const { user, fetchWithAuth } = useAuth();
-  const [respondedCount, setRespondedCount] = useState(0);
-  const [vouchProfile, setVouchProfile] = useState<Record<string, string> | null>(null);
+  const { fetchWithAuth } = useAuth();
+  const [strength, setStrength] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       setLoading(true);
-      Promise.all([
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
-      ])
-        .then(([sentData, profileData]) => {
-          if (!cancelled) {
-            const requests: { status: string }[] = sentData?.requests ?? [];
-            setRespondedCount(requests.filter((r) => r.status === "responded").length);
-            if (profileData) setVouchProfile(profileData);
+      fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!cancelled && data?.profileStrength !== undefined) {
+            setStrength(data.profileStrength);
           }
         })
         .catch(() => {})
@@ -55,21 +34,19 @@ export default function VouchMyProjectScreen() {
       };
     }, [fetchWithAuth])
   );
-
-  const strength = computeStrength(user, vouchProfile, respondedCount);
   const isUnlocked = strength === 100;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle} numberOfLines={1}>
           CREATE MY PROJECT
         </AppText>
-        <TouchableOpacity hitSlop={8}>
+        <TouchableOpacity hitSlop={10}>
           <Ionicons name="help-circle-outline" size={24} color={Colors.grey500} />
         </TouchableOpacity>
       </View>
@@ -126,11 +103,27 @@ export default function VouchMyProjectScreen() {
           </View>
         )}
 
-        {/* What your score will show */}
+        {/* What you unlock */}
         <View style={[styles.featureCard, isUnlocked && styles.featureCardUnlocked]}>
           <AppText style={[styles.featureCardLabel, isUnlocked && styles.featureCardLabelUnlocked]}>
-            WHAT YOUR SCORE WILL SHOW
+            WHAT YOU CAN DO AS A PROJECT OWNER
           </AppText>
+
+          <View style={styles.featureItem}>
+            <View style={styles.featureIcon}>
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
+              />
+            </View>
+            <View style={styles.featureText}>
+              <AppText style={styles.featureTitle}>Invite your team</AppText>
+              <AppText style={styles.featureDesc}>
+                Add subbies, PMs, and consultants with role-based invite codes.
+              </AppText>
+            </View>
+          </View>
 
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
@@ -141,9 +134,9 @@ export default function VouchMyProjectScreen() {
               />
             </View>
             <View style={styles.featureText}>
-              <AppText style={styles.featureTitle}>Payment health on active projects</AppText>
+              <AppText style={styles.featureTitle}>Track payment health</AppText>
               <AppText style={styles.featureDesc}>
-                See how your project is flowing in real time.
+                See invoice status, approvals, and payment timing in real time.
               </AppText>
             </View>
           </View>
@@ -151,17 +144,15 @@ export default function VouchMyProjectScreen() {
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
               <Ionicons
-                name="calendar-outline"
+                name="shield-checkmark-outline"
                 size={20}
                 color={isUnlocked ? Colors.vouchGreen : Colors.amber}
               />
             </View>
             <View style={styles.featureText}>
-              <AppText style={styles.featureTitle}>
-                Calendar view of Project Financial Health
-              </AppText>
+              <AppText style={styles.featureTitle}>Build verified project credibility</AppText>
               <AppText style={styles.featureDesc}>
-                Every claim, every due date, all in one place.
+                Your verified profile backs the project — giving your team confidence.
               </AppText>
             </View>
           </View>

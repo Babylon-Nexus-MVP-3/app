@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -8,6 +8,7 @@ import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import { AppText } from "@/components/AppText";
+import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 
 const CODE_LENGTH = 6;
 
@@ -21,12 +22,11 @@ export default function VerifyOtp() {
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
+  const otpRef = useRef<OtpInputRef>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     startCountdown();
-    setTimeout(() => inputRefs.current[0]?.focus(), 300);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -48,26 +48,6 @@ export default function VerifyOtp() {
     }, 1000);
   }
 
-  function handleDigitChange(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const next = [...digits];
-    next[index] = digit;
-    setDigits(next);
-    setError("");
-    if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === "Backspace" && !digits[index] && index > 0) {
-      const next = [...digits];
-      next[index - 1] = "";
-      setDigits(next);
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
-
   async function handleResend() {
     if (!canResend) return;
     try {
@@ -80,7 +60,7 @@ export default function VerifyOtp() {
       // Not live yet — ignore
     }
     setDigits(Array(CODE_LENGTH).fill(""));
-    inputRefs.current[0]?.focus();
+    otpRef.current?.focusFirst();
     startCountdown();
   }
 
@@ -130,7 +110,13 @@ export default function VerifyOtp() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Back */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => router.back()}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+      >
         <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
       </TouchableOpacity>
 
@@ -144,36 +130,34 @@ export default function VerifyOtp() {
         <AppText style={styles.title}>Enter the code</AppText>
         <View style={styles.sentRow}>
           <AppText style={styles.sentText}>Sent to {displayMobile} · </AppText>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Edit phone number"
+          >
             <AppText style={styles.editLink}>Edit</AppText>
           </TouchableOpacity>
         </View>
 
         {/* OTP boxes */}
-        <View style={styles.boxRow}>
-          {digits.map((d, i) => (
-            <TextInput
-              key={i}
-              ref={(ref) => {
-                inputRefs.current[i] = ref;
-              }}
-              style={[styles.box, d ? styles.boxFilled : null]}
-              value={d}
-              onChangeText={(v) => handleDigitChange(i, v)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-              keyboardType="numeric"
-              maxLength={1}
-              textAlign="center"
-              selectTextOnFocus
-            />
-          ))}
-        </View>
+        <OtpInput
+          ref={otpRef}
+          digits={digits}
+          onChange={(d) => { setDigits(d); setError(""); }}
+          style={styles.boxRow}
+        />
 
         {/* Resend */}
         <View style={styles.resendRow}>
           <AppText style={styles.resendBase}>{"Didn't get a code?  "}</AppText>
           {canResend ? (
-            <TouchableOpacity onPress={handleResend} hitSlop={8}>
+            <TouchableOpacity
+              onPress={handleResend}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Resend code"
+            >
               <AppText style={styles.resendLink}>Resend</AppText>
             </TouchableOpacity>
           ) : (
@@ -191,6 +175,9 @@ export default function VerifyOtp() {
           onPress={handleVerify}
           disabled={!isComplete || loading}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Verify code"
+          accessibilityState={{ disabled: !isComplete || loading }}
         >
           {loading ? (
             <ActivityIndicator color={Colors.white} />
@@ -251,23 +238,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
   },
   boxRow: {
-    flexDirection: "row",
-    gap: 10,
     marginBottom: 24,
-  },
-  box: {
-    width: 48,
-    height: 60,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    fontSize: 28,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
-  boxFilled: {
-    borderColor: Colors.vouchGreen,
   },
   resendRow: {
     flexDirection: "row",

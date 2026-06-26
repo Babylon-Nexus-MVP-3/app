@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -15,6 +14,7 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
@@ -83,7 +83,7 @@ export default function Step1() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} hitSlop={8}>
+        <TouchableOpacity onPress={handleBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>STEP 1 OF 6</AppText>
@@ -125,12 +125,11 @@ export default function Step1() {
           </View>
 
           <AppText style={styles.fieldLabel}>TRADE / BUSINESS TYPE</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={trade}
             onChangeText={setTrade}
             placeholder="e.g. Plumbing, Electrical, Carpentry"
-            placeholderTextColor={Colors.grey300}
             autoCapitalize="words"
             autoCorrect={false}
           />
@@ -204,15 +203,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 8,
   },
   fieldHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, lineHeight: 18 },

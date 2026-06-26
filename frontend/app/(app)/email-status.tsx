@@ -13,7 +13,12 @@ export default function EmailStatus() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>EMAIL ADDRESS</AppText>
@@ -45,6 +50,8 @@ export default function EmailStatus() {
           style={styles.changeBtn}
           onPress={() => router.push("/(app)/change-email" as any)}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Change email address"
         >
           <AppText style={styles.changeBtnText}>Change email address</AppText>
         </TouchableOpacity>
