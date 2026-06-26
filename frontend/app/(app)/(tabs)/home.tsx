@@ -148,6 +148,9 @@ export default function HomeScreen() {
   const strength = profileStrength;
   const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
+  const step1Done =
+    !!(user?.name && user?.abn && (user?.businessTrade || wizardDraft?.step1?.trade)) ||
+    !!(wizardDraft?.step1?.name && wizardDraft?.step1?.abn && wizardDraft?.step1?.trade);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -437,6 +440,13 @@ export default function HomeScreen() {
               style={styles.addRefBtn}
               activeOpacity={0.8}
               onPress={() => {
+                if (!step1Done) {
+                  Alert.alert(
+                    "Complete your profile first",
+                    "Please complete Step 1 of Build your Profile before requesting a vouch."
+                  );
+                  return;
+                }
                 setRequestModalVisible(false);
                 router.push("/(app)/get-vouched/step3?fresh=true" as any);
               }}

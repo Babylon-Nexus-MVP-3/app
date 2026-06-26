@@ -23,9 +23,10 @@ vouchRouter.post(
       const body = req.body;
 
       // Source identity fields from DB — not the request body — to prevent impersonation
-      const dbUser = await UserModel.findById(userId).select("name abn").lean();
+      const dbUser = await UserModel.findById(userId).select("name abn businessName").lean();
       const fromName = dbUser?.name ?? "";
       const fromAbn = dbUser?.abn ?? body.abn ?? "";
+      const fromCompany = dbUser?.businessName || "";
 
       // Each wizard step only sends the fields it owns, so this must be a partial
       // $set merge rather than a full-document replace — otherwise saving any one
@@ -50,7 +51,7 @@ vouchRouter.post(
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
         { $set: setFields },
-        { upsert: true, returnDocument: "after", runValidators: true }
+        { upsert: true, returnDocument: "after", runValidators: false }
       );
 
       const references: Array<{
@@ -62,7 +63,6 @@ vouchRouter.post(
         project: string;
       }> = body.references ?? [];
 
-      const fromCompany = body.trade ?? body.name ?? "Unknown";
       const userAbn: string = body.abn ?? "";
 
       // Pre-check: block if any reference has already given a vouch to this user.
