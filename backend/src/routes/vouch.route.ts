@@ -35,7 +35,9 @@ vouchRouter.post(
       if (references.length > 0) {
         const verifyUser = await UserModel.findById(userId).select("mobileVerified").lean();
         if (!verifyUser?.mobileVerified) {
-          res.status(403).json({ error: "You must verify your mobile number before requesting vouches." });
+          res
+            .status(403)
+            .json({ error: "You must verify your mobile number before requesting vouches." });
           return;
         }
       }
@@ -208,7 +210,7 @@ vouchRouter.get(
       const step3Done = respondedCount >= 1;
       const step4Done = respondedCount >= 2;
       const step5Done = !!(profile?.pastProjectName && profile?.pastSuburb && profile?.pastState);
-      const step6Done = !!(profile?.idNumber);
+      const step6Done = !!profile?.idNumber;
 
       const STEP_PCT = [20, 15, 20, 20, 15, 10];
       const stepsDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
