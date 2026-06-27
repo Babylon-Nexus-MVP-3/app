@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   // Role picker modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: Colors.overlay,
     justifyContent: "flex-end",
   },
   modalSheet: {

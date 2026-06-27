@@ -40,7 +40,7 @@ export const authStyles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: Colors.grey700,
+    color: Colors.black,
     letterSpacing: 0.8,
     marginBottom: Spacing.sm,
   },

@@ -94,7 +94,7 @@ function PickerModal({
 }
 
 const modal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)" },
+  overlay: { flex: 1, backgroundColor: Colors.overlay },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,

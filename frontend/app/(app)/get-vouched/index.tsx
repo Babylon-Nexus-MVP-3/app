@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   // Request detail sheet
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: Colors.overlay,
   },
   sheet: {
     position: "absolute",
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sheetStatusBadgeGreen: { backgroundColor: Colors.vouchGreenLight },
-  sheetStatusBadgeAmber: { backgroundColor: "#FFF8E7" },
+  sheetStatusBadgeAmber: { backgroundColor: Colors.amberBg },
   sheetStatusText: { fontSize: 13, fontFamily: Fonts.bold },
   sheetStatusTextGreen: { color: Colors.vouchGreen },
   sheetStatusTextAmber: { color: Colors.amber },

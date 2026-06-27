@@ -33,7 +33,7 @@ export default function AdminLayout() {
           height: 60 + bottom,
         },
         tabBarActiveTintColor: Colors.white,
-        tabBarInactiveTintColor: "rgba(255,255,255,0.45)",
+        tabBarInactiveTintColor: Colors.whiteInactive,
         tabBarLabelStyle: {
           fontSize: 11,
           fontFamily: Fonts.semiBold,

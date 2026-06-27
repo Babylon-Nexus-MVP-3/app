@@ -197,7 +197,7 @@ export default function MeScreen() {
           <View style={styles.vpCard}>
             <View style={styles.vpCardTop}>
               <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
-              <Ionicons name="expand-outline" size={16} color="rgba(255,255,255,0.5)" />
+              <Ionicons name="expand-outline" size={16} color={Colors.white} />
             </View>
             <View style={styles.vpIdentity}>
               <View style={styles.vpAvatar}>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: Colors.whiteGloss,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   vpBusiness: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.65)",
+    color: Colors.white,
     marginTop: 2,
   },
   vpCardBottom: {
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   vpStatLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: "rgba(255,255,255,0.5)",
+    color: Colors.white,
     letterSpacing: 0.8,
   },
   vpStatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   // Modal
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: Colors.overlay,
   },
   modalContent: {
     ...StyleSheet.absoluteFillObject,
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   closeHintText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.45)",
+    color: Colors.white,
   },
 
   expandedDivider: {

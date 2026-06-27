@@ -523,15 +523,6 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     flex: 1,
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
   },
   nameSearchBtn: {
     width: 52,

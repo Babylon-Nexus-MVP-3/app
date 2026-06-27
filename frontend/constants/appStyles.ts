@@ -25,7 +25,7 @@ export const appStyles = StyleSheet.create({
   },
   headerBadge: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     marginBottom: 4,
@@ -38,7 +38,7 @@ export const appStyles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.65)",
+    color: Colors.white,
     marginTop: 2,
   },
   headerIconBtn: {
@@ -58,7 +58,7 @@ export const appStyles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     padding: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: Colors.whiteGloss,
     minHeight: 88,
     justifyContent: "space-between",
   },
@@ -67,7 +67,7 @@ export const appStyles = StyleSheet.create({
   },
   statChipLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     letterSpacing: 0.5,
     lineHeight: 14,
@@ -82,7 +82,7 @@ export const appStyles = StyleSheet.create({
   statChipSuffix: {
     fontSize: 11,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.55)",
+    color: Colors.white,
     marginBottom: 1,
   },
 
@@ -99,7 +99,7 @@ export const appStyles = StyleSheet.create({
   },
   headerBackLabel: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
   },
 
@@ -241,7 +241,7 @@ export const appStyles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: Colors.grey700,
+    color: Colors.black,
     letterSpacing: 0.8,
     marginBottom: 8,
   },

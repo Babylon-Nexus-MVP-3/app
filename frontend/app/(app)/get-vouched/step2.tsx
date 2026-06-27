@@ -85,7 +85,7 @@ function StatePickerModal({
 }
 
 const sp = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
+  overlay: { flex: 1, backgroundColor: Colors.overlay },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,

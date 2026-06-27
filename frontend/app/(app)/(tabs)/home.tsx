@@ -151,9 +151,7 @@ export default function HomeScreen() {
   const strength = profileStrength;
   const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
-  const step1Done =
-    !!(user?.name && user?.abn && (user?.businessTrade || wizardDraft?.step1?.trade)) ||
-    !!(wizardDraft?.step1?.name && wizardDraft?.step1?.abn && wizardDraft?.step1?.trade);
+  const step1Done = !!(user?.name && user?.abn && user?.businessTrade);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

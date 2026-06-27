@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: Colors.white,
     borderRadius: 28,
     paddingVertical: 10,
   },
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   joinBackLabel: {
     fontSize: 14,
     fontFamily: Fonts.semiBold,
-    color: "rgba(255,255,255,0.8)",
+    color: Colors.white,
   },
   joinTitle: {
     fontSize: 22,
