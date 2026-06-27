@@ -112,7 +112,7 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
   // Intentionally vague error to prevent email enumeration attacks
   const existingEmail = await UserModel.findOne({ email: normalisedEmail });
   if (existingEmail) {
-    throw new Error("Unable to complete sign up");
+    throw new Error("An account with this email already exists. Try signing in instead.");
   }
 }
 
