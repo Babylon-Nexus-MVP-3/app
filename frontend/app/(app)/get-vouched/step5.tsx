@@ -144,7 +144,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? ""}
-                keyboardType={keyboardType ?? "default"}
+        keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
       />
     </View>
@@ -260,7 +260,7 @@ export default function Step5() {
                   value={form.pastPostcode}
                   onChangeText={(v) => update("pastPostcode", v.replace(/\D/g, "").slice(0, 4))}
                   placeholder="Postcode"
-                                    keyboardType="numeric"
+                  keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
                 />
@@ -275,7 +275,7 @@ export default function Step5() {
                   onChangeText={(v) => update("pastMonthYear", v.replace(/\D/g, "").slice(0, 4))}
                   onBlur={() => setYearTouched(true)}
                   placeholder="YYYY"
-                                    keyboardType="numeric"
+                  keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
                 />
@@ -294,7 +294,7 @@ export default function Step5() {
                   value={form.pastValue}
                   onChangeText={(v) => update("pastValue", filterDecimal(v))}
                   placeholder="A$ approx"
-                                    keyboardType="decimal-pad"
+                  keyboardType="decimal-pad"
                 />
               </View>
             </View>

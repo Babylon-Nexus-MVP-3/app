@@ -1,5 +1,12 @@
 import { forwardRef, useState, useCallback } from "react";
-import { StyleSheet, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
@@ -36,15 +43,21 @@ export const PasswordInput = forwardRef<TextInput, PasswordInputProps>(function 
   const [show, setShow] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  const handleFocus = useCallback<NonNullable<TextInputProps["onFocus"]>>((e) => {
-    setFocused(true);
-    onFocus?.(e);
-  }, [onFocus]);
+  const handleFocus = useCallback<NonNullable<TextInputProps["onFocus"]>>(
+    (e) => {
+      setFocused(true);
+      onFocus?.(e);
+    },
+    [onFocus]
+  );
 
-  const handleBlur = useCallback<NonNullable<TextInputProps["onBlur"]>>((e) => {
-    setFocused(false);
-    onBlur?.(e);
-  }, [onBlur]);
+  const handleBlur = useCallback<NonNullable<TextInputProps["onBlur"]>>(
+    (e) => {
+      setFocused(false);
+      onBlur?.(e);
+    },
+    [onBlur]
+  );
 
   return (
     <View style={[styles.row, focused && styles.rowFocused, containerStyle]}>

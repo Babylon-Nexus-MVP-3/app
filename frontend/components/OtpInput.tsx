@@ -31,9 +31,12 @@ export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput
     const sanitized = value.replace(/\D/g, "");
     if (sanitized.length > 1) {
       const next = [...digits];
-      sanitized.slice(0, length).split("").forEach((char, i) => {
-        if (index + i < length) next[index + i] = char;
-      });
+      sanitized
+        .slice(0, length)
+        .split("")
+        .forEach((char, i) => {
+          if (index + i < length) next[index + i] = char;
+        });
       onChange(next);
       inputRefs.current[Math.min(index + sanitized.length - 1, length - 1)]?.focus();
       return;

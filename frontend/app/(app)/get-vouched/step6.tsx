@@ -142,7 +142,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? ""}
-                keyboardType={keyboardType ?? "default"}
+        keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
       />
     </View>
@@ -314,7 +314,7 @@ export default function Step6() {
                 value={form.idExpiry}
                 onChangeText={(v) => update("idExpiry", formatExpiry(v))}
                 placeholder="DD/MM/YYYY"
-                                keyboardType="numeric"
+                keyboardType="numeric"
                 maxLength={10}
                 autoCorrect={false}
               />

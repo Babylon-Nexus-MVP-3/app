@@ -130,8 +130,12 @@ export default function Projects() {
 
       const vouchNotifData = vouchNotifRes.ok ? await vouchNotifRes.json() : null;
       const projectNotifData = projectNotifRes.ok ? await projectNotifRes.json() : null;
-      const vouchUnread = (vouchNotifData?.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
-      const projUnread = (projectNotifData?.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
+      const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      const projUnread = (projectNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
       setUnreadCount(vouchUnread + projUnread);
     } catch {
       setProjectsError("Network error. Please try again.");
@@ -206,7 +210,9 @@ export default function Projects() {
               onPress={() => router.push("/(app)/notifications" as any)}
               style={appStyles.headerIconBtn}
               hitSlop={HEADER_HIT_SLOP}
-              accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+              accessibilityLabel={
+                unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"
+              }
             >
               <View>
                 <Ionicons name="notifications-outline" size={24} color={Colors.white} />
@@ -227,7 +233,11 @@ export default function Projects() {
               style={[styles.actionBtn, !canCreateProject && styles.actionBtnDisabled]}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel={canCreateProject ? "Create new project" : "Create new project, complete profile first"}
+              accessibilityLabel={
+                canCreateProject
+                  ? "Create new project"
+                  : "Create new project, complete profile first"
+              }
               accessibilityState={{ disabled: !canCreateProject }}
               onPress={() => {
                 if (canCreateProject) {
@@ -347,9 +357,7 @@ export default function Projects() {
 
                 {project.overdue > 0 && (
                   <View style={appStyles.overdueBadge}>
-                    <AppText style={appStyles.overdueBadgeText}>
-                      {project.overdue} overdue
-                    </AppText>
+                    <AppText style={appStyles.overdueBadgeText}>{project.overdue} overdue</AppText>
                   </View>
                 )}
 

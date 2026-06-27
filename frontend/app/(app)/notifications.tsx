@@ -92,13 +92,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function NotificationCard({
-  item,
-  onPress,
-}: {
-  item: UnifiedNotif;
-  onPress: () => void;
-}) {
+function NotificationCard({ item, onPress }: { item: UnifiedNotif; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={[styles.card, !item.read && styles.cardUnread]}
@@ -155,7 +149,9 @@ export default function Notifications() {
         message,
         read: n.read,
         createdAt: n.createdAt,
-        iconName: isReceived ? ("shield-checkmark-outline" as IoniconName) : ("person-add-outline" as IoniconName),
+        iconName: isReceived
+          ? ("shield-checkmark-outline" as IoniconName)
+          : ("person-add-outline" as IoniconName),
         iconColor: Colors.vouchGreen,
         vouchId: n._id,
       };
@@ -168,8 +164,12 @@ export default function Notifications() {
 
   const load = useCallback(async () => {
     const [projectRes, vouchRes] = await Promise.all([
-      fetchWithAuth(`${API_BASE_URL}/notifications`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetchWithAuth(`${API_BASE_URL}/vouch/notifications`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetchWithAuth(`${API_BASE_URL}/notifications`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+      fetchWithAuth(`${API_BASE_URL}/vouch/notifications`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
     ]);
     setNotifications(buildUnified(projectRes, vouchRes));
   }, [fetchWithAuth]);
@@ -190,7 +190,9 @@ export default function Notifications() {
   async function markAllRead() {
     await Promise.all([
       fetchWithAuth(`${API_BASE_URL}/notifications/read-all`, { method: "PATCH" }).catch(() => {}),
-      fetchWithAuth(`${API_BASE_URL}/vouch/notifications/read-all`, { method: "PATCH" }).catch(() => {}),
+      fetchWithAuth(`${API_BASE_URL}/vouch/notifications/read-all`, { method: "PATCH" }).catch(
+        () => {}
+      ),
     ]);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
@@ -199,7 +201,9 @@ export default function Notifications() {
     if (item.source === "vouch") {
       // Mark individual vouch notif read
       if (!item.read && item.vouchId) {
-        fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${item.vouchId}/read`, { method: "PATCH" }).catch(() => {});
+        fetchWithAuth(`${API_BASE_URL}/vouch/notifications/${item.vouchId}/read`, {
+          method: "PATCH",
+        }).catch(() => {});
         setNotifications((prev) =>
           prev.map((n) => (n.key === item.key ? { ...n, read: true } : n))
         );

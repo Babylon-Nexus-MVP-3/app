@@ -1,5 +1,12 @@
 import { useCallback, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -42,7 +49,7 @@ type StepState = "done" | "active" | "locked";
 
 export default function GetVouchedIntro() {
   const { user, fetchWithAuth } = useAuth();
-  const { step1, step2, references } = useWizard();
+  const { step1, step2 } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
 
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
@@ -250,8 +257,14 @@ export default function GetVouchedIntro() {
                 activeOpacity={tappable ? 0.7 : 1}
                 onPress={() => {
                   if (!tappable) return;
-                  if (n === 3 && slot3Request) { setSelectedSlot(3); return; }
-                  if (n === 4 && slot4Request) { setSelectedSlot(4); return; }
+                  if (n === 3 && slot3Request) {
+                    setSelectedSlot(3);
+                    return;
+                  }
+                  if (n === 4 && slot4Request) {
+                    setSelectedSlot(4);
+                    return;
+                  }
                   router.push(STEP_ROUTES[n - 1]);
                 }}
                 disabled={!tappable}
@@ -358,9 +371,7 @@ export default function GetVouchedIntro() {
                 {isResponded ? "Vouch received" : "Waiting for response"}
               </AppText>
               <AppText style={styles.sheetContact}>{req.toMobile}</AppText>
-              {req.toEmail ? (
-                <AppText style={styles.sheetContactSub}>{req.toEmail}</AppText>
-              ) : null}
+              {req.toEmail ? <AppText style={styles.sheetContactSub}>{req.toEmail}</AppText> : null}
               <View style={styles.sheetRow}>
                 <AppText style={styles.sheetRowLabel}>Relationship</AppText>
                 <AppText style={styles.sheetRowValue}>{req.relationship}</AppText>
@@ -539,7 +550,12 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.black },
   sheetContact: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.black },
-  sheetContactSub: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: -6 },
+  sheetContactSub: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: -6,
+  },
   sheetRow: {
     flexDirection: "row",
     justifyContent: "space-between",

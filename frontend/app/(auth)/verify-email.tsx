@@ -85,12 +85,7 @@ export default function VerifyEmail() {
             <AppText style={styles.emailHighlight}>{email}</AppText>
           </AppText>
 
-          <OtpInput
-            ref={otpRef}
-            digits={digits}
-            onChange={setDigits}
-            style={styles.boxRow}
-          />
+          <OtpInput ref={otpRef} digits={digits} onChange={setDigits} style={styles.boxRow} />
 
           <AppText style={styles.hint}>{"Didn't receive a code? Check your spam folder."}</AppText>
 

@@ -144,7 +144,10 @@ export default function VerifyOtp() {
         <OtpInput
           ref={otpRef}
           digits={digits}
-          onChange={(d) => { setDigits(d); setError(""); }}
+          onChange={(d) => {
+            setDigits(d);
+            setError("");
+          }}
           style={styles.boxRow}
         />
 

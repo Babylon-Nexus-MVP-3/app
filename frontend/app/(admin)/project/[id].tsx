@@ -311,7 +311,9 @@ export default function AdminProjectDetail() {
               scrollRef.current?.scrollTo({ y: 0, animated: false });
             }}
             accessibilityRole="tab"
-            accessibilityLabel={t === "calendar" ? "Calendar" : t === "invoices" ? "All Invoices" : "Project Info"}
+            accessibilityLabel={
+              t === "calendar" ? "Calendar" : t === "invoices" ? "All Invoices" : "Project Info"
+            }
             accessibilityState={{ selected: activeTab === t }}
           >
             <Ionicons

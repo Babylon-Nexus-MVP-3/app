@@ -155,7 +155,9 @@ export default function VerifyResetCode() {
             style={styles.resendBtn}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={cooldown > 0 ? `Resend code, available in ${cooldown} seconds` : "Resend code"}
+            accessibilityLabel={
+              cooldown > 0 ? `Resend code, available in ${cooldown} seconds` : "Resend code"
+            }
             accessibilityState={{ disabled: resending || cooldown > 0 }}
           >
             <AppText style={styles.resendText}>

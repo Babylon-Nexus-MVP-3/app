@@ -97,7 +97,7 @@ export default function VouchesScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchWithAuth])
+    }, [fetchWithAuth, tabParam])
   );
 
   return (
@@ -241,7 +241,9 @@ export default function VouchesScreen() {
                     <AppText style={styles.businessName}>
                       {v.fromName || "Someone"}
                       {v.fromBusinessName ? (
-                        <AppText style={styles.fromBusiness}>{`  ·  ${v.fromBusinessName}`}</AppText>
+                        <AppText
+                          style={styles.fromBusiness}
+                        >{`  ·  ${v.fromBusinessName}`}</AppText>
                       ) : null}
                     </AppText>
                     <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
@@ -258,10 +260,19 @@ export default function VouchesScreen() {
                         onPress={onVouchBack}
                         activeOpacity={0.75}
                         accessibilityRole="button"
-                        accessibilityLabel={canVouchBack ? `Vouch back for ${displayName}` : "Vouch back requires 2 vouches received"}
+                        accessibilityLabel={
+                          canVouchBack
+                            ? `Vouch back for ${displayName}`
+                            : "Vouch back requires 2 vouches received"
+                        }
                         accessibilityState={{ disabled: !canVouchBack }}
                       >
-                        <AppText style={[styles.vouchBackBtnText, !canVouchBack && styles.vouchBackBtnTextDisabled]}>
+                        <AppText
+                          style={[
+                            styles.vouchBackBtnText,
+                            !canVouchBack && styles.vouchBackBtnTextDisabled,
+                          ]}
+                        >
                           Vouch back
                         </AppText>
                       </TouchableOpacity>

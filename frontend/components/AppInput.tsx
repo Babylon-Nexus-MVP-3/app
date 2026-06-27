@@ -17,11 +17,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
   return (
     <TextInput
       ref={ref}
-      style={[
-        styles.input,
-        focused && styles.inputFocused,
-        style,
-      ]}
+      style={[styles.input, focused && styles.inputFocused, style]}
       placeholderTextColor={Colors.grey300}
       onFocus={(e) => {
         setFocused(true);

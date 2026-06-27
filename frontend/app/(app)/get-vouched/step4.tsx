@@ -265,21 +265,21 @@ export default function Step4() {
               value={ref.name}
               onChangeText={(v) => update("name", v)}
               placeholder="Full name"
-                            autoCorrect={false}
+              autoCorrect={false}
             />
             <AppInput
               style={styles.refInput}
               value={ref.company}
               onChangeText={(v) => update("company", v)}
               placeholder="Company"
-                            autoCorrect={false}
+              autoCorrect={false}
             />
             <AppInput
               style={styles.refInput}
               value={ref.mobile}
               onChangeText={(v) => update("mobile", formatMobile(v))}
               placeholder="Mobile number"
-                            keyboardType="number-pad"
+              keyboardType="number-pad"
               maxLength={10}
               autoCorrect={false}
             />
@@ -290,7 +290,7 @@ export default function Step4() {
                 onChangeText={(v) => update("email", v)}
                 onBlur={() => setEmailTouched(true)}
                 placeholder="Email"
-                                keyboardType="email-address"
+                keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -315,7 +315,7 @@ export default function Step4() {
                   value={ref.project}
                   onChangeText={(v) => update("project", v)}
                   placeholder="Project name"
-                                    autoCorrect={false}
+                  autoCorrect={false}
                 />
               </>
             )}

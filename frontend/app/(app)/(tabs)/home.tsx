@@ -27,7 +27,6 @@ type SentRequest = {
   createdAt: string;
 };
 
-
 function MiniStrengthBar({ pct }: { pct: number }) {
   const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
   return (
@@ -124,8 +123,12 @@ export default function HomeScreen() {
       const profileData = profileRes.ok ? await profileRes.json() : null;
 
       setPendingCount(vouchData.requests?.length ?? 0);
-      const vouchUnread = (vouchNotifData?.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
-      const projectUnread = (projectNotifData?.notifications ?? []).filter((n: { read: boolean }) => !n.read).length;
+      const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      const projectUnread = (projectNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
       setUnreadCount(vouchUnread + projectUnread);
       const requests: SentRequest[] = sentData?.requests ?? [];
       setSentRequests(requests);
@@ -172,7 +175,9 @@ export default function HomeScreen() {
             hitSlop={8}
             onPress={() => router.push("/(app)/notifications")}
             accessibilityRole="button"
-            accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+            accessibilityLabel={
+              unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"
+            }
           >
             <View>
               <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
@@ -211,7 +216,11 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             onPress={() => setRequestModalVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={pendingSentCount > 0 ? `Request a Vouch, ${pendingSentCount} pending` : "Request a Vouch"}
+            accessibilityLabel={
+              pendingSentCount > 0
+                ? `Request a Vouch, ${pendingSentCount} pending`
+                : "Request a Vouch"
+            }
           >
             <View style={styles.cardIcon}>
               <Ionicons name="person-add-outline" size={26} color={Colors.black} />
@@ -232,7 +241,11 @@ export default function HomeScreen() {
             style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={respondedCount >= 1 ? `Give a Vouch${pendingCount > 0 ? `, ${pendingCount} pending` : ""}` : "Give a Vouch, requires 1 vouch first"}
+            accessibilityLabel={
+              respondedCount >= 1
+                ? `Give a Vouch${pendingCount > 0 ? `, ${pendingCount} pending` : ""}`
+                : "Give a Vouch, requires 1 vouch first"
+            }
             onPress={() => {
               if (respondedCount >= 1) {
                 router.push("/(app)/give-vouch");
@@ -310,7 +323,9 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
             accessibilityRole="button"
-            accessibilityLabel={strength === 100 ? "Create my Project" : "Create my Project, complete profile first"}
+            accessibilityLabel={
+              strength === 100 ? "Create my Project" : "Create my Project, complete profile first"
+            }
           >
             <View style={styles.cardIcon}>
               <Ionicons
@@ -451,7 +466,9 @@ export default function HomeScreen() {
                 router.push("/(app)/get-vouched/step3?fresh=true" as any);
               }}
               accessibilityRole="button"
-              accessibilityLabel={sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"}
+              accessibilityLabel={
+                sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"
+              }
             >
               <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
               <AppText style={styles.addRefBtnText}>
