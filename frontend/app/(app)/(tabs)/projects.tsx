@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
+import { Spacing } from "@/constants/spacing";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { appStyles } from "@/constants/appStyles";
@@ -514,8 +515,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   topRow: {
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   actionRow: {
     flexDirection: "row",
