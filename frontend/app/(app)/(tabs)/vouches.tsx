@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
+import { Spacing } from "@/constants/spacing";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -103,7 +104,7 @@ export default function VouchesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <AppText style={styles.headerTitle}>VOUCHES</AppText>
+        <AppText style={styles.headerTitle}>Vouches</AppText>
       </View>
 
       {/* Segment control */}
@@ -300,15 +301,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   headerTitle: {
-    fontSize: 22,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    letterSpacing: 0.5,
+    fontSize: 26,
+    fontFamily: Fonts.extraBold,
+    color: Colors.vouchGreen,
+    letterSpacing: 1,
   },
 
   // Segment control

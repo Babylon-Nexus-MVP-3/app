@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { Colors } from "./colors";
 import { Fonts } from "./fonts";
+import { Spacing } from "./spacing";
 
 /** Shared styles for app & admin list/detail screens. */
 export const appStyles = StyleSheet.create({
@@ -19,9 +20,9 @@ export const appStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
   headerBadge: {
     fontSize: 10,
@@ -31,7 +32,7 @@ export const appStyles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: Fonts.extraBold,
     color: Colors.white,
   },
