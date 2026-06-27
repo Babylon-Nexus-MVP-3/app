@@ -25,7 +25,7 @@ vouchRouter.post(
       // Source identity fields from DB — not the request body — to prevent impersonation
       const dbUser = await UserModel.findById(userId).select("name abn businessName").lean();
       const fromName = dbUser?.name ?? "";
-      const fromAbn = dbUser?.abn ?? body.abn ?? "";
+      const fromAbn = dbUser?.abn ?? "";
       const fromCompany = dbUser?.businessName || "";
 
       // Each wizard step only sends the fields it owns, so this must be a partial
@@ -63,8 +63,6 @@ vouchRouter.post(
         project: string;
       }> = body.references ?? [];
 
-      const userAbn: string = body.abn ?? "";
-
       // Pre-check: block if any reference has already given a vouch to this user.
       // The frontend always resends the full cumulative references array (no flag
       // distinguishes new vs. previously-submitted refs), so this must skip ANY
@@ -85,10 +83,10 @@ vouchRouter.post(
         const orConditions: object[] = [{ mobile: ref.mobile }];
         if (ref.email) orConditions.push({ email: ref.email });
         const refUser = await UserModel.findOne({ $or: orConditions }).select("_id").lean();
-        if (refUser && userAbn) {
+        if (refUser && fromAbn) {
           const alreadyVouched = await GivenVouchModel.exists({
             fromUserId: refUser._id,
-            toAbn: userAbn,
+            toAbn: fromAbn,
           });
           if (alreadyVouched) {
             res.status(400).json({
