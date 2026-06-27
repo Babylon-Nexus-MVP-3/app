@@ -125,7 +125,7 @@ describe("Admin endpoints", () => {
     }).lean();
 
     expect(notification).toBeTruthy();
-    expect(notification?.message).toContain("has been approved by the admin");
+    expect(notification?.message).toContain("is now active");
     expect(notification?.read).toBe(false);
   });
 
