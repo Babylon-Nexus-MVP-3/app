@@ -134,7 +134,7 @@ function Dropdown({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.75}>
         <AppText style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
           {value || label}
         </AppText>

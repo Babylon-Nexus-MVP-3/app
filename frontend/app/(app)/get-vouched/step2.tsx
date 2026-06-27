@@ -232,7 +232,7 @@ export default function Step2() {
               <TouchableOpacity
                 style={[styles.fieldWrap, { flex: 1 }]}
                 onPress={() => setStatePickerOpen(true)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
               >
                 <View style={styles.stateBtn}>
                   <AppText style={[styles.stateBtnText, !form.state && styles.stateBtnPlaceholder]}>

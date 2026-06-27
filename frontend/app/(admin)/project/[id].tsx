@@ -424,7 +424,7 @@ function MembersTab({
               <TouchableOpacity
                 style={styles.removeBtn}
                 onPress={() => onRemove(p)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${p.name ?? p.email} from project`}
               >
@@ -439,7 +439,7 @@ function MembersTab({
         <TouchableOpacity
           style={styles.deleteProjectBtn}
           onPress={onDeleteProject}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel="Archive Project"
         >

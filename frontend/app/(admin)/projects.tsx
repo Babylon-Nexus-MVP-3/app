@@ -92,7 +92,7 @@ export default function AdminProjects() {
             <TouchableOpacity
               onPress={handleSignOutPress}
               style={styles.signOutBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityLabel="Sign out"
             >
@@ -145,7 +145,7 @@ export default function AdminProjects() {
             <TouchableOpacity
               key={project._id}
               style={styles.projectCard}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() =>
                 router.push({
                   pathname: "/(admin)/project/[id]",

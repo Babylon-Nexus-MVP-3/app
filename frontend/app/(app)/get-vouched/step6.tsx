@@ -288,7 +288,7 @@ export default function Step6() {
                 <TouchableOpacity
                   style={[styles.input, styles.inputSelect]}
                   onPress={() => setStatePickerOpen(true)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                 >
                   <AppText
                     style={form.idState ? styles.inputSelectValue : styles.inputSelectPlaceholder}

@@ -143,7 +143,7 @@ export function CalendarTab({
                 <TouchableOpacity
                   key={inv.id}
                   onPress={() => setDetailInvoice(inv)}
-                  activeOpacity={0.8}
+                  activeOpacity={0.75}
                 >
                   <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
                     <View style={styles.invoiceRow}>

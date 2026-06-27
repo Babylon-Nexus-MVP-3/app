@@ -228,7 +228,7 @@ export default function GetVouchedIntro() {
         {!mobileVerified && (
           <TouchableOpacity
             style={styles.stepRow}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() =>
               router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })
             }
@@ -254,7 +254,7 @@ export default function GetVouchedIntro() {
               <TouchableOpacity
                 key={n}
                 style={[styles.stepRow, !tappable && styles.stepRowLocked]}
-                activeOpacity={tappable ? 0.7 : 1}
+                activeOpacity={tappable ? 0.75 : 1}
                 onPress={() => {
                   if (!tappable) return;
                   if (n === 3 && slot3Request) {
@@ -398,7 +398,7 @@ export default function GetVouchedIntro() {
               {!isResponded && (
                 <TouchableOpacity
                   style={styles.sheetSecondaryBtn}
-                  activeOpacity={0.8}
+                  activeOpacity={0.75}
                   onPress={() => {
                     setSelectedSlot(null);
                     router.push(STEP_ROUTES[(selectedSlot ?? 3) - 1]);

@@ -127,7 +127,7 @@ export default function AdminArchives() {
             <TouchableOpacity
               key={project._id}
               style={styles.projectCard}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() =>
                 router.push({
                   pathname: "/(admin)/project/[id]",

@@ -280,7 +280,7 @@ export default function CreateProject() {
           <TouchableOpacity
             style={styles.roleSelector}
             onPress={() => setRolePickerTarget("creator")}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
           >
             <AppText style={role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}>
               {role || "Select role..."}
@@ -320,7 +320,7 @@ export default function CreateProject() {
               <TouchableOpacity
                 style={styles.inviteeRoleSelector}
                 onPress={() => setRolePickerTarget(index)}
-                activeOpacity={0.8}
+                activeOpacity={0.75}
               >
                 <AppText
                   style={inv.role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}

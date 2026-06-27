@@ -162,7 +162,7 @@ export default function AdminApprovals() {
               <View key={project._id} style={styles.projectCard}>
                 <TouchableOpacity
                   style={styles.cardHeader}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                   accessibilityRole="button"
                   accessibilityLabel={`View approval details for ${project.name}`}
                   onPress={() =>

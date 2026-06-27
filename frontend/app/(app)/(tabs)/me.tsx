@@ -189,7 +189,7 @@ export default function MeScreen() {
       <View style={styles.scroll}>
         {/* VouchPay credential card — tap to expand */}
         <TouchableOpacity
-          activeOpacity={0.9}
+          activeOpacity={0.75}
           onPress={openCardModal}
           accessibilityRole="button"
           accessibilityLabel="View your VouchPay credential card"
@@ -346,7 +346,7 @@ export default function MeScreen() {
           <TouchableOpacity
             style={styles.credRow}
             onPress={() => router.push("/(app)/email-status" as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`Email, ${user?.email ?? "—"}, verified`}
           >
@@ -371,7 +371,7 @@ export default function MeScreen() {
                 user?.mobileVerified ? ("/(app)/mobile-status" as any) : "/(app)/verify-mobile"
               )
             }
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`Mobile, ${displayMobile ?? "Not added"}, ${user?.mobileVerified ? "verified" : displayMobile ? "tap to verify" : "tap to add"}`}
           >
@@ -417,7 +417,7 @@ export default function MeScreen() {
             <TouchableOpacity
               style={styles.credRow}
               onPress={() => router.push("/(app)/add-abn")}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityLabel="ABN, not added, tap to add"
             >
@@ -440,7 +440,7 @@ export default function MeScreen() {
           <TouchableOpacity
             style={styles.credRow}
             onPress={() => router.push("/(app)/change-password" as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="Change Password"
           >
@@ -478,7 +478,7 @@ export default function MeScreen() {
 
         <TouchableOpacity
           onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
-          activeOpacity={0.7}
+          activeOpacity={0.75}
           style={styles.feedbackRow}
           accessibilityRole="button"
           accessibilityLabel="Email us at support@vouchpay.app"

@@ -279,7 +279,7 @@ export default function SignUp() {
                           styles.resultRow,
                           idx < nameResults.length - 1 && styles.resultRowBorder,
                         ]}
-                        activeOpacity={0.7}
+                        activeOpacity={0.75}
                         onPress={() => onSelectResult(item)}
                         accessibilityRole="button"
                         accessibilityLabel={`${item.entityName}, ABN ${formatAbn(item.abn)}, ${item.state}`}
