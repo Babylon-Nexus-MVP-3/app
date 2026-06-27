@@ -112,7 +112,17 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
   // Intentionally vague error to prevent email enumeration attacks
   const existingEmail = await UserModel.findOne({ email: normalisedEmail });
   if (existingEmail) {
-    throw new Error("Unable to complete sign up");
+    throw new Error("An account with this email already exists. Try signing in instead.");
+  }
+}
+
+/*
+  Checks that an ABN isn't already registered to another account.
+*/
+export async function checkAbn(abn: string): Promise<void> {
+  const existing = await UserModel.findOne({ abn });
+  if (existing) {
+    throw new Error("This ABN is already registered to another account.");
   }
 }
 
