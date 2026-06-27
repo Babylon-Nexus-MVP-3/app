@@ -71,10 +71,15 @@ export default function Step1() {
 
   async function onSave() {
     const updatedStep1 = persistTrade(trade);
-    fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
-      method: "POST",
-      body: JSON.stringify({ ...updatedStep1, references: [] }),
-    }).catch(() => {});
+    try {
+      await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
+        method: "POST",
+        body: JSON.stringify({ ...updatedStep1, references: [] }),
+      });
+    } catch {
+      alert("Failed to save. Please check your connection and try again.");
+      return;
+    }
     router.back();
   }
 

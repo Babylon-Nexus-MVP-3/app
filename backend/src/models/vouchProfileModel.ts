@@ -15,7 +15,7 @@ export interface VouchProfile extends Document {
   name: string;
   abn: string;
   trade: string;
-  idType: "passport" | "licence";
+  idType: "passport" | "licence" | "trade-licence";
   idNumber: string;
   idExpiry: string;
   // Step 2 — projects
@@ -56,7 +56,7 @@ const vouchProfileSchema = new Schema<VouchProfile>(
     name: { type: String, required: true },
     abn: { type: String, required: true },
     trade: { type: String, required: true },
-    idType: { type: String, enum: ["passport", "licence"], required: true },
+    idType: { type: String, enum: ["passport", "licence", "trade-licence"], required: true },
     idNumber: { type: String, required: true },
     idExpiry: { type: String, required: true },
     currentProjectName: { type: String, required: true },
