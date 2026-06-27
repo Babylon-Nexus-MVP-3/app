@@ -151,9 +151,7 @@ export default function HomeScreen() {
   const strength = profileStrength;
   const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
-  const step1Done =
-    !!(user?.name && user?.abn && (user?.businessTrade || wizardDraft?.step1?.trade)) ||
-    !!(wizardDraft?.step1?.name && wizardDraft?.step1?.abn && wizardDraft?.step1?.trade);
+  const step1Done = !!(user?.name && user?.abn && user?.businessTrade);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -213,7 +211,7 @@ export default function HomeScreen() {
           {/* Request a Vouch — view pending requests / send new ones */}
           <TouchableOpacity
             style={[styles.card, styles.cardDefault]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => setRequestModalVisible(true)}
             accessibilityRole="button"
             accessibilityLabel={
@@ -239,7 +237,7 @@ export default function HomeScreen() {
           {/* Give a Vouch — locked until 1 vouch received */}
           <TouchableOpacity
             style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={
               respondedCount >= 1
@@ -288,7 +286,7 @@ export default function HomeScreen() {
           {/* Build your profile */}
           <TouchableOpacity
             style={[styles.card, styles.cardGetVouched]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => router.push("/(app)/get-vouched")}
             accessibilityRole="button"
             accessibilityLabel="Build your profile"
@@ -303,7 +301,7 @@ export default function HomeScreen() {
           {/* Join a Project */}
           <TouchableOpacity
             style={[styles.card, styles.cardDefault]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => router.push("/(app)/join-project")}
             accessibilityRole="button"
             accessibilityLabel="Join a Project"
@@ -320,7 +318,7 @@ export default function HomeScreen() {
           {/* Create my Project */}
           <TouchableOpacity
             style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
             accessibilityRole="button"
             accessibilityLabel={
@@ -350,7 +348,7 @@ export default function HomeScreen() {
           {/* Apply for supplier credit — locked */}
           <TouchableOpacity
             style={[styles.card, styles.cardLocked]}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="Apply for supplier credit, locked"
             onPress={() =>
@@ -453,7 +451,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={styles.addRefBtn}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
               onPress={() => {
                 if (!step1Done) {
                   Alert.alert(

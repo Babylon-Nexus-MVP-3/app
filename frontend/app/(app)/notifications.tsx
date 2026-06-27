@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   markAllText: {
     fontSize: 13,
     fontFamily: Fonts.semiBold,
-    color: "rgba(255,255,255,0.85)",
+    color: Colors.white,
     textAlign: "right",
   },
   listContent: { padding: 16, gap: 10 },

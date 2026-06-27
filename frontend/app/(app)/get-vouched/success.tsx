@@ -63,7 +63,7 @@ export default function GetVouchedSuccess() {
             router.dismissAll();
             router.replace("/(app)/(tabs)/home");
           }}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
         >
           <AppText style={styles.outlineBtnText}>Done</AppText>
         </TouchableOpacity>

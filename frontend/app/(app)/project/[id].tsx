@@ -276,7 +276,7 @@ export default function ProjectDetail() {
                 setKebabVisible(true);
               }}
             >
-              <Ionicons name="ellipsis-vertical" size={22} color="rgba(255,255,255,0.8)" />
+              <Ionicons name="ellipsis-vertical" size={22} color={Colors.white} />
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -394,7 +394,7 @@ export default function ProjectDetail() {
               <Ionicons
                 name={t === "calendar" ? "calendar-outline" : "person-outline"}
                 size={16}
-                color={activeTab === t ? Colors.white : "rgba(255,255,255,0.4)"}
+                color={activeTab === t ? Colors.white : Colors.whiteInactive}
               />
               <AppText style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
                 {t === "calendar" ? "Calendar" : "My Space"}

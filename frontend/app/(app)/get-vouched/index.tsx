@@ -228,7 +228,7 @@ export default function GetVouchedIntro() {
         {!mobileVerified && (
           <TouchableOpacity
             style={styles.stepRow}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() =>
               router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })
             }
@@ -254,7 +254,7 @@ export default function GetVouchedIntro() {
               <TouchableOpacity
                 key={n}
                 style={[styles.stepRow, !tappable && styles.stepRowLocked]}
-                activeOpacity={tappable ? 0.7 : 1}
+                activeOpacity={tappable ? 0.75 : 1}
                 onPress={() => {
                   if (!tappable) return;
                   if (n === 3 && slot3Request) {
@@ -398,7 +398,7 @@ export default function GetVouchedIntro() {
               {!isResponded && (
                 <TouchableOpacity
                   style={styles.sheetSecondaryBtn}
-                  activeOpacity={0.8}
+                  activeOpacity={0.75}
                   onPress={() => {
                     setSelectedSlot(null);
                     router.push(STEP_ROUTES[(selectedSlot ?? 3) - 1]);
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   // Request detail sheet
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: Colors.overlay,
   },
   sheet: {
     position: "absolute",
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sheetStatusBadgeGreen: { backgroundColor: Colors.vouchGreenLight },
-  sheetStatusBadgeAmber: { backgroundColor: "#FFF8E7" },
+  sheetStatusBadgeAmber: { backgroundColor: Colors.amberBg },
   sheetStatusText: { fontSize: 13, fontFamily: Fonts.bold },
   sheetStatusTextGreen: { color: Colors.vouchGreen },
   sheetStatusTextAmber: { color: Colors.amber },

@@ -135,7 +135,7 @@ export default function AttributesScreen() {
           <TouchableOpacity
             style={styles.secondarySuccessBtn}
             onPress={() => router.replace("/(app)/(tabs)/home")}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="Back to home"
           >
@@ -177,7 +177,7 @@ export default function AttributesScreen() {
                   key={attr}
                   style={[styles.chip, active && styles.chipActive]}
                   onPress={() => toggleAttribute(attr)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                   accessibilityRole="checkbox"
                   accessibilityLabel={attr}
                   accessibilityState={{ checked: active }}

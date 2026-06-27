@@ -325,7 +325,7 @@ export default function AdminProjectDetail() {
                     : "information-circle-outline"
               }
               size={16}
-              color={activeTab === t ? Colors.white : "rgba(255,255,255,0.4)"}
+              color={activeTab === t ? Colors.white : Colors.whiteInactive}
               style={{ marginBottom: 2 }}
             />
             <AppText style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
@@ -424,7 +424,7 @@ function MembersTab({
               <TouchableOpacity
                 style={styles.removeBtn}
                 onPress={() => onRemove(p)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${p.name ?? p.email} from project`}
               >
@@ -439,7 +439,7 @@ function MembersTab({
         <TouchableOpacity
           style={styles.deleteProjectBtn}
           onPress={onDeleteProject}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel="Archive Project"
         >
@@ -473,12 +473,12 @@ const styles = StyleSheet.create({
     minWidth: 44,
     marginBottom: 4,
     alignSelf: "flex-start",
-    direction: "ltr",
+    writingDirection: "ltr",
   },
   backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
   adminBadge: {
     fontSize: 9,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   headerSub: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.65)",
+    color: Colors.white,
     fontFamily: Fonts.regular,
     paddingHorizontal: 20,
     marginBottom: 2,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     borderTopColor: "transparent",
   },
   subTabActive: { borderTopColor: Colors.white },
-  subTabText: { fontSize: 11, fontFamily: Fonts.semiBold, color: "rgba(255,255,255,0.4)" },
+  subTabText: { fontSize: 11, fontFamily: Fonts.semiBold, color: Colors.whiteInactive },
   subTabTextActive: { color: Colors.white },
   sectionLabel: {
     fontSize: 12,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 14,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,

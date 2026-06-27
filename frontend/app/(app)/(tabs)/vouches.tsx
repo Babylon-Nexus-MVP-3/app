@@ -111,7 +111,7 @@ export default function VouchesScreen() {
         <TouchableOpacity
           style={[styles.segment, tab === "given" && styles.segmentActive]}
           onPress={() => setTab("given")}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
           accessibilityRole="tab"
           accessibilityLabel="Given vouches"
           accessibilityState={{ selected: tab === "given" }}
@@ -123,7 +123,7 @@ export default function VouchesScreen() {
         <TouchableOpacity
           style={[styles.segment, tab === "received" && styles.segmentActive]}
           onPress={() => setTab("received")}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
           accessibilityRole="tab"
           accessibilityLabel="Received vouches"
           accessibilityState={{ selected: tab === "received" }}
@@ -148,7 +148,7 @@ export default function VouchesScreen() {
             </AppText>
             <TouchableOpacity
               style={styles.emptyBtn}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
               onPress={() => router.push("/(app)/give-vouch")}
               accessibilityRole="button"
               accessibilityLabel="Give a Vouch"
@@ -193,7 +193,7 @@ export default function VouchesScreen() {
           </AppText>
           <TouchableOpacity
             style={styles.emptyBtn}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
             onPress={() => router.push("/(app)/get-vouched")}
             accessibilityRole="button"
             accessibilityLabel="Build your profile"

@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     minWidth: 44,
     marginBottom: 10,
     alignSelf: "flex-start",
-    direction: "ltr",
+    writingDirection: "ltr",
   },
   backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
   exportBtns: { flexDirection: "row", gap: 8, marginTop: 14 },
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     padding: 14,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 6,

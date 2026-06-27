@@ -1,5 +1,6 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { Colors } from "@/constants/colors";
+import { AppText } from "@/components/AppText";
 
 function getColor(value: number) {
   if (value >= 75) return Colors.green;
@@ -115,28 +116,21 @@ export default function CircularProgress({ value, size = 68, label, textScale = 
           justifyContent: "center",
         }}
       >
-        <Text
-          style={{
-            fontSize: Math.round(size * 0.25 * textScale),
-            fontWeight: "700",
-            color,
-          }}
+        <AppText
+          weight="bold"
+          style={{ fontSize: Math.round(size * 0.25 * textScale), color }}
           maxFontSizeMultiplier={1}
         >
           {value}%
-        </Text>
+        </AppText>
         {label && (
-          <Text
-            style={{
-              fontSize: Math.round(size * 0.13 * textScale),
-              fontWeight: "600",
-              color,
-              marginTop: 2,
-            }}
+          <AppText
+            weight="semiBold"
+            style={{ fontSize: Math.round(size * 0.13 * textScale), color, marginTop: 2 }}
             maxFontSizeMultiplier={1}
           >
             {label}
-          </Text>
+          </AppText>
         )}
       </View>
     </View>

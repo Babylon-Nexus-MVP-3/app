@@ -2,6 +2,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { API_BASE_URL } from "@/constants/api";
+import { Colors } from "@/constants/colors";
 
 const EAS_PROJECT_ID = "9d4647b6-8dc0-4bd4-82fb-256190ef2cd8";
 
@@ -17,7 +18,7 @@ export async function registerForPushNotifications(
       name: "Babylon Nexus",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#C9A84C",
+      lightColor: Colors.gold,
       sound: "default",
     });
   }

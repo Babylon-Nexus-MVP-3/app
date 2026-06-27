@@ -162,7 +162,7 @@ export default function AdminApprovals() {
               <View key={project._id} style={styles.projectCard}>
                 <TouchableOpacity
                   style={styles.cardHeader}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                   accessibilityRole="button"
                   accessibilityLabel={`View approval details for ${project.name}`}
                   onPress={() =>
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   adminBadge: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,

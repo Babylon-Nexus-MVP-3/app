@@ -44,6 +44,11 @@ export const Colors = {
   purpleBg: "#F3E8F9",
   greyBg: "#F0F1F2",
   issuedBg: "#E8EAF0",
+
+  // Overlays & frosted glass (on dark/green backgrounds)
+  overlay: "rgba(0,0,0,0.35)",
+  whiteGloss: "rgba(255,255,255,0.12)",
+  whiteInactive: "rgba(255,255,255,0.4)",
 } as const;
 
 export type ColorKey = keyof typeof Colors;

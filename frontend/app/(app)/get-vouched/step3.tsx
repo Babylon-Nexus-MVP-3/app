@@ -94,7 +94,7 @@ function PickerModal({
 }
 
 const modal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)" },
+  overlay: { flex: 1, backgroundColor: Colors.overlay },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
@@ -134,7 +134,7 @@ function Dropdown({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.75}>
         <AppText style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
           {value || label}
         </AppText>

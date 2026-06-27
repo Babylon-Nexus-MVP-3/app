@@ -189,7 +189,7 @@ export default function MeScreen() {
       <View style={styles.scroll}>
         {/* VouchPay credential card — tap to expand */}
         <TouchableOpacity
-          activeOpacity={0.9}
+          activeOpacity={0.75}
           onPress={openCardModal}
           accessibilityRole="button"
           accessibilityLabel="View your VouchPay credential card"
@@ -197,7 +197,7 @@ export default function MeScreen() {
           <View style={styles.vpCard}>
             <View style={styles.vpCardTop}>
               <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
-              <Ionicons name="expand-outline" size={16} color="rgba(255,255,255,0.5)" />
+              <Ionicons name="expand-outline" size={16} color={Colors.white} />
             </View>
             <View style={styles.vpIdentity}>
               <View style={styles.vpAvatar}>
@@ -346,7 +346,7 @@ export default function MeScreen() {
           <TouchableOpacity
             style={styles.credRow}
             onPress={() => router.push("/(app)/email-status" as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`Email, ${user?.email ?? "—"}, verified`}
           >
@@ -371,7 +371,7 @@ export default function MeScreen() {
                 user?.mobileVerified ? ("/(app)/mobile-status" as any) : "/(app)/verify-mobile"
               )
             }
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`Mobile, ${displayMobile ?? "Not added"}, ${user?.mobileVerified ? "verified" : displayMobile ? "tap to verify" : "tap to add"}`}
           >
@@ -417,7 +417,7 @@ export default function MeScreen() {
             <TouchableOpacity
               style={styles.credRow}
               onPress={() => router.push("/(app)/add-abn")}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityLabel="ABN, not added, tap to add"
             >
@@ -440,7 +440,7 @@ export default function MeScreen() {
           <TouchableOpacity
             style={styles.credRow}
             onPress={() => router.push("/(app)/change-password" as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="Change Password"
           >
@@ -478,7 +478,7 @@ export default function MeScreen() {
 
         <TouchableOpacity
           onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
-          activeOpacity={0.7}
+          activeOpacity={0.75}
           style={styles.feedbackRow}
           accessibilityRole="button"
           accessibilityLabel="Email us at support@vouchpay.app"
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: Colors.whiteGloss,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   vpBusiness: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.65)",
+    color: Colors.white,
     marginTop: 2,
   },
   vpCardBottom: {
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   vpStatLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
-    color: "rgba(255,255,255,0.5)",
+    color: Colors.white,
     letterSpacing: 0.8,
   },
   vpStatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   // Modal
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: Colors.overlay,
   },
   modalContent: {
     ...StyleSheet.absoluteFillObject,
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   closeHintText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: "rgba(255,255,255,0.45)",
+    color: Colors.white,
   },
 
   expandedDivider: {

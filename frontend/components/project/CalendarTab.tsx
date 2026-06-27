@@ -112,7 +112,7 @@ export function CalendarTab({
           calendarBackground: Colors.grey100,
           textSectionTitleColor: Colors.grey500,
           dayTextColor: Colors.black,
-          textDisabledColor: "rgba(0,0,0,0.2)",
+          textDisabledColor: Colors.grey300,
           arrowColor: Colors.vouchGreen,
           monthTextColor: Colors.black,
           textMonthFontWeight: "bold",
@@ -143,7 +143,7 @@ export function CalendarTab({
                 <TouchableOpacity
                   key={inv.id}
                   onPress={() => setDetailInvoice(inv)}
-                  activeOpacity={0.8}
+                  activeOpacity={0.75}
                 >
                   <View style={[styles.invoiceCard, { borderLeftColor: statusColor(calStatus) }]}>
                     <View style={styles.invoiceRow}>

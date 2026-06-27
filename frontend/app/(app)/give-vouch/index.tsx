@@ -268,7 +268,7 @@ export default function GiveAVouchScreen() {
             <View key={r._id}>
               <TouchableOpacity
                 style={styles.requestCard}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
                 onPress={() =>
                   router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
                 }
@@ -421,7 +421,7 @@ export default function GiveAVouchScreen() {
                       styles.resultRow,
                       idx < nameResults.length - 1 && styles.resultRowBorder,
                     ]}
-                    activeOpacity={0.7}
+                    activeOpacity={0.75}
                     onPress={() => proceedWithAbn(item.abn)}
                     accessibilityRole="button"
                     accessibilityLabel={`Select ${item.entityName}, ABN ${formatAbn(item.abn)}`}

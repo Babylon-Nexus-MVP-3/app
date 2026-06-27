@@ -85,7 +85,7 @@ function StatePickerModal({
 }
 
 const sp = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
+  overlay: { flex: 1, backgroundColor: Colors.overlay },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
@@ -288,7 +288,7 @@ export default function Step6() {
                 <TouchableOpacity
                   style={[styles.input, styles.inputSelect]}
                   onPress={() => setStatePickerOpen(true)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                 >
                   <AppText
                     style={form.idState ? styles.inputSelectValue : styles.inputSelectPlaceholder}

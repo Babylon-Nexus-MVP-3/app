@@ -279,7 +279,7 @@ export default function SignUp() {
                           styles.resultRow,
                           idx < nameResults.length - 1 && styles.resultRowBorder,
                         ]}
-                        activeOpacity={0.7}
+                        activeOpacity={0.75}
                         onPress={() => onSelectResult(item)}
                         accessibilityRole="button"
                         accessibilityLabel={`${item.entityName}, ABN ${formatAbn(item.abn)}, ${item.state}`}
@@ -523,15 +523,6 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     flex: 1,
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
   },
   nameSearchBtn: {
     width: 52,

@@ -127,7 +127,7 @@ export default function AdminArchives() {
             <TouchableOpacity
               key={project._id}
               style={styles.projectCard}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() =>
                 router.push({
                   pathname: "/(admin)/project/[id]",
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   adminBadge: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -179,13 +179,13 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: Colors.whiteGloss,
     alignItems: "center",
   },
   statNum: { fontSize: 22, fontFamily: Fonts.extraBold, color: Colors.white },
   statLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
+    color: Colors.white,
     fontFamily: Fonts.semiBold,
     marginTop: 2,
     textTransform: "uppercase",
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
