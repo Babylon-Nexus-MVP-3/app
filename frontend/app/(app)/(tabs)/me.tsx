@@ -6,6 +6,7 @@ import {
   Linking,
   Modal,
   Platform,
+  ScrollView,
   Share,
   StyleSheet,
   TouchableOpacity,
@@ -186,7 +187,7 @@ export default function MeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.scroll}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* VouchPay credential card — tap to expand */}
         <TouchableOpacity
           activeOpacity={0.75}
@@ -196,7 +197,7 @@ export default function MeScreen() {
         >
           <View style={styles.vpCard}>
             <View style={styles.vpCardTop}>
-              <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
+              <AppText style={styles.vpWordmark}>VouchPay</AppText>
               <Ionicons name="expand-outline" size={16} color={Colors.white} />
             </View>
             <View style={styles.vpIdentity}>
@@ -227,8 +228,11 @@ export default function MeScreen() {
           onRequestClose={closeCardModal}
         >
           <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropAnim }]}>
-            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
-            <View style={styles.modalBackdrop} />
+            {Platform.OS === "ios" ? (
+              <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
+            ) : (
+              <View style={styles.modalBackdropAndroid} />
+            )}
           </Animated.View>
           <TouchableWithoutFeedback onPress={closeCardModal}>
             <View style={StyleSheet.absoluteFillObject} />
@@ -241,10 +245,15 @@ export default function MeScreen() {
               {/* Card to capture */}
               <View ref={cardRef} style={styles.expandedCard} collapsable={false}>
                 <View style={styles.vpCardTop}>
-                  <Image
-                    source={require("../../../assets/appIcon.png")}
-                    style={styles.expandedLogo}
-                  />
+                  <View style={styles.expandedLogoWrap}>
+                    <View style={styles.expandedLogoBox}>
+                      <Image
+                        source={require("../../../assets/appIconMono.png")}
+                        style={styles.expandedLogoIcon}
+                      />
+                    </View>
+                    <AppText style={styles.expandedLogoName}>VouchPay</AppText>
+                  </View>
                   <Ionicons name="shield-checkmark" size={20} color={Colors.vouchGreen} />
                 </View>
 
@@ -487,14 +496,15 @@ export default function MeScreen() {
           <AppText style={styles.feedbackLink}>Email us</AppText>
           <AppText style={styles.feedbackEmail}>support@vouchpay.app</AppText>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  scroll: { paddingHorizontal: 24, paddingBottom: 16, paddingTop: 12, gap: 8 },
+  scrollView: { flex: 1 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 48, paddingTop: 12, gap: 8 },
 
   // VouchPay credential card
   vpCard: {
@@ -647,9 +657,9 @@ const styles = StyleSheet.create({
   },
 
   // Modal
-  modalBackdrop: {
+  modalBackdropAndroid: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.overlay,
+    backgroundColor: "rgba(0,0,0,0.72)",
   },
   modalContent: {
     ...StyleSheet.absoluteFillObject,
@@ -669,10 +679,28 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
-  expandedLogo: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+  expandedLogoWrap: {
+    alignItems: "center",
+    gap: 6,
+  },
+  expandedLogoBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.vouchGreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandedLogoIcon: {
+    width: 34,
+    height: 34,
+    resizeMode: "contain",
+  },
+  expandedLogoName: {
+    fontSize: 13,
+    fontFamily: Fonts.extraBold,
+    color: Colors.black,
+    letterSpacing: 0.5,
   },
   expandedName: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.black },
   expandedBusiness: {

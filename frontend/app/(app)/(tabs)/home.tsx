@@ -168,7 +168,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <AppText style={styles.logo}>VOUCHPAY</AppText>
+          <AppText style={styles.logo}>VouchPay</AppText>
           <TouchableOpacity
             hitSlop={8}
             onPress={() => router.push("/(app)/notifications")}
