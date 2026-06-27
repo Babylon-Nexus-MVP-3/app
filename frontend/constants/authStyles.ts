@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { Colors } from "./colors";
 import { Fonts } from "./fonts";
+import { Radius, Size, Spacing } from "./spacing";
 
 /** Shared styles for all auth form screens. */
 export const authStyles = StyleSheet.create({
@@ -13,13 +14,13 @@ export const authStyles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxl,
   },
   backButton: {
     alignSelf: "flex-start",
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
     minHeight: 44,
     minWidth: 44,
     justifyContent: "center",
@@ -28,7 +29,7 @@ export const authStyles = StyleSheet.create({
     fontSize: 28,
     fontFamily: Fonts.extraBold,
     color: Colors.black,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   screenSubtitle: {
     fontSize: 15,
@@ -41,22 +42,22 @@ export const authStyles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.grey700,
     letterSpacing: 0.8,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   textInput: {
-    height: 52,
+    height: Size.input,
     borderWidth: 1,
     borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
     fontSize: 16,
     fontFamily: Fonts.regular,
-    marginBottom: 20,
+    marginBottom: Spacing.field,
     backgroundColor: Colors.white,
     color: Colors.black,
   },
   inputWrapper: {
-    marginBottom: 20,
+    marginBottom: Spacing.field,
   },
   inputNoMargin: {
     marginBottom: 0,
@@ -72,9 +73,9 @@ export const authStyles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryButton: {
-    height: 54,
+    height: Size.button,
     backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -91,6 +92,6 @@ export const authStyles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     color: Colors.red,
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
 });

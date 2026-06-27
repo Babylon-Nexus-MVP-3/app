@@ -5,10 +5,10 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -16,13 +16,14 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
+import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/context/AuthContext";
 
 export default function SignIn() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -74,7 +75,13 @@ export default function SignIn() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
@@ -82,12 +89,11 @@ export default function SignIn() {
           <AppText style={styles.subtitle}>Sign in to your account.</AppText>
 
           <AppText style={styles.label}>EMAIL</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={Colors.grey300}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -96,34 +102,20 @@ export default function SignIn() {
           />
 
           <AppText style={styles.label}>PASSWORD</AppText>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showPassword}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowPassword((v) => !v)}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            value={password}
+            onChangeText={setPassword}
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            containerStyle={styles.passwordRow}
+          />
 
           <TouchableOpacity
             style={styles.forgotBtn}
             onPress={() => router.push("/(auth)/forgot-password")}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
           >
             <AppText style={styles.forgotText}>Forgot password?</AppText>
           </TouchableOpacity>
@@ -135,6 +127,9 @@ export default function SignIn() {
             onPress={handleSubmit}
             disabled={!canSubmit || loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            accessibilityState={{ disabled: !canSubmit || loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -145,7 +140,12 @@ export default function SignIn() {
 
           <View style={styles.signUpRow}>
             <AppText style={styles.signUpBase}>New to VouchPay? </AppText>
-            <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => router.push("/(auth)/sign-up")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Sign up"
+            >
               <AppText style={styles.signUpLink}>Sign up →</AppText>
             </TouchableOpacity>
           </View>
@@ -192,36 +192,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 20,
   },
   passwordRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
     marginBottom: 20,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  eyeBtn: {
-    paddingHorizontal: 14,
   },
   forgotBtn: {
     alignSelf: "flex-end",

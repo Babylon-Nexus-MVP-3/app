@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   Modal,
@@ -19,6 +18,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -239,7 +239,7 @@ export default function Step4() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>STEP 4 OF 6</AppText>
@@ -260,40 +260,36 @@ export default function Step4() {
           </AppText>
 
           <View style={styles.refCard}>
-            <TextInput
+            <AppInput
               style={styles.refInput}
               value={ref.name}
               onChangeText={(v) => update("name", v)}
               placeholder="Full name"
-              placeholderTextColor={Colors.grey300}
               autoCorrect={false}
             />
-            <TextInput
+            <AppInput
               style={styles.refInput}
               value={ref.company}
               onChangeText={(v) => update("company", v)}
               placeholder="Company"
-              placeholderTextColor={Colors.grey300}
               autoCorrect={false}
             />
-            <TextInput
+            <AppInput
               style={styles.refInput}
               value={ref.mobile}
               onChangeText={(v) => update("mobile", formatMobile(v))}
               placeholder="Mobile number"
-              placeholderTextColor={Colors.grey300}
               keyboardType="number-pad"
               maxLength={10}
               autoCorrect={false}
             />
             <View>
-              <TextInput
+              <AppInput
                 style={[styles.refInput, emailInvalid ? styles.refInputError : null]}
                 value={ref.email}
                 onChangeText={(v) => update("email", v)}
                 onBlur={() => setEmailTouched(true)}
                 placeholder="Email"
-                placeholderTextColor={Colors.grey300}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -314,12 +310,11 @@ export default function Step4() {
             {ref.relationship === "From another project" && (
               <>
                 <AppText style={styles.dropdownLabel}>WHICH PROJECT?</AppText>
-                <TextInput
+                <AppInput
                   style={styles.refInput}
                   value={ref.project}
                   onChangeText={(v) => update("project", v)}
                   placeholder="Project name"
-                  placeholderTextColor={Colors.grey300}
                   autoCorrect={false}
                 />
               </>
@@ -371,17 +366,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: Colors.white,
   },
-  refInput: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 10,
-    height: 48,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
+  refInput: {},
   refInputError: { borderColor: Colors.red },
   fieldError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   dropdownLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },

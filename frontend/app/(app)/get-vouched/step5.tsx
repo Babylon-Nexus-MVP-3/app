@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,6 +15,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useWizard } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -139,12 +139,11 @@ function Field({
   return (
     <View style={[styles.fieldWrap, flex !== undefined && { flex }]}>
       {label ? <AppText style={styles.fieldLabel}>{label}</AppText> : null}
-      <TextInput
+      <AppInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? ""}
-        placeholderTextColor={Colors.grey300}
         keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
       />
@@ -256,12 +255,11 @@ export default function Step5() {
                 </View>
               </TouchableOpacity>
               <View style={[styles.fieldWrap, { flex: 1 }]}>
-                <TextInput
+                <AppInput
                   style={styles.input}
                   value={form.pastPostcode}
                   onChangeText={(v) => update("pastPostcode", v.replace(/\D/g, "").slice(0, 4))}
                   placeholder="Postcode"
-                  placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
@@ -271,13 +269,12 @@ export default function Step5() {
             <View style={styles.row}>
               <View style={[styles.fieldWrap, { flex: 1 }]}>
                 <AppText style={styles.fieldLabel}>YEAR COMPLETED</AppText>
-                <TextInput
+                <AppInput
                   style={[styles.input, yearErr ? styles.inputError : null]}
                   value={form.pastMonthYear}
                   onChangeText={(v) => update("pastMonthYear", v.replace(/\D/g, "").slice(0, 4))}
                   onBlur={() => setYearTouched(true)}
                   placeholder="YYYY"
-                  placeholderTextColor={Colors.grey300}
                   keyboardType="numeric"
                   maxLength={4}
                   autoCorrect={false}
@@ -292,12 +289,11 @@ export default function Step5() {
                     <AppText style={styles.privateText}>private</AppText>
                   </View>
                 </View>
-                <TextInput
+                <AppInput
                   style={styles.input}
                   value={form.pastValue}
                   onChangeText={(v) => update("pastValue", filterDecimal(v))}
                   placeholder="A$ approx"
-                  placeholderTextColor={Colors.grey300}
                   keyboardType="decimal-pad"
                 />
               </View>
@@ -354,17 +350,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 10 },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
+  input: {},
   stateBtn: {
     height: 50,
     borderWidth: 1,

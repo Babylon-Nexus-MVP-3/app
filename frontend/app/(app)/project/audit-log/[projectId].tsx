@@ -2,8 +2,8 @@ import { API_BASE_URL } from "@/constants/api";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -383,45 +383,47 @@ export default function AuditLog() {
           </TouchableOpacity>
         </View>
       ) : data ? (
-        <ScrollView
+        <FlatList
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.statsGrid}>
-            <View style={styles.statsRow}>
-              <StatCard label="TOTAL INVOICES" value={String(data.summary.totalInvoices)} />
-              <StatCard label="TOTAL AMOUNT" value={formatCurrency(data.summary.totalAmount)} />
+          data={data.entries}
+          keyExtractor={(entry) => entry.invoiceId}
+          ListHeaderComponent={
+            <View style={styles.statsGrid}>
+              <View style={styles.statsRow}>
+                <StatCard label="TOTAL INVOICES" value={String(data.summary.totalInvoices)} />
+                <StatCard label="TOTAL AMOUNT" value={formatCurrency(data.summary.totalAmount)} />
+              </View>
+              <View style={styles.statsRow}>
+                <StatCard
+                  label="PAID"
+                  value={formatCurrency(data.summary.paidAmount)}
+                  valueColor={Colors.green}
+                />
+                <StatCard
+                  label="OUTSTANDING"
+                  value={formatCurrency(data.summary.outstandingAmount)}
+                  valueColor={data.summary.outstandingAmount > 0 ? Colors.amber : undefined}
+                />
+              </View>
             </View>
-            <View style={styles.statsRow}>
-              <StatCard
-                label="PAID"
-                value={formatCurrency(data.summary.paidAmount)}
-                valueColor={Colors.green}
-              />
-              <StatCard
-                label="OUTSTANDING"
-                value={formatCurrency(data.summary.outstandingAmount)}
-                valueColor={data.summary.outstandingAmount > 0 ? Colors.amber : undefined}
-              />
-            </View>
-          </View>
-
-          {data.entries.length === 0 ? (
+          }
+          ListEmptyComponent={
             <View style={styles.emptyState}>
               <AppText style={styles.emptyText}>No invoices on this project yet.</AppText>
             </View>
-          ) : (
-            data.entries.map((entry) => <InvoiceCard key={entry.invoiceId} entry={entry} />)
-          )}
-
-          <View style={styles.notice}>
-            <AppText style={styles.noticeText}>
-              This record is generated from an immutable event log. Entries cannot be modified or
-              deleted.
-            </AppText>
-          </View>
-        </ScrollView>
+          }
+          ListFooterComponent={
+            <View style={styles.notice}>
+              <AppText style={styles.noticeText}>
+                This record is generated from an immutable event log. Entries cannot be modified or
+                deleted.
+              </AppText>
+            </View>
+          }
+          renderItem={({ item: entry }) => <InvoiceCard entry={entry} />}
+        />
       ) : null}
     </View>
   );

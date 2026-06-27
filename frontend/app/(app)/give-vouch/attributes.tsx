@@ -126,6 +126,8 @@ export default function AttributesScreen() {
             style={styles.primarySuccessBtn}
             onPress={() => router.replace("/(app)/(tabs)/vouches")}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Vouch another business"
           >
             <AppText style={styles.primarySuccessBtnText}>Vouch another business</AppText>
           </TouchableOpacity>
@@ -134,6 +136,8 @@ export default function AttributesScreen() {
             style={styles.secondarySuccessBtn}
             onPress={() => router.replace("/(app)/(tabs)/home")}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Back to home"
           >
             <AppText style={styles.secondarySuccessBtnText}>Back to home</AppText>
           </TouchableOpacity>
@@ -145,7 +149,12 @@ export default function AttributesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>Vouch for {displayName}</AppText>
@@ -169,6 +178,9 @@ export default function AttributesScreen() {
                   style={[styles.chip, active && styles.chipActive]}
                   onPress={() => toggleAttribute(attr)}
                   activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={attr}
+                  accessibilityState={{ checked: active }}
                 >
                   {active && <Ionicons name="checkmark" size={13} color={Colors.white} />}
                   <AppText style={[styles.chipText, active && styles.chipTextActive]}>
@@ -200,6 +212,9 @@ export default function AttributesScreen() {
           onPress={onVouch}
           disabled={!canVouch || submitting}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Submit vouch"
+          accessibilityState={{ disabled: !canVouch || submitting }}
         >
           {submitting ? (
             <ActivityIndicator color={Colors.white} />

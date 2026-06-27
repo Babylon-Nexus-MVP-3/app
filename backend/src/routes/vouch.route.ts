@@ -181,21 +181,41 @@ vouchRouter.post(
   }
 );
 
-// GET /vouch/profile/me — retrieve the logged-in user's vouch profile
+// GET /vouch/profile/me — retrieve the logged-in user's vouch profile + server-computed strength
 vouchRouter.get(
   "/profile/me",
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const profile = await VouchProfileModel.findOne({ userId });
+      const [profile, respondedCount] = await Promise.all([
+        VouchProfileModel.findOne({ userId }),
+        VouchRequestModel.countDocuments({ fromUserId: userId, status: "responded" }),
+      ]);
 
       if (!profile) {
         res.status(404).json({ error: "No profile found" });
         return;
       }
 
-      res.status(200).json(profile);
+      // Any 2 responded requests count — order doesn't matter.
+      // If request 1 is still pending but requests 2 and 3 both responded,
+      // those 2 responses should still credit steps 3 and 4.
+      const step1Done = !!(profile.name && profile.abn && profile.trade);
+      const step2Done = !!(profile.currentProjectName && profile.suburb && profile.state);
+      const step3Done = respondedCount >= 1;
+      const step4Done = respondedCount >= 2;
+      const step5Done = !!(profile.pastProjectName && profile.pastSuburb && profile.pastState);
+      const step6Done = !!profile.idNumber;
+
+      const STEP_PCT = [20, 15, 20, 20, 15, 10];
+      const stepsDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
+      const profileStrength = stepsDone.reduce((acc, done, i) => acc + (done ? STEP_PCT[i] : 0), 0);
+
+      res.status(200).json({
+        ...profile.toObject(),
+        profileStrength,
+      });
     } catch (err) {
       next(err);
     }

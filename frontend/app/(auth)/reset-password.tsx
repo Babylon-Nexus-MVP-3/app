@@ -5,9 +5,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,14 +14,13 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { AppText } from "@/components/AppText";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function ResetPassword() {
   const { resetCode } = useLocalSearchParams<{ resetCode: string }>();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +57,13 @@ export default function ResetPassword() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
@@ -68,56 +71,27 @@ export default function ResetPassword() {
           <AppText style={styles.subtitle}>Choose a new password for your account.</AppText>
 
           <AppText style={styles.label}>NEW PASSWORD</AppText>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Min. 12 characters"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showPassword}
-              returnKeyType="next"
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowPassword((v) => !v)}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Min. 12 characters"
+            returnKeyType="next"
+            containerStyle={styles.passwordRow}
+          />
           {password.length > 0 && password.length < 12 ? (
             <AppText style={styles.hintText}>Password must be at least 12 characters</AppText>
           ) : null}
 
           <AppText style={styles.label}>CONFIRM PASSWORD</AppText>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Re-enter password"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showConfirm}
-              returnKeyType="done"
-              onSubmitEditing={handleReset}
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowConfirm((v) => !v)}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            value={confirm}
+            onChangeText={setConfirm}
+            placeholder="Re-enter password"
+            returnKeyType="done"
+            onSubmitEditing={handleReset}
+            containerStyle={styles.passwordRow}
+            accessibilityLabel="confirm password"
+          />
           {confirm.length > 0 && password !== confirm ? (
             <AppText style={styles.hintText}>Passwords do not match</AppText>
           ) : null}
@@ -129,6 +103,9 @@ export default function ResetPassword() {
             onPress={handleReset}
             disabled={isDisabled}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Reset password"
+            accessibilityState={{ disabled: isDisabled }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -179,24 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   passwordRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
     marginBottom: 8,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  eyeBtn: {
-    paddingHorizontal: 14,
   },
   hintText: {
     fontSize: 13,

@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,49 +18,17 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { authStyles } from "@/constants/authStyles";
 import { AppText } from "@/components/AppText";
+import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 
 export default function VerifyEmail() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const { login } = useAuth();
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const otpRef = useRef<OtpInputRef>(null);
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const code = digits.join("");
-
-  function handleDigitChange(index: number, value: string) {
-    const sanitized = value.replace(/\D/g, "");
-
-    if (sanitized.length > 1) {
-      const newDigits = [...digits];
-      sanitized
-        .slice(0, 6)
-        .split("")
-        .forEach((char, i) => {
-          if (index + i < 6) newDigits[index + i] = char;
-        });
-      setDigits(newDigits);
-      inputRefs.current[Math.min(index + sanitized.length - 1, 5)]?.focus();
-      return;
-    }
-
-    const newDigits = [...digits];
-    newDigits[index] = sanitized;
-    setDigits(newDigits);
-    if (sanitized && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === "Backspace" && !digits[index] && index > 0) {
-      const newDigits = [...digits];
-      newDigits[index - 1] = "";
-      setDigits(newDigits);
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
 
   async function handleVerify() {
     if (code.length < 6) return;
@@ -118,24 +85,7 @@ export default function VerifyEmail() {
             <AppText style={styles.emailHighlight}>{email}</AppText>
           </AppText>
 
-          <View style={styles.boxRow}>
-            {digits.map((digit, i) => (
-              <TextInput
-                key={i}
-                ref={(ref) => {
-                  inputRefs.current[i] = ref;
-                }}
-                style={[styles.digitBox, digit ? styles.digitBoxFilled : null]}
-                value={digit}
-                onChangeText={(v) => handleDigitChange(i, v)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-                keyboardType="number-pad"
-                maxLength={2}
-                selectTextOnFocus
-                autoFocus={i === 0}
-              />
-            ))}
-          </View>
+          <OtpInput ref={otpRef} digits={digits} onChange={setDigits} style={styles.boxRow} />
 
           <AppText style={styles.hint}>{"Didn't receive a code? Check your spam folder."}</AppText>
 
@@ -149,6 +99,9 @@ export default function VerifyEmail() {
             onPress={handleVerify}
             disabled={code.length < 6 || loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Verify email"
+            accessibilityState={{ disabled: code.length < 6 || loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -185,26 +138,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
   },
   boxRow: {
-    flexDirection: "row",
-    gap: 10,
     justifyContent: "center",
     marginTop: 8,
     marginBottom: 24,
-  },
-  digitBox: {
-    width: 48,
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    fontSize: 24,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    textAlign: "center",
-    backgroundColor: Colors.white,
-  },
-  digitBoxFilled: {
-    borderColor: Colors.vouchGreen,
   },
   hint: {
     fontSize: 13,

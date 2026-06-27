@@ -11,25 +11,11 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-
-type WizardDraft = {
-  step1: { name: string; abn: string; trade: string; idNumber: string };
-  step2: {
-    currentProjectName: string;
-    suburb: string;
-    state: string;
-    pastProjectName: string;
-    pastSuburb: string;
-    pastState: string;
-  };
-  references: { name: string; company: string; mobile: string; relationship: string }[];
-};
 
 type SentRequest = {
   _id: string;
@@ -41,31 +27,29 @@ type SentRequest = {
   createdAt: string;
 };
 
-function computeStrength(
-  user: { name?: string; abn?: string; businessTrade?: string } | null,
-  draft: WizardDraft | null,
-  respondedCount: number
-): number {
-  const s1 = draft?.step1;
-  const s2 = draft?.step2;
-  const step1Done =
-    !!(user?.name && user?.abn && (user?.businessTrade || s1?.trade)) ||
-    !!(s1?.name && s1?.abn && s1?.trade);
-  const step2Done = !!(s2?.currentProjectName && s2?.suburb && s2?.state);
-  // Steps 3/4 only count once a vouch is actually confirmed (responded),
-  // not just requested — a sent-but-unanswered reference shouldn't count
-  // toward profile strength.
-  const step5Done = !!(s2?.pastProjectName && s2?.pastSuburb && s2?.pastState);
-  const step6Done = !!s1?.idNumber;
-  let pct = 0;
-  if (step1Done) pct += 20;
-  if (step2Done) pct += 15;
-  if (respondedCount >= 1) pct += 20;
-  if (respondedCount >= 2) pct += 20;
-  if (step5Done) pct += 15;
-  if (step6Done) pct += 10;
-  return pct;
+function MiniStrengthBar({ pct }: { pct: number }) {
+  const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
+  return (
+    <View style={msb.wrap}>
+      <View style={msb.track}>
+        <View style={[msb.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
+      </View>
+      <AppText style={[msb.label, { color }]}>{pct}%</AppText>
+    </View>
+  );
 }
+
+const msb = StyleSheet.create({
+  wrap: { gap: 4 },
+  track: {
+    height: 4,
+    backgroundColor: Colors.grey300,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  fill: { height: 4, borderRadius: 2 },
+  label: { fontSize: 11, fontFamily: Fonts.bold },
+});
 
 function StrengthBar({ pct }: { pct: number }) {
   const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
@@ -118,34 +102,39 @@ export default function HomeScreen() {
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [respondedCount, setRespondedCount] = useState(0);
+  const [profileStrength, setProfileStrength] = useState(0);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [requestModalVisible, setRequestModalVisible] = useState(false);
-  const [wizardDraft, setWizardDraft] = useState<WizardDraft | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, notifRes, sentRes, raw] = await Promise.all([
+      const [vouchRes, vouchNotifRes, projectNotifRes, sentRes, profileRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
+        fetchWithAuth(`${API_BASE_URL}/notifications`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
-        AsyncStorage.getItem(`wizard_draft_${user?.id ?? "anon"}`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
       ]);
       const vouchData = await vouchRes.json();
-      const notifData = await notifRes.json();
+      const vouchNotifData = vouchNotifRes.ok ? await vouchNotifRes.json() : null;
+      const projectNotifData = projectNotifRes.ok ? await projectNotifRes.json() : null;
       const sentData = sentRes.ok ? await sentRes.json() : null;
+      const profileData = profileRes.ok ? await profileRes.json() : null;
 
       setPendingCount(vouchData.requests?.length ?? 0);
-      setUnreadCount(
-        (notifData.notifications ?? []).filter((n: { read: boolean }) => !n.read).length
-      );
+      const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      const projectUnread = (projectNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      setUnreadCount(vouchUnread + projectUnread);
       const requests: SentRequest[] = sentData?.requests ?? [];
       setSentRequests(requests);
-      setRespondedCount(requests.filter((r) => r.status === "responded").length);
-      if (raw) setWizardDraft(JSON.parse(raw));
+      setProfileStrength(profileData?.profileStrength ?? 0);
     } catch {}
-  }, [fetchWithAuth, user?.id]);
+  }, [fetchWithAuth]);
 
   useFocusEffect(
     useCallback(() => {
@@ -159,7 +148,8 @@ export default function HomeScreen() {
     setRefreshing(false);
   }
 
-  const strength = computeStrength(user, wizardDraft, respondedCount);
+  const strength = profileStrength;
+  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
   const step1Done =
     !!(user?.name && user?.abn && (user?.businessTrade || wizardDraft?.step1?.trade)) ||
@@ -181,7 +171,14 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <AppText style={styles.logo}>VOUCHPAY</AppText>
-          <TouchableOpacity hitSlop={8} onPress={() => router.push("/(app)/vouch-notifications")}>
+          <TouchableOpacity
+            hitSlop={8}
+            onPress={() => router.push("/(app)/notifications")}
+            accessibilityRole="button"
+            accessibilityLabel={
+              unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"
+            }
+          >
             <View>
               <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
               {unreadCount > 0 && (
@@ -218,6 +215,12 @@ export default function HomeScreen() {
             style={[styles.card, styles.cardDefault]}
             activeOpacity={0.7}
             onPress={() => setRequestModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              pendingSentCount > 0
+                ? `Request a Vouch, ${pendingSentCount} pending`
+                : "Request a Vouch"
+            }
           >
             <View style={styles.cardIcon}>
               <Ionicons name="person-add-outline" size={26} color={Colors.black} />
@@ -237,6 +240,12 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              respondedCount >= 1
+                ? `Give a Vouch${pendingCount > 0 ? `, ${pendingCount} pending` : ""}`
+                : "Give a Vouch, requires 1 vouch first"
+            }
             onPress={() => {
               if (respondedCount >= 1) {
                 router.push("/(app)/give-vouch");
@@ -264,9 +273,14 @@ export default function HomeScreen() {
             <AppText style={[styles.cardTitle, respondedCount < 1 && styles.cardTitleLocked]}>
               Give a Vouch
             </AppText>
-            <AppText style={styles.cardDesc}>
-              {respondedCount >= 1 ? "Vouch for others" : "Needs 1 vouch"}
-            </AppText>
+            {respondedCount >= 1 ? (
+              <AppText style={styles.cardDesc}>Vouch for others</AppText>
+            ) : (
+              <>
+                <AppText style={styles.cardDesc}>Needs 1 vouch</AppText>
+                <MiniStrengthBar pct={strength} />
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -276,6 +290,8 @@ export default function HomeScreen() {
             style={[styles.card, styles.cardGetVouched]}
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/get-vouched")}
+            accessibilityRole="button"
+            accessibilityLabel="Build your profile"
           >
             <View style={styles.cardIcon}>
               <Ionicons name="shield-checkmark-outline" size={26} color={Colors.vouchGreen} />
@@ -289,6 +305,8 @@ export default function HomeScreen() {
             style={[styles.card, styles.cardDefault]}
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/join-project")}
+            accessibilityRole="button"
+            accessibilityLabel="Join a Project"
           >
             <View style={styles.cardIcon}>
               <Ionicons name="enter-outline" size={26} color={Colors.black} />
@@ -304,6 +322,10 @@ export default function HomeScreen() {
             style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
             activeOpacity={0.7}
             onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
+            accessibilityRole="button"
+            accessibilityLabel={
+              strength === 100 ? "Create my Project" : "Create my Project, complete profile first"
+            }
           >
             <View style={styles.cardIcon}>
               <Ionicons
@@ -315,15 +337,22 @@ export default function HomeScreen() {
             <AppText style={[styles.cardTitle, strength < 100 && styles.cardTitleLocked]}>
               Create my Project
             </AppText>
-            <AppText style={styles.cardDesc}>
-              {strength === 100 ? "Set up your project" : "Complete profile first"}
-            </AppText>
+            {strength === 100 ? (
+              <AppText style={styles.cardDesc}>Set up your project</AppText>
+            ) : (
+              <>
+                <AppText style={styles.cardDesc}>Complete profile first</AppText>
+                <MiniStrengthBar pct={strength} />
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Apply for supplier credit — locked */}
           <TouchableOpacity
             style={[styles.card, styles.cardLocked]}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Apply for supplier credit, locked"
             onPress={() =>
               Alert.alert(
                 "Supplier Credit",
@@ -351,7 +380,12 @@ export default function HomeScreen() {
       >
         <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity hitSlop={8} onPress={() => setRequestModalVisible(false)}>
+            <TouchableOpacity
+              hitSlop={8}
+              onPress={() => setRequestModalVisible(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Ionicons name="arrow-back" size={24} color={Colors.black} />
             </TouchableOpacity>
             <AppText style={styles.headerTitle}>VOUCH REQUESTS</AppText>
@@ -431,6 +465,10 @@ export default function HomeScreen() {
                 setRequestModalVisible(false);
                 router.push("/(app)/get-vouched/step3?fresh=true" as any);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={
+                sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"
+              }
             >
               <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
               <AppText style={styles.addRefBtnText}>

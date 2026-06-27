@@ -2,6 +2,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Modal,
   RefreshControl,
   ScrollView,
@@ -83,6 +84,7 @@ export default function Projects() {
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [canCreateProject, setCanCreateProject] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -96,10 +98,12 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, profileRes, sentRes] = await Promise.all([
+      const [projectsRes, profileRes, sentRes, vouchNotifRes, projectNotifRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/projects`),
         fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
+        fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
+        fetchWithAuth(`${API_BASE_URL}/notifications`),
       ]);
       const data = await projectsRes.json();
       if (!projectsRes.ok) {
@@ -123,6 +127,16 @@ export default function Projects() {
         (r: { status: string }) => r.status === "responded"
       ).length;
       setCanCreateProject(isProfileComplete(profileData, respondedCount));
+
+      const vouchNotifData = vouchNotifRes.ok ? await vouchNotifRes.json() : null;
+      const projectNotifData = projectNotifRes.ok ? await projectNotifRes.json() : null;
+      const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      const projUnread = (projectNotifData?.notifications ?? []).filter(
+        (n: { read: boolean }) => !n.read
+      ).length;
+      setUnreadCount(vouchUnread + projUnread);
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
@@ -196,9 +210,20 @@ export default function Projects() {
               onPress={() => router.push("/(app)/notifications" as any)}
               style={appStyles.headerIconBtn}
               hitSlop={HEADER_HIT_SLOP}
-              accessibilityLabel="Notifications"
+              accessibilityLabel={
+                unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"
+              }
             >
-              <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+              <View>
+                <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+                {unreadCount > 0 && (
+                  <View style={styles.notifBadge}>
+                    <AppText style={styles.notifBadgeText}>
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </AppText>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -207,6 +232,13 @@ export default function Projects() {
             <TouchableOpacity
               style={[styles.actionBtn, !canCreateProject && styles.actionBtnDisabled]}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={
+                canCreateProject
+                  ? "Create new project"
+                  : "Create new project, complete profile first"
+              }
+              accessibilityState={{ disabled: !canCreateProject }}
               onPress={() => {
                 if (canCreateProject) {
                   router.push("/(app)/create-project");
@@ -230,6 +262,8 @@ export default function Projects() {
               style={styles.actionBtnOutline}
               activeOpacity={0.85}
               onPress={openJoinModal}
+              accessibilityRole="button"
+              accessibilityLabel="Join a project"
             >
               <Ionicons name="enter-outline" size={15} color={Colors.white} />
               <AppText style={styles.actionBtnOutlineText}>Join Project</AppText>
@@ -271,10 +305,12 @@ export default function Projects() {
       </View>
 
       {/* ── Projects list ── */}
-      <ScrollView
+      <FlatList
         style={appStyles.body}
         contentContainerStyle={appStyles.bodyContent}
         showsVerticalScrollIndicator={false}
+        data={projectsLoading || projectsError ? [] : projects}
+        keyExtractor={(p) => p.id}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -283,68 +319,66 @@ export default function Projects() {
             colors={[Colors.vouchGreen]}
           />
         }
-      >
-        <AppText style={appStyles.sectionLabel}>YOUR PROJECTS</AppText>
+        ListHeaderComponent={<AppText style={appStyles.sectionLabel}>YOUR PROJECTS</AppText>}
+        ListEmptyComponent={
+          projectsLoading ? (
+            <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 32 }} />
+          ) : projectsError ? (
+            <AppText style={appStyles.errorText}>{projectsError}</AppText>
+          ) : (
+            <AppText style={appStyles.emptyText}>
+              No active projects yet. Create or join one above.
+            </AppText>
+          )
+        }
+        renderItem={({ item: project }) => (
+          <TouchableOpacity
+            style={[appStyles.card, styles.projectCard]}
+            activeOpacity={0.75}
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/project/[id]",
+                params: { id: project.id, name: project.name },
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`${project.name}, ${displayRole(project.role)}, health ${project.health}%${project.overdue > 0 ? `, ${project.overdue} overdue` : ""}`}
+          >
+            <CircularProgress value={project.health} size={68} />
 
-        {projectsLoading ? (
-          <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 32 }} />
-        ) : projectsError ? (
-          <AppText style={appStyles.errorText}>{projectsError}</AppText>
-        ) : projects.length === 0 ? (
-          <AppText style={appStyles.emptyText}>
-            No active projects yet. Create or join one above.
-          </AppText>
-        ) : (
-          projects.map((project) => (
-            <TouchableOpacity
-              key={project.id}
-              style={[appStyles.card, styles.projectCard]}
-              activeOpacity={0.75}
-              onPress={() =>
-                router.push({
-                  pathname: "/(app)/project/[id]",
-                  params: { id: project.id, name: project.name },
-                })
-              }
-            >
-              <CircularProgress value={project.health} size={68} />
+            <View style={styles.projectInfo}>
+              <AppText style={styles.projectName}>{project.name}</AppText>
+              <AppText style={styles.projectSubtitle}>{project.subtitle}</AppText>
 
-              <View style={styles.projectInfo}>
-                <AppText style={styles.projectName}>{project.name}</AppText>
-                <AppText style={styles.projectSubtitle}>{project.subtitle}</AppText>
-
-                <View style={styles.badgeRow}>
-                  <View style={appStyles.roleBadge}>
-                    <AppText style={appStyles.roleBadgeText}>{displayRole(project.role)}</AppText>
-                  </View>
-
-                  {project.overdue > 0 && (
-                    <View style={appStyles.overdueBadge}>
-                      <AppText style={appStyles.overdueBadgeText}>
-                        {project.overdue} overdue
-                      </AppText>
-                    </View>
-                  )}
-
-                  {project.change !== 0 && (
-                    <AppText
-                      style={[
-                        styles.changeBadge,
-                        { color: project.change > 0 ? Colors.vouchGreen : Colors.red },
-                      ]}
-                    >
-                      {project.change > 0 ? "+" : ""}
-                      {project.change}%
-                    </AppText>
-                  )}
+              <View style={styles.badgeRow}>
+                <View style={appStyles.roleBadge}>
+                  <AppText style={appStyles.roleBadgeText}>{displayRole(project.role)}</AppText>
                 </View>
-              </View>
 
-              <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
-            </TouchableOpacity>
-          ))
+                {project.overdue > 0 && (
+                  <View style={appStyles.overdueBadge}>
+                    <AppText style={appStyles.overdueBadgeText}>{project.overdue} overdue</AppText>
+                  </View>
+                )}
+
+                {project.change !== 0 && (
+                  <AppText
+                    style={[
+                      styles.changeBadge,
+                      { color: project.change > 0 ? Colors.vouchGreen : Colors.red },
+                    ]}
+                  >
+                    {project.change > 0 ? "+" : ""}
+                    {project.change}%
+                  </AppText>
+                )}
+              </View>
+            </View>
+
+            <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+          </TouchableOpacity>
         )}
-      </ScrollView>
+      />
 
       {/* ── Join a Project modal ── */}
       <Modal visible={joinModalVisible} animationType="slide" presentationStyle="fullScreen">
@@ -389,6 +423,8 @@ export default function Projects() {
                     setJoinModalVisible(false);
                     fetchProjects();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Done"
                 >
                   <AppText style={appStyles.primaryBtnText}>Done</AppText>
                 </TouchableOpacity>
@@ -427,6 +463,9 @@ export default function Projects() {
                         joinHasLicence === val && appStyles.optionChipActive,
                       ]}
                       onPress={() => setJoinHasLicence(val)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Licence: ${label}`}
+                      accessibilityState={{ checked: joinHasLicence === val }}
                     >
                       <AppText
                         style={[
@@ -458,6 +497,9 @@ export default function Projects() {
                         joinHasInsurance === val && appStyles.optionChipActive,
                       ]}
                       onPress={() => setJoinHasInsurance(val)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Insurance: ${label}`}
+                      accessibilityState={{ checked: joinHasInsurance === val }}
                     >
                       <AppText
                         style={[
@@ -480,6 +522,9 @@ export default function Projects() {
                   ]}
                   onPress={handleJoin}
                   disabled={joinCode.length < 6 || joinLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Join Project"
+                  accessibilityState={{ disabled: joinCode.length < 6 || joinLoading }}
                 >
                   {joinLoading ? (
                     <ActivityIndicator color={Colors.white} />
@@ -685,5 +730,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
+  },
+  notifBadge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: Colors.red,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  notifBadgeText: {
+    fontSize: 9,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
   },
 });

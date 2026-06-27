@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -56,7 +56,13 @@ export default function ForgotPassword() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
@@ -66,12 +72,11 @@ export default function ForgotPassword() {
           </AppText>
 
           <AppText style={styles.label}>EMAIL</AppText>
-          <TextInput
+          <AppInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={Colors.grey300}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -87,6 +92,9 @@ export default function ForgotPassword() {
             onPress={handleSubmit}
             disabled={!email.trim() || loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Send reset code"
+            accessibilityState={{ disabled: !email.trim() || loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -96,7 +104,12 @@ export default function ForgotPassword() {
           </TouchableOpacity>
 
           <View style={styles.backRow}>
-            <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Back to sign in"
+            >
               <AppText style={styles.backLink}>Back to sign in</AppText>
             </TouchableOpacity>
           </View>
@@ -143,15 +156,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 20,
   },
   errorText: {

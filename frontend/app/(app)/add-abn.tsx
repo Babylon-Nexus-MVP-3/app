@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,6 +14,7 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { AbrCard } from "@/components/AbrCard";
 import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
@@ -77,7 +77,9 @@ export default function AddAbn() {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => router.push("/(app)/me" as any)}
-            hitSlop={14}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
           </TouchableOpacity>
@@ -96,12 +98,11 @@ export default function AddAbn() {
               <Ionicons name="lock-closed-outline" size={14} color={Colors.grey500} />
             </View>
           ) : (
-            <TextInput
+            <AppInput
               style={[styles.input, abrError ? styles.inputError : null]}
               value={abn}
               onChangeText={onAbnChange}
               placeholder="XX XXX XXX XXX"
-              placeholderTextColor={Colors.grey300}
               keyboardType="numeric"
               returnKeyType="done"
               onSubmitEditing={handleSave}
@@ -118,6 +119,8 @@ export default function AddAbn() {
               style={styles.primaryButton}
               onPress={() => router.back()}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
             >
               <AppText style={styles.primaryButtonText}>Done</AppText>
             </TouchableOpacity>
@@ -127,6 +130,9 @@ export default function AddAbn() {
               onPress={handleSave}
               disabled={!canSave || loading}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Save ABN"
+              accessibilityState={{ disabled: !canSave || loading }}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
@@ -176,15 +182,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
     marginBottom: 16,
   },
   inputError: { borderColor: Colors.red },

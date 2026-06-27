@@ -258,7 +258,12 @@ export default function AdminProjectDetail() {
           {error ? (
             <View style={styles.centerBox}>
               <AppText style={styles.errorText}>{error}</AppText>
-              <TouchableOpacity onPress={() => fetchDetail()} style={styles.retryBtn}>
+              <TouchableOpacity
+                onPress={() => fetchDetail()}
+                style={styles.retryBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Retry loading project"
+              >
                 <AppText style={styles.retryBtnText}>Retry</AppText>
               </TouchableOpacity>
             </View>
@@ -305,6 +310,11 @@ export default function AdminProjectDetail() {
               setActiveTab(t);
               scrollRef.current?.scrollTo({ y: 0, animated: false });
             }}
+            accessibilityRole="tab"
+            accessibilityLabel={
+              t === "calendar" ? "Calendar" : t === "invoices" ? "All Invoices" : "Project Info"
+            }
+            accessibilityState={{ selected: activeTab === t }}
           >
             <Ionicons
               name={
@@ -415,6 +425,8 @@ function MembersTab({
                 style={styles.removeBtn}
                 onPress={() => onRemove(p)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${p.name ?? p.email} from project`}
               >
                 <Ionicons name="remove-circle" size={26} color={Colors.red} />
               </TouchableOpacity>
@@ -428,6 +440,8 @@ function MembersTab({
           style={styles.deleteProjectBtn}
           onPress={onDeleteProject}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Archive Project"
         >
           <Ionicons name="trash-outline" size={18} color={Colors.white} />
           <AppText style={styles.deleteProjectBtnText}>Archive Project</AppText>

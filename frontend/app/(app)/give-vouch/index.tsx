@@ -228,7 +228,12 @@ export default function GiveAVouchScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>GIVE A VOUCH</AppText>
@@ -267,6 +272,8 @@ export default function GiveAVouchScreen() {
                 onPress={() =>
                   router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
                 }
+                accessibilityRole="button"
+                accessibilityLabel={`Vouch request from ${r.fromCompany} · ${r.fromName}`}
               >
                 <Avatar name={r.fromName} index={i} />
                 <View style={{ flex: 1, gap: 2 }}>
@@ -287,6 +294,9 @@ export default function GiveAVouchScreen() {
                 onPress={() => onIgnore(r._id)}
                 disabled={ignoring === r._id}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Ignore vouch request from ${r.fromCompany}`}
+                accessibilityState={{ disabled: ignoring === r._id }}
               >
                 <AppText style={styles.ignoreText}>
                   {ignoring === r._id ? "Ignoring…" : "Ignore"}
@@ -310,7 +320,12 @@ export default function GiveAVouchScreen() {
           <>
             <View style={styles.labelRow}>
               <AppText style={styles.abnLabel}>ABN</AppText>
-              <TouchableOpacity onPress={() => setActiveTab("name")} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => setActiveTab("name")}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Search by name instead"
+              >
                 <AppText style={styles.switchLink}>Search by name →</AppText>
               </TouchableOpacity>
             </View>
@@ -331,6 +346,9 @@ export default function GiveAVouchScreen() {
               onPress={onLookup}
               disabled={checking}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Look up ABN"
+              accessibilityState={{ disabled: checking }}
             >
               {checking ? (
                 <ActivityIndicator color={Colors.white} size="small" />
@@ -352,7 +370,12 @@ export default function GiveAVouchScreen() {
           <>
             <View style={styles.labelRow}>
               <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
-              <TouchableOpacity onPress={() => setActiveTab("abn")} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => setActiveTab("abn")}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Enter ABN instead"
+              >
                 <AppText style={styles.switchLink}>← Enter ABN instead</AppText>
               </TouchableOpacity>
             </View>
@@ -375,6 +398,9 @@ export default function GiveAVouchScreen() {
                 onPress={onNameSearch}
                 activeOpacity={0.85}
                 disabled={nameSearching}
+                accessibilityRole="button"
+                accessibilityLabel="Search businesses by name"
+                accessibilityState={{ disabled: nameSearching }}
               >
                 {nameSearching ? (
                   <ActivityIndicator size="small" color={Colors.white} />
@@ -397,6 +423,8 @@ export default function GiveAVouchScreen() {
                     ]}
                     activeOpacity={0.7}
                     onPress={() => proceedWithAbn(item.abn)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${item.entityName}, ABN ${formatAbn(item.abn)}`}
                   >
                     <View style={{ flex: 1, gap: 2 }}>
                       <AppText style={styles.resultName} numberOfLines={1}>

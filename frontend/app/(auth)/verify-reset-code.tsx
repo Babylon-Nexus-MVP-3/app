@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +14,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 
 export default function VerifyResetCode() {
   const { email } = useLocalSearchParams<{ email: string }>();
@@ -103,7 +103,13 @@ export default function VerifyResetCode() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={14}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
@@ -114,12 +120,11 @@ export default function VerifyResetCode() {
             {"."}
           </AppText>
 
-          <TextInput
+          <AppInput
             style={styles.codeInput}
             value={code}
             onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor={Colors.grey300}
             keyboardType="number-pad"
             maxLength={6}
             autoFocus
@@ -133,6 +138,9 @@ export default function VerifyResetCode() {
             onPress={handleVerify}
             disabled={code.length < 6 || loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Verify code"
+            accessibilityState={{ disabled: code.length < 6 || loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -146,6 +154,11 @@ export default function VerifyResetCode() {
             disabled={resending || cooldown > 0}
             style={styles.resendBtn}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={
+              cooldown > 0 ? `Resend code, available in ${cooldown} seconds` : "Resend code"
+            }
+            accessibilityState={{ disabled: resending || cooldown > 0 }}
           >
             <AppText style={styles.resendText}>
               {resending
@@ -195,16 +208,11 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     height: 72,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
     paddingHorizontal: 24,
     fontSize: 36,
     fontFamily: Fonts.extraBold,
     letterSpacing: 10,
     marginBottom: 24,
-    backgroundColor: Colors.white,
-    color: Colors.black,
     textAlign: "center",
   },
   resendMsg: {

@@ -188,7 +188,12 @@ export default function MeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.scroll}>
         {/* VouchPay credential card — tap to expand */}
-        <TouchableOpacity activeOpacity={0.9} onPress={openCardModal}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={openCardModal}
+          accessibilityRole="button"
+          accessibilityLabel="View your VouchPay credential card"
+        >
           <View style={styles.vpCard}>
             <View style={styles.vpCardTop}>
               <AppText style={styles.vpWordmark}>VOUCHPAY</AppText>
@@ -312,6 +317,9 @@ export default function MeScreen() {
                 onPress={handleShare}
                 disabled={sharing}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={sharing ? "Preparing to share" : "Share my VouchPay card"}
+                accessibilityState={{ disabled: sharing }}
               >
                 <Ionicons name="share-outline" size={20} color={Colors.vouchGreen} />
                 <AppText style={styles.shareBtnText}>
@@ -319,7 +327,12 @@ export default function MeScreen() {
                 </AppText>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={closeCardModal} style={styles.closeHint}>
+              <TouchableOpacity
+                onPress={closeCardModal}
+                style={styles.closeHint}
+                accessibilityRole="button"
+                accessibilityLabel="Close card"
+              >
                 <AppText style={styles.closeHintText}>Tap outside to close</AppText>
               </TouchableOpacity>
             </Animated.View>
@@ -334,6 +347,8 @@ export default function MeScreen() {
             style={styles.credRow}
             onPress={() => router.push("/(app)/email-status" as any)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Email, ${user?.email ?? "—"}, verified`}
           >
             <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
               <Ionicons name="mail-outline" size={18} color={Colors.vouchGreen} />
@@ -357,6 +372,8 @@ export default function MeScreen() {
               )
             }
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Mobile, ${displayMobile ?? "Not added"}, ${user?.mobileVerified ? "verified" : displayMobile ? "tap to verify" : "tap to add"}`}
           >
             <View
               style={[
@@ -401,6 +418,8 @@ export default function MeScreen() {
               style={styles.credRow}
               onPress={() => router.push("/(app)/add-abn")}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="ABN, not added, tap to add"
             >
               <View style={[styles.credIcon, { backgroundColor: Colors.amberBg }]}>
                 <Ionicons name="business-outline" size={18} color={Colors.amber} />
@@ -422,6 +441,8 @@ export default function MeScreen() {
             style={styles.credRow}
             onPress={() => router.push("/(app)/change-password" as any)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Change Password"
           >
             <View style={[styles.credIcon, { backgroundColor: Colors.offWhite }]}>
               <Ionicons name="lock-closed-outline" size={18} color={Colors.grey500} />
@@ -434,7 +455,13 @@ export default function MeScreen() {
         </View>
 
         {/* Actions */}
-        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.signOutBtn}
+          onPress={handleSignOut}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Sign Out"
+        >
           <AppText style={styles.signOutText}>Sign Out</AppText>
         </TouchableOpacity>
 
@@ -442,6 +469,8 @@ export default function MeScreen() {
           style={styles.deleteBtn}
           onPress={handleDeleteAccount}
           activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Delete Account"
         >
           <Ionicons name="trash-outline" size={15} color={Colors.red} />
           <AppText style={styles.deleteText}>Delete Account</AppText>
@@ -451,6 +480,8 @@ export default function MeScreen() {
           onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
           activeOpacity={0.7}
           style={styles.feedbackRow}
+          accessibilityRole="button"
+          accessibilityLabel="Email us at support@vouchpay.app"
         >
           <AppText style={styles.feedbackText}>Have feedback or suggestions? </AppText>
           <AppText style={styles.feedbackLink}>Email us</AppText>

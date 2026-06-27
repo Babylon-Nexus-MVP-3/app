@@ -3,7 +3,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -97,7 +97,7 @@ export default function VouchesScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchWithAuth])
+    }, [fetchWithAuth, tabParam])
   );
 
   return (
@@ -112,6 +112,9 @@ export default function VouchesScreen() {
           style={[styles.segment, tab === "given" && styles.segmentActive]}
           onPress={() => setTab("given")}
           activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityLabel="Given vouches"
+          accessibilityState={{ selected: tab === "given" }}
         >
           <AppText style={[styles.segmentText, tab === "given" && styles.segmentTextActive]}>
             Given
@@ -121,6 +124,9 @@ export default function VouchesScreen() {
           style={[styles.segment, tab === "received" && styles.segmentActive]}
           onPress={() => setTab("received")}
           activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityLabel="Received vouches"
+          accessibilityState={{ selected: tab === "received" }}
         >
           <AppText style={[styles.segmentText, tab === "received" && styles.segmentTextActive]}>
             Received
@@ -140,14 +146,29 @@ export default function VouchesScreen() {
             <AppText style={styles.emptySubtitle}>
               Vouching for a business builds trust across the industry.
             </AppText>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push("/(app)/give-vouch")}
+              accessibilityRole="button"
+              accessibilityLabel="Give a Vouch"
+            >
+              <AppText style={styles.emptyBtnText}>Give a Vouch</AppText>
+            </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <AppText style={styles.countLabel}>
-              {given.length} {given.length === 1 ? "business" : "businesses"} vouched
-            </AppText>
-            {given.map((v) => (
-              <View key={v._id} style={styles.card}>
+          <FlatList
+            data={given}
+            keyExtractor={(v) => v._id}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <AppText style={styles.countLabel}>
+                {given.length} {given.length === 1 ? "business" : "businesses"} vouched
+              </AppText>
+            }
+            renderItem={({ item: v }) => (
+              <View style={styles.card}>
                 <View style={styles.cardTop}>
                   <View style={styles.iconBadge}>
                     <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
@@ -160,8 +181,8 @@ export default function VouchesScreen() {
                 <AttributeChips attributes={v.attributes} />
                 {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
               </View>
-            ))}
-          </ScrollView>
+            )}
+          />
         )
       ) : received.length === 0 ? (
         <View style={styles.centered}>
@@ -170,19 +191,33 @@ export default function VouchesScreen() {
           <AppText style={styles.emptySubtitle}>
             Complete your Vouch profile and send requests to build your reputation.
           </AppText>
+          <TouchableOpacity
+            style={styles.emptyBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(app)/get-vouched")}
+            accessibilityRole="button"
+            accessibilityLabel="Build your profile"
+          >
+            <AppText style={styles.emptyBtnText}>Build your profile</AppText>
+          </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.countLabel}>
-            {received.length} {received.length === 1 ? "vouch" : "vouches"} received
-          </AppText>
-          {received.map((v) => {
+        <FlatList
+          data={received}
+          keyExtractor={(v) => v._id}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          extraData={respondedCount}
+          ListHeaderComponent={
+            <AppText style={styles.countLabel}>
+              {received.length} {received.length === 1 ? "vouch" : "vouches"} received
+            </AppText>
+          }
+          renderItem={({ item: v }) => {
             const canVouchBack = respondedCount >= 2;
             const displayName = v.fromBusinessName || v.fromName || "this business";
-
             function onVouchBack() {
-              if (!v.fromAbn) return;
-              if (v.alreadyVouchedBack) return;
+              if (!v.fromAbn || v.alreadyVouchedBack) return;
               if (!canVouchBack) {
                 Alert.alert(
                   "Not yet unlocked",
@@ -196,9 +231,8 @@ export default function VouchesScreen() {
                 params: { abn: v.fromAbn, businessName: displayName },
               });
             }
-
             return (
-              <View key={v._id} style={styles.card}>
+              <View style={styles.card}>
                 <View style={styles.cardTop}>
                   <View style={styles.iconBadge}>
                     <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
@@ -225,6 +259,13 @@ export default function VouchesScreen() {
                         style={[styles.vouchBackBtn, !canVouchBack && styles.vouchBackBtnDisabled]}
                         onPress={onVouchBack}
                         activeOpacity={0.75}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          canVouchBack
+                            ? `Vouch back for ${displayName}`
+                            : "Vouch back requires 2 vouches received"
+                        }
+                        accessibilityState={{ disabled: !canVouchBack }}
                       >
                         <AppText
                           style={[
@@ -242,8 +283,8 @@ export default function VouchesScreen() {
                 {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
               </View>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       )}
     </SafeAreaView>
   );
@@ -416,6 +457,19 @@ const styles = StyleSheet.create({
   },
 
   // Empty state
+  emptyBtn: {
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 28,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+  },
+  emptyBtnText: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+  },
   emptyTitle: {
     fontSize: 17,
     fontFamily: Fonts.semiBold,

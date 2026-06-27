@@ -19,6 +19,7 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { authStyles } from "@/constants/authStyles";
 import { AppText } from "@/components/AppText";
+import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
 
 export default function ChangePassword() {
@@ -26,9 +27,6 @@ export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -90,6 +88,8 @@ export default function ChangePassword() {
             onPress={() => router.replace("/(app)/me" as any)}
             style={authStyles.primaryButton}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Done"
           >
             <AppText style={authStyles.primaryButtonText}>Done</AppText>
           </TouchableOpacity>
@@ -125,77 +125,38 @@ export default function ChangePassword() {
           </AppText>
 
           <AppText style={authStyles.fieldLabel}>CURRENT PASSWORD</AppText>
-          <View style={authStyles.inputWrapper}>
-            <TextInput
-              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showCurrent}
-              returnKeyType="next"
-              onSubmitEditing={() => newPassRef.current?.focus()}
-            />
-            <TouchableOpacity
-              style={authStyles.eyeButton}
-              onPress={() => setShowCurrent((v) => !v)}
-            >
-              <Ionicons
-                name={showCurrent ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            returnKeyType="next"
+            onSubmitEditing={() => newPassRef.current?.focus()}
+            containerStyle={styles.fieldSpacing}
+            accessibilityLabel="current password"
+          />
 
           <AppText style={authStyles.fieldLabel}>NEW PASSWORD</AppText>
-          <View style={authStyles.inputWrapper}>
-            <TextInput
-              ref={newPassRef}
-              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showNew}
-              returnKeyType="next"
-              onSubmitEditing={() => confirmPassRef.current?.focus()}
-            />
-            <TouchableOpacity style={authStyles.eyeButton} onPress={() => setShowNew((v) => !v)}>
-              <Ionicons
-                name={showNew ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            ref={newPassRef}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            returnKeyType="next"
+            onSubmitEditing={() => confirmPassRef.current?.focus()}
+            containerStyle={styles.fieldSpacing}
+            accessibilityLabel="new password"
+          />
 
           <PasswordStrengthHints password={newPassword} />
 
           <AppText style={authStyles.fieldLabel}>CONFIRM NEW PASSWORD</AppText>
-          <View style={authStyles.inputWrapper}>
-            <TextInput
-              ref={confirmPassRef}
-              style={[authStyles.textInput, authStyles.inputNoMargin, authStyles.inputPadRight]}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="••••••••••••"
-              placeholderTextColor={Colors.grey300}
-              secureTextEntry={!showConfirm}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-            <TouchableOpacity
-              style={authStyles.eyeButton}
-              onPress={() => setShowConfirm((v) => !v)}
-            >
-              <Ionicons
-                name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={Colors.grey500}
-              />
-            </TouchableOpacity>
-          </View>
+          <PasswordInput
+            ref={confirmPassRef}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            containerStyle={styles.fieldSpacing}
+            accessibilityLabel="confirm password"
+          />
 
           {error && <AppText style={authStyles.errorText}>{error}</AppText>}
 
@@ -204,6 +165,9 @@ export default function ChangePassword() {
             onPress={handleSubmit}
             disabled={loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Update Password"
+            accessibilityState={{ disabled: loading }}
           >
             {loading ? (
               <ActivityIndicator color={Colors.white} />
@@ -218,6 +182,9 @@ export default function ChangePassword() {
 }
 
 const styles = StyleSheet.create({
+  fieldSpacing: {
+    marginBottom: 20,
+  },
   successScreen: {
     flex: 1,
     paddingHorizontal: 24,

@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,6 +14,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -74,6 +74,8 @@ export default function JoinProject() {
           <TouchableOpacity
             style={styles.doneBtn}
             onPress={() => router.replace("/(app)/(tabs)/projects")}
+            accessibilityRole="button"
+            accessibilityLabel="View my projects"
           >
             <AppText style={styles.doneBtnText}>View my projects</AppText>
           </TouchableOpacity>
@@ -85,7 +87,12 @@ export default function JoinProject() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
         <AppText style={styles.headerTitle}>JOIN A PROJECT</AppText>
@@ -106,12 +113,11 @@ export default function JoinProject() {
             Check the email you received from VouchPay for your 6-digit code.
           </AppText>
 
-          <TextInput
+          <AppInput
             style={styles.codeInput}
             value={joinCode}
             onChangeText={(t) => setJoinCode(t.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor={Colors.grey300}
             keyboardType="number-pad"
             maxLength={6}
             autoFocus
@@ -130,6 +136,9 @@ export default function JoinProject() {
                 key={label}
                 style={[styles.chip, joinHasLicence === val && styles.chipActive]}
                 onPress={() => setJoinHasLicence(val)}
+                accessibilityRole="radio"
+                accessibilityLabel={`Licence: ${label}`}
+                accessibilityState={{ checked: joinHasLicence === val }}
               >
                 <AppText style={[styles.chipText, joinHasLicence === val && styles.chipTextActive]}>
                   {label}
@@ -151,6 +160,9 @@ export default function JoinProject() {
                 key={label}
                 style={[styles.chip, joinHasInsurance === val && styles.chipActive]}
                 onPress={() => setJoinHasInsurance(val)}
+                accessibilityRole="radio"
+                accessibilityLabel={`Insurance: ${label}`}
+                accessibilityState={{ checked: joinHasInsurance === val }}
               >
                 <AppText
                   style={[styles.chipText, joinHasInsurance === val && styles.chipTextActive]}
@@ -171,6 +183,9 @@ export default function JoinProject() {
             onPress={handleJoin}
             disabled={joinCode.length < 6 || joinLoading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Join Project"
+            accessibilityState={{ disabled: joinCode.length < 6 || joinLoading }}
           >
             {joinLoading ? (
               <ActivityIndicator color={Colors.white} />
@@ -219,15 +234,11 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     height: 80,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    borderRadius: 16,
     paddingHorizontal: 24,
     fontSize: 40,
     fontFamily: Fonts.extraBold,
     letterSpacing: 12,
     marginBottom: 32,
-    backgroundColor: Colors.white,
     color: Colors.vouchGreen,
     textAlign: "center",
   },

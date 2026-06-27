@@ -111,7 +111,12 @@ export default function AdminArchives() {
         ) : error ? (
           <View style={styles.centerBox}>
             <AppText style={styles.errorText}>{error}</AppText>
-            <TouchableOpacity onPress={() => fetchProjects()} style={styles.retryBtn}>
+            <TouchableOpacity
+              onPress={() => fetchProjects()}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading archived projects"
+            >
               <AppText style={styles.retryBtnText}>Retry</AppText>
             </TouchableOpacity>
           </View>
@@ -129,6 +134,8 @@ export default function AdminArchives() {
                   params: { id: project._id },
                 })
               }
+              accessibilityRole="button"
+              accessibilityLabel={`View archived project ${project.name}`}
             >
               <View style={styles.cardTop}>
                 <View style={styles.cardTitleBlock}>

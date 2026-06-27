@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -17,6 +16,7 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
 
@@ -137,12 +137,11 @@ function Field({
   return (
     <View style={styles.fieldWrap}>
       <AppText style={styles.fieldLabel}>{label}</AppText>
-      <TextInput
+      <AppInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? ""}
-        placeholderTextColor={Colors.grey300}
         keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
       />
@@ -310,12 +309,11 @@ export default function Step6() {
 
             <View style={styles.fieldWrap}>
               <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
-              <TextInput
+              <AppInput
                 style={[styles.input, expiryInvalid && styles.inputError]}
                 value={form.idExpiry}
                 onChangeText={(v) => update("idExpiry", formatExpiry(v))}
                 placeholder="DD/MM/YYYY"
-                placeholderTextColor={Colors.grey300}
                 keyboardType="numeric"
                 maxLength={10}
                 autoCorrect={false}
@@ -382,17 +380,7 @@ const styles = StyleSheet.create({
   section: { gap: 16, marginBottom: 28 },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-    backgroundColor: Colors.white,
-  },
+  input: {},
   inputError: { borderColor: Colors.red },
   inputSelect: {
     flexDirection: "row" as const,
