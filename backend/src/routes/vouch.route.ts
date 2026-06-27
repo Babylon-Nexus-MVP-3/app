@@ -22,6 +22,24 @@ vouchRouter.post(
       const userId = req.user!.sub;
       const body = req.body;
 
+      const references: Array<{
+        name: string;
+        company: string;
+        mobile: string;
+        email?: string;
+        relationship: string;
+        project: string;
+      }> = req.body.references ?? [];
+
+      // Block vouch requests for users who haven't verified their mobile number
+      if (references.length > 0) {
+        const verifyUser = await UserModel.findById(userId).select("mobileVerified").lean();
+        if (!verifyUser?.mobileVerified) {
+          res.status(403).json({ error: "You must verify your mobile number before requesting vouches." });
+          return;
+        }
+      }
+
       // Source identity fields from DB — not the request body — to prevent impersonation
       const dbUser = await UserModel.findById(userId).select("name abn businessName").lean();
       const fromName = dbUser?.name ?? "";
@@ -53,15 +71,6 @@ vouchRouter.post(
         { $set: setFields },
         { upsert: true, returnDocument: "after", runValidators: false }
       );
-
-      const references: Array<{
-        name: string;
-        company: string;
-        mobile: string;
-        email?: string;
-        relationship: string;
-        project: string;
-      }> = body.references ?? [];
 
       // Pre-check: block if any reference has already given a vouch to this user.
       // The frontend always resends the full cumulative references array (no flag
@@ -186,33 +195,29 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const [profile, respondedCount] = await Promise.all([
+      const [profile, respondedCount, dbUser] = await Promise.all([
         VouchProfileModel.findOne({ userId }),
         VouchRequestModel.countDocuments({ fromUserId: userId, status: "responded" }),
+        UserModel.findById(userId).select("name abn businessTrade").lean(),
       ]);
 
-      if (!profile) {
-        res.status(404).json({ error: "No profile found" });
-        return;
-      }
-
-      // Any 2 responded requests count — order doesn't matter.
-      // If request 1 is still pending but requests 2 and 3 both responded,
-      // those 2 responses should still credit steps 3 and 4.
-      const step1Done = !!(profile.name && profile.abn && profile.trade);
-      const step2Done = !!(profile.currentProjectName && profile.suburb && profile.state);
+      // Step 1 is complete if the user has name/ABN/trade — sourced from the
+      // User record (set at sign-up) so it counts even before the wizard is opened.
+      const step1Done = !!(dbUser?.name && dbUser?.abn && dbUser?.businessTrade);
+      const step2Done = !!(profile?.currentProjectName && profile?.suburb && profile?.state);
       const step3Done = respondedCount >= 1;
       const step4Done = respondedCount >= 2;
-      const step5Done = !!(profile.pastProjectName && profile.pastSuburb && profile.pastState);
-      const step6Done = !!profile.idNumber;
+      const step5Done = !!(profile?.pastProjectName && profile?.pastSuburb && profile?.pastState);
+      const step6Done = !!(profile?.idNumber);
 
       const STEP_PCT = [20, 15, 20, 20, 15, 10];
       const stepsDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
       const profileStrength = stepsDone.reduce((acc, done, i) => acc + (done ? STEP_PCT[i] : 0), 0);
 
       res.status(200).json({
-        ...profile.toObject(),
+        ...(profile ? profile.toObject() : {}),
         profileStrength,
+        stepsDone,
       });
     } catch (err) {
       next(err);

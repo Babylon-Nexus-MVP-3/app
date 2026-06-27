@@ -84,7 +84,6 @@ export default function Projects() {
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [canCreateProject, setCanCreateProject] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -98,12 +97,10 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, profileRes, sentRes, vouchNotifRes, projectNotifRes] = await Promise.all([
+      const [projectsRes, profileRes, sentRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/projects`),
         fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
-        fetchWithAuth(`${API_BASE_URL}/notifications`),
       ]);
       const data = await projectsRes.json();
       if (!projectsRes.ok) {
@@ -127,16 +124,6 @@ export default function Projects() {
         (r: { status: string }) => r.status === "responded"
       ).length;
       setCanCreateProject(isProfileComplete(profileData, respondedCount));
-
-      const vouchNotifData = vouchNotifRes.ok ? await vouchNotifRes.json() : null;
-      const projectNotifData = projectNotifRes.ok ? await projectNotifRes.json() : null;
-      const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
-        (n: { read: boolean }) => !n.read
-      ).length;
-      const projUnread = (projectNotifData?.notifications ?? []).filter(
-        (n: { read: boolean }) => !n.read
-      ).length;
-      setUnreadCount(vouchUnread + projUnread);
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
@@ -206,25 +193,6 @@ export default function Projects() {
           {/* Header row */}
           <View style={[appStyles.headerInner, styles.topRow]}>
             <AppText style={appStyles.headerTitle}>My Projects</AppText>
-            <TouchableOpacity
-              onPress={() => router.push("/(app)/notifications" as any)}
-              style={appStyles.headerIconBtn}
-              hitSlop={HEADER_HIT_SLOP}
-              accessibilityLabel={
-                unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"
-              }
-            >
-              <View>
-                <Ionicons name="notifications-outline" size={24} color={Colors.white} />
-                {unreadCount > 0 && (
-                  <View style={styles.notifBadge}>
-                    <AppText style={styles.notifBadgeText}>
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </AppText>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
           </View>
 
           {/* Action buttons */}
@@ -730,22 +698,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.bold,
     color: Colors.vouchGreen,
-  },
-  notifBadge: {
-    position: "absolute",
-    top: -4,
-    right: -6,
-    backgroundColor: Colors.red,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  notifBadgeText: {
-    fontSize: 9,
-    fontFamily: Fonts.bold,
-    color: Colors.white,
   },
 });

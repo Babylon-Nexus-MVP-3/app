@@ -28,7 +28,7 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.body}>
-          <Image source={require("../assets/appIcon.png")} style={styles.logo} />
+          <Image source={require("../assets/appIconWithName.png")} style={styles.logo} />
 
           <AppText style={styles.headlineBlack} maxFontSizeMultiplier={1}>
             {"Stop losing money on bad jobs. "}
@@ -85,9 +85,9 @@ const styles = StyleSheet.create({
     gap: 32,
   },
   logo: {
-    width: 110,
-    height: 110,
-    borderRadius: 22,
+    width: 140,
+    height: 140,
+    borderRadius: 20,
     alignSelf: "flex-start",
   },
   headlineBlack: {
