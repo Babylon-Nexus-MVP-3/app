@@ -26,6 +26,7 @@ import {
   verifyEmailChange,
 } from "../service/auth.service";
 
+import { checkAbn } from "../utils/authHelper";
 import validator from "validator";
 
 function isNonEmptyString(value: unknown): value is string {
@@ -332,6 +333,7 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
   const userId = req.user!.sub;
   const { abn, businessName } = req.body;
   try {
+    if (abn) await checkAbn(abn);
     await updateProfile(userId, { abn, businessName });
     // Keep VouchProfile in sync if one exists
     if (abn) {

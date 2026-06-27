@@ -117,6 +117,16 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
 }
 
 /*
+  Checks that an ABN isn't already registered to another account.
+*/
+export async function checkAbn(abn: string): Promise<void> {
+  const existing = await UserModel.findOne({ abn });
+  if (existing) {
+    throw new Error("This ABN is already registered to another account.");
+  }
+}
+
+/*
   Hashes a plaintext password using bcrypt.
   Uses 14 salt rounds for a strong security/performance balance.
 */

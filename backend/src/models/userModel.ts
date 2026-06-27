@@ -60,7 +60,7 @@ const userSchema = new Schema<User>(
     password: { type: String, required: false },
     mobile: { type: String },
     mobileVerified: { type: Boolean, default: false },
-    abn: { type: String },
+    abn: { type: String, unique: true, sparse: true },
     businessName: { type: String },
     businessTrade: { type: String },
     businessState: { type: String },

@@ -9,6 +9,7 @@ import { EventModel } from "../models/eventModel";
 import {
   checkName,
   checkEmail,
+  checkAbn,
   checkPassword,
   validateEmailFormat,
   generateCode,
@@ -79,6 +80,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
   try {
     checkName(name);
     await checkEmail(normalisedEmail);
+    if (input.abn) await checkAbn(input.abn);
     checkPassword(input.password);
   } catch (err) {
     throw new AuthError(
