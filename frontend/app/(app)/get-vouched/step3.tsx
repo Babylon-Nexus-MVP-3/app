@@ -184,6 +184,17 @@ export default function Step3() {
   const [ref, setRef] = useState<Reference>(isFresh ? emptyRef() : (references[0] ?? emptyRef()));
   const [emailTouched, setEmailTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sentRequests, setSentRequests] = useState<{ toMobile: string; toEmail?: string }[]>([]);
+
+  useEffect(() => {
+    if (!isFresh) return;
+    fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.requests) setSentRequests(data.requests);
+      })
+      .catch(() => {});
+  }, [isFresh, fetchWithAuth]);
 
   function update(key: keyof Reference, v: string) {
     setRef((r) => ({ ...r, [key]: v }));
@@ -194,6 +205,24 @@ export default function Step3() {
 
   async function onSubmit() {
     setSubmitting(true);
+    if (isFresh) {
+      const mobile = ref.mobile.trim();
+      const email = ref.email.trim().toLowerCase();
+      const alreadySent = sentRequests.some(
+        (r) =>
+          (mobile && r.toMobile === mobile) ||
+          (email && r.toEmail && r.toEmail.toLowerCase() === email)
+      );
+      if (alreadySent) {
+        if (Platform.OS === "web") {
+          window.alert("You've already sent a vouch request to this person.");
+        } else {
+          Alert.alert("Already requested", "You've already sent a vouch request to this person.");
+        }
+        setSubmitting(false);
+        return;
+      }
+    }
     const updatedRefs = isFresh ? [...references, ref] : [ref, ...references.slice(1)];
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
@@ -222,10 +251,12 @@ export default function Step3() {
       });
       if (res.status === 400) {
         const data = await res.json().catch(() => ({}));
-        Alert.alert(
-          "Cannot send request",
-          data.error ?? "This person has already vouched for you."
-        );
+        const msg = data.error ?? "This person has already vouched for you.";
+        if (Platform.OS === "web") {
+          window.alert(msg);
+        } else {
+          Alert.alert("Cannot send request", msg);
+        }
         setSubmitting(false);
         return;
       }
