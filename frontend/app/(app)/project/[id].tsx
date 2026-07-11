@@ -64,6 +64,7 @@ export default function ProjectDetail() {
   const [invAmount, setInvAmount] = useState("");
   const [invSubmittingParty, setInvSubmittingParty] = useState("");
   const [invCategory, setInvCategory] = useState("");
+  const [partyPickerVisible, setPartyPickerVisible] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [invoiceSuccess, setInvoiceSuccess] = useState(false);
@@ -140,6 +141,7 @@ export default function ProjectDetail() {
     setInvCategory("");
     setInvoiceError(null);
     setInvoiceSuccess(false);
+    setPartyPickerVisible(false);
     setInvoiceVisible(true);
   }
 
@@ -556,14 +558,74 @@ export default function ProjectDetail() {
                     textAlignVertical="top"
                   />
 
-                  <AppText style={styles.raiseFieldLabel}>Submitting Party</AppText>
-                  <TextInput
-                    style={styles.raiseInput}
-                    placeholder="e.g. ABC Electrical"
-                    placeholderTextColor={Colors.grey300}
-                    value={invSubmittingParty}
-                    onChangeText={setInvSubmittingParty}
-                  />
+                  <AppText style={styles.raiseFieldLabel}>
+                    Who are you raising an invoice to?
+                  </AppText>
+                  <TouchableOpacity
+                    style={styles.raiseDateWrap}
+                    onPress={() => setPartyPickerVisible(true)}
+                    accessibilityRole="button"
+                  >
+                    <AppText
+                      style={[
+                        { flex: 1, fontSize: 16 },
+                        invSubmittingParty
+                          ? { color: Colors.black }
+                          : { color: Colors.grey300 },
+                      ]}
+                    >
+                      {invSubmittingParty || "Select a person"}
+                    </AppText>
+                    <Ionicons name="chevron-down" size={18} color={Colors.grey500} />
+                  </TouchableOpacity>
+
+                  <Modal
+                    visible={partyPickerVisible}
+                    animationType="fade"
+                    transparent
+                    onRequestClose={() => setPartyPickerVisible(false)}
+                  >
+                    <TouchableOpacity
+                      style={styles.kebabOverlay}
+                      activeOpacity={1}
+                      onPress={() => setPartyPickerVisible(false)}
+                    >
+                      <View style={styles.partyPickerBackdrop}>
+                        <View style={styles.partyPickerCard}>
+                          <AppText style={styles.partyPickerTitle}>Select a person</AppText>
+                          <ScrollView
+                            style={styles.partyPickerList}
+                            showsVerticalScrollIndicator={false}
+                          >
+                            {participants
+                              .filter((p) => p.status === "Accepted" && p.userId !== userId)
+                              .map((p) => (
+                                <TouchableOpacity
+                                  key={p.participantId}
+                                  style={styles.partyPickerItem}
+                                  onPress={() => {
+                                    setInvSubmittingParty(p.name ?? p.email);
+                                    setPartyPickerVisible(false);
+                                  }}
+                                >
+                                  <AppText style={styles.partyPickerItemText}>
+                                    {p.name ?? p.email}
+                                  </AppText>
+                                  <AppText style={styles.partyPickerItemRole}>
+                                    {displayRole(p.role)}
+                                  </AppText>
+                                </TouchableOpacity>
+                              ))}
+                            {participants.filter(
+                              (p) => p.status === "Accepted" && p.userId !== userId
+                            ).length === 0 && (
+                              <AppText style={styles.emptyText}>No other members yet.</AppText>
+                            )}
+                          </ScrollView>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </Modal>
 
                   <AppText style={styles.raiseFieldLabel}>Category</AppText>
                   <TextInput

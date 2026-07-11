@@ -70,6 +70,7 @@ export const INVOICE_UPLOADER_ROLES = ["Subbie", "Builder", "Consultant", "PM"];
 
 export type Participant = {
   participantId: string;
+  userId: string | null;
   name: string | null;
   email: string;
   role: string;

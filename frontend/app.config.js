@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "VouchPay",
     slug: "babylonnexus",
-    version: "2.3.1",
+    version: "2.4.0",
     orientation: "portrait",
     icon: "./assets/appIcon.png",
     scheme: "frontend",
@@ -11,14 +11,14 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.babylonnexus",
-      buildNumber: "8",
+      buildNumber: "9",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
       package: "com.babylonnexus",
-      versionCode: 8,
+      versionCode: 9,
       softwareKeyboardLayoutMode: "pan",
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       adaptiveIcon: {

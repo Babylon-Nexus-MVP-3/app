@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
@@ -28,6 +28,7 @@ export function MembersModal({
   projectInfo: ProjectInfo;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const accepted = participants.filter((p) => p.status === "Accepted");
   const acceptedEmails = new Set(accepted.map((p) => p.email));
   const pending = participants.filter(
@@ -37,23 +38,26 @@ export function MembersModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.membersContainer}>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: Colors.vouchGreen }}>
-          <View style={styles.membersHeader}>
-            <View style={styles.headerTopRow}>
-              <TouchableOpacity
-                onPress={onClose}
-                style={styles.backBtn}
-                hitSlop={HEADER_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Ionicons name="arrow-back" size={20} color={Colors.white} />
-                <AppText style={styles.backLabel}>Back</AppText>
-              </TouchableOpacity>
-            </View>
-            <AppText style={styles.membersTitle}>Project Information</AppText>
+        <View
+          style={[
+            styles.membersHeader,
+            { backgroundColor: Colors.vouchGreen, paddingTop: insets.top + 8 },
+          ]}
+        >
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.backBtn}
+              hitSlop={HEADER_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Ionicons name="arrow-back" size={20} color={Colors.white} />
+              <AppText style={styles.backLabel}>Back</AppText>
+            </TouchableOpacity>
           </View>
-        </SafeAreaView>
+          <AppText style={styles.membersTitle}>Project Information</AppText>
+        </View>
 
         <ScrollView contentContainerStyle={styles.membersBody} showsVerticalScrollIndicator={false}>
           <AppText style={styles.sectionLabel}>PROJECT DETAILS</AppText>
