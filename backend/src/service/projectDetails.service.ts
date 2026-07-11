@@ -58,6 +58,7 @@ export interface ProjectInvoiceListItem {
 
 export interface ProjectParticipantListItem {
   participantId: string;
+  userId: string | null;
   name: string | null;
   email: string;
   role: string;
@@ -226,6 +227,7 @@ export async function getProjectDetails(
     invoices,
     participants: allParticipants.map((p) => ({
       participantId: p._id.toString(),
+      userId: p.userId ? p.userId.toString() : null,
       name: p.userId ? (participantUserMap[p.userId] ?? null) : null,
       email: p.email,
       role: p.role,
