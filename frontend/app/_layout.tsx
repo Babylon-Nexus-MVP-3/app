@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
@@ -24,20 +24,37 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
     DMSans_700Bold,
     DMSans_800ExtraBold,
   });
+  const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
+  const fontsReady = fontsLoaded || !!fontError || fontLoadTimedOut;
 
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontError) console.warn("Font loading failed, continuing without custom fonts", fontError);
+  }, [fontError]);
+
+  // Guards against a stalled font asset fetch (e.g. after an OTA update) leaving
+  // the app on a permanent blank screen with no error to react to.
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+    const timer = setTimeout(() => {
+      console.warn("Font loading timed out, continuing without custom fonts");
+      setFontLoadTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync();
+  }, [fontsReady]);
 
   useEffect(() => {
     Notifications.setBadgeCountAsync(0);
@@ -82,7 +99,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsReady) return null;
 
   return (
     <AuthProvider>
