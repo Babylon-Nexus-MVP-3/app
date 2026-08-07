@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
@@ -73,11 +73,15 @@ export default function ChangeEmail() {
         throw new Error(data.error ?? "Failed to send code. Please try again.");
       }
     } catch (err: unknown) {
-      if (!(err instanceof TypeError)) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
-        setLoading(false);
-        return;
-      }
+      setError(
+        err instanceof TypeError
+          ? NETWORK_ERROR_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong."
+      );
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }
@@ -114,7 +118,7 @@ export default function ChangeEmail() {
       router.replace("/(app)/me" as any);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
-        router.replace("/(app)/me" as any);
+        setError(NETWORK_ERROR_MESSAGE);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }

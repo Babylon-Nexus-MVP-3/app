@@ -125,8 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ refreshToken: storedRefreshToken }),
         });
 
+        // Only a genuine auth rejection should end the session. A 429 or a 5xx
+        // from a dead zone means "try again", not "your refresh token is bad".
         if (!res.ok) {
-          await logout();
+          if (res.status === 400 || res.status === 401 || res.status === 403) {
+            await logout();
+          }
           return null;
         }
 
@@ -140,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return data.accessToken;
       } catch {
-        await logout();
+        // Network failure — keep the session and let the caller retry.
         return null;
       } finally {
         refreshPromiseRef.current = null;

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { config } from "./config";
 import { ProjectModel } from "./models/projectModel";
@@ -101,10 +101,24 @@ export const otpVerifyLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Keyed by user, not IP — the wizard saves on every step and whole worksites
+// share one IP, so an IP-keyed limit locks out unrelated users mid-signup.
+// Must run after requireAuth so req.user is populated.
 export const vouchProfileLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 10,
+  max: process.env.NODE_ENV === "test" ? 1000 : 60,
   message: { error: "Too many profile submissions. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.user?.sub ?? ipKeyGenerator(req.ip ?? ""),
+});
+
+// ABR lookup/search are unauthenticated (the signup form needs them before an
+// account exists), so cap them per IP to stop bulk scraping through our key.
+export const abrLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 60,
+  message: { error: "Too many ABN lookups. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });

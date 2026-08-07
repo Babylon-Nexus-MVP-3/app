@@ -208,6 +208,10 @@ async function createRefreshToken(user: User): Promise<string> {
   return token;
 }
 
+// Per-account lockout. The per-IP login limiter alone is bypassable by rotating IPs.
+const MAX_LOGIN_ATTEMPTS = 10;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+
 export async function loginUser(input: LoginInput): Promise<LoginResult> {
   const email = validateEmailFormat(input.email);
   const password = input.password;
@@ -231,10 +235,37 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     throw new AuthError("User email is not verified", 400);
   }
 
+  if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+    const minutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+    throw new AuthError(
+      `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+      423
+    );
+  }
+
   const passwordMatches = await bcrypt.compare(password, user.password);
 
   if (!passwordMatches) {
+    const attempts = (user.loginAttempts ?? 0) + 1;
+    const locked = attempts >= MAX_LOGIN_ATTEMPTS;
+    await UserModel.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          loginAttempts: locked ? 0 : attempts,
+          accountLocked: locked,
+          ...(locked ? { lockUntil: new Date(Date.now() + LOGIN_LOCK_MS) } : {}),
+        },
+      }
+    );
     throw new AuthError("Invalid credentials", 400);
+  }
+
+  if (user.loginAttempts || user.accountLocked || user.lockUntil) {
+    await UserModel.updateOne(
+      { _id: user._id },
+      { $set: { loginAttempts: 0, accountLocked: false }, $unset: { lockUntil: 1 } }
+    );
   }
 
   const accessToken = createAccessToken(user);
@@ -774,8 +805,17 @@ export async function verifyMobileOtp(userId: string, mobile: string, code: stri
     if (!approved) throw new AuthError("Incorrect code. Please try again.", 400);
   }
 
+  const au04 = toAuMobile(e164);
+
+  // A number may only be attached to one account — otherwise two accounts both
+  // match the same pending vouch requests.
+  const existing = await UserModel.findOne({ mobile: au04, deletedAt: null }).select("_id").lean();
+  if (existing && existing._id.toString() !== userId) {
+    throw new AuthError("This mobile number is already linked to another account", 409);
+  }
+
   await UserModel.findByIdAndUpdate(userId, {
-    $set: { mobile: toAuMobile(e164), mobileVerified: true },
+    $set: { mobile: au04, mobileVerified: true },
   });
 }
 

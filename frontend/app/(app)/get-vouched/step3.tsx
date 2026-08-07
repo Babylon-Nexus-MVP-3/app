@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   ActivityIndicator,
   Animated,
   View,
@@ -21,7 +20,8 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
+import { showAlert, vouchRequestErrorMessage } from "@/lib/errors";
 
 const RELATIONSHIPS = [
   "Worked together",
@@ -214,11 +214,7 @@ export default function Step3() {
           (email && r.toEmail && r.toEmail.toLowerCase() === email)
       );
       if (alreadySent) {
-        if (Platform.OS === "web") {
-          window.alert("You've already sent a vouch request to this person.");
-        } else {
-          Alert.alert("Already requested", "You've already sent a vouch request to this person.");
-        }
+        showAlert("Already requested", "You've already sent a vouch request to this person.");
         setSubmitting(false);
         return;
       }
@@ -249,23 +245,16 @@ export default function Step3() {
           references: updatedRefs.filter((r) => r.name.trim()),
         }),
       });
-      if (res.status === 400) {
+      if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const msg = data.error ?? "This person has already vouched for you.";
-        if (Platform.OS === "web") {
-          window.alert(msg);
-        } else {
-          Alert.alert("Cannot send request", msg);
-        }
-        setSubmitting(false);
+        showAlert("Cannot send request", vouchRequestErrorMessage(res.status, data.error));
         return;
       }
-      if (res.ok) {
-        setReferences(updatedRefs);
-        await updateUser({ abn: step1.abn }).catch(() => {});
-      }
+      setReferences(updatedRefs);
+      await updateUser({ abn: step1.abn }).catch(() => {});
     } catch {
-      // Network error — continue
+      showAlert("Cannot send request", NETWORK_ERROR_MESSAGE);
+      return;
     } finally {
       setSubmitting(false);
     }
