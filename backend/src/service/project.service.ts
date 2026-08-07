@@ -228,6 +228,28 @@ export async function inviteParticipant(
     throw new ProjectError("You are not a participant on this project", 403);
   }
 
+  // Only Owner/Builder/PM may grant Owner/Builder/PM — otherwise a low-privilege
+  // participant could invite an accomplice into an approver role and self-approve
+  // their own invoices. Exception: a non-trinity requester may still invite the
+  // project's first-ever trinity member, so a project that started without one
+  // (e.g. a Subbie creating it to invite the real owner) isn't permanently stuck.
+  const TRINITY_ROLES: UserRole[] = [UserRole.Owner, UserRole.Builder, UserRole.PM];
+  const isRequesterTrinity = TRINITY_ROLES.includes(requester.role as UserRole);
+  const isGrantingTrinityRole = TRINITY_ROLES.includes(role);
+  if (!isRequesterTrinity && isGrantingTrinityRole) {
+    const hasTrinityMember = await ProjectParticipantModel.exists({
+      projectId,
+      status: "Accepted",
+      role: { $in: TRINITY_ROLES },
+    });
+    if (hasTrinityMember) {
+      throw new ProjectError(
+        "Only an Owner, Builder, or PM on this project can invite someone into that role",
+        403
+      );
+    }
+  }
+
   const inviteCode = generateOTP();
   const hashedCode = hashCode(inviteCode);
 
