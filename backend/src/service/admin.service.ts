@@ -179,6 +179,7 @@ export async function removeProjectParticipant(
   if (!Object.values(UserRole).includes(role as UserRole)) {
     throw new AdminError("Invalid role", 400);
   }
+  const validatedRole = role as UserRole;
 
   const project = await ProjectModel.findById(projectId);
   if (!project) throw new AdminError("Project does not exist", 404);
@@ -190,7 +191,7 @@ export async function removeProjectParticipant(
   const participantsToDelete = await ProjectParticipantModel.find({
     projectId,
     email: { $regex: emailRegex },
-    role,
+    role: validatedRole,
   }).select("status userId role email");
 
   if (participantsToDelete.length === 0) {
@@ -209,7 +210,7 @@ export async function removeProjectParticipant(
   const deleteResult = await ProjectParticipantModel.deleteMany({
     projectId,
     email: { $regex: emailRegex },
-    role,
+    role: validatedRole,
   });
 
   const removedCount = deleteResult.deletedCount ?? 0;
