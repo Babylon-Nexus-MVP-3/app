@@ -8,6 +8,7 @@ import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
 import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
+import { validateEmailFormat } from "../utils/authHelper";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -180,7 +181,7 @@ vouchRouter.post(
         if (toEmail) {
           sendVouchRequestEmail(
             toEmail,
-            body.name,
+            fromName,
             fromCompany,
             ref.relationship,
             ref.project
@@ -493,14 +494,19 @@ vouchRouter.post(
         : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
 
       if (!recipient && recipientEmail) {
-        sendVouchedForEmail(
-          recipientEmail,
-          recipientName ?? "there",
-          giverName,
-          giverCompany,
-          attributes ?? [],
-          note
-        ).catch(() => {});
+        try {
+          const safeRecipientEmail = validateEmailFormat(recipientEmail);
+          sendVouchedForEmail(
+            safeRecipientEmail,
+            recipientName ?? "there",
+            giverName,
+            giverCompany,
+            attributes ?? [],
+            note
+          ).catch(() => {});
+        } catch {
+          // Malformed recipientEmail — skip the notification rather than fail the vouch
+        }
       }
 
       if (recipient && recipient._id.toString() !== userId) {
