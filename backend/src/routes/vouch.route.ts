@@ -71,6 +71,16 @@ vouchRouter.post(
       const fromAbn = dbUser?.abn ?? "";
       const fromCompany = dbUser?.businessName || "";
 
+      // fromCompany and fromAbn are both required on VouchRequest — without this
+      // guard, submitting references with either missing crashes mid-loop with a
+      // raw 500 instead of a clean error.
+      if (references.length > 0 && (!fromCompany || !fromAbn)) {
+        res.status(400).json({
+          error: "Please add your business name and ABN before requesting vouches.",
+        });
+        return;
+      }
+
       // Each wizard step only sends the fields it owns, so this must be a partial
       // $set merge rather than a full-document replace — otherwise saving any one
       // step wipes out the fields collected by every other step. Steps that don't
