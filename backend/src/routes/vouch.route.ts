@@ -217,7 +217,10 @@ vouchRouter.post(
       if (body.abn) {
         const existingAbnOwner = await UserModel.findOne({ abn: body.abn }).select("_id").lean();
         if (existingAbnOwner && existingAbnOwner._id.toString() !== userId) {
-          res.status(400).json({ error: "This ABN is already registered to another account." });
+          res.status(400).json({
+            error:
+              "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
+          });
           return;
         }
         await UserModel.findByIdAndUpdate(userId, {

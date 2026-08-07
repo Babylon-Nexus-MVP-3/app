@@ -724,7 +724,10 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
     // their own in-progress signup (e.g. resend) from being flagged as a duplicate.
     const existingAbn = await UserModel.findOne({ abn: input.abn });
     if (existingAbn && existingAbn.mobile !== au04) {
-      throw new AuthError("This ABN is already registered to another account.", 409);
+      throw new AuthError(
+        "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
+        409
+      );
     }
 
     const updateData: Record<string, unknown> = {
