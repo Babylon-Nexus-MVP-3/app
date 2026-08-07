@@ -773,7 +773,7 @@ export async function verifyOtp(
 
   const user = await UserModel.findOneAndUpdate(
     { mobile: toAuMobile(e164) },
-    { $set: { status: "Active", emailVerified: true } },
+    { $set: { status: "Active", emailVerified: true, accountExpiresAt: null } },
     { new: true }
   );
   if (!user) throw new AuthError("Account not found", 404);
