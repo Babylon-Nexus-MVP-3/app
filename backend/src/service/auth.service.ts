@@ -312,9 +312,11 @@ export async function forgotPassword(email: string) {
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
-export async function verifyResetCodeService(resetCode: string) {
+export async function verifyResetCodeService(email: string, resetCode: string) {
+  const normalisedEmail = validateEmailFormat(email);
   const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
+    email: normalisedEmail,
     resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
   });
@@ -351,13 +353,15 @@ export async function resendResetCodeService(email: string) {
   return process.env.NODE_ENV === "test" ? { success: true, code } : { success: true };
 }
 
-export async function resetPassword(resetCode: string, newPassword: string) {
+export async function resetPassword(email: string, resetCode: string, newPassword: string) {
   if (newPassword.length < 12) {
     throw new AuthError("Password must be at least 12 characters");
   }
 
+  const normalisedEmail = validateEmailFormat(email);
   const hashedCode = hashCode(resetCode);
   const user = await UserModel.findOne({
+    email: normalisedEmail,
     resetCode: hashedCode,
     resetCodeExpiry: { $gt: new Date() },
   });
@@ -434,11 +438,12 @@ async function backfillVouchNotifications(
   }
 }
 
-export async function userVerifyEmail(verificationCode: string) {
+export async function userVerifyEmail(email: string, verificationCode: string) {
+  const normalisedEmail = validateEmailFormat(email);
   const hashedCode = hashCode(verificationCode);
 
   // Read the user first so we can validate the expiry before committing the update.
-  const existing = await UserModel.findOne({ verificationCode: hashedCode });
+  const existing = await UserModel.findOne({ email: normalisedEmail, verificationCode: hashedCode });
   if (!existing) {
     throw new AuthError("Invalid Verification Code");
   }
@@ -451,7 +456,7 @@ export async function userVerifyEmail(verificationCode: string) {
   // DocumentNotFoundError when a concurrent deleteMany (e.g. parallel CI runs) removed
   // the document between findOne and save().
   const user = await UserModel.findOneAndUpdate(
-    { verificationCode: hashedCode },
+    { email: normalisedEmail, verificationCode: hashedCode },
     {
       $set: {
         emailVerified: true,
