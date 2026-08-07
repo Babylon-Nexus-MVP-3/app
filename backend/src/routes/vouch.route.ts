@@ -188,11 +188,21 @@ vouchRouter.post(
         }
       }
 
-      // Keep UserModel in sync so Give a Vouch notifications work
-      await UserModel.findByIdAndUpdate(userId, {
-        abn: body.abn,
-        businessName: body.trade ?? body.name,
-      });
+      // Keep UserModel in sync so Give a Vouch notifications work — only when
+      // there's an ABN to sync, and only when it isn't already someone else's
+      // (received-vouches are looked up purely by ABN, so writing an unvalidated
+      // one would let a caller display another business's reputation as their own).
+      if (body.abn) {
+        const existingAbnOwner = await UserModel.findOne({ abn: body.abn }).select("_id").lean();
+        if (existingAbnOwner && existingAbnOwner._id.toString() !== userId) {
+          res.status(400).json({ error: "This ABN is already registered to another account." });
+          return;
+        }
+        await UserModel.findByIdAndUpdate(userId, {
+          abn: body.abn,
+          ...(body.trade || body.name ? { businessName: body.trade ?? body.name } : {}),
+        });
+      }
 
       res.status(201).json(profile);
     } catch (err) {

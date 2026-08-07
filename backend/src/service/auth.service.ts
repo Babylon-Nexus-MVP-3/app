@@ -689,6 +689,13 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
       throw new AuthError("An account with this mobile already exists. Please sign in.", 409);
     }
 
+    // existingAbn.mobile !== au04 excludes the caller re-requesting an OTP for
+    // their own in-progress signup (e.g. resend) from being flagged as a duplicate.
+    const existingAbn = await UserModel.findOne({ abn: input.abn });
+    if (existingAbn && existingAbn.mobile !== au04) {
+      throw new AuthError("This ABN is already registered to another account.", 409);
+    }
+
     const updateData: Record<string, unknown> = {
       name: input.name.trim(),
       abn: input.abn,
