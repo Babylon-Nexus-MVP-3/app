@@ -13,15 +13,6 @@ import { validateEmailFormat } from "../utils/authHelper";
 export const vouchRouter = express.Router();
 const expo = new Expo();
 
-// MongoDB throws error code 11000 for unique index violations. This type guard
-// lets us catch only that case and rethrow as a clean 409, without swallowing
-// unrelated errors like network or validation failures.
-function isDuplicateKeyError(error: unknown): error is { code: number } {
-  return (
-    typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
-  );
-}
-
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
   "/profile",
@@ -140,27 +131,17 @@ vouchRouter.post(
 
         const toEmail = ref.email?.trim().toLowerCase() ?? "";
 
-        // DB unique index on { fromUserId, toMobile } prevents duplicates from a
-        // double-tap or retry racing past the exists() check above. Skip this
-        // reference rather than failing the whole request — other references in
-        // the same submission should still go through.
-        let request;
-        try {
-          request = await VouchRequestModel.create({
-            fromUserId: userId,
-            fromName,
-            fromCompany,
-            fromAbn,
-            toEmail,
-            toMobile: ref.mobile,
-            relationship: ref.relationship,
-            projectName: ref.project,
-            status: "pending",
-          });
-        } catch (error) {
-          if (isDuplicateKeyError(error)) continue;
-          throw error;
-        }
+        const request = await VouchRequestModel.create({
+          fromUserId: userId,
+          fromName,
+          fromCompany,
+          fromAbn,
+          toEmail,
+          toMobile: ref.mobile,
+          relationship: ref.relationship,
+          projectName: ref.project,
+          status: "pending",
+        });
 
         // Find the reference's user account — match by either mobile or email
         const orConditions: object[] = [{ mobile: ref.mobile }];
@@ -477,28 +458,17 @@ vouchRouter.post(
       const giverName = giver?.name ?? "Someone";
       const giverCompany = giver?.businessName ?? "";
 
-      // DB unique index on { fromUserId, toAbn } prevents a double-tap or retry
-      // from racing past the exists() check above and creating a duplicate vouch.
-      let vouch;
-      try {
-        vouch = await GivenVouchModel.create({
-          fromUserId: userId,
-          toAbn,
-          toBusinessName,
-          attributes,
-          note: note ?? undefined,
-          requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
-          recipientName: recipientName ?? undefined,
-          recipientEmail: recipientEmail ?? undefined,
-          recipientMobile: recipientMobile ?? undefined,
-        });
-      } catch (error) {
-        if (isDuplicateKeyError(error)) {
-          res.status(409).json({ error: "You have already vouched for this business." });
-          return;
-        }
-        throw error;
-      }
+      const vouch = await GivenVouchModel.create({
+        fromUserId: userId,
+        toAbn,
+        toBusinessName,
+        attributes,
+        note: note ?? undefined,
+        requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
+        recipientName: recipientName ?? undefined,
+        recipientEmail: recipientEmail ?? undefined,
+        recipientMobile: recipientMobile ?? undefined,
+      });
 
       let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
       if (requestId) {

@@ -31,9 +31,5 @@ const givenVouchSchema = new Schema<GivenVouch>(
 
 givenVouchSchema.index({ toAbn: 1 });
 givenVouchSchema.index({ fromUserId: 1 });
-// Prevents a double-tap or slow-network retry from registering the same
-// vouch twice — the app already blocks this at the request layer, but only
-// a DB-level constraint closes the race between two concurrent requests.
-givenVouchSchema.index({ fromUserId: 1, toAbn: 1 }, { unique: true });
 
 export const GivenVouchModel = mongoose.model<GivenVouch>("GivenVouch", givenVouchSchema);
