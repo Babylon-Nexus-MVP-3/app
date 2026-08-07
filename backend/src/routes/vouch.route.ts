@@ -79,16 +79,27 @@ vouchRouter.post(
       // always includes idNumber/idExpiry from the same local object, empty until
       // step 6 is done) sends them as "" — $set'ing an empty string still trips
       // the schema's `required: true` validator, so drop empty values too.
-      const { references: referencesField, ...rest } = body;
+      //
+      // Only fields on this list may be written — never trust the request body's
+      // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
+      // would reassign this profile document to someone else's account.
+      const WRITABLE_FIELDS = [
+        "name", "abn", "trade", "idType", "idNumber", "idExpiry",
+        "currentProjectName", "address", "suburb", "state", "postcode", "value",
+        "pastProjectName", "pastSuburb", "pastState", "pastPostcode", "pastMonthYear", "pastValue",
+      ] as const;
+
       const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
-      for (const [key, value] of Object.entries(rest)) {
+      for (const key of WRITABLE_FIELDS) {
+        const value = body[key];
         if (value !== "" && value !== undefined && value !== null) {
           setFields[key] = value;
         }
       }
-      if (Array.isArray(referencesField) && referencesField.length > 0) {
-        setFields.references = referencesField;
+      if (Array.isArray(body.references) && body.references.length > 0) {
+        setFields.references = body.references;
       }
+      setFields.userId = userId; // reassert — cannot be overridden by anything above
 
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
