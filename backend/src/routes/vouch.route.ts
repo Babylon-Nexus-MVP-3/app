@@ -507,7 +507,8 @@ vouchRouter.post(
         recipientMobile: recipientMobile ?? undefined,
       });
 
-      let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
+      let vouchRequest: { _id: mongoose.Types.ObjectId; fromUserId: mongoose.Types.ObjectId } | null =
+        null;
       if (requestId) {
         vouchRequest = await VouchRequestModel.findByIdAndUpdate(
           requestId,
@@ -520,6 +521,28 @@ vouchRouter.post(
           { requestId: new mongoose.Types.ObjectId(requestId) },
           { $set: { read: true } }
         );
+      } else {
+        // Vouching via ABN search instead of tapping a pending-request card still
+        // counts as responding to that request if one exists — otherwise the
+        // requester's profile strength stays stuck even though the vouch happened.
+        const orConditions: object[] = [];
+        if (giver?.email) orConditions.push({ toEmail: giver.email });
+        if (giver?.mobile) orConditions.push({ toMobile: giver.mobile });
+        if (orConditions.length > 0) {
+          vouchRequest = await VouchRequestModel.findOneAndUpdate(
+            { fromAbn: toAbn, status: "pending", $or: orConditions },
+            { status: "responded", respondedAt: new Date() },
+            { returnDocument: "after" }
+          )
+            .select("fromUserId")
+            .lean();
+          if (vouchRequest) {
+            await VouchNotificationModel.updateMany(
+              { requestId: vouchRequest._id },
+              { $set: { read: true } }
+            );
+          }
+        }
       }
 
       const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
