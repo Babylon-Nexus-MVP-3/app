@@ -569,7 +569,10 @@ async function createNudgeReminders(userId: string): Promise<void> {
     fromUserId: userId,
     status: "pending",
     lastSentAt: { $lt: staleBefore },
-    $or: [{ lastNudgeReminderAt: { $exists: false } }, { lastNudgeReminderAt: { $lt: staleBefore } }],
+    $or: [
+      { lastNudgeReminderAt: { $exists: false } },
+      { lastNudgeReminderAt: { $lt: staleBefore } },
+    ],
   })
     .select("_id toEmail toMobile relationship")
     .lean();
