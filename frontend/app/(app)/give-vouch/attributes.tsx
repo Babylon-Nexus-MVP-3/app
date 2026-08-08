@@ -16,7 +16,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 
 const ATTRIBUTES = [
   "Pays on time",
@@ -73,15 +73,18 @@ export default function AttributesScreen() {
       });
       if (res.status === 409) {
         setSubmitError("You've already vouched for this business.");
-        setSubmitting(false);
         return;
       }
-      if (res.ok) {
-        const data = await res.json();
-        if (data.vouchCount !== undefined) setVouchCount(data.vouchCount);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error ?? "We couldn't save your vouch. Please try again.");
+        return;
       }
+      const data = await res.json().catch(() => ({}) as { vouchCount?: number });
+      if (data.vouchCount !== undefined) setVouchCount(data.vouchCount);
     } catch {
-      // Network unavailable — proceed optimistically
+      setSubmitError(NETWORK_ERROR_MESSAGE);
+      return;
     } finally {
       setSubmitting(false);
     }

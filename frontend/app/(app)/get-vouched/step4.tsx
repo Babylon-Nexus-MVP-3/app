@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   ActivityIndicator,
   Animated,
   View,
@@ -21,7 +20,8 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
+import { showAlert, vouchRequestErrorMessage } from "@/lib/errors";
 
 const RELATIONSHIPS = [
   "Worked together",
@@ -219,17 +219,14 @@ export default function Step4() {
           references: updatedRefs.filter((r) => r.name.trim()),
         }),
       });
-      if (res.status === 400) {
+      if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        Alert.alert(
-          "Cannot send request",
-          data.error ?? "This person has already vouched for you."
-        );
-        setSubmitting(false);
+        showAlert("Cannot send request", vouchRequestErrorMessage(res.status, data.error));
         return;
       }
     } catch {
-      // Network error — continue
+      showAlert("Cannot send request", NETWORK_ERROR_MESSAGE);
+      return;
     } finally {
       setSubmitting(false);
     }

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
@@ -161,12 +161,15 @@ export default function SignUp() {
         throw new Error(data.error ?? "Sign up failed. Please try again.");
       }
     } catch (err: unknown) {
-      if (!(err instanceof TypeError)) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
-        setLoading(false);
-        return;
-      }
-      // Network error — dev fallback, proceed to verify-email
+      setError(
+        err instanceof TypeError
+          ? NETWORK_ERROR_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong."
+      );
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }

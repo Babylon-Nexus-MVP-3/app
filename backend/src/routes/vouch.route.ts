@@ -12,6 +12,13 @@ import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.ser
 export const vouchRouter = express.Router();
 const expo = new Expo();
 
+// Values that end up inside a query filter must be plain strings — an object
+// such as {"$ne": null} arriving in the body would otherwise be interpreted as
+// a Mongo operator and match records it shouldn't.
+function isQuerySafeString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
   "/profile",
@@ -29,7 +36,22 @@ vouchRouter.post(
         email?: string;
         relationship: string;
         project: string;
-      }> = req.body.references ?? [];
+      }> = Array.isArray(req.body.references) ? req.body.references : [];
+
+      for (const ref of references) {
+        const fields = [
+          ref.name,
+          ref.company,
+          ref.mobile,
+          ref.email,
+          ref.relationship,
+          ref.project,
+        ];
+        if (fields.some((v) => v !== undefined && v !== null && !isQuerySafeString(v))) {
+          res.status(400).json({ error: "Invalid reference details" });
+          return;
+        }
+      }
 
       // Block vouch requests for users who haven't verified their mobile number
       if (references.length > 0) {
@@ -393,6 +415,11 @@ vouchRouter.post(
         recipientEmail,
         recipientMobile,
       } = req.body;
+
+      if (!isQuerySafeString(toAbn)) {
+        res.status(400).json({ error: "Invalid ABN" });
+        return;
+      }
 
       const giver = await UserModel.findById(userId)
         .select("email mobile abn name businessName")

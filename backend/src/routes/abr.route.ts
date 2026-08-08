@@ -1,11 +1,12 @@
 import express, { Request, Response } from "express";
+import { abrLookupLimiter } from "../middleware";
 
 export const abrRouter = express.Router();
 
 // ABR Lookup via the free ABN Lookup JSON API
 // Requires ABR_GUID env var (register at https://abr.business.gov.au/Tools/WebServices)
 // Falls back to mock in dev/test so the signup form works before the key is set up.
-abrRouter.get("/lookup", async (req: Request, res: Response) => {
+abrRouter.get("/lookup", abrLookupLimiter, async (req: Request, res: Response) => {
   const abn = String(req.query.abn ?? "").replace(/\D/g, "");
 
   if (abn.length !== 11) {
@@ -66,7 +67,7 @@ abrRouter.get("/lookup", async (req: Request, res: Response) => {
   }
 });
 
-abrRouter.get("/search", async (req: Request, res: Response) => {
+abrRouter.get("/search", abrLookupLimiter, async (req: Request, res: Response) => {
   const name = String(req.query.name ?? "").trim();
 
   if (name.length < 3) {

@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
@@ -48,14 +48,7 @@ export default function SignIn() {
       router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       if (err instanceof TypeError) {
-        await login("mock-access-token", "mock-refresh-token", {
-          id: "mock-id",
-          name: "Tom Cheng",
-          email: email.trim().toLowerCase(),
-          role: "Subbie" as never,
-          status: "Active",
-        });
-        router.replace("/(app)/(tabs)/home");
+        setError(NETWORK_ERROR_MESSAGE);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
