@@ -22,11 +22,8 @@ import { useAuth } from "@/context/AuthContext";
 import { appStyles } from "@/constants/appStyles";
 import { AppText } from "@/components/AppText";
 import CircularProgress from "@/components/CircularProgress";
-
-const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
-function displayRole(role: string): string {
-  return ROLE_DISPLAY[role] ?? role;
-}
+import { useVouchProfile } from "@/lib/useVouchProfile";
+import { displayRole } from "@/components/project/helpers";
 
 type Project = {
   id: string;
@@ -49,27 +46,6 @@ type ApiProject = {
   overdueInvoiceCount?: number;
 };
 
-type VouchProfileApi = {
-  name?: string;
-  abn?: string;
-  trade?: string;
-  idNumber?: string;
-};
-
-// Mirrors the 2 steps of the "Build your profile" wizard: your details and
-// your trade licence. Vouches received are deliberately not part of it — they
-// depend on other people responding.
-function isProfileComplete(profile: VouchProfileApi | null): boolean {
-  if (!profile) return false;
-  const detailsDone = !!(profile.name && profile.abn && profile.trade);
-  const licenceDone = !!profile.idNumber;
-  return detailsDone && licenceDone;
-}
-
-// Remembered across mounts so the New Project button doesn't render disabled
-// for a frame on every visit before the profile check comes back.
-let lastKnownCanCreate: boolean | null = null;
-
 export default function Projects() {
   const { fetchWithAuth } = useAuth();
   const insets = useSafeAreaInsets();
@@ -78,7 +54,13 @@ export default function Projects() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [canCreateProject, setCanCreateProject] = useState(lastKnownCanCreate ?? true);
+
+  // This tab used to re-derive completeness from the raw profile, checking the
+  // VouchProfile's `trade` where the server checks the User's `businessTrade`.
+  // Someone who signed up but never opened the wizard was unlocked on Home and
+  // locked here. One source now answers both.
+  const { isComplete } = useVouchProfile();
+  const canCreateProject = isComplete !== false;
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -92,10 +74,7 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, profileRes] = await Promise.all([
-        fetchWithAuth(`${API_BASE_URL}/projects`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
-      ]);
+      const projectsRes = await fetchWithAuth(`${API_BASE_URL}/projects`);
       const data = await projectsRes.json();
       if (!projectsRes.ok) {
         setProjectsError(data.error ?? "Failed to load projects.");
@@ -111,11 +90,6 @@ export default function Projects() {
         change: 0,
       }));
       setProjects(mapped);
-
-      const profileData = profileRes.ok ? ((await profileRes.json()) as VouchProfileApi) : null;
-      const complete = isProfileComplete(profileData);
-      lastKnownCanCreate = complete;
-      setCanCreateProject(complete);
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {

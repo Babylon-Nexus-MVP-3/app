@@ -1,4 +1,3 @@
-import { useCallback, useRef, useState } from "react";
 import {
   Animated,
   View,
@@ -9,14 +8,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
-import { useAuth } from "@/context/AuthContext";
-import { API_BASE_URL } from "@/constants/api";
+import { useVouchProfile } from "@/lib/useVouchProfile";
 import { useEntrance, usePressScale, useReduceMotion, STAGGER } from "@/lib/motion";
 
 const FEATURES = [
@@ -37,15 +35,10 @@ const FEATURES = [
   },
 ];
 
-// Remembered across mounts, so returning to this screen doesn't show the
-// locked copy for a frame before the real strength arrives.
-let lastKnownStrength: number | null = null;
-
 export default function VouchMyProjectScreen() {
-  const { fetchWithAuth } = useAuth();
-  const [strength, setStrength] = useState<number | null>(lastKnownStrength);
-  const [loading, setLoading] = useState(true);
-  const hasLoadedRef = useRef(false);
+  // The hook owns the fetch, the cross-mount cache and the derived step counts,
+  // so this screen can never disagree with the rest of the app about them.
+  const { profileStrength: strength, stepsLeft, isComplete, loading } = useVouchProfile();
 
   const reduceMotion = useReduceMotion();
   const statusEntrance = useEntrance(0, reduceMotion);
@@ -53,39 +46,9 @@ export default function VouchMyProjectScreen() {
   const noteEntrance = useEntrance(STAGGER * 2, reduceMotion);
   const ctaPress = usePressScale(reduceMotion, 0.97);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      // Only the first load shows a spinner — refocusing after a back
-      // navigation refetches quietly instead of flashing the screen.
-      if (!hasLoadedRef.current) setLoading(true);
-      fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (!cancelled && data?.profileStrength !== undefined) {
-            lastKnownStrength = data.profileStrength;
-            setStrength(data.profileStrength);
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) {
-            hasLoadedRef.current = true;
-            setLoading(false);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [fetchWithAuth])
-  );
-
   // Treat "not yet known" as unlocked: claiming it's locked and then undoing
   // that a moment later reads as the app changing its mind.
-  const isUnlocked = strength === null || strength === 100;
-  // Each of the 5 profile steps is worth 20%, so this turns an abstract
-  // percentage into the concrete number of things still to do.
-  const stepsLeft = Math.max(Math.round((100 - (strength ?? 100)) / 20), 0);
+  const isUnlocked = isComplete !== false;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -100,7 +63,7 @@ export default function VouchMyProjectScreen() {
               ? "Your profile is verified."
               : stepsLeft === 1
                 ? "1 step left on your profile."
-                : `${stepsLeft} steps left on your profile.`
+                : `${stepsLeft ?? 0} steps left on your profile.`
         }
       >
         {/* Progress lives in the header rather than a card below it — the two

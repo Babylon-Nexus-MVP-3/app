@@ -14,10 +14,10 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
-import { SectionLabel } from "@/components/ui";
-import { useWizard } from "./WizardContext";
+import { Pill, SectionLabel } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { useVouchProfile } from "@/lib/useVouchProfile";
 import { useEntrance, useReduceMotion, STAGGER } from "@/lib/motion";
 
 type SentRequest = {
@@ -60,19 +60,25 @@ const UNLOCKS = [
     desc: "Set one up and invite your team.",
   },
   {
+    // Not shipped yet. Home already labels this "Coming soon", so promising it
+    // as a reward for finishing the profile set up an expectation the app
+    // immediately broke.
     icon: "card-outline" as const,
     title: "Supplier credit",
     desc: "Apply using your verified profile.",
+    comingSoon: true,
   },
 ];
 
 export default function GetVouchedIntro() {
   const { user, fetchWithAuth } = useAuth();
-  const { step1 } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
 
+  // Each wizard step writes to the server before navigating back here, and the
+  // hook refetches on focus — so the server's answer is the only one needed.
+  const { profileStrength, stepsDone, stepsLeft, isComplete } = useVouchProfile();
+
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
-  const [profileStrength, setProfileStrength] = useState<number | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const hasLoadedRef = useRef(false);
 
@@ -87,17 +93,10 @@ export default function GetVouchedIntro() {
       // to a spinner for that makes the screen flash. Only the first load
       // shows one; later loads update in place.
       if (!hasLoadedRef.current) setLoadingStatus(true);
-      Promise.all([
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
-      ])
-        .then(([sentData, profileData]) => {
-          if (!cancelled) {
-            setSentRequests(sentData?.requests ?? []);
-            if (profileData?.profileStrength !== undefined) {
-              setProfileStrength(profileData.profileStrength);
-            }
-          }
+      fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((sentData) => {
+          if (!cancelled) setSentRequests(sentData?.requests ?? []);
         })
         .catch(() => {})
         .finally(() => {
@@ -113,18 +112,13 @@ export default function GetVouchedIntro() {
   );
 
   // ── Step completion ──────────────────────────────────────────────────────
-  const step1Done =
-    !!(user?.name && user?.abn && user?.businessTrade) ||
-    !!(step1.name && step1.abn && step1.trade);
-  const step2Done = !!step1.idNumber;
-  const stepDone = [step1Done, step2Done];
-
-  // Server-computed strength is the source of truth; the local sum only covers
-  // the gap while that request is in flight.
-  const localStrength = STEPS.reduce((acc, s, i) => acc + (stepDone[i] ? s.pct : 0), 0);
-  const strength = profileStrength ?? localStrength;
-  const complete = strength === 100;
-  const stepsLeft = stepDone.filter((d) => !d).length;
+  // All of it comes from the server, so this screen, the home meter and the
+  // project gate can never disagree about what's done.
+  const step1Done = stepsDone[0] ?? false;
+  const step2Done = stepsDone[1] ?? false;
+  const stepDone = stepsDone;
+  const strength = profileStrength ?? 0;
+  const complete = isComplete ?? false;
 
   const hasAnySentRequest = sentRequests.length >= 1;
   const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
@@ -177,6 +171,11 @@ export default function GetVouchedIntro() {
           </View>
           <AppText style={styles.meterPct}>{strength}%</AppText>
         </View>
+        {/* The number is meaningless on first encounter without this. */}
+        <AppText style={styles.meterExplainer}>
+          Profile strength is how much of your own information you&apos;ve added. At 100% you can
+          give vouches and create projects.
+        </AppText>
       </ScreenHeader>
 
       <ScrollView
@@ -264,12 +263,15 @@ export default function GetVouchedIntro() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText style={[styles.unlockTitle, !complete && styles.unlockTitleOff]}>
-                    {u.title}
-                  </AppText>
+                  <View style={styles.unlockTitleRow}>
+                    <AppText style={[styles.unlockTitle, !complete && styles.unlockTitleOff]}>
+                      {u.title}
+                    </AppText>
+                    {u.comingSoon && <Pill label="Coming soon" tone="neutral" />}
+                  </View>
                   <AppText style={styles.unlockDesc}>{u.desc}</AppText>
                 </View>
-                {complete && (
+                {complete && !u.comingSoon && (
                   <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
                 )}
               </View>
@@ -332,6 +334,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   meterFill: { height: 6, borderRadius: 3, backgroundColor: Colors.white },
+  meterExplainer: {
+    fontSize: 12.5,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    opacity: 0.85,
+    lineHeight: 18,
+    marginTop: 10,
+  },
   meterPct: { fontSize: 14, fontFamily: Fonts.extraBold, color: Colors.white },
 
   prereq: {
@@ -398,6 +408,7 @@ const styles = StyleSheet.create({
   unlockIconOn: { backgroundColor: Colors.vouchGreenLight },
   unlockTitle: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.black },
   unlockTitleOff: { color: Colors.grey700 },
+  unlockTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   unlockDesc: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
 
   requestsRow: {

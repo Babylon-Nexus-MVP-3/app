@@ -8,6 +8,7 @@ import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
 import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
+import { getProfileCompletion } from "../service/vouchProfile.service";
 import { validateEmailFormat } from "../utils/authHelper";
 
 export const vouchRouter = express.Router();
@@ -268,27 +269,19 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const [profile, dbUser] = await Promise.all([
+      const [profile, completion] = await Promise.all([
         VouchProfileModel.findOne({ userId }),
-        UserModel.findById(userId).select("name abn businessTrade").lean(),
+        getProfileCompletion(userId),
       ]);
 
-      // Step 1 is complete if the user has name/ABN/trade — sourced from the
-      // User record (set at sign-up) so it counts even before the wizard is opened.
-      const step1Done = !!(dbUser?.name && dbUser?.abn && dbUser?.businessTrade);
-      const step2Done = !!profile?.idNumber;
-
-      // Only facts about the user themselves count. Vouches received depend on
-      // other people responding, and project membership comes and goes — neither
-      // belongs in a score that gates what the user can do.
-      const STEP_PCT = [50, 50];
-      const stepsDone = [step1Done, step2Done];
-      const profileStrength = stepsDone.reduce((acc, done, i) => acc + (done ? STEP_PCT[i] : 0), 0);
-
+      // stepsLeft and isComplete ship alongside the percentage so clients never
+      // have to reverse-engineer either one from profileStrength.
       res.status(200).json({
         ...(profile ? profile.toObject() : {}),
-        profileStrength,
-        stepsDone,
+        profileStrength: completion.profileStrength,
+        stepsDone: completion.stepsDone,
+        stepsLeft: completion.stepsLeft,
+        isComplete: completion.isComplete,
       });
     } catch (err) {
       next(err);
@@ -658,14 +651,8 @@ vouchRouter.post(
       // must have completed their own profile first — the same two things the
       // "build your profile" flow asks for. Receiving a vouch stays open to
       // everyone; only giving one is gated.
-      const giverProfile = await VouchProfileModel.findOne({ userId }).select("idNumber").lean();
-      const giverProfileComplete = !!(
-        giver?.name &&
-        giver?.abn &&
-        giver?.businessTrade &&
-        giverProfile?.idNumber
-      );
-      if (!giverProfileComplete) {
+      const giverCompletion = await getProfileCompletion(userId);
+      if (!giverCompletion.isComplete) {
         res.status(403).json({
           error: "Complete your profile — your details and trade licence — before giving a vouch.",
         });

@@ -26,6 +26,9 @@ import { AppText } from "@/components/AppText";
 import { Pill, SectionLabel } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { useVouchProfile } from "@/lib/useVouchProfile";
+import { confirmAction } from "@/lib/errors";
+import { formatAbn, formatStoredMobile } from "@/lib/format";
 
 function VerifiedBadge() {
   return <Pill label="Verified" tone="green" icon="checkmark-circle" />;
@@ -57,7 +60,7 @@ export default function MeScreen() {
   const [vouchesSent, setVouchesSent] = useState<number | null>(null);
   const [topAttributes, setTopAttributes] = useState<{ attr: string; count: number }[]>([]);
   const [projectHistory, setProjectHistory] = useState<ProjectHistoryEntry[]>([]);
-  const [hasLicence, setHasLicence] = useState(false);
+  const { isComplete } = useVouchProfile();
   const [cardModalVisible, setCardModalVisible] = useState(false);
   const [sharing, setSharing] = useState(false);
   const cardRef = useRef<View>(null);
@@ -107,11 +110,6 @@ export default function MeScreen() {
           .then((d) => {
             if (d) setProjectHistory(d.projects ?? []);
           }),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((d) => {
-            if (d) setHasLicence(!!d.idNumber);
-          }),
       ];
       if (abn) {
         fetches.push(
@@ -138,37 +136,28 @@ export default function MeScreen() {
   );
 
   async function handleSignOut() {
-    if (Platform.OS === "web") {
-      if (!window.confirm("Are you sure you want to sign out?")) return;
-      await logout();
-      router.replace("/");
-    } else {
-      Alert.alert("Sign out", "Are you sure you want to sign out?", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign out",
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/");
-          },
-        },
-      ]);
-    }
+    const confirmed = await confirmAction({
+      title: "Sign out",
+      message: "Are you sure you want to sign out?",
+      confirmLabel: "Sign out",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await logout();
+    router.replace("/");
   }
 
   async function handleDeleteAccount() {
     const msg =
       "Your account will be deactivated immediately and permanently deleted after 30 days. You can reactivate it any time within that period by signing back in.";
-    if (Platform.OS === "web") {
-      if (!window.confirm(`Delete Account\n\n${msg}`)) return;
-      await confirmDeleteAccount();
-    } else {
-      Alert.alert("Delete Account", msg, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Deactivate", style: "destructive", onPress: confirmDeleteAccount },
-      ]);
-    }
+    const confirmed = await confirmAction({
+      title: "Delete Account",
+      message: msg,
+      confirmLabel: "Deactivate",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await confirmDeleteAccount();
   }
 
   async function confirmDeleteAccount() {
@@ -187,19 +176,11 @@ export default function MeScreen() {
   }
 
   // Same rule the rest of the app gates giving a vouch on.
-  const profileVerified = !!(user?.name && user?.abn && user?.businessTrade && hasLicence);
+  // Same rule as every other gate in the app, answered by the server.
+  const profileVerified = isComplete === true;
 
-  const displayMobile = user?.mobile
-    ? (() => {
-        const m = user.mobile.replace(/^\+61/, "");
-        const digits = m.startsWith("0") ? m : `0${m}`;
-        return digits.replace(/(\d{4})(\d{3})(\d{3})/, "$1 $2 $3");
-      })()
-    : null;
-
-  const displayAbn = user?.abn
-    ? user.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, "$1 $2 $3 $4")
-    : null;
+  const displayMobile = user?.mobile ? formatStoredMobile(user.mobile) : null;
+  const displayAbn = user?.abn ? formatAbn(user.abn) : null;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

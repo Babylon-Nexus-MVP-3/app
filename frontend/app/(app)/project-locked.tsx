@@ -37,7 +37,7 @@ export default function ProjectLocked() {
               <AppText style={styles.stepNumText}>2</AppText>
             </View>
             <AppText style={styles.stepText}>
-              Reach 100% profile strength — identity, projects, and references
+              Reach 100% profile strength — your details and your trade licence
             </AppText>
           </View>
 
