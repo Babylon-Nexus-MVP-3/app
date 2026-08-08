@@ -303,6 +303,8 @@ export default function GiveAVouchScreen() {
               renderRightActions={(progress) => renderIgnoreAction(progress, () => onIgnore(r._id))}
               rightThreshold={40}
               overshootRight={false}
+              containerStyle={styles.swipeContainer}
+              childrenContainerStyle={styles.swipeChildren}
             >
               <TouchableOpacity
                 style={styles.requestCard}
@@ -484,6 +486,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
+  },
+  // A sliver of this shows past the card's right edge at rest — the
+  // permanent hint that the row is swipeable, without a hint animation.
+  swipeContainer: {
+    backgroundColor: Colors.grey100,
+    borderRadius: 16,
+  },
+  swipeChildren: {
+    marginRight: 10,
   },
   requestCard: {
     flexDirection: "row",
