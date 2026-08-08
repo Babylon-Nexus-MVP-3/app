@@ -16,8 +16,12 @@ export interface VouchProfile extends Document {
   abn: string;
   trade: string;
   idType: "trade-licence";
+  /** Licence class, e.g. "Electrical" — distinct from the free-text business trade. */
+  tradeType: string;
   idNumber: string;
   idExpiry: string;
+  /** State that issued the licence. */
+  idState: string;
   // References the user has asked for vouches from
   references: VouchReference[];
   submittedAt: Date;
@@ -47,8 +51,10 @@ const vouchProfileSchema = new Schema<VouchProfile>(
     // removed to simplify verification. Legacy documents may still hold the old
     // values; nothing revalidates them, and any save from the app overwrites them.
     idType: { type: String, enum: ["trade-licence"], default: "trade-licence", required: true },
+    tradeType: { type: String, default: "" },
     idNumber: { type: String, required: true },
     idExpiry: { type: String, required: true },
+    idState: { type: String, default: "" },
     references: { type: [vouchReferenceSchema], required: true },
     submittedAt: { type: Date, required: true, default: Date.now },
   },

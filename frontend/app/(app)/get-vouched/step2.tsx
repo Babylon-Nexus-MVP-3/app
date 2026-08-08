@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-  Animated,
-  Modal,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -19,109 +17,32 @@ import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
 import { AppInput } from "@/components/AppInput";
+import { NativeSelect } from "@/components/NativeSelect";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
 
-function StatePickerModal({
-  visible,
-  selected,
-  onSelect,
-  onClose,
-}: {
-  visible: boolean;
-  selected: string;
-  onSelect: (s: string) => void;
-  onClose: () => void;
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
-
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, sp.overlay, { opacity: fadeAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        </Animated.View>
-        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
-          <Animated.View style={[sp.sheet, { transform: [{ translateY: slideAnim }] }]}>
-            <View style={sp.handle} />
-            <AppText style={sp.title}>Select state</AppText>
-            {AU_STATES.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={sp.option}
-                onPress={() => {
-                  onSelect(s);
-                  onClose();
-                }}
-              >
-                <AppText style={[sp.optionText, selected === s && sp.optionTextSelected]}>
-                  {s}
-                </AppText>
-                {selected === s && (
-                  <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const sp = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: Colors.overlay },
-  sheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    paddingTop: 12,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.grey300,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey300,
-  },
-  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
-  optionTextSelected: { fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
-});
+// Licence classes people actually hold on Australian sites. "Other" keeps the
+// list short without shutting anyone out.
+const TRADE_TYPES = [
+  "Builder",
+  "Carpentry",
+  "Electrical",
+  "Plumbing",
+  "Concreting",
+  "Bricklaying",
+  "Roofing",
+  "Painting",
+  "Plastering",
+  "Tiling",
+  "Waterproofing",
+  "Air conditioning & refrigeration",
+  "Landscaping",
+  "Glazing",
+  "Demolition",
+  "Other",
+];
 
 function Field({
   label,
@@ -156,7 +77,6 @@ export default function Step5() {
   const { step1, setStep1 } = useWizard();
 
   const [form, setForm] = useState(step1);
-  const [statePickerOpen, setStatePickerOpen] = useState(false);
 
   function update(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -223,21 +143,21 @@ export default function Step5() {
               placeholder="e.g. BLD123456"
             />
 
-            <View style={styles.fieldWrap}>
-              <AppText style={styles.fieldLabel}>STATE</AppText>
-              <TouchableOpacity
-                style={[styles.input, styles.inputSelect]}
-                onPress={() => setStatePickerOpen(true)}
-                activeOpacity={0.75}
-              >
-                <AppText
-                  style={form.idState ? styles.inputSelectValue : styles.inputSelectPlaceholder}
-                >
-                  {form.idState || "Select state"}
-                </AppText>
-                <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
-              </TouchableOpacity>
-            </View>
+            <NativeSelect
+              label="TRADE TYPE"
+              value={form.tradeType}
+              options={TRADE_TYPES}
+              placeholder="Select trade type"
+              onChange={(v) => update("tradeType", v)}
+            />
+
+            <NativeSelect
+              label="STATE"
+              value={form.idState}
+              options={AU_STATES}
+              placeholder="Select state"
+              onChange={(v) => update("idState", v)}
+            />
 
             <View style={styles.fieldWrap}>
               <AppText style={styles.fieldLabel}>EXPIRY DATE</AppText>
@@ -257,13 +177,6 @@ export default function Step5() {
               )}
             </View>
           </View>
-
-          <StatePickerModal
-            visible={statePickerOpen}
-            selected={form.idState}
-            onSelect={(s) => update("idState", s)}
-            onClose={() => setStatePickerOpen(false)}
-          />
 
           <View style={styles.privacyNote}>
             <Ionicons name="lock-closed-outline" size={13} color={Colors.grey500} />
@@ -304,13 +217,6 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
   input: {},
   inputError: { borderColor: Colors.red },
-  inputSelect: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-  },
-  inputSelectValue: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
-  inputSelectPlaceholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey300 },
   expiryError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   privacyNote: {
     flexDirection: "row",

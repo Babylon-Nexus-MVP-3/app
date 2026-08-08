@@ -95,7 +95,16 @@ vouchRouter.post(
       // Only fields on this list may be written — never trust the request body's
       // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
       // would reassign this profile document to someone else's account.
-      const WRITABLE_FIELDS = ["name", "abn", "trade", "idType", "idNumber", "idExpiry"] as const;
+      const WRITABLE_FIELDS = [
+        "name",
+        "abn",
+        "trade",
+        "idType",
+        "tradeType",
+        "idNumber",
+        "idExpiry",
+        "idState",
+      ] as const;
 
       const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
       for (const key of WRITABLE_FIELDS) {

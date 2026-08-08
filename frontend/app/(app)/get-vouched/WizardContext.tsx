@@ -8,6 +8,8 @@ export type Step1Data = {
   abn: string;
   trade: string;
   idType: "trade-licence";
+  /** Licence class, e.g. "Electrical" — distinct from the free-text business trade. */
+  tradeType: string;
   idNumber: string;
   idExpiry: string;
   idState: string;
@@ -51,6 +53,7 @@ const emptyStep1: Step1Data = {
   abn: "",
   trade: "",
   idType: "trade-licence",
+  tradeType: "",
   idNumber: "",
   idExpiry: "",
   idState: "",
@@ -123,6 +126,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           // Legacy profiles may carry "licence"/"passport"; trade licence is now
           // the only ID type, so old values collapse onto it.
           idType: "trade-licence",
+          tradeType: p.tradeType ?? "",
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",
