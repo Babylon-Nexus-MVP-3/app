@@ -474,7 +474,10 @@ export async function userVerifyEmail(email: string, verificationCode: string) {
   const hashedCode = hashCode(verificationCode);
 
   // Read the user first so we can validate the expiry before committing the update.
-  const existing = await UserModel.findOne({ email: normalisedEmail, verificationCode: hashedCode });
+  const existing = await UserModel.findOne({
+    email: normalisedEmail,
+    verificationCode: hashedCode,
+  });
   if (!existing) {
     throw new AuthError("Invalid Verification Code");
   }

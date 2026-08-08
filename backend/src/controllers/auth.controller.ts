@@ -188,7 +188,11 @@ export const resetPasswd = async (req: Request, res: Response, next: NextFunctio
 
 export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   const { email, verificationCode } = req.body;
-  if (!isNonEmptyString(email) || !validator.isEmail(email) || !isNonEmptyString(verificationCode)) {
+  if (
+    !isNonEmptyString(email) ||
+    !validator.isEmail(email) ||
+    !isNonEmptyString(verificationCode)
+  ) {
     return res.status(400).json({ error: "Email and verification code are required" });
   }
 

@@ -95,9 +95,24 @@ vouchRouter.post(
       // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
       // would reassign this profile document to someone else's account.
       const WRITABLE_FIELDS = [
-        "name", "abn", "trade", "idType", "idNumber", "idExpiry",
-        "currentProjectName", "address", "suburb", "state", "postcode", "value",
-        "pastProjectName", "pastSuburb", "pastState", "pastPostcode", "pastMonthYear", "pastValue",
+        "name",
+        "abn",
+        "trade",
+        "idType",
+        "idNumber",
+        "idExpiry",
+        "currentProjectName",
+        "address",
+        "suburb",
+        "state",
+        "postcode",
+        "value",
+        "pastProjectName",
+        "pastSuburb",
+        "pastState",
+        "pastPostcode",
+        "pastMonthYear",
+        "pastValue",
       ] as const;
 
       const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
@@ -520,8 +535,10 @@ vouchRouter.post(
         recipientMobile: recipientMobile ?? undefined,
       });
 
-      let vouchRequest: { _id: mongoose.Types.ObjectId; fromUserId: mongoose.Types.ObjectId } | null =
-        null;
+      let vouchRequest: {
+        _id: mongoose.Types.ObjectId;
+        fromUserId: mongoose.Types.ObjectId;
+      } | null = null;
       if (requestId) {
         vouchRequest = await VouchRequestModel.findByIdAndUpdate(
           requestId,
