@@ -18,7 +18,8 @@ import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel, Segmented } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-import { formatAbn } from "@/lib/useAbrLookup";
+import { formatAbn } from "@/lib/format";
+import { confirmAction, showAlert } from "@/lib/errors";
 
 type VouchRequest = {
   _id: string;
@@ -95,13 +96,29 @@ export default function GiveAVouchScreen() {
     }, [load])
   );
 
-  async function onIgnore(id: string) {
+  async function onIgnore(id: string, fromCompany: string) {
+    // Ignoring is permanent and invisible to the sender, so it should not be
+    // one stray tap away — the same courtesy Sign Out and Withdraw already get.
+    const confirmed = await confirmAction({
+      title: "Ignore this request?",
+      message: `${fromCompany} won't be told, and this request will disappear from your list.`,
+      confirmLabel: "Ignore",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     setIgnoring(id);
     try {
-      await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, { method: "PATCH" });
+      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, {
+        method: "PATCH",
+      });
+      if (!res.ok) {
+        showAlert("Couldn't ignore", "Please try again.");
+        return;
+      }
       setRequests((prev) => prev.filter((r) => r._id !== id));
     } catch {
-      // silently fail — list unchanged
+      showAlert("Couldn't ignore", "Check your connection and try again.");
     } finally {
       setIgnoring(null);
     }
@@ -287,7 +304,7 @@ export default function GiveAVouchScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.ignoreBtn}
-                onPress={() => onIgnore(r._id)}
+                onPress={() => onIgnore(r._id, r.fromCompany)}
                 disabled={ignoring === r._id}
                 hitSlop={8}
                 accessibilityRole="button"

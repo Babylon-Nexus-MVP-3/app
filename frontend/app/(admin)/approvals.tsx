@@ -1,14 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +8,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { useAuth } from "@/context/AuthContext";
 import { AppText } from "@/components/AppText";
+import { confirmAction } from "@/lib/errors";
 
 type PendingProject = {
   _id: string;
@@ -88,16 +81,14 @@ export default function AdminApprovals() {
     }
   }
 
-  function handleReject(projectId: string) {
-    if (Platform.OS === "web") {
-      if (!window.confirm("Are you sure you want to reject this project?")) return;
-      void doReject(projectId);
-    } else {
-      Alert.alert("Reject Project", "Are you sure you want to reject this project?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Reject", style: "destructive", onPress: () => void doReject(projectId) },
-      ]);
-    }
+  async function handleReject(projectId: string) {
+    const confirmed = await confirmAction({
+      title: "Reject Project",
+      message: "Are you sure you want to reject this project?",
+      confirmLabel: "Reject",
+      destructive: true,
+    });
+    if (confirmed) await doReject(projectId);
   }
 
   useEffect(() => {

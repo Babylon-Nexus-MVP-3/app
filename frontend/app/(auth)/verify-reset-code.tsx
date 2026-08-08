@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,26 +14,17 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { AppText } from "@/components/AppText";
+import { useResendCooldown } from "@/lib/useResendCooldown";
 import { AppInput } from "@/components/AppInput";
 
 export default function VerifyResetCode() {
   const { email } = useLocalSearchParams<{ email: string }>();
 
-  const COOLDOWN = 60;
-
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendMsg, setResendMsg] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+  const resendState = useResendCooldown("/auth/resend-reset-code", { email });
 
   async function handleVerify() {
     if (code.length < 6) return;
@@ -55,40 +46,6 @@ export default function VerifyResetCode() {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  function startCooldown() {
-    setCooldown(COOLDOWN);
-    timerRef.current = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }
-
-  async function handleResend() {
-    setResending(true);
-    setError(null);
-    setResendMsg(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/resend-reset-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to resend code");
-      setResendMsg("Code resent. Check your email.");
-      startCooldown();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
-      setResending(false);
     }
   }
 
@@ -129,8 +86,12 @@ export default function VerifyResetCode() {
             maxLength={6}
           />
 
-          {resendMsg ? <AppText style={styles.resendMsg}>{resendMsg}</AppText> : null}
-          {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
+          {resendState.message ? (
+            <AppText style={styles.resendMsg}>{resendState.message}</AppText>
+          ) : null}
+          {error || resendState.error ? (
+            <AppText style={styles.errorText}>{error ?? resendState.error}</AppText>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.button, (code.length < 6 || loading) && styles.buttonDisabled]}
@@ -149,21 +110,23 @@ export default function VerifyResetCode() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={handleResend}
-            disabled={resending || cooldown > 0}
+            onPress={resendState.resend}
+            disabled={resendState.disabled}
             style={styles.resendBtn}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={
-              cooldown > 0 ? `Resend code, available in ${cooldown} seconds` : "Resend code"
+              resendState.cooldown > 0
+                ? `Resend code, available in ${resendState.cooldown} seconds`
+                : "Resend code"
             }
-            accessibilityState={{ disabled: resending || cooldown > 0 }}
+            accessibilityState={{ disabled: resendState.disabled }}
           >
             <AppText style={styles.resendText}>
-              {resending
+              {resendState.resending
                 ? "Resending..."
-                : cooldown > 0
-                  ? `Resend code (${cooldown}s)`
+                : resendState.cooldown > 0
+                  ? `Resend code (${resendState.cooldown}s)`
                   : "Resend code"}
             </AppText>
           </TouchableOpacity>

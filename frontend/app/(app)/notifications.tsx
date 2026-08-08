@@ -49,6 +49,8 @@ type UnifiedNotif = {
   // vouch-specific
   vouchId?: string;
   nudgeReminder?: boolean;
+  /** Someone is asking this user to vouch for them. */
+  vouchRequest?: boolean;
 };
 
 function projectIcon(type: ProjectNotifType): { name: IoniconName; color: string } {
@@ -166,8 +168,9 @@ export default function Notifications() {
         iconName,
         iconColor: isNudgeReminder ? Colors.amber : Colors.vouchGreen,
         vouchId: n._id,
-        // Tapping a reminder should land on the screen where you can act.
+        // Tapping a notification should land on the screen where you can act.
         nudgeReminder: isNudgeReminder,
+        vouchRequest: !isReceived && !isNudgeReminder,
       };
     });
 
@@ -227,13 +230,20 @@ export default function Notifications() {
           prev.map((n) => (n.key === item.key ? { ...n, read: true } : n))
         );
       }
-      // A nudge reminder is about a request you sent, so it belongs on the
-      // requests screen where the Nudge button lives — not the vouches list.
-      router.push(
-        item.nudgeReminder
-          ? { pathname: "/(app)/(tabs)/vouches", params: { tab: "requests" } }
-          : "/(app)/(tabs)/vouches"
-      );
+      // Each kind of vouch notification has a different screen where you can
+      // actually do something about it. Sending them all to the vouches list
+      // meant "someone requested a vouch from you" landed on your own received
+      // vouches, with no way to respond in sight.
+      if (item.nudgeReminder) {
+        // About a request you sent — the requests tab has the Nudge button.
+        router.push({ pathname: "/(app)/(tabs)/vouches", params: { tab: "requests" } });
+      } else if (item.vouchRequest) {
+        // Someone is asking you to vouch — this is where you accept or ignore.
+        router.push("/(app)/give-vouch");
+      } else {
+        // A vouch you received — it's on your vouches list.
+        router.push("/(app)/(tabs)/vouches");
+      }
       return;
     }
     // Project notification

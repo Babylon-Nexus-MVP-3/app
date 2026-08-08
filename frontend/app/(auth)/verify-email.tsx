@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { authStyles } from "@/constants/authStyles";
 import { AppText } from "@/components/AppText";
 import { OtpInput, OtpInputRef } from "@/components/OtpInput";
+import { useResendCooldown } from "@/lib/useResendCooldown";
 
 export default function VerifyEmail() {
   const { email } = useLocalSearchParams<{ email: string }>();
@@ -29,6 +30,10 @@ export default function VerifyEmail() {
   const [error, setError] = useState<string | null>(null);
 
   const code = digits.join("");
+
+  // Without this the screen was a dead end: a delayed or lost email left no
+  // way forward, and the unverified account is deleted after 24 hours.
+  const resendState = useResendCooldown("/auth/resend-verification", { email });
 
   async function handleVerify() {
     if (code.length < 6) return;
@@ -89,7 +94,13 @@ export default function VerifyEmail() {
 
           <AppText style={styles.hint}>{"Didn't receive a code? Check your spam folder."}</AppText>
 
-          {error && <AppText style={authStyles.errorText}>{error}</AppText>}
+          {resendState.message ? (
+            <AppText style={styles.resendMsg}>{resendState.message}</AppText>
+          ) : null}
+
+          {(error || resendState.error) && (
+            <AppText style={authStyles.errorText}>{error ?? resendState.error}</AppText>
+          )}
 
           <TouchableOpacity
             style={[
@@ -108,6 +119,28 @@ export default function VerifyEmail() {
             ) : (
               <AppText style={authStyles.primaryButtonText}>Verify</AppText>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={resendState.resend}
+            disabled={resendState.disabled}
+            style={styles.resendBtn}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              resendState.cooldown > 0
+                ? `Resend code, available in ${resendState.cooldown} seconds`
+                : "Resend code"
+            }
+            accessibilityState={{ disabled: resendState.disabled }}
+          >
+            <AppText style={[styles.resendText, resendState.disabled && styles.resendTextOff]}>
+              {resendState.resending
+                ? "Sending…"
+                : resendState.cooldown > 0
+                  ? `Resend code in ${resendState.cooldown}s`
+                  : "Resend code"}
+            </AppText>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -148,5 +181,25 @@ const styles = StyleSheet.create({
     color: Colors.grey500,
     textAlign: "center",
     marginBottom: 32,
+  },
+  resendMsg: {
+    fontSize: 13,
+    fontFamily: Fonts.medium,
+    color: Colors.vouchGreen,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  resendBtn: {
+    alignSelf: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  resendText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
+  },
+  resendTextOff: {
+    color: Colors.grey500,
   },
 });

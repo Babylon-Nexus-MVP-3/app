@@ -25,6 +25,8 @@ import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 import { showAlert, vouchRequestErrorMessage } from "@/lib/errors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
+import { isValidEmail } from "@/lib/validation";
+import { mobileDigits } from "@/lib/format";
 
 const RELATIONSHIPS = [
   "Worked together",
@@ -173,11 +175,6 @@ function isRefComplete(ref: Reference) {
   );
 }
 
-function formatMobile(v: string) {
-  return v.replace(/\D/g, "").slice(0, 10);
-}
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export default function RequestVouch() {
   const { step1, references, setReferences } = useWizard();
   const { fetchWithAuth, updateUser } = useAuth();
@@ -200,7 +197,7 @@ export default function RequestVouch() {
     setRef((r) => ({ ...r, [key]: v }));
   }
 
-  const emailInvalid = emailTouched && ref.email.trim() && !EMAIL_RE.test(ref.email.trim());
+  const emailInvalid = emailTouched && ref.email.trim() && !isValidEmail(ref.email);
   const canSubmit = isRefComplete(ref);
 
   async function onSubmit() {
@@ -315,7 +312,7 @@ export default function RequestVouch() {
             <AppInput
               style={styles.refInput}
               value={ref.mobile}
-              onChangeText={(v) => update("mobile", formatMobile(v))}
+              onChangeText={(v) => update("mobile", mobileDigits(v))}
               placeholder="Mobile number"
               keyboardType="number-pad"
               maxLength={10}

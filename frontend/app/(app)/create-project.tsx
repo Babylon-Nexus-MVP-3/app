@@ -103,9 +103,19 @@ export default function CreateProject() {
     return "";
   }
 
+  const REQUIRED_FIELDS = [
+    { label: "a project name", value: () => name },
+    { label: "the site address", value: () => address },
+    { label: "the council", value: () => council },
+    { label: "your role on this project", value: () => role },
+  ];
+
   async function handleSubmit() {
-    if (!name.trim() || !address.trim() || !council.trim() || !role) {
-      setError("Please fill in all fields.");
+    // On a form this long, "fill in all fields" means scrolling to hunt for
+    // the empty one. Name it instead.
+    const missing = REQUIRED_FIELDS.find(({ value }) => !value().trim());
+    if (missing) {
+      setError(`Please add ${missing.label}.`);
       return;
     }
 
@@ -236,7 +246,10 @@ export default function CreateProject() {
             returnKeyType="next"
           />
 
-          <AppText style={authStyles.fieldLabel}>DA APPROVED?</AppText>
+          <AppText style={authStyles.fieldLabel}>DEVELOPMENT APPROVAL (DA)?</AppText>
+          <AppText style={styles.fieldHelp}>
+            Has the council approved the development application for this site?
+          </AppText>
           <View style={[appStyles.optionRow, styles.chipRow]}>
             {(["yes", "no"] as const).map((val) => (
               <TouchableOpacity
@@ -340,6 +353,10 @@ export default function CreateProject() {
           {/* ── Compliance ── */}
           <View style={styles.sectionDivider} />
           <AppText style={styles.sectionTitle}>Compliance</AppText>
+          <AppText style={styles.sectionHelp}>
+            Shown to your team so everyone knows who is covered. It doesn&apos;t affect approval —
+            answer N/A if it doesn&apos;t apply to your trade.
+          </AppText>
 
           <AppText style={authStyles.fieldLabel}>PUBLIC LIABILITY INSURANCE?</AppText>
           <View style={[appStyles.optionRow, styles.chipRow]}>
@@ -441,6 +458,22 @@ export default function CreateProject() {
 const styles = StyleSheet.create({
   chipRow: {
     marginBottom: 20,
+  },
+  fieldHelp: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: -6,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  sectionHelp: {
+    fontSize: 12.5,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: -4,
+    marginBottom: 14,
+    lineHeight: 18,
   },
   optionalLabel: {
     fontSize: 11,
