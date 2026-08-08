@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { config } from "./config";
 import { ProjectModel } from "./models/projectModel";
 import { ProjectError } from "./service/project.service";
@@ -161,6 +162,10 @@ export function requireProjectRole(...allowedRoles: UserRole[]) {
     try {
       const projectId = req.params.projectId;
       const userId = req.user!.sub;
+
+      if (!mongoose.isValidObjectId(projectId)) {
+        throw new ProjectError("Invalid project id", 400);
+      }
 
       const project = await ProjectModel.findById(projectId);
       if (!project) throw new ProjectError("Project Does not Exist");

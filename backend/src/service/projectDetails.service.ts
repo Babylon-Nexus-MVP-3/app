@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { Invoice, InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
@@ -104,6 +105,10 @@ export async function getProjectDetails(
   const normalizedUserId = userId?.trim();
   if (!normalizedUserId) {
     throw new AuthError("Authentication Required", 401);
+  }
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ProjectError("Invalid project id", 400);
   }
 
   const project = await ProjectModel.findById(projectId).lean();

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { EventModel, EventType } from "../models/eventModel";
 import { ProjectModel } from "../models/projectModel";
@@ -46,6 +47,9 @@ export async function submitInvoice(
   projectId: string,
   userId: string
 ): Promise<string> {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ProjectError("Invalid project id", 400);
+  }
   const project = await ProjectModel.findById(projectId);
   if (!project) {
     throw new ProjectError("Project Does not Exist");
@@ -135,6 +139,9 @@ export async function submitInvoice(
 }
 
 async function getInvoiceForAction(invoiceId: string, projectId: string, userId: string) {
+  if (!mongoose.isValidObjectId(invoiceId) || !mongoose.isValidObjectId(projectId)) {
+    throw new InvoiceError("Invalid id", 400);
+  }
   const invoice = await InvoiceModel.findOne({ _id: invoiceId, projectId });
   if (!invoice) {
     throw new InvoiceError("Invoice not found", 404);
@@ -341,6 +348,9 @@ export async function getProjectAuditLog(
   projectId: string,
   userId: string
 ): Promise<AuditLogResult> {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ProjectError("Invalid project id", 400);
+  }
   const project = await ProjectModel.findById(projectId);
   if (!project) {
     throw new ProjectError("Project not found", 404);

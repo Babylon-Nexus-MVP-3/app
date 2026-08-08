@@ -429,8 +429,13 @@ vouchRouter.patch(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) {
+        res.status(400).json({ error: "Invalid notification id" });
+        return;
+      }
       await VouchNotificationModel.updateOne(
-        { _id: req.params.id, recipientUserId: userId },
+        { _id: id, recipientUserId: userId },
         { $set: { read: true } }
       );
       res.status(200).json({ ok: true });

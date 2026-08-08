@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { ProjectModel } from "../models/projectModel";
 import { EventModel } from "../models/eventModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
@@ -209,6 +210,10 @@ export async function inviteParticipant(
   const email = input.email.trim().toLowerCase();
   const trade = input.trade;
   const role = input.role;
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ProjectError("Invalid project id", 400);
+  }
 
   const project = await ProjectModel.findById(projectId);
   if (!project) {

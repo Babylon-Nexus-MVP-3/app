@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
@@ -116,6 +117,9 @@ export async function listInactiveProjects(): Promise<any[]> {
 }
 
 export async function approveProject(projectId: string): Promise<void> {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new AdminError("Invalid project id", 400);
+  }
   const project = await ProjectModel.findOneAndUpdate(
     { _id: projectId, status: "Pending" },
     { $set: { status: "Active" } },
@@ -147,6 +151,9 @@ export async function approveProject(projectId: string): Promise<void> {
 }
 
 export async function rejectProject(projectId: string): Promise<void> {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new AdminError("Invalid project id", 400);
+  }
   const result = await ProjectModel.updateOne(
     { _id: projectId, status: "Pending" },
     { $set: { status: "Rejected" } }
@@ -180,6 +187,10 @@ export async function removeProjectParticipant(
     throw new AdminError("Invalid role", 400);
   }
   const validatedRole = role as UserRole;
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new AdminError("Invalid project id", 400);
+  }
 
   const project = await ProjectModel.findById(projectId);
   if (!project) throw new AdminError("Project does not exist", 404);
@@ -274,6 +285,9 @@ export async function removeProjectParticipant(
 }
 
 export async function deleteProject(projectId: string) {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ProjectError("Invalid project id", 400);
+  }
   const project = await ProjectModel.findOne({ _id: projectId });
 
   if (!project) {
@@ -305,6 +319,9 @@ function computeHealthScore(invoices: any[]): number {
 }
 
 export async function getAdminProjectDetail(projectId: string) {
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new AdminError("Invalid project id", 400);
+  }
   const project = await ProjectModel.findById(projectId)
     .setOptions({ bypassSoftDelete: true })
     .lean();
