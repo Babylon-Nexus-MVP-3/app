@@ -42,3 +42,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Firebase config — contains project API keys, never commit
+google-services.json
+GoogleService-Info.plist
