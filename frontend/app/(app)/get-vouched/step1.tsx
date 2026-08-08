@@ -14,6 +14,8 @@ import { Colors } from "@/constants/colors";
 import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SectionLabel } from "@/components/ui";
 import { AppInput } from "@/components/AppInput";
 import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
@@ -32,8 +34,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 export default function Step1() {
   const { user, fetchWithAuth, updateUser } = useAuth();
   const { step1, setStep1 } = useWizard();
-
-  const hasAccountDetails = !!(user?.name && user?.abn && user?.businessTrade);
 
   const [trade, setTrade] = useState(step1.trade || user?.businessTrade || "");
   const syncedRef = useRef(false);
@@ -87,31 +87,24 @@ export default function Step1() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>STEP 1 OF 6</AppText>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <View style={styles.progressWrap}>
-        <View style={[styles.progressFill, { flex: 1 }]} />
-        <View style={[styles.progressEmpty, { flex: 5 }]} />
-      </View>
+      <ScreenHeader
+        showBack
+        onBack={handleBack}
+        eyebrow="Step 1 of 2"
+        title="Your details"
+        subtitle="Who you are and what you do."
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.heading}>Your details</AppText>
-          <AppText style={styles.subheading}>
-            {hasAccountDetails
-              ? "These details come from your account. Confirm or update your trade type."
-              : "Confirm your details from your account."}
-          </AppText>
-
+        <ScrollView
+          style={sheetStyle.sheet}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <SectionLabel>From your account</SectionLabel>
           <View style={styles.detailsCard}>
             <InfoRow label="NAME" value={user?.name ?? step1.name} />
             <View style={styles.divider} />
@@ -129,6 +122,7 @@ export default function Step1() {
             </View>
           </View>
 
+          <SectionLabel>What do you do?</SectionLabel>
           <AppText style={styles.fieldLabel}>TRADE / BUSINESS TYPE</AppText>
           <AppInput
             style={styles.input}
@@ -159,34 +153,15 @@ export default function Step1() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black, letterSpacing: 1 },
-  progressWrap: { flexDirection: "row", height: 3, marginTop: 10 },
-  progressFill: { backgroundColor: Colors.vouchGreen },
-  progressEmpty: { backgroundColor: Colors.grey300 },
-  scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24 },
-  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
-  subheading: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
+  scroll: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 22 },
   detailsCard: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 28,
-    gap: 4,
+    marginBottom: 26,
   },
   infoRow: { paddingVertical: 10 },
   infoLabel: {
@@ -211,7 +186,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   fieldHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, lineHeight: 18 },
-  footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.grey300,
+  },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,

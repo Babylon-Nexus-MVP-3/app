@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { FlowHeader } from "@/components/FlowHeader";
 import { useAuth } from "@/context/AuthContext";
 
 export default function MobileStatus() {
@@ -16,18 +17,7 @@ export default function MobileStatus() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.push("/(app)/me" as any)}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>MOBILE NUMBER</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <FlowHeader label="MOBILE NUMBER" />
 
       <View style={styles.content}>
         <View style={styles.iconCircle}>
@@ -64,19 +54,6 @@ export default function MobileStatus() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.grey500,
-    letterSpacing: 1,
-  },
   content: {
     flex: 1,
     alignItems: "center",

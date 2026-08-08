@@ -91,7 +91,6 @@ export default function SignIn() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="next"
-            autoFocus
           />
 
           <AppText style={styles.label}>PASSWORD</AppText>

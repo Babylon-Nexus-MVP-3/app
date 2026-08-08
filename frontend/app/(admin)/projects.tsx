@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 4,
   },
-  headerTitle: { fontSize: 24, fontFamily: Fonts.extraBold, color: Colors.white },
+  headerTitle: { fontSize: 28, fontFamily: Fonts.bold, color: Colors.white },
   statsRow: { flexDirection: "row", paddingHorizontal: 16, paddingBottom: 20, gap: 8 },
   statCard: {
     flex: 1,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   projectCard: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 10,
     shadowColor: Colors.black,

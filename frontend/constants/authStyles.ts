@@ -14,7 +14,8 @@ export const authStyles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.lg,
+    // One content gutter across the app.
+    paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },
@@ -48,7 +49,7 @@ export const authStyles = StyleSheet.create({
     height: Size.input,
     borderWidth: 1,
     borderColor: Colors.grey300,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
     fontSize: 16,
     fontFamily: Fonts.regular,

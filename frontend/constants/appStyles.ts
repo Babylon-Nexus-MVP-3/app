@@ -8,7 +8,7 @@ export const appStyles = StyleSheet.create({
   // ─── Root ───────────────────────────────────────────────
   screen: {
     flex: 1,
-    backgroundColor: Colors.grey100,
+    backgroundColor: Colors.white,
   },
 
   // ─── Green header bar ───────────────────────────────────
@@ -32,8 +32,8 @@ export const appStyles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 26,
-    fontFamily: Fonts.extraBold,
+    fontSize: 28,
+    fontFamily: Fonts.bold,
     color: Colors.white,
   },
   headerSubtitle: {
@@ -107,31 +107,30 @@ export const appStyles = StyleSheet.create({
   // ─── Body / list ────────────────────────────────────────
   body: {
     flex: 1,
+    backgroundColor: Colors.white,
   },
   bodyContent: {
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 22,
+    // Extra room at the end so content clears the translucent native tab bar.
+    paddingBottom: 44,
   },
   sectionLabel: {
     fontSize: 11,
     color: Colors.grey500,
     fontFamily: Fonts.bold,
-    letterSpacing: 1.5,
-    marginBottom: 14,
+    letterSpacing: 1,
+    marginBottom: 10,
   },
 
   // ─── Cards ──────────────────────────────────────────────
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 10,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
   cardRow: {
     flexDirection: "row",

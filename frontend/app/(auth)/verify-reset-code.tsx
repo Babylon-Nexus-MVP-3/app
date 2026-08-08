@@ -127,7 +127,6 @@ export default function VerifyResetCode() {
             placeholder="000000"
             keyboardType="number-pad"
             maxLength={6}
-            autoFocus
           />
 
           {resendMsg ? <AppText style={styles.resendMsg}>{resendMsg}</AppText> : null}

@@ -12,8 +12,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
-import { Spacing } from "@/constants/spacing";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { EmptyState, Pill, Segmented } from "@/components/ui";
+import { SentRequests } from "@/components/SentRequests";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -64,31 +66,32 @@ function AttributeChips({ attributes }: { attributes: string[] }) {
 export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<"given" | "received">("given");
+  const [tab, setTab] = useState<"given" | "received" | "requests">("received");
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
-  const [respondedCount, setRespondedCount] = useState(0);
+  const [profileVerified, setProfileVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const hasLoaded = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (tabParam === "received" || tabParam === "given") setTab(tabParam);
+      if (tabParam === "received" || tabParam === "given" || tabParam === "requests") {
+        setTab(tabParam);
+      }
       let cancelled = false;
       if (!hasLoaded.current) setLoading(true);
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
       ])
-        .then(([givenData, receivedData, sentData]) => {
+        .then(([givenData, receivedData, profileData]) => {
           if (cancelled) return;
           setGiven(givenData?.vouches ?? []);
           setReceived(receivedData?.vouches ?? []);
-          const responded = (sentData?.requests ?? []).filter(
-            (r: { status: string }) => r.status === "responded"
-          ).length;
-          setRespondedCount(responded);
+          // Vouching back is still giving a vouch, so it needs the same
+          // complete profile that giving one anywhere else does.
+          setProfileVerified(profileData?.profileStrength === 100);
           hasLoaded.current = true;
         })
         .catch(() => {})
@@ -103,196 +106,177 @@ export default function VouchesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <AppText style={styles.headerTitle}>Vouches</AppText>
-      </View>
-
-      {/* Segment control */}
-      <View style={styles.segmentWrap}>
-        <TouchableOpacity
-          style={[styles.segment, tab === "given" && styles.segmentActive]}
-          onPress={() => setTab("given")}
-          activeOpacity={0.75}
-          accessibilityRole="tab"
-          accessibilityLabel="Given vouches"
-          accessibilityState={{ selected: tab === "given" }}
-        >
-          <AppText style={[styles.segmentText, tab === "given" && styles.segmentTextActive]}>
-            Given
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, tab === "received" && styles.segmentActive]}
-          onPress={() => setTab("received")}
-          activeOpacity={0.75}
-          accessibilityRole="tab"
-          accessibilityLabel="Received vouches"
-          accessibilityState={{ selected: tab === "received" }}
-        >
-          <AppText style={[styles.segmentText, tab === "received" && styles.segmentTextActive]}>
-            Received
-          </AppText>
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.vouchGreen} />
+      <ScreenHeader
+        title="Vouches"
+        subtitle={
+          tab === "given"
+            ? "Businesses you've vouched for"
+            : tab === "received"
+              ? "People who've vouched for you"
+              : "Requests you've sent out"
+        }
+      >
+        <View style={styles.segmentSlot}>
+          <Segmented
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "received", label: "Received" },
+              { value: "given", label: "Given" },
+              { value: "requests", label: "Requests" },
+            ]}
+          />
         </View>
-      ) : tab === "given" ? (
-        given.length === 0 ? (
+      </ScreenHeader>
+
+      <View style={sheetStyle.sheet}>
+        {tab === "requests" ? (
+          <SentRequests />
+        ) : loading ? (
           <View style={styles.centered}>
-            <Ionicons name="shield-outline" size={44} color={Colors.grey300} />
-            <AppText style={styles.emptyTitle}>No vouches given yet.</AppText>
-            <AppText style={styles.emptySubtitle}>
-              Vouching for a business builds trust across the industry.
-            </AppText>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              activeOpacity={0.75}
-              onPress={() => router.push("/(app)/give-vouch")}
-              accessibilityRole="button"
-              accessibilityLabel="Give a Vouch"
-            >
-              <AppText style={styles.emptyBtnText}>Give a Vouch</AppText>
-            </TouchableOpacity>
+            <ActivityIndicator size="large" color={Colors.vouchGreen} />
           </View>
+        ) : tab === "given" ? (
+          given.length === 0 ? (
+            <EmptyState
+              icon="shield-outline"
+              title="No vouches given yet"
+              subtitle={
+                profileVerified
+                  ? "Vouching for a business builds trust across the industry."
+                  : "Complete your profile — your details and trade licence — to start vouching for others."
+              }
+              actionLabel={profileVerified ? "Give a vouch" : "Build your profile"}
+              onAction={() =>
+                router.push(profileVerified ? "/(app)/give-vouch" : "/(app)/get-vouched")
+              }
+            />
+          ) : (
+            <FlatList
+              data={given}
+              keyExtractor={(v) => v._id}
+              contentContainerStyle={styles.scroll}
+              showsVerticalScrollIndicator={false}
+              contentInsetAdjustmentBehavior="automatic"
+              ListHeaderComponent={
+                <AppText style={styles.countLabel}>
+                  {given.length} {given.length === 1 ? "business" : "businesses"} vouched
+                </AppText>
+              }
+              renderItem={({ item: v }) => (
+                <View style={styles.card}>
+                  <View style={styles.cardTop}>
+                    <View style={styles.iconBadge}>
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={18}
+                        color={Colors.vouchGreen}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText style={styles.businessName}>
+                        {v.toBusinessName || "Business"}
+                      </AppText>
+                      <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                    </View>
+                  </View>
+                  <AttributeChips attributes={v.attributes} />
+                  {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
+                </View>
+              )}
+            />
+          )
+        ) : received.length === 0 ? (
+          <EmptyState
+            icon="shield-outline"
+            title="No vouches received yet"
+            subtitle="Complete your vouch profile and send requests to build your reputation."
+            actionLabel="Build your profile"
+            onAction={() => router.push("/(app)/get-vouched")}
+          />
         ) : (
           <FlatList
-            data={given}
+            data={received}
             keyExtractor={(v) => v._id}
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
+            contentInsetAdjustmentBehavior="automatic"
+            extraData={profileVerified}
             ListHeaderComponent={
               <AppText style={styles.countLabel}>
-                {given.length} {given.length === 1 ? "business" : "businesses"} vouched
+                {received.length} {received.length === 1 ? "vouch" : "vouches"} received
               </AppText>
             }
-            renderItem={({ item: v }) => (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={styles.iconBadge}>
-                    <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText style={styles.businessName}>{v.toBusinessName || "Business"}</AppText>
-                    <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
-                  </View>
-                </View>
-                <AttributeChips attributes={v.attributes} />
-                {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
-              </View>
-            )}
-          />
-        )
-      ) : received.length === 0 ? (
-        <View style={styles.centered}>
-          <Ionicons name="shield-outline" size={44} color={Colors.grey300} />
-          <AppText style={styles.emptyTitle}>No vouches received yet.</AppText>
-          <AppText style={styles.emptySubtitle}>
-            Complete your Vouch profile and send requests to build your reputation.
-          </AppText>
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            activeOpacity={0.75}
-            onPress={() => router.push("/(app)/get-vouched")}
-            accessibilityRole="button"
-            accessibilityLabel="Build your profile"
-          >
-            <AppText style={styles.emptyBtnText}>Build your profile</AppText>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={received}
-          keyExtractor={(v) => v._id}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          extraData={respondedCount}
-          ListHeaderComponent={
-            <AppText style={styles.countLabel}>
-              {received.length} {received.length === 1 ? "vouch" : "vouches"} received
-            </AppText>
-          }
-          renderItem={({ item: v }) => {
-            const canVouchBack = respondedCount >= 2;
-            const displayName = v.fromBusinessName || v.fromName || "this business";
-            function onVouchBack() {
-              if (!v.fromAbn || v.alreadyVouchedBack) return;
-              if (!canVouchBack) {
-                Alert.alert(
-                  "Not yet unlocked",
-                  "You need at least 2 people to vouch for you before you can vouch for others.",
-                  [{ text: "OK" }]
-                );
-                return;
+            renderItem={({ item: v }) => {
+              const displayName = v.fromBusinessName || v.fromName || "this business";
+              function onVouchBack() {
+                if (!v.fromAbn || v.alreadyVouchedBack) return;
+                if (!profileVerified) {
+                  Alert.alert(
+                    "Complete your profile first",
+                    "Add your details and trade licence before you vouch for someone else.",
+                    [
+                      { text: "Not now", style: "cancel" },
+                      {
+                        text: "Build profile",
+                        onPress: () => router.push("/(app)/get-vouched"),
+                      },
+                    ]
+                  );
+                  return;
+                }
+                router.push({
+                  pathname: "/(app)/give-vouch/attributes",
+                  params: { abn: v.fromAbn, businessName: displayName },
+                });
               }
-              router.push({
-                pathname: "/(app)/give-vouch/attributes",
-                params: { abn: v.fromAbn, businessName: displayName },
-              });
-            }
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={styles.iconBadge}>
-                    <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText style={styles.businessName}>
-                      {v.fromName || "Someone"}
-                      {v.fromBusinessName ? (
-                        <AppText
-                          style={styles.fromBusiness}
-                        >{`  ·  ${v.fromBusinessName}`}</AppText>
-                      ) : null}
-                    </AppText>
-                    <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
-                  </View>
-                  {v.fromAbn ? (
-                    v.alreadyVouchedBack ? (
-                      <View style={styles.vouchBackDone}>
-                        <Ionicons name="checkmark" size={12} color={Colors.vouchGreen} />
-                        <AppText style={styles.vouchBackDoneText}>Vouched</AppText>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.vouchBackBtn, !canVouchBack && styles.vouchBackBtnDisabled]}
-                        onPress={onVouchBack}
-                        activeOpacity={0.75}
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          canVouchBack
-                            ? `Vouch back for ${displayName}`
-                            : "Vouch back requires 2 vouches received"
-                        }
-                        accessibilityState={{ disabled: !canVouchBack }}
-                      >
-                        <AppText
-                          style={[
-                            styles.vouchBackBtnText,
-                            !canVouchBack && styles.vouchBackBtnTextDisabled,
-                          ]}
+              return (
+                <View style={styles.card}>
+                  <View style={styles.cardTop}>
+                    <View style={styles.iconBadge}>
+                      <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText style={styles.businessName}>
+                        {v.fromName || "Someone"}
+                        {v.fromBusinessName ? (
+                          <AppText
+                            style={styles.fromBusiness}
+                          >{`  ·  ${v.fromBusinessName}`}</AppText>
+                        ) : null}
+                      </AppText>
+                      <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                    </View>
+                    {v.fromAbn ? (
+                      v.alreadyVouchedBack ? (
+                        <Pill label="Vouched" tone="green" icon="checkmark" />
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.vouchBackBtn}
+                          onPress={onVouchBack}
+                          activeOpacity={0.75}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Vouch back for ${displayName}`}
                         >
-                          Vouch back
-                        </AppText>
-                      </TouchableOpacity>
-                    )
-                  ) : null}
+                          <AppText style={styles.vouchBackBtnText}>Vouch back</AppText>
+                        </TouchableOpacity>
+                      )
+                    ) : null}
+                  </View>
+                  <AttributeChips attributes={v.attributes} />
+                  {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
                 </View>
-                <AttributeChips attributes={v.attributes} />
-                {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
-              </View>
-            );
-          }}
-        />
-      )}
+              );
+            }}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
   centered: {
     flex: 1,
     alignItems: "center",
@@ -300,54 +284,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 12,
   },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontFamily: Fonts.extraBold,
-    color: Colors.vouchGreen,
-    letterSpacing: 1,
-  },
-
-  // Segment control
-  segmentWrap: {
-    flexDirection: "row",
-    marginHorizontal: 24,
-    marginBottom: 16,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 12,
-    padding: 4,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  segmentActive: {
-    backgroundColor: Colors.white,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
-    color: Colors.grey500,
-  },
-  segmentTextActive: {
-    color: Colors.black,
-  },
+  segmentSlot: { marginTop: 18 },
 
   // List
   scroll: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingHorizontal: 16,
+    paddingTop: 22,
+    paddingBottom: 44,
     gap: 12,
   },
   countLabel: {
@@ -359,7 +302,9 @@ const styles = StyleSheet.create({
 
   // Vouch card
   card: {
-    backgroundColor: Colors.offWhite,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 16,
     padding: 16,
     gap: 10,
@@ -401,17 +346,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.vouchGreenLight,
     borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
+    paddingVertical: 5,
   },
   chipText: {
     fontSize: 12,
-    fontFamily: Fonts.medium,
-    color: Colors.grey700,
+    fontFamily: Fonts.semiBold,
+    color: Colors.vouchGreen,
   },
 
   // Note
@@ -431,57 +374,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  vouchBackBtnDisabled: {
-    borderColor: Colors.grey300,
-  },
   vouchBackBtnText: {
     fontSize: 12,
     fontFamily: Fonts.semiBold,
     color: Colors.vouchGreen,
-  },
-  vouchBackBtnTextDisabled: {
-    color: Colors.grey300,
-  },
-  vouchBackDone: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 20,
-  },
-  vouchBackDoneText: {
-    fontSize: 12,
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
-  },
-
-  // Empty state
-  emptyBtn: {
-    marginTop: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 28,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-  },
-  emptyBtnText: {
-    fontSize: 15,
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    textAlign: "center",
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    textAlign: "center",
-    lineHeight: 20,
   },
 });

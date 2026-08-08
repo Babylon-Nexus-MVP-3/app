@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { FlowHeader } from "@/components/FlowHeader";
 import { useAuth } from "@/context/AuthContext";
 
 export default function EmailStatus() {
@@ -12,18 +13,7 @@ export default function EmailStatus() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>EMAIL ADDRESS</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <FlowHeader label="EMAIL ADDRESS" />
 
       <View style={styles.content}>
         <View style={styles.iconCircle}>
@@ -62,19 +52,6 @@ export default function EmailStatus() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.grey500,
-    letterSpacing: 1,
-  },
   content: {
     flex: 1,
     alignItems: "center",

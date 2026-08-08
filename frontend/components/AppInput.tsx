@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     height: Size.input,
     borderWidth: 1,
     borderColor: Colors.grey300,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
     fontSize: 16,
     fontFamily: Fonts.regular,

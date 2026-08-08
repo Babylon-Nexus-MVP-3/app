@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { FlowHeader } from "@/components/FlowHeader";
 import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -86,18 +87,7 @@ export default function JoinProject() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>JOIN A PROJECT</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <FlowHeader label="JOIN A PROJECT" />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -120,7 +110,6 @@ export default function JoinProject() {
             placeholder="000000"
             keyboardType="number-pad"
             maxLength={6}
-            autoFocus
           />
 
           <AppText style={styles.sectionLabel}>DO YOU HOLD A CURRENT LICENCE?</AppText>
@@ -201,26 +190,13 @@ export default function JoinProject() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 48,
   },
   heading: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 8,

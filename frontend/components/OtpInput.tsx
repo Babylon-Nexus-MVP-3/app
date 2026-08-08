@@ -5,6 +5,11 @@ import { Fonts } from "@/constants/fonts";
 import { Radius, Size, Spacing } from "@/constants/spacing";
 
 export interface OtpInputRef {
+  /**
+   * Focus the first box. Call this only in response to a user action (sending
+   * or resending a code) — never on mount, so arriving at a screen doesn't pop
+   * the keyboard open before the user has asked for it.
+   */
   focusFirst: () => void;
 }
 
@@ -75,7 +80,6 @@ export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput
           maxLength={2}
           textAlign="center"
           selectTextOnFocus
-          autoFocus={i === 0}
         />
       ))}
     </View>
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
     height: Size.otpBox,
     borderWidth: 1.5,
     borderColor: Colors.grey300,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     fontSize: 28,
     fontFamily: Fonts.bold,
     color: Colors.black,

@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SectionLabel, Segmented } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { formatAbn } from "@/lib/useAbrLookup";
@@ -227,20 +229,15 @@ export default function GiveAVouchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>GIVE A VOUCH</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        showBack
+        eyebrow="Give a vouch"
+        title="Vouch for someone"
+        subtitle="Back the people whose work you'd stand behind."
+      />
 
       <ScrollView
+        style={sheetStyle.sheet}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -251,17 +248,16 @@ export default function GiveAVouchScreen() {
           />
         }
       >
-        <AppText style={styles.pageTitle}>Vouch for someone</AppText>
-
-        {/* Pending requests */}
-        <AppText style={styles.sectionLabel}>
-          PENDING REQUESTS{requests.length > 0 ? ` · ${requests.length}` : ""}
-        </AppText>
+        {/* People who have asked you to vouch for them come first — it's the
+            fastest path to giving a vouch. */}
+        <SectionLabel>
+          {requests.length > 0 ? `Waiting on you · ${requests.length}` : "Waiting on you"}
+        </SectionLabel>
 
         {requests.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Ionicons name="time-outline" size={20} color={Colors.grey500} />
-            <AppText style={styles.emptyText}>No pending requests right now.</AppText>
+            <Ionicons name="time-outline" size={18} color={Colors.grey500} />
+            <AppText style={styles.emptyText}>Nobody has asked you for a vouch right now.</AppText>
           </View>
         ) : (
           requests.map((r, i) => (
@@ -308,27 +304,26 @@ export default function GiveAVouchScreen() {
 
         <View style={styles.divider} />
 
-        {/* Vouch a business */}
-        <AppText style={styles.newTitle}>Vouch a business</AppText>
+        {/* Or start one yourself */}
+        <SectionLabel>Vouch a business</SectionLabel>
+        <Segmented
+          tone="light"
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[
+            { value: "abn", label: "By ABN" },
+            { value: "name", label: "By name" },
+          ]}
+        />
         <AppText style={styles.newSubtitle}>
           {activeTab === "abn"
-            ? "Enter their ABN. We'll verify it instantly."
+            ? "Enter their ABN and we'll verify it instantly."
             : "Search by business name to find their ABN."}
         </AppText>
 
         {activeTab === "abn" && (
           <>
-            <View style={styles.labelRow}>
-              <AppText style={styles.abnLabel}>ABN</AppText>
-              <TouchableOpacity
-                onPress={() => setActiveTab("name")}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Search by name instead"
-              >
-                <AppText style={styles.switchLink}>Search by name →</AppText>
-              </TouchableOpacity>
-            </View>
+            <AppText style={styles.abnLabel}>ABN</AppText>
             <TextInput
               style={[styles.abnInput, abnError ? styles.abnInputError : null]}
               value={abn}
@@ -368,17 +363,7 @@ export default function GiveAVouchScreen() {
 
         {activeTab === "name" && (
           <>
-            <View style={styles.labelRow}>
-              <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
-              <TouchableOpacity
-                onPress={() => setActiveTab("abn")}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Enter ABN instead"
-              >
-                <AppText style={styles.switchLink}>← Enter ABN instead</AppText>
-              </TouchableOpacity>
-            </View>
+            <AppText style={styles.abnLabel}>BUSINESS NAME</AppText>
             <View style={styles.nameSearchRow}>
               <TextInput
                 style={styles.nameInput}
@@ -447,42 +432,21 @@ export default function GiveAVouchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
+    paddingTop: 22,
     paddingBottom: 32,
     gap: 12,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-    marginBottom: 4,
   },
   emptyBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
+    gap: 10,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   emptyText: {
     fontSize: 15,
@@ -495,7 +459,7 @@ const styles = StyleSheet.create({
     gap: 14,
     borderWidth: 1,
     borderColor: Colors.grey300,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
     backgroundColor: Colors.white,
@@ -541,19 +505,14 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.grey300,
-    marginVertical: 8,
-  },
-  newTitle: {
-    fontSize: 22,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
+    backgroundColor: Colors.grey100,
+    marginVertical: 18,
   },
   newSubtitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
-    marginTop: -4,
+    marginTop: 4,
   },
   abnLabel: {
     fontSize: 11,
@@ -584,7 +543,7 @@ const styles = StyleSheet.create({
   lookupBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,
-    height: 56,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
@@ -606,16 +565,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grey500,
     lineHeight: 18,
-  },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  switchLink: {
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    color: Colors.vouchGreen,
   },
   nameSearchRow: {
     flexDirection: "row",

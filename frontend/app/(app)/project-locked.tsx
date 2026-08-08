@@ -5,22 +5,12 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { FlowHeader } from "@/components/FlowHeader";
 
 export default function ProjectLocked() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>NEW PROJECT</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <FlowHeader label="NEW PROJECT" />
 
       <View style={styles.body}>
         <View style={styles.iconWrap}>
@@ -88,19 +78,6 @@ export default function ProjectLocked() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
   body: {
     flex: 1,
     paddingHorizontal: 24,

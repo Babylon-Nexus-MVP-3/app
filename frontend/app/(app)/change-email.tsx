@@ -141,7 +141,7 @@ export default function ChangeEmail() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
           {step === "enter" ? (
@@ -165,7 +165,6 @@ export default function ChangeEmail() {
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={handleSendCode}
-                autoFocus
               />
 
               {error ? <AppText style={styles.errorText}>{error}</AppText> : null}

@@ -432,7 +432,7 @@ export default function AuditLog() {
 /* ─── Styles ─── */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.grey100 },
-  header: { paddingBottom: 20, paddingHorizontal: 20 },
+  header: { paddingBottom: 22, paddingHorizontal: 20 },
   backBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -459,8 +459,8 @@ const styles = StyleSheet.create({
   exportBtnDisabled: { opacity: 0.5 },
   exportBtnText: { color: Colors.white, fontSize: 13, fontFamily: Fonts.bold },
   headerTitle: {
-    fontSize: 22,
-    fontFamily: Fonts.extraBold,
+    fontSize: 28,
+    fontFamily: Fonts.bold,
     color: Colors.white,
     marginBottom: 2,
   },

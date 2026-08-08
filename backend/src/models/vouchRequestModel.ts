@@ -11,6 +11,10 @@ export interface VouchRequest extends Document {
   projectName: string;
   status: "pending" | "responded" | "ignored";
   respondedAt?: Date;
+  /** When the reference was last nudged — drives the nudge cooldown. */
+  lastSentAt?: Date;
+  /** When we last reminded the *sender* that this request is going unanswered. */
+  lastNudgeReminderAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +31,8 @@ const vouchRequestSchema = new Schema<VouchRequest>(
     projectName: { type: String, default: "" },
     status: { type: String, enum: ["pending", "responded", "ignored"], default: "pending" },
     respondedAt: { type: Date },
+    lastSentAt: { type: Date, default: Date.now },
+    lastNudgeReminderAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/constants/api";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -48,6 +48,7 @@ type UnifiedNotif = {
   projectNotifType?: ProjectNotifType;
   // vouch-specific
   vouchId?: string;
+  nudgeReminder?: boolean;
 };
 
 function projectIcon(type: ProjectNotifType): { name: IoniconName; color: string } {
@@ -117,6 +118,7 @@ export default function Notifications() {
   const { fetchWithAuth } = useAuth();
   const [notifications, setNotifications] = useState<UnifiedNotif[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const hasUnread = notifications.some((n) => !n.read);
@@ -140,20 +142,32 @@ export default function Notifications() {
 
     const vouchNotifs: UnifiedNotif[] = (vouchData?.notifications ?? []).map((n: any) => {
       const isReceived = n.type === "vouch_received";
+      // A reminder aimed at the sender: their request has gone quiet.
+      const isNudgeReminder = n.type === "nudge_reminder";
+
       const message = isReceived
         ? `${n.fromName} vouched for ${n.toBusinessName ?? "your business"}.`
-        : `${n.fromName} from ${n.fromCompany} requested a vouch for ${n.projectName ?? "a project"}.`;
+        : isNudgeReminder
+          ? `${n.fromName} hasn't responded to your vouch request yet. Give them a nudge.`
+          : `${n.fromName} from ${n.fromCompany} requested a vouch for ${n.projectName ?? "a project"}.`;
+
+      const iconName: IoniconName = isReceived
+        ? "shield-checkmark-outline"
+        : isNudgeReminder
+          ? "notifications-outline"
+          : "person-add-outline";
+
       return {
         key: `vouch-${n._id}`,
         source: "vouch" as const,
         message,
         read: n.read,
         createdAt: n.createdAt,
-        iconName: isReceived
-          ? ("shield-checkmark-outline" as IoniconName)
-          : ("person-add-outline" as IoniconName),
-        iconColor: Colors.vouchGreen,
+        iconName,
+        iconColor: isNudgeReminder ? Colors.amber : Colors.vouchGreen,
         vouchId: n._id,
+        // Tapping a reminder should land on the screen where you can act.
+        nudgeReminder: isNudgeReminder,
       };
     });
 
@@ -176,8 +190,13 @@ export default function Notifications() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
+      // Refocusing refetches, but showing the spinner again makes the list
+      // blink — only the first load blanks the screen.
+      if (!hasLoadedRef.current) setLoading(true);
+      load().finally(() => {
+        hasLoadedRef.current = true;
+        setLoading(false);
+      });
     }, [load])
   );
 
@@ -208,7 +227,13 @@ export default function Notifications() {
           prev.map((n) => (n.key === item.key ? { ...n, read: true } : n))
         );
       }
-      router.push("/(app)/(tabs)/vouches");
+      // A nudge reminder is about a request you sent, so it belongs on the
+      // requests screen where the Nudge button lives — not the vouches list.
+      router.push(
+        item.nudgeReminder
+          ? { pathname: "/(app)/(tabs)/vouches", params: { tab: "requests" } }
+          : "/(app)/(tabs)/vouches"
+      );
       return;
     }
     // Project notification
@@ -263,6 +288,7 @@ export default function Notifications() {
         </View>
       ) : (
         <FlatList
+          style={appStyles.body}
           data={notifications}
           keyExtractor={(item) => item.key}
           contentContainerStyle={
@@ -309,7 +335,7 @@ const styles = StyleSheet.create({
   emptyContent: { flex: 1 },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",

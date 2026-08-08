@@ -17,11 +17,14 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SectionLabel } from "@/components/ui";
 import { AppInput } from "@/components/AppInput";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 import { showAlert, vouchRequestErrorMessage } from "@/lib/errors";
+import { HEADER_HIT_SLOP } from "@/constants/touch";
 
 const RELATIONSHIPS = [
   "Worked together",
@@ -175,13 +178,23 @@ function formatMobile(v: string) {
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function Step4() {
-  const { step1, step2, references, setReferences } = useWizard();
-  const { fetchWithAuth } = useAuth();
+export default function RequestVouch() {
+  const { step1, references, setReferences } = useWizard();
+  const { fetchWithAuth, updateUser } = useAuth();
 
-  const [ref, setRef] = useState<Reference>(references[1] ?? emptyRef());
+  const [ref, setRef] = useState<Reference>(emptyRef());
   const [emailTouched, setEmailTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sentRequests, setSentRequests] = useState<{ toMobile: string; toEmail?: string }[]>([]);
+
+  useEffect(() => {
+    fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.requests) setSentRequests(data.requests);
+      })
+      .catch(() => {});
+  }, [fetchWithAuth]);
 
   function update(key: keyof Reference, v: string) {
     setRef((r) => ({ ...r, [key]: v }));
@@ -192,8 +205,19 @@ export default function Step4() {
 
   async function onSubmit() {
     setSubmitting(true);
-    const updatedRefs = [references[0] ?? emptyRef(), ref, ...references.slice(2)];
-    setReferences(updatedRefs);
+    const mobile = ref.mobile.trim();
+    const email = ref.email.trim().toLowerCase();
+    const alreadySent = sentRequests.some(
+      (r) =>
+        (mobile && r.toMobile === mobile) ||
+        (email && r.toEmail && r.toEmail.toLowerCase() === email)
+    );
+    if (alreadySent) {
+      showAlert("Already requested", "You've already sent a vouch request to this person.");
+      setSubmitting(false);
+      return;
+    }
+    const updatedRefs = [...references, ref];
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
         method: "POST",
@@ -204,18 +228,6 @@ export default function Step4() {
           idType: step1.idType,
           idNumber: step1.idNumber,
           idExpiry: step1.idExpiry,
-          currentProjectName: step2.currentProjectName,
-          address: step2.address,
-          suburb: step2.suburb,
-          state: step2.state,
-          postcode: step2.postcode,
-          value: step2.value,
-          pastProjectName: step2.pastProjectName,
-          pastSuburb: step2.pastSuburb,
-          pastPostcode: step2.pastPostcode,
-          pastMonthYear: step2.pastMonthYear,
-          pastState: step2.pastState,
-          pastValue: step2.pastValue,
           references: updatedRefs.filter((r) => r.name.trim()),
         }),
       });
@@ -224,38 +236,67 @@ export default function Step4() {
         showAlert("Cannot send request", vouchRequestErrorMessage(res.status, data.error));
         return;
       }
+      setReferences(updatedRefs);
+      await updateUser({ abn: step1.abn }).catch(() => {});
     } catch {
       showAlert("Cannot send request", NETWORK_ERROR_MESSAGE);
       return;
     } finally {
       setSubmitting(false);
     }
-    router.replace("/(app)/get-vouched/success" as any);
+    router.back();
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>STEP 4 OF 6</AppText>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.progressWrap}>
-        <View style={[styles.progressFill, { flex: 4 }]} />
-        <View style={[styles.progressEmpty, { flex: 2 }]} />
-      </View>
+      <ScreenHeader
+        showBack
+        eyebrow="Get vouched"
+        title="Request a vouch"
+        subtitle="Ask someone you've worked with to back your work."
+        right={
+          <TouchableOpacity
+            onPress={() =>
+              router.push({ pathname: "/(app)/(tabs)/vouches", params: { tab: "requests" } })
+            }
+            hitSlop={HEADER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel={
+              sentRequests.length > 0
+                ? `View your ${sentRequests.length} sent requests`
+                : "View your requests"
+            }
+          >
+            <View style={styles.requestsBtn}>
+              <AppText style={styles.requestsBtnText}>Requests</AppText>
+              {sentRequests.length > 0 && (
+                <View style={styles.requestsCount}>
+                  <AppText style={styles.requestsCountText}>{sentRequests.length}</AppText>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.subtitle}>
-            Add a second person who can vouch for your work. This unlocks your full profile.
-          </AppText>
+        <ScrollView
+          style={sheetStyle.sheet}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.guide}>
+            <Ionicons name="information-circle-outline" size={18} color={Colors.vouchGreen} />
+            <AppText style={styles.guideText}>
+              Pick someone who has seen your work first-hand — a builder, PM or client. They get a
+              text and answer a few questions.
+            </AppText>
+          </View>
 
+          <SectionLabel>Who are you asking?</SectionLabel>
           <View style={styles.refCard}>
             <AppInput
               style={styles.refInput}
@@ -296,6 +337,7 @@ export default function Step4() {
               ) : null}
             </View>
 
+            <View style={styles.divider} />
             <AppText style={styles.dropdownLabel}>HOW DO YOU KNOW THEM?</AppText>
             <Dropdown
               label="Select relationship"
@@ -339,28 +381,45 @@ export default function Step4() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
+  requestsBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  requestsBtnText: { fontSize: 13, fontFamily: Fonts.bold, color: Colors.white },
+  requestsCount: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: Colors.whiteGloss,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 4,
+    justifyContent: "center",
   },
-  headerTitle: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black, letterSpacing: 1 },
-  progressWrap: { flexDirection: "row", height: 3, marginTop: 10 },
-  progressFill: { backgroundColor: Colors.vouchGreen },
-  progressEmpty: { backgroundColor: Colors.grey300 },
-  scroll: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 24, gap: 16 },
-  heading: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.black },
+  requestsCountText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.white },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
+  scroll: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 22 },
+  guide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 24,
+  },
+  guideText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey700,
+    lineHeight: 19,
+  },
+  divider: { height: 1, backgroundColor: Colors.grey100, marginVertical: 4 },
+  heading: { fontSize: 28, fontFamily: Fonts.bold, color: Colors.black },
   subtitle: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.grey500, lineHeight: 20 },
   refCard: {
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 16,
     padding: 16,
-    gap: 10,
+    gap: 12,
     backgroundColor: Colors.white,
   },
   refInput: {},
@@ -380,7 +439,14 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
   dropdownPlaceholder: { color: Colors.grey300 },
-  footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.grey300,
+  },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,
     borderRadius: 28,

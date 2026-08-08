@@ -54,26 +54,16 @@ type VouchProfileApi = {
   abn?: string;
   trade?: string;
   idNumber?: string;
-  currentProjectName?: string;
-  suburb?: string;
-  state?: string;
-  pastProjectName?: string;
-  pastSuburb?: string;
-  pastState?: string;
 };
 
-// Mirrors the 6 steps of the "Build your profile" wizard. Steps 3/4 require
-// an actually confirmed (responded) vouch, not just a sent-but-unanswered
-// request — a pending reference shouldn't unlock project creation.
-function isProfileComplete(profile: VouchProfileApi | null, respondedCount: number): boolean {
+// Mirrors the 2 steps of the "Build your profile" wizard: your details and
+// your trade licence. Vouches received are deliberately not part of it — they
+// depend on other people responding.
+function isProfileComplete(profile: VouchProfileApi | null): boolean {
   if (!profile) return false;
-  const step1 = !!(profile.name && profile.abn && profile.trade);
-  const step2 = !!(profile.currentProjectName && profile.suburb && profile.state);
-  const step3 = respondedCount >= 1;
-  const step4 = respondedCount >= 2;
-  const step5 = !!(profile.pastProjectName && profile.pastSuburb && profile.pastState);
-  const step6 = !!profile.idNumber;
-  return step1 && step2 && step3 && step4 && step5 && step6;
+  const detailsDone = !!(profile.name && profile.abn && profile.trade);
+  const licenceDone = !!profile.idNumber;
+  return detailsDone && licenceDone;
 }
 
 export default function Projects() {
@@ -98,10 +88,9 @@ export default function Projects() {
     if (!silent) setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const [projectsRes, profileRes, sentRes] = await Promise.all([
+      const [projectsRes, profileRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/projects`),
         fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
       ]);
       const data = await projectsRes.json();
       if (!projectsRes.ok) {
@@ -120,11 +109,7 @@ export default function Projects() {
       setProjects(mapped);
 
       const profileData = profileRes.ok ? ((await profileRes.json()) as VouchProfileApi) : null;
-      const sentData = sentRes.ok ? await sentRes.json() : null;
-      const respondedCount = (sentData?.requests ?? []).filter(
-        (r: { status: string }) => r.status === "responded"
-      ).length;
-      setCanCreateProject(isProfileComplete(profileData, respondedCount));
+      setCanCreateProject(isProfileComplete(profileData));
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
@@ -410,7 +395,6 @@ export default function Projects() {
                   placeholderTextColor={Colors.grey300}
                   keyboardType="number-pad"
                   maxLength={6}
-                  autoFocus
                 />
                 <AppText style={styles.joinHint}>Enter the 6-digit code from your invite.</AppText>
 

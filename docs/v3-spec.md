@@ -30,6 +30,10 @@ Use this to mark work done. Update as you complete each item.
 - [ ] `POST /vouch/request/:id/accept`
 - [ ] `POST /vouch/request/:id/decline`
 - [ ] `GET /vouch/business/:abn` — public profile (vouch count + attributes only)
+- [x] `GET /vouch/requests/sent` — requests the current user has sent, with status
+- [x] `POST /vouch/requests/:requestId/nudge` — nudge a reference who hasn't responded (24h cooldown)
+- [x] `DELETE /vouch/requests/:requestId` — withdraw a pending request
+- [x] `GET /projects/history` — every project the user is or has been part of
 - [ ] Modify `POST /auth/register` — add mobile/ABN fields, remove password requirement (v2 flow kept, v3 uses request-otp)
 - [ ] Modify `POST /auth/login` — change to OTP-based flow (v2 flow kept, v3 uses request-otp)
 
