@@ -153,13 +153,13 @@ export const resendResetCode = async (req: Request, res: Response, next: NextFun
 };
 
 export const verifyResetCode = async (req: Request, res: Response, next: NextFunction) => {
-  const { resetCode } = req.body;
-  if (!isNonEmptyString(resetCode)) {
-    return res.status(400).json({ error: "Reset code is required" });
+  const { email, resetCode } = req.body;
+  if (!isNonEmptyString(email) || !validator.isEmail(email) || !isNonEmptyString(resetCode)) {
+    return res.status(400).json({ error: "Email and reset code are required" });
   }
 
   try {
-    const result = await verifyResetCodeService(resetCode);
+    const result = await verifyResetCodeService(email, resetCode);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -167,14 +167,19 @@ export const verifyResetCode = async (req: Request, res: Response, next: NextFun
 };
 
 export const resetPasswd = async (req: Request, res: Response, next: NextFunction) => {
-  const { resetCode, newPassword } = req.body;
+  const { email, resetCode, newPassword } = req.body;
 
-  if (!isNonEmptyString(resetCode) || !isNonEmptyString(newPassword)) {
-    return res.status(400).json({ error: "Reset code and password are required" });
+  if (
+    !isNonEmptyString(email) ||
+    !validator.isEmail(email) ||
+    !isNonEmptyString(resetCode) ||
+    !isNonEmptyString(newPassword)
+  ) {
+    return res.status(400).json({ error: "Email, reset code, and password are required" });
   }
 
   try {
-    const result = await resetPassword(resetCode, newPassword);
+    const result = await resetPassword(email, resetCode, newPassword);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -182,13 +187,17 @@ export const resetPasswd = async (req: Request, res: Response, next: NextFunctio
 };
 
 export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
-  const { verificationCode } = req.body;
-  if (!isNonEmptyString(verificationCode)) {
-    return res.status(400).json({ error: "Verification code is required" });
+  const { email, verificationCode } = req.body;
+  if (
+    !isNonEmptyString(email) ||
+    !validator.isEmail(email) ||
+    !isNonEmptyString(verificationCode)
+  ) {
+    return res.status(400).json({ error: "Email and verification code are required" });
   }
 
   try {
-    const result = await userVerifyEmail(verificationCode);
+    const result = await userVerifyEmail(email, verificationCode);
     res.status(200).json(result);
   } catch (err) {
     next(err);

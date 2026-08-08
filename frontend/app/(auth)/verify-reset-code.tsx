@@ -43,13 +43,13 @@ export default function VerifyResetCode() {
       const res = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resetCode: code }),
+        body: JSON.stringify({ email, resetCode: code }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Invalid or expired code");
       router.push({
         pathname: "/(auth)/reset-password",
-        params: { resetCode: code },
+        params: { email, resetCode: code },
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");

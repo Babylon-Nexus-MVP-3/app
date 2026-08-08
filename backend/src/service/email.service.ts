@@ -1,6 +1,19 @@
 import nodemailer from "nodemailer";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
+// Escapes HTML metacharacters in values that end up inside email HTML.
+// Without this, user-supplied text (a name, a note, a project name) can
+// inject arbitrary markup — links, fake buttons — into an email sent from
+// our SES-verified domain, which passes SPF/DKIM and looks fully legitimate.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const BASE_URL = "https://api.babylon-nexus.com";
 const LOGO_URL = `${BASE_URL}/assets/appIcon.png`;
 const NSW_LOGO_URL = `${BASE_URL}/assets/nsw-government-logo.png`;
@@ -63,6 +76,7 @@ export async function sendInviteEmail(
   inviteCode: string,
   projectLocation: string
 ): Promise<void> {
+  const safeProjectLocation = escapeHtml(projectLocation);
   await transporter.sendMail({
     from: `"VouchPay" <${process.env.EMAIL_USER}>`,
     to,
@@ -73,7 +87,7 @@ export async function sendInviteEmail(
         ${emailHeader}
         <div style="padding: 24px;">
           <h2>You've been invited to a project</h2>
-          <p>You have been invited to join the project at <strong>${projectLocation}</strong>.</p>
+          <p>You have been invited to join the project at <strong>${safeProjectLocation}</strong>.</p>
           <p>Your invite code is:</p>
           <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f4f4f4; border-radius: 8px; text-align: center;">
             ${inviteCode}
@@ -168,6 +182,9 @@ export async function sendVouchRequestEmail(
   projectName: string
 ): Promise<void> {
   const context = [relationship, projectName].filter(Boolean).join(" on ");
+  const safeFromName = escapeHtml(fromName);
+  const safeFromCompany = escapeHtml(fromCompany);
+  const safeContext = escapeHtml(context);
   await transporter.sendMail({
     from: `"VouchPay" <${process.env.EMAIL_USER}>`,
     to,
@@ -177,10 +194,10 @@ export async function sendVouchRequestEmail(
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5;">
         ${emailHeader}
         <div style="padding: 24px;">
-          <h2>${fromName} wants you to vouch for them</h2>
-          <p><strong>${fromName}</strong> from <strong>${fromCompany}</strong> has asked you to vouch for them on VouchPay.</p>
+          <h2>${safeFromName} wants you to vouch for them</h2>
+          <p><strong>${safeFromName}</strong> from <strong>${safeFromCompany}</strong> has asked you to vouch for them on VouchPay.</p>
           <div style="background: #f8f9fa; border-radius: 10px; padding: 16px; margin: 20px 0;">
-            <p style="margin: 0; color: #5a5a5a; font-size: 14px;">${context}</p>
+            <p style="margin: 0; color: #5a5a5a; font-size: 14px;">${safeContext}</p>
           </div>
           <p>To respond, open the VouchPay app, tap <strong>"Give a Vouch"</strong> and their request will be waiting for you.</p>
           <p>If you don't have the app yet:</p>
@@ -205,24 +222,28 @@ export async function sendVouchedForEmail(
   attributes: string[] = [],
   note?: string
 ): Promise<void> {
+  const safeRecipientName = escapeHtml(recipientName);
+  const safeGiverName = escapeHtml(giverName);
+  const safeGiverCompany = escapeHtml(giverCompany);
+
   const attributeList = attributes.length
     ? `<ul style="padding-left: 20px; line-height: 1.8; margin: 8px 0;">
-        ${attributes.map((a) => `<li>${a}</li>`).join("")}
+        ${attributes.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}
       </ul>`
     : "";
 
   const noteBlock = note
-    ? `<p style="margin: 12px 0 0; font-style: italic; color: #444;">"${note}"</p>`
+    ? `<p style="margin: 12px 0 0; font-style: italic; color: #444;">"${escapeHtml(note)}"</p>`
     : "";
 
   const attributeSection = attributes.length
     ? `<div style="background: #E8F5EE; border-radius: 10px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0 0 8px; color: #1B5C38; font-weight: bold; font-size: 15px;">Here's what ${giverName} said about you:</p>
+        <p style="margin: 0 0 8px; color: #1B5C38; font-weight: bold; font-size: 15px;">Here's what ${safeGiverName} said about you:</p>
         ${attributeList}
         ${noteBlock}
       </div>`
     : `<div style="background: #E8F5EE; border-radius: 10px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0; color: #1B5C38; font-weight: bold; font-size: 15px;">${giverName} had great things to say about you and your work.</p>
+        <p style="margin: 0; color: #1B5C38; font-weight: bold; font-size: 15px;">${safeGiverName} had great things to say about you and your work.</p>
       </div>`;
 
   const textAttributes = attributes.length
@@ -239,8 +260,8 @@ export async function sendVouchedForEmail(
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5;">
         ${emailHeader}
         <div style="padding: 24px;">
-          <h2 style="margin-top: 0;">Great news, ${recipientName}! 🎉</h2>
-          <p><strong>${giverName}</strong> from <strong>${giverCompany}</strong> just vouched for you on VouchPay — they had some great things to say about you!</p>
+          <h2 style="margin-top: 0;">Great news, ${safeRecipientName}! 🎉</h2>
+          <p><strong>${safeGiverName}</strong> from <strong>${safeGiverCompany}</strong> just vouched for you on VouchPay — they had some great things to say about you!</p>
           ${attributeSection}
           <p>Claim your reputation on VouchPay to see your full vouch and share it with future clients.</p>
           <ol style="line-height: 1.8;">
@@ -321,6 +342,7 @@ export async function sendResendResetCodeEmail(to: string, resetCode: string): P
 }
 
 export async function sendEmailChangeCode(to: string, code: string): Promise<void> {
+  const safeTo = escapeHtml(to);
   await transporter.sendMail({
     from: `"VouchPay" <${process.env.EMAIL_USER}>`,
     to,
@@ -331,7 +353,7 @@ export async function sendEmailChangeCode(to: string, code: string): Promise<voi
         ${emailHeader}
         <div style="padding: 24px;">
           <h2>Confirm your new email</h2>
-          <p>We received a request to change your VouchPay email address to <strong>${to}</strong>.</p>
+          <p>We received a request to change your VouchPay email address to <strong>${safeTo}</strong>.</p>
           <p>Enter the code below in the app to confirm:</p>
           <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f4f4f4; border-radius: 8px; text-align: center;">
             ${code}

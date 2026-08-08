@@ -19,7 +19,10 @@ const vouchNotificationSchema = new Schema<VouchNotificationDocument>(
     type: { type: String, enum: ["vouch_request", "vouch_received"], default: "vouch_request" },
     requestId: { type: Schema.Types.ObjectId, ref: "VouchRequest" },
     fromName: { type: String, required: true },
-    fromCompany: { type: String, required: true },
+    // Not required: vouch_received notifications (created in /vouch/give) don't
+    // display fromCompany at all, and a giver with no business name set would
+    // otherwise crash the whole vouch attempt over a field nothing shows.
+    fromCompany: { type: String, default: "" },
     projectName: { type: String },
     toBusinessName: { type: String },
     read: { type: Boolean, default: false },

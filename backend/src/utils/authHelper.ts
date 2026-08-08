@@ -122,7 +122,9 @@ export async function checkEmail(normalisedEmail: string): Promise<void> {
 export async function checkAbn(abn: string): Promise<void> {
   const existing = await UserModel.findOne({ abn });
   if (existing) {
-    throw new Error("This ABN is already registered to another account.");
+    throw new Error(
+      "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app."
+    );
   }
 }
 

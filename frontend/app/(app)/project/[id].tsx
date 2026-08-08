@@ -569,9 +569,7 @@ export default function ProjectDetail() {
                     <AppText
                       style={[
                         { flex: 1, fontSize: 16 },
-                        invSubmittingParty
-                          ? { color: Colors.black }
-                          : { color: Colors.grey300 },
+                        invSubmittingParty ? { color: Colors.black } : { color: Colors.grey300 },
                       ]}
                     >
                       {invSubmittingParty || "Select a person"}

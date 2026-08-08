@@ -17,7 +17,7 @@ import { AppText } from "@/components/AppText";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export default function ResetPassword() {
-  const { resetCode } = useLocalSearchParams<{ resetCode: string }>();
+  const { email, resetCode } = useLocalSearchParams<{ email: string; resetCode: string }>();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -34,7 +34,7 @@ export default function ResetPassword() {
       const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resetCode, newPassword: password }),
+        body: JSON.stringify({ email, resetCode, newPassword: password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Reset failed");

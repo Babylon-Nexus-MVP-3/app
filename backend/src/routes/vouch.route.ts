@@ -8,6 +8,7 @@ import { GivenVouchModel } from "../models/givenVouchModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
 import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
+import { validateEmailFormat } from "../utils/authHelper";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -70,6 +71,16 @@ vouchRouter.post(
       const fromAbn = dbUser?.abn ?? "";
       const fromCompany = dbUser?.businessName || "";
 
+      // fromCompany and fromAbn are both required on VouchRequest — without this
+      // guard, submitting references with either missing crashes mid-loop with a
+      // raw 500 instead of a clean error.
+      if (references.length > 0 && (!fromCompany || !fromAbn)) {
+        res.status(400).json({
+          error: "Please add your business name and ABN before requesting vouches.",
+        });
+        return;
+      }
+
       // Each wizard step only sends the fields it owns, so this must be a partial
       // $set merge rather than a full-document replace — otherwise saving any one
       // step wipes out the fields collected by every other step. Steps that don't
@@ -79,16 +90,42 @@ vouchRouter.post(
       // always includes idNumber/idExpiry from the same local object, empty until
       // step 6 is done) sends them as "" — $set'ing an empty string still trips
       // the schema's `required: true` validator, so drop empty values too.
-      const { references: referencesField, ...rest } = body;
+      //
+      // Only fields on this list may be written — never trust the request body's
+      // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
+      // would reassign this profile document to someone else's account.
+      const WRITABLE_FIELDS = [
+        "name",
+        "abn",
+        "trade",
+        "idType",
+        "idNumber",
+        "idExpiry",
+        "currentProjectName",
+        "address",
+        "suburb",
+        "state",
+        "postcode",
+        "value",
+        "pastProjectName",
+        "pastSuburb",
+        "pastState",
+        "pastPostcode",
+        "pastMonthYear",
+        "pastValue",
+      ] as const;
+
       const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
-      for (const [key, value] of Object.entries(rest)) {
+      for (const key of WRITABLE_FIELDS) {
+        const value = body[key];
         if (value !== "" && value !== undefined && value !== null) {
           setFields[key] = value;
         }
       }
-      if (Array.isArray(referencesField) && referencesField.length > 0) {
-        setFields.references = referencesField;
+      if (Array.isArray(body.references) && body.references.length > 0) {
+        setFields.references = body.references;
       }
+      setFields.userId = userId; // reassert — cannot be overridden by anything above
 
       const profile = await VouchProfileModel.findOneAndUpdate(
         { userId },
@@ -105,10 +142,13 @@ vouchRouter.post(
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
+        // A request the reference ignored doesn't count as "already requested" —
+        // otherwise re-adding them after an ignore silently does nothing forever.
         const dupConditions: object[] = [{ toMobile: ref.mobile }];
         if (ref.email) dupConditions.push({ toEmail: ref.email });
         const alreadyRequested = await VouchRequestModel.exists({
           fromUserId: userId,
+          status: { $ne: "ignored" },
           $or: dupConditions,
         });
         if (alreadyRequested) continue;
@@ -133,10 +173,15 @@ vouchRouter.post(
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
-        // Skip if a request was already sent to this reference
+        // Skip if a non-ignored request was already sent to this reference — an
+        // ignored one doesn't block a retry (see matching check above).
         const dupConditions: object[] = [{ toMobile: ref.mobile }];
         if (ref.email) dupConditions.push({ toEmail: ref.email });
-        const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
+        const existing = await VouchRequestModel.exists({
+          fromUserId: userId,
+          status: { $ne: "ignored" },
+          $or: dupConditions,
+        });
         if (existing) continue;
 
         const toEmail = ref.email?.trim().toLowerCase() ?? "";
@@ -191,7 +236,7 @@ vouchRouter.post(
         if (toEmail) {
           sendVouchRequestEmail(
             toEmail,
-            body.name,
+            fromName,
             fromCompany,
             ref.relationship,
             ref.project
@@ -199,11 +244,24 @@ vouchRouter.post(
         }
       }
 
-      // Keep UserModel in sync so Give a Vouch notifications work
-      await UserModel.findByIdAndUpdate(userId, {
-        abn: body.abn,
-        businessName: body.trade ?? body.name,
-      });
+      // Keep UserModel in sync so Give a Vouch notifications work — only when
+      // there's an ABN to sync, and only when it isn't already someone else's
+      // (received-vouches are looked up purely by ABN, so writing an unvalidated
+      // one would let a caller display another business's reputation as their own).
+      if (body.abn) {
+        const existingAbnOwner = await UserModel.findOne({ abn: body.abn }).select("_id").lean();
+        if (existingAbnOwner && existingAbnOwner._id.toString() !== userId) {
+          res.status(400).json({
+            error:
+              "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
+          });
+          return;
+        }
+        await UserModel.findByIdAndUpdate(userId, {
+          abn: body.abn,
+          ...(body.trade || body.name ? { businessName: body.trade ?? body.name } : {}),
+        });
+      }
 
       res.status(201).json(profile);
     } catch (err) {
@@ -386,8 +444,13 @@ vouchRouter.patch(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) {
+        res.status(400).json({ error: "Invalid notification id" });
+        return;
+      }
       await VouchNotificationModel.updateOne(
-        { _id: req.params.id, recipientUserId: userId },
+        { _id: id, recipientUserId: userId },
         { $set: { read: true } }
       );
       res.status(200).json({ ok: true });
@@ -472,7 +535,10 @@ vouchRouter.post(
         recipientMobile: recipientMobile ?? undefined,
       });
 
-      let vouchRequest: { fromUserId: mongoose.Types.ObjectId } | null = null;
+      let vouchRequest: {
+        _id: mongoose.Types.ObjectId;
+        fromUserId: mongoose.Types.ObjectId;
+      } | null = null;
       if (requestId) {
         vouchRequest = await VouchRequestModel.findByIdAndUpdate(
           requestId,
@@ -485,6 +551,28 @@ vouchRouter.post(
           { requestId: new mongoose.Types.ObjectId(requestId) },
           { $set: { read: true } }
         );
+      } else {
+        // Vouching via ABN search instead of tapping a pending-request card still
+        // counts as responding to that request if one exists — otherwise the
+        // requester's profile strength stays stuck even though the vouch happened.
+        const orConditions: object[] = [];
+        if (giver?.email) orConditions.push({ toEmail: giver.email });
+        if (giver?.mobile) orConditions.push({ toMobile: giver.mobile });
+        if (orConditions.length > 0) {
+          vouchRequest = await VouchRequestModel.findOneAndUpdate(
+            { fromAbn: toAbn, status: "pending", $or: orConditions },
+            { status: "responded", respondedAt: new Date() },
+            { returnDocument: "after" }
+          )
+            .select("fromUserId")
+            .lean();
+          if (vouchRequest) {
+            await VouchNotificationModel.updateMany(
+              { requestId: vouchRequest._id },
+              { $set: { read: true } }
+            );
+          }
+        }
       }
 
       const vouchCount = await GivenVouchModel.countDocuments({ toAbn });
@@ -496,14 +584,19 @@ vouchRouter.post(
         : await UserModel.findOne({ abn: toAbn }).select("_id pushToken").lean();
 
       if (!recipient && recipientEmail) {
-        sendVouchedForEmail(
-          recipientEmail,
-          recipientName ?? "there",
-          giverName,
-          giverCompany,
-          attributes ?? [],
-          note
-        ).catch(() => {});
+        try {
+          const safeRecipientEmail = validateEmailFormat(recipientEmail);
+          sendVouchedForEmail(
+            safeRecipientEmail,
+            recipientName ?? "there",
+            giverName,
+            giverCompany,
+            attributes ?? [],
+            note
+          ).catch(() => {});
+        } catch {
+          // Malformed recipientEmail — skip the notification rather than fail the vouch
+        }
       }
 
       if (recipient && recipient._id.toString() !== userId) {
