@@ -7,13 +7,12 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { FlowHeader } from "@/components/FlowHeader";
 import { useAuth } from "@/context/AuthContext";
+import { formatStoredMobile } from "@/lib/format";
 
 export default function MobileStatus() {
   const { user } = useAuth();
 
-  const displayMobile = user?.mobile
-    ? `0${user.mobile.replace(/^\+61/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3")}`
-    : "—";
+  const displayMobile = user?.mobile ? formatStoredMobile(user.mobile) : "—";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

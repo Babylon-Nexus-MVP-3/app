@@ -18,7 +18,9 @@ import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-import { formatAbn, type AbrResult } from "@/lib/useAbrLookup";
+import { type AbrResult } from "@/lib/useAbrLookup";
+import { formatAbn, formatMobileDisplay } from "@/lib/format";
+import { isValidEmail } from "@/lib/validation";
 
 type VouchStatus = {
   isOnVouch: boolean;
@@ -110,15 +112,9 @@ export default function VerifyScreen() {
   const displayName = abrData?.tradingName || abrData?.entityName || "this business";
   const alreadyVouched = !!vouchStatus?.alreadyVouched;
 
-  function formatMobileDisplay(digits: string): string {
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-  }
-
   function onPressVouch() {
     if (!isOnVouch && !requestId) {
-      if (!recipientEmail.trim() || !recipientEmail.includes("@")) {
+      if (!isValidEmail(recipientEmail)) {
         setContactError("Please enter a valid email address.");
         return;
       }

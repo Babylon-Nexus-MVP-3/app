@@ -3,7 +3,14 @@ import { ScrollView, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/colors";
 import { AppText } from "@/components/AppText";
 import { ApiInvoice, InvoiceActionType } from "./types";
-import { apiStatusToCalStatus, invoiceStatusLabel, statusBg, statusColor } from "./helpers";
+import {
+  apiStatusToCalStatus,
+  groupInvoices,
+  invoiceStatusLabel,
+  isSettled,
+  statusBg,
+  statusColor,
+} from "./helpers";
 import { styles } from "./styles";
 import { MyInvoiceCard, ApprovalCard } from "./InvoiceCards";
 import { ConfirmModal } from "./ConfirmModal";
@@ -51,15 +58,8 @@ export function InvoiceUploaderView({
     else closeConfirm();
   }
 
-  const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
-  const myOutstanding = myInvoices.filter(
-    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
-  const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
-  const allActive = invoices.filter((i) => i.status !== "Rejected");
-  const allPending = allActive.filter((i) => i.status === "Pending");
-  const allApproved = allActive.filter((i) => i.status === "Approved");
-  const allPaid = allActive.filter((i) => i.status === "Paid" || i.status === "Received");
+  const { myInvoices, myOutstanding, myPaid, allActive, allPending, allApproved, allPaid } =
+    groupInvoices(invoices, userId);
 
   const filteredMyInvoices = applyFilter(myInvoices, myFilter);
   const filteredAllInvoices = applyFilter(invoices, allFilter);
@@ -235,24 +235,16 @@ export function DualRoleMySpace({
     else closeConfirm();
   }
 
-  const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
+  const { myInvoices, myOutstanding, myPaid, allActive, allPending, allApproved, allPaid } =
+    groupInvoices(invoices, userId);
+  // All roles see all project invoices; amounts are gated per canViewAmount.
+  const allInvoices = invoices;
+
   const approvalInvoices = invoices.filter((i) => i.approverRole === approverRole);
-  const myOutstanding = myInvoices.filter(
-    (i) => i.status !== "Paid" && i.status !== "Received" && i.status !== "Rejected"
-  );
-  const myPaid = myInvoices.filter((i) => i.status === "Paid" || i.status === "Received");
   const toAction = approvalInvoices
     .filter((i) => i.status === "Pending" || i.status === "Approved")
     .sort((a, b) => new Date(a.dateDue).getTime() - new Date(b.dateDue).getTime());
-  const actionDone = approvalInvoices.filter(
-    (i) => i.status === "Paid" || i.status === "Received" || i.status === "Rejected"
-  );
-  // All roles see all project invoices; amounts are gated per canViewAmount.
-  const allInvoices = invoices;
-  const allActive = allInvoices.filter((i) => i.status !== "Rejected");
-  const allPending = allActive.filter((i) => i.status === "Pending");
-  const allApproved = allActive.filter((i) => i.status === "Approved");
-  const allPaid = allActive.filter((i) => i.status === "Paid" || i.status === "Received");
+  const actionDone = approvalInvoices.filter((i) => isSettled(i) || i.status === "Rejected");
 
   // PM sees all amounts; Builder sees amounts on own + approved invoices
   const canSeeAllAmounts = approverRole === "PM";

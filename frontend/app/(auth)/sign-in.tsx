@@ -19,6 +19,7 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/context/AuthContext";
+import { isValidEmail } from "@/lib/validation";
 
 export default function SignIn() {
   const { login } = useAuth();
@@ -27,7 +28,7 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const canSubmit = email.includes("@") && password.length > 0;
+  const canSubmit = isValidEmail(email) && password.length > 0;
 
   async function handleSubmit() {
     if (!canSubmit) return;

@@ -15,6 +15,8 @@ import { Fonts } from "@/constants/fonts";
 import { API_BASE_URL } from "@/constants/api";
 import { AppText } from "@/components/AppText";
 import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
+import { PASSWORD_MIN_LENGTH, isValidPassword } from "@/lib/validation";
 
 export default function ResetPassword() {
   const { email, resetCode } = useLocalSearchParams<{ email: string; resetCode: string }>();
@@ -24,7 +26,9 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDisabled = password.length < 12 || password !== confirm || loading;
+  // The full server rule, not just length — this screen used to accept
+  // "aaaaaaaaaaaa" and let the user discover the real rule from a 400.
+  const isDisabled = !isValidPassword(password) || password !== confirm || loading;
 
   async function handleReset() {
     if (isDisabled) return;
@@ -74,13 +78,11 @@ export default function ResetPassword() {
           <PasswordInput
             value={password}
             onChangeText={setPassword}
-            placeholder="Min. 12 characters"
+            placeholder={`Min. ${PASSWORD_MIN_LENGTH} characters`}
             returnKeyType="next"
             containerStyle={styles.passwordRow}
           />
-          {password.length > 0 && password.length < 12 ? (
-            <AppText style={styles.hintText}>Password must be at least 12 characters</AppText>
-          ) : null}
+          <PasswordStrengthHints password={password} />
 
           <AppText style={styles.label}>CONFIRM PASSWORD</AppText>
           <PasswordInput

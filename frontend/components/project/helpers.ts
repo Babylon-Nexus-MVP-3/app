@@ -70,3 +70,48 @@ export function canViewAmount(role: string, inv: ApiInvoice, userId: string): bo
     return true;
   return inv.submittedByUserId === userId || inv.approverRole === role;
 }
+
+/*
+  Invoice lifecycle predicates and the grouping every invoice view needs.
+
+  Both My Space views used to inline the same filters, and they had already
+  drifted: one treated "active" as everything not Rejected, the other built its
+  own settled/unsettled split. Naming the lifecycle states once means a change
+  to the lifecycle lands everywhere at the same time.
+*/
+
+/** Money has moved — the invoice is done. */
+export function isSettled(invoice: ApiInvoice): boolean {
+  return invoice.status === "Paid" || invoice.status === "Received";
+}
+
+/** Still moving through the approval chain. */
+export function isOutstanding(invoice: ApiInvoice): boolean {
+  return !isSettled(invoice) && invoice.status !== "Rejected";
+}
+
+export interface InvoiceGroups {
+  /** Invoices this user raised. */
+  myInvoices: ApiInvoice[];
+  myOutstanding: ApiInvoice[];
+  myPaid: ApiInvoice[];
+  /** Every non-rejected invoice on the project. */
+  allActive: ApiInvoice[];
+  allPending: ApiInvoice[];
+  allApproved: ApiInvoice[];
+  allPaid: ApiInvoice[];
+}
+
+export function groupInvoices(invoices: ApiInvoice[], userId: string): InvoiceGroups {
+  const myInvoices = invoices.filter((i) => i.submittedByUserId === userId);
+  const allActive = invoices.filter((i) => i.status !== "Rejected");
+  return {
+    myInvoices,
+    myOutstanding: myInvoices.filter(isOutstanding),
+    myPaid: myInvoices.filter(isSettled),
+    allActive,
+    allPending: allActive.filter((i) => i.status === "Pending"),
+    allApproved: allActive.filter((i) => i.status === "Approved"),
+    allPaid: allActive.filter(isSettled),
+  };
+}

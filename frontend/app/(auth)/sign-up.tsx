@@ -19,7 +19,9 @@ import { AbrCard } from "@/components/AbrCard";
 import { AppInput } from "@/components/AppInput";
 import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordStrengthHints } from "@/components/PasswordStrengthHints";
-import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
+import { useAbrLookup } from "@/lib/useAbrLookup";
+import { formatAbn, formatMobileDisplay } from "@/lib/format";
+import { isValidEmail, isValidPassword } from "@/lib/validation";
 
 type SearchResult = { abn: string; entityName: string; state: string };
 
@@ -52,12 +54,6 @@ export default function SignUp() {
   const [error, setError] = useState("");
 
   const mobileDigits = mobile.replace(/\D/g, "");
-
-  function formatMobileDisplay(digits: string): string {
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-  }
 
   function onAbnChange(text: string) {
     const digits = text.replace(/\D/g, "").slice(0, 11);
@@ -115,20 +111,11 @@ export default function SignUp() {
   const firstName = nameParts[0] ?? "";
   const lastName = nameParts.slice(1).join(" ") || "-";
 
-  const pwChecks = {
-    length: password.length >= 12,
-    lower: /[a-z]/.test(password),
-    upper: /[A-Z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[^a-zA-Z0-9]/.test(password),
-  };
-  const complexityMet =
-    [pwChecks.lower, pwChecks.upper, pwChecks.number, pwChecks.special].filter(Boolean).length >= 3;
-  const passwordValid = pwChecks.length && complexityMet;
+  const passwordValid = isValidPassword(password);
 
   const canSubmit =
     firstName.length > 0 &&
-    email.includes("@") &&
+    isValidEmail(email) &&
     passwordValid &&
     trade.trim().length > 0 &&
     abnDigits.length === 11 &&

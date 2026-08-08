@@ -17,6 +17,7 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 import { useAuth } from "@/context/AuthContext";
+import { formatMobileDisplay } from "@/lib/format";
 
 const CODE_LENGTH = 6;
 
@@ -67,12 +68,6 @@ export default function VerifyMobile() {
 
   const mobileDigits = mobile.replace(/\D/g, "");
   const canSend = mobileDigits.length >= 10;
-
-  function formatMobileDisplay(digits: string): string {
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-  }
 
   async function handleSendCode() {
     if (!canSend) return;
