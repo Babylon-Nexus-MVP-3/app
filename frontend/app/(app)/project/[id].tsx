@@ -1,13 +1,17 @@
 import { API_BASE_URL } from "@/constants/api";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
+import { BlurView } from "expo-blur";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
@@ -17,8 +21,8 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
-import CircularProgress from "@/components/CircularProgress";
 import { useAuth } from "@/context/AuthContext";
+import { useReduceMotion } from "@/lib/motion";
 import { AppText } from "@/components/AppText";
 import {
   ApiInvoice,
@@ -90,6 +94,30 @@ export default function ProjectDetail() {
 
   // ── FAB menu state ──
   const [fabMenuVisible, setFabMenuVisible] = useState(false);
+  // Kept mounted through the closing animation — a conditional render alone
+  // would rip the menu off screen with no exit.
+  const [fabMenuMounted, setFabMenuMounted] = useState(false);
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
+
+  useEffect(() => {
+    if (fabMenuVisible) setFabMenuMounted(true);
+    if (reduceMotion) {
+      fabAnim.setValue(fabMenuVisible ? 1 : 0);
+      if (!fabMenuVisible) setFabMenuMounted(false);
+      return;
+    }
+    const animation = Animated.timing(fabAnim, {
+      toValue: fabMenuVisible ? 1 : 0,
+      duration: fabMenuVisible ? 220 : 160,
+      easing: fabMenuVisible ? Easing.out(Easing.back(1.4)) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !fabMenuVisible) setFabMenuMounted(false);
+    });
+    return () => animation.stop();
+  }, [fabMenuVisible, fabAnim, reduceMotion]);
 
   // ── Scroll ref (for resetting position on tab switch) ──
   const scrollRef = useRef<ScrollView>(null);
@@ -251,8 +279,8 @@ export default function ProjectDetail() {
 
   return (
     <View style={styles.screen}>
-      {/* Fixed top nav bar */}
-      <View style={{ backgroundColor: Colors.vouchGreen }}>
+      {/* ── Header: identity, health and the view switcher in one block ── */}
+      <View style={styles.headerBlock}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity
@@ -262,8 +290,7 @@ export default function ProjectDetail() {
               accessibilityRole="button"
               accessibilityLabel="Back to all projects"
             >
-              <Ionicons name="arrow-back" size={20} color={Colors.white} />
-              <AppText style={styles.backLabel}>All Projects</AppText>
+              <Ionicons name="arrow-back" size={22} color={Colors.white} />
             </TouchableOpacity>
             <TouchableOpacity
               ref={kebabRef}
@@ -281,163 +308,232 @@ export default function ProjectDetail() {
               <Ionicons name="ellipsis-vertical" size={22} color={Colors.white} />
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
-      </View>
 
-      {/* Scrollable content: header body + tab content */}
-      <View style={{ flex: 1 }}>
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: "50%",
-            backgroundColor: Colors.vouchGreen,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: Colors.grey100,
-          }}
-        />
-        <ScrollView
-          ref={scrollRef}
-          style={{ flex: 1, backgroundColor: "transparent" }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={Colors.white}
-              colors={[Colors.vouchGreen]}
-            />
-          }
-        >
-          {/* Header body — scrolls away */}
-          <View style={[styles.header, { backgroundColor: Colors.vouchGreen }]}>
-            <AppText style={styles.headerProjectName}>{projectName}</AppText>
-
-            {role !== "Member" && (
-              <View style={styles.headerRolePillWrap}>
+          <View style={styles.headerBody}>
+            <AppText style={styles.headerProjectName} numberOfLines={2}>
+              {projectName}
+            </AppText>
+            <View style={styles.headerMetaRow}>
+              {role !== "Member" && (
                 <View style={styles.headerRolePill}>
                   <AppText style={styles.headerRolePillText}>{displayRole(role)}</AppText>
                 </View>
-              </View>
-            )}
-
-            <View style={styles.healthWrap}>
-              {dataLoading ? (
-                <ActivityIndicator color={Colors.white} style={{ height: 100 }} />
-              ) : (
-                <CircularProgress
-                  value={health}
-                  size={100}
-                  textScale={0.72}
-                  label={health >= 75 ? "Healthy" : health >= 50 ? "At Risk" : "Critical"}
-                />
               )}
-              {change !== null && (
-                <AppText
-                  style={[styles.healthTrend, { color: change >= 0 ? Colors.green : Colors.red }]}
-                >
-                  {change >= 0 ? "+" : ""}
-                  {change}% vs last month
+              {!!projectCouncil && (
+                <AppText style={styles.headerMeta} numberOfLines={1}>
+                  {projectCouncil}
                 </AppText>
               )}
             </View>
 
-            {overdue > 0 && (
-              <View style={styles.overdueAlert}>
-                <AppText style={styles.overdueAlertText}>
-                  {overdue} {overdue === 1 ? "invoice" : "invoices"} overdue
+            {/* Health reads as a stat line, not a gauge floating in space. */}
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <AppText style={styles.statValue}>{dataLoading ? "—" : `${health}%`}</AppText>
+                <AppText style={styles.statLabel}>
+                  {health >= 75 ? "HEALTHY" : health >= 50 ? "AT RISK" : "CRITICAL"}
                 </AppText>
               </View>
-            )}
-          </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <AppText style={styles.statValue}>{dataLoading ? "—" : invoices.length}</AppText>
+                <AppText style={styles.statLabel}>INVOICES</AppText>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <AppText style={[styles.statValue, overdue > 0 && styles.statValueAlert]}>
+                  {dataLoading ? "—" : overdue}
+                </AppText>
+                <AppText style={styles.statLabel}>OVERDUE</AppText>
+              </View>
+            </View>
 
-          {activeTab === "calendar" ? (
-            <CalendarTab
-              invoices={invoices}
-              role={role}
-              userId={userId}
-              invoiceAction={invoiceAction}
-            />
-          ) : (
-            <MySpaceTab
-              role={role}
-              invoices={invoices}
-              userId={userId}
-              invoiceAction={invoiceAction}
-              initialInvoice={pendingInvoice}
-              onInitialInvoiceOpened={() => setPendingInvoice(null)}
-            />
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Fixed bottom tab bar */}
-      <View style={styles.subTabBar}>
-        {(["calendar", "myspace"] as const).map((t) => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.subTab, activeTab === t && styles.subTabActive]}
-            onPress={() => {
-              setActiveTab(t);
-              scrollRef.current?.scrollTo({ y: 0, animated: false });
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons
-                name={t === "calendar" ? "calendar-outline" : "person-outline"}
-                size={16}
-                color={activeTab === t ? Colors.white : Colors.whiteInactive}
-              />
-              <AppText style={[styles.subTabText, activeTab === t && styles.subTabTextActive]}>
-                {t === "calendar" ? "Calendar" : "My Space"}
+            {change !== null && !dataLoading && (
+              <AppText style={styles.headerTrend}>
+                {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs last month
               </AppText>
+            )}
+
+            {/* One switcher, in the header — the app already has a tab bar at
+                the bottom of the screen. */}
+            <View style={styles.switcher}>
+              {(["calendar", "myspace"] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.switcherTab, activeTab === t && styles.switcherTabActive]}
+                  onPress={() => {
+                    setActiveTab(t);
+                    scrollRef.current?.scrollTo({ y: 0, animated: false });
+                  }}
+                  accessibilityRole="tab"
+                  accessibilityLabel={t === "calendar" ? "Calendar" : "My Space"}
+                  accessibilityState={{ selected: activeTab === t }}
+                >
+                  <Ionicons
+                    name={t === "calendar" ? "calendar-outline" : "person-outline"}
+                    size={15}
+                    color={activeTab === t ? Colors.vouchGreen : Colors.white}
+                  />
+                  <AppText
+                    style={[styles.switcherText, activeTab === t && styles.switcherTextActive]}
+                  >
+                    {t === "calendar" ? "Calendar" : "My Space"}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
             </View>
-          </TouchableOpacity>
-        ))}
+          </View>
+        </SafeAreaView>
       </View>
+
+      <ScrollView
+        ref={scrollRef}
+        style={styles.body}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.vouchGreen}
+          />
+        }
+      >
+        {activeTab === "calendar" ? (
+          <CalendarTab
+            invoices={invoices}
+            role={role}
+            userId={userId}
+            invoiceAction={invoiceAction}
+          />
+        ) : (
+          <MySpaceTab
+            role={role}
+            invoices={invoices}
+            userId={userId}
+            invoiceAction={invoiceAction}
+            initialInvoice={pendingInvoice}
+            onInitialInvoiceOpened={() => setPendingInvoice(null)}
+          />
+        )}
+      </ScrollView>
 
       {/* Floating + FAB */}
       {activeTab === "myspace" && (
-        <View style={styles.fabWrap}>
-          {fabMenuVisible && (
-            <View style={styles.fabMenu}>
+        <>
+          {/* Tapping anywhere else closes the menu — previously it could only
+              be dismissed by hitting the button again. */}
+          {fabMenuMounted && (
+            <Animated.View style={[styles.fabBackdrop, { opacity: fabAnim }]}>
               <TouchableOpacity
-                style={styles.fabMenuItem}
-                onPress={() => {
-                  setFabMenuVisible(false);
-                  openInvoice();
+                style={StyleSheet.absoluteFill}
+                activeOpacity={1}
+                onPress={() => setFabMenuVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close menu"
+              >
+                {/* Blur pushes the page back so the menu reads as a layer above
+                  it. Android gets a plain scrim — BlurView is expensive there
+                  and falls back to a flat colour anyway. */}
+                {Platform.OS === "ios" ? (
+                  <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+                ) : (
+                  <View style={styles.fabBackdropAndroid} />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          <View style={[styles.fabWrap, { bottom: insets.bottom + 24 }]}>
+            {fabMenuMounted && (
+              <Animated.View
+                style={[
+                  styles.fabMenu,
+                  {
+                    opacity: fabAnim,
+                    transform: [
+                      {
+                        translateY: fabAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [16, 0],
+                        }),
+                      },
+                      {
+                        scale: fabAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.92, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.fabMenuItem}
+                  onPress={() => {
+                    setFabMenuVisible(false);
+                    openInvoice();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Raise an invoice"
+                >
+                  <View style={styles.fabMenuIcon}>
+                    <Ionicons name="document-text-outline" size={18} color={Colors.vouchGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.fabMenuText}>Raise an invoice</AppText>
+                    <AppText style={styles.fabMenuSub}>Submit work for payment</AppText>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.fabMenuDivider} />
+
+                <TouchableOpacity
+                  style={styles.fabMenuItem}
+                  onPress={openInvite}
+                  accessibilityRole="button"
+                  accessibilityLabel="Invite a team member"
+                >
+                  <View style={styles.fabMenuIcon}>
+                    <Ionicons name="person-add-outline" size={18} color={Colors.vouchGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.fabMenuText}>Invite a team member</AppText>
+                    <AppText style={styles.fabMenuSub}>Send them a join code</AppText>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.fab, fabMenuVisible && styles.fabActive]}
+              onPress={() => {
+                if (isInvoiceUploader) {
+                  setFabMenuVisible((v) => !v);
+                  return;
+                }
+                openInvite();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={fabMenuVisible ? "Close menu" : "Add"}
+            >
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: fabAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "45deg"],
+                      }),
+                    },
+                  ],
                 }}
               >
-                <AppText style={styles.fabMenuText}>Raise Invoice</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.fabMenuItem} onPress={openInvite}>
-                <AppText style={styles.fabMenuText}>Invite Team Member</AppText>
-              </TouchableOpacity>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.fab, fabMenuVisible && styles.fabActive]}
-            onPress={() => {
-              if (isInvoiceUploader) {
-                setFabMenuVisible((v) => !v);
-                return;
-              }
-              openInvite();
-            }}
-          >
-            <Ionicons name={fabMenuVisible ? "close" : "add"} size={28} color={Colors.white} />
-          </TouchableOpacity>
-        </View>
+                <Ionicons name="add" size={28} color={Colors.white} />
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       {/* ── Kebab menu ── */}

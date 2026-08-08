@@ -140,7 +140,9 @@ export default function VerifyScreen() {
   }
 
   const isOnVouch = vouchStatus?.isOnVouch ?? false;
-  const btnLabel = requestId || isOnVouch ? `Vouch for ${displayName}` : "Vouch and invite them";
+  // This screen only confirms who you're vouching for — the vouch itself is
+  // committed on the next step.
+  const btnLabel = requestId || isOnVouch ? "Confirm business" : "Confirm and invite them";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -582,9 +584,12 @@ const styles = StyleSheet.create({
 
   // Footer
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 20,
+    // The screen container is green so the header's safe area is green; the
+    // pinned bar has to paint white or that shows through behind the CTA.
+    backgroundColor: Colors.white,
   },
   vouchBtn: {
     backgroundColor: Colors.vouchGreen,

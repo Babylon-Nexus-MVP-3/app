@@ -11,7 +11,9 @@
     "seed:vouchback": "ts-node -T scripts/seedVouchBack.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint-fix": "eslint --fix 'src/**/*.{ts,js}'",
-    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand",
+    "seed:demo": "ts-node -T scripts/seedDemo.ts",
+    "seed:demo:clear": "ts-node -T scripts/seedDemo.ts --clear"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1073.0",

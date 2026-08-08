@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { ReactNode, useState } from "react";
+import { Animated, View, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
@@ -81,23 +81,57 @@ export function EmptyState({
 }
 
 /**
- * Two-option segmented control. `tone` picks the surface it sits on: "green"
- * for inside a ScreenHeader, "light" for a white body.
+ * Segmented control. `tone` picks the surface it sits on: "green" for inside a
+ * ScreenHeader, "light" for a white body.
+ *
+ * Pass `progress` — a value in page units (0, 1, 2…) — when the control sits
+ * above a pager, and the highlight tracks the swipe instead of snapping once
+ * the gesture ends.
  */
 export function Segmented<T extends string>({
   options,
   value,
   onChange,
   tone = "green",
+  progress,
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
   tone?: "green" | "light";
+  progress?: Animated.AnimatedInterpolation<number>;
 }) {
   const light = tone === "light";
+  const [trackWidth, setTrackWidth] = useState(0);
+  const segWidth = trackWidth > 0 ? trackWidth / options.length : 0;
+
   return (
-    <View style={[styles.segmentWrap, light && styles.segmentWrapLight]}>
+    <View
+      style={[styles.segmentWrap, light && styles.segmentWrapLight]}
+      onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width - 8)}
+    >
+      {/* Sliding highlight — only rendered when a pager is driving it, so the
+          plain tap-only version keeps its simple per-segment background. */}
+      {!!progress && segWidth > 0 && (
+        <Animated.View
+          style={[
+            styles.segmentIndicator,
+            light && styles.segmentIndicatorLight,
+            {
+              width: segWidth,
+              transform: [
+                {
+                  translateX: progress.interpolate({
+                    inputRange: options.map((_, i) => i),
+                    outputRange: options.map((_, i) => i * segWidth),
+                    extrapolate: "clamp",
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      )}
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -105,8 +139,8 @@ export function Segmented<T extends string>({
             key={o.value}
             style={[
               styles.segment,
-              active && styles.segmentActive,
-              active && light && styles.segmentActiveLight,
+              !progress && active && styles.segmentActive,
+              !progress && active && light && styles.segmentActiveLight,
             ]}
             onPress={() => onChange(o.value)}
             activeOpacity={0.8}
@@ -204,6 +238,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentActive: { backgroundColor: Colors.white },
+  segmentIndicator: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    bottom: 4,
+    borderRadius: 9,
+    backgroundColor: Colors.white,
+  },
+  segmentIndicatorLight: { backgroundColor: Colors.white },
   segmentActiveLight: { backgroundColor: Colors.white },
   segmentText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.white },
   segmentTextLight: { color: Colors.grey700 },

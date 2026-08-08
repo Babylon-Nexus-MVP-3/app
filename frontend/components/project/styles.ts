@@ -3,19 +3,84 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 
 export const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.grey100 },
+  screen: { flex: 1, backgroundColor: Colors.white },
+  // ── Project shell ─────────────────────────────────────────────────────
+  // One green header carrying identity, health and the view switcher, then a
+  // white body. Replaces the old split-background hack (two absolutely
+  // positioned halves behind a transparent scroll view), which drew a hard
+  // colour break across the middle of the screen no matter where you scrolled.
+  headerBlock: { backgroundColor: Colors.vouchGreen },
+  headerBody: { paddingHorizontal: 16, paddingBottom: 16 },
+  headerProjectName: {
+    fontSize: 26,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    marginBottom: 8,
+  },
+  headerMetaRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 18 },
+  headerRolePill: {
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  headerRolePillText: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.white },
+  headerMeta: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    opacity: 0.75,
+  },
+  statsRow: { flexDirection: "row", alignItems: "center" },
+  stat: { flex: 1, alignItems: "center", gap: 3 },
+  statDivider: { width: 1, height: 28, backgroundColor: Colors.whiteInactive },
+  statValue: { fontSize: 22, fontFamily: Fonts.extraBold, color: Colors.white },
+  statValueAlert: { color: Colors.amber },
+  statLabel: {
+    fontSize: 9,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    opacity: 0.7,
+    letterSpacing: 0.8,
+  },
+  headerTrend: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
+    opacity: 0.8,
+    textAlign: "center",
+    marginTop: 10,
+  },
+  switcher: {
+    flexDirection: "row",
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 18,
+  },
+  switcherTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  switcherTabActive: { backgroundColor: Colors.white },
+  switcherText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.white },
+  switcherTextActive: { color: Colors.vouchGreen },
+  body: { flex: 1, backgroundColor: Colors.white },
+  bodyContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 32 },
 
   // Header
-  header: { paddingBottom: 12 },
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    width: "100%",
-    alignSelf: "stretch",
-    paddingLeft: 8,
-    paddingRight: 8,
-    writingDirection: "ltr",
+    paddingHorizontal: 8,
+    paddingTop: 4,
   },
   backBtn: {
     flexDirection: "row",
@@ -78,43 +143,8 @@ export const styles = StyleSheet.create({
   },
   backArrow: { fontSize: 18, color: Colors.white },
   backLabel: { fontSize: 13, color: Colors.white, fontFamily: Fonts.semiBold },
-  headerProjectName: {
-    fontSize: 16,
-    color: Colors.white,
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.3,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  headerRolePillWrap: { alignItems: "center", marginBottom: 6 },
-  headerRolePill: {
-    backgroundColor: Colors.whiteGloss,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-  },
-  headerRolePillText: {
-    fontSize: 11,
-    fontFamily: Fonts.semiBold,
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  healthWrap: { alignItems: "center", marginBottom: 6 },
 
   // Compact header (collapsed state)
-  compactHeaderRow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    gap: 14,
-  },
   compactHeaderInfo: { flex: 1 },
   compactHeaderName: {
     fontSize: 15,
@@ -129,48 +159,20 @@ export const styles = StyleSheet.create({
     color: Colors.red,
     marginTop: 2,
   },
-  healthTrend: { fontSize: 12, fontFamily: Fonts.semiBold, marginTop: 4 },
-  overdueAlert: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-    marginHorizontal: 32,
-    backgroundColor: "rgba(231,76,60,0.15)",
-    borderRadius: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  overdueAlertText: { fontSize: 11, color: Colors.red, fontFamily: Fonts.semiBold },
   overdueAlertArrow: { fontSize: 14, color: Colors.red },
 
   // Sub-tab bar
-  subTabBar: { flexDirection: "row", backgroundColor: Colors.vouchGreen, paddingBottom: 24 },
-  subTab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    borderTopWidth: 2,
-    borderTopColor: "transparent",
-  },
-  subTabActive: { borderTopColor: Colors.white },
-  subTabText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.whiteInactive },
-  subTabTextActive: { color: Colors.white },
 
   // Body
-  body: { flex: 1 },
-  bodyContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 32,
-    backgroundColor: Colors.grey100,
-  },
 
   // Calendar
   calendarWidget: {
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    paddingBottom: 6,
   },
   legend: {
     flexDirection: "row",
@@ -194,15 +196,14 @@ export const styles = StyleSheet.create({
   },
   invoiceCard: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 10,
+    // The body is white now, so a shadow no longer separates these — the
+    // status colour stays as a left rule and a hairline does the rest.
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderLeftWidth: 4,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
   },
   invoiceRow: {
     flexDirection: "row",
@@ -234,23 +235,23 @@ export const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     backgroundColor: Colors.white,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 16,
     padding: 14,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
+    gap: 2,
   },
   statBoxLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.grey500,
-    fontFamily: Fonts.semiBold,
-    marginBottom: 4,
-    textAlign: "center",
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
-  statBoxNum: { fontSize: 22, fontFamily: Fonts.extraBold, marginBottom: 2, textAlign: "center" },
-  statBoxSub: { fontSize: 12, color: Colors.grey500, textAlign: "center" },
+  statBoxNum: { fontSize: 24, fontFamily: Fonts.extraBold },
+  // Currency needs a smaller size than a bare count to fit a half-width card.
+  statBoxNumMoney: { fontSize: 18 },
+  statBoxSub: { fontSize: 12, color: Colors.grey500, fontFamily: Fonts.regular },
 
   // Subcontractor
   confirmedText: { fontSize: 12, color: Colors.green, fontFamily: Fonts.semiBold },
@@ -385,33 +386,56 @@ export const styles = StyleSheet.create({
   // Placeholder
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
   placeholderText: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.black, marginBottom: 8 },
-  emptyText: { fontSize: 14, color: Colors.grey500, textAlign: "center", marginTop: 16 },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.grey500,
+    fontFamily: Fonts.regular,
+    textAlign: "center",
+    backgroundColor: Colors.offWhite,
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    overflow: "hidden",
+  },
   placeholderSub: { fontSize: 14, color: Colors.grey500 },
 
   // Inner sub-tab bar (inside role views)
+  // Segmented control rather than a third row of underlined tabs — the screen
+  // already has the app tab bar and the project switcher above this.
   innerTabBar: {
     flexDirection: "row",
     backgroundColor: Colors.grey100,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.07)",
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 20,
   },
   innerTab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    paddingVertical: 9,
+    borderRadius: 9,
   },
-  innerTabActive: { borderBottomColor: Colors.vouchGreen },
-  innerTabText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.grey500 },
+  innerTabActive: { backgroundColor: Colors.white },
+  innerTabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.grey700 },
   innerTabTextActive: { color: Colors.vouchGreen },
 
   // FAB wrap + menu
-  fabWrap: { position: "absolute", bottom: 80, right: 20, alignItems: "flex-end" },
+  // `bottom` is set at the call site from the safe-area inset — this screen is
+  // pushed over the tab bar, so the old fixed 80 left it floating mid-screen.
+  fabWrap: { position: "absolute", right: 20, alignItems: "flex-end" },
+  fabBackdrop: { ...StyleSheet.absoluteFillObject },
+  fabBackdropAndroid: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
   fabMenu: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 16,
+    marginBottom: 12,
+    minWidth: 260,
+    transformOrigin: "bottom right",
+    // A white card floating over a white body needs an edge — the shadow alone
+    // left it blending into the page.
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -420,13 +444,24 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fabMenuItem: {
-    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
   },
-  fabMenuText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.black },
-  fabActive: { backgroundColor: Colors.vouchGreen },
+  fabMenuIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.vouchGreenLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabMenuDivider: { height: 1, backgroundColor: Colors.grey100, marginHorizontal: 16 },
+  fabMenuSub: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
+  fabMenuText: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.black },
+  fabActive: { backgroundColor: Colors.black },
 
   // Floating action button
   fab: {
@@ -790,7 +825,7 @@ export const styles = StyleSheet.create({
 
   // Filter chips
   filterScroll: { flexGrow: 0, marginBottom: 14 },
-  filterRow: { flexDirection: "row", gap: 8, paddingVertical: 4 },
+  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   filterChip: {
     borderWidth: 1,
     borderColor: Colors.grey300,

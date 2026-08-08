@@ -66,6 +66,10 @@ function isProfileComplete(profile: VouchProfileApi | null): boolean {
   return detailsDone && licenceDone;
 }
 
+// Remembered across mounts so the New Project button doesn't render disabled
+// for a frame on every visit before the profile check comes back.
+let lastKnownCanCreate: boolean | null = null;
+
 export default function Projects() {
   const { fetchWithAuth } = useAuth();
   const insets = useSafeAreaInsets();
@@ -74,7 +78,7 @@ export default function Projects() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [canCreateProject, setCanCreateProject] = useState(false);
+  const [canCreateProject, setCanCreateProject] = useState(lastKnownCanCreate ?? true);
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -109,7 +113,9 @@ export default function Projects() {
       setProjects(mapped);
 
       const profileData = profileRes.ok ? ((await profileRes.json()) as VouchProfileApi) : null;
-      setCanCreateProject(isProfileComplete(profileData));
+      const complete = isProfileComplete(profileData);
+      lastKnownCanCreate = complete;
+      setCanCreateProject(complete);
     } catch {
       setProjectsError("Network error. Please try again.");
     } finally {
