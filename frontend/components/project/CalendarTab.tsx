@@ -108,8 +108,8 @@ export function CalendarTab({
           setSelectedDate(day.dateString === selectedDate ? null : day.dateString)
         }
         theme={{
-          backgroundColor: Colors.grey100,
-          calendarBackground: Colors.grey100,
+          backgroundColor: Colors.white,
+          calendarBackground: Colors.white,
           textSectionTitleColor: Colors.grey500,
           dayTextColor: Colors.black,
           textDisabledColor: Colors.grey300,

@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -16,15 +15,32 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SlideToConfirm } from "@/components/SlideToConfirm";
+import { SuccessReveal, SuccessTick } from "@/components/SuccessReveal";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 
+// Phrased the way someone on site would actually describe a person they've
+// worked with. Order runs from the things that cost money when they go wrong
+// (payment, turning up, safety) to the softer signals, with the overall
+// verdict last. Adding to this list is safe — existing vouches keep whatever
+// they were given.
 const ATTRIBUTES = [
   "Pays on time",
+  "Turns up on time",
   "Quality work",
-  "Professional",
   "Reliable",
-  "Communication",
+  "Safety first",
+  "Professional",
+  "Good communication",
+  "Fair pricing",
+  "Honest",
+  "Knows their trade",
+  "Solves problems",
+  "Tidy work site",
+  "No surprises",
+  "Easy to deal with",
+  "Fast turnaround",
   "Work with again",
 ];
 
@@ -95,63 +111,55 @@ export default function AttributesScreen() {
   if (submitted) {
     const totalVouches = vouchCount > 0 ? vouchCount : 1;
 
+    // The green grows out of the slider knob, so the confirmation reads as a
+    // continuation of the gesture rather than a new screen.
     return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <ScrollView
-          contentContainerStyle={styles.successScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.successIconCircle}>
-            <Ionicons name="shield-checkmark-outline" size={36} color={Colors.vouchGreen} />
-          </View>
+      <SuccessReveal>
+        <SafeAreaView style={styles.successSafe} edges={["top", "bottom"]}>
+          <View style={styles.successBody}>
+            <SuccessTick />
 
-          <AppText style={styles.successTitle}>Your vouch is live.</AppText>
-          <AppText style={styles.successSub}>
-            {displayName}
-            {"'"}s reputation just got stronger.
-          </AppText>
-
-          <View style={styles.bizCard}>
-            <View style={styles.bizCardTop}>
-              <View style={styles.bizIconSmall}>
-                <Ionicons name="shield-checkmark-outline" size={18} color={Colors.vouchGreen} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText style={styles.bizName}>{displayName}</AppText>
-              </View>
-            </View>
-            <AppText style={styles.vouchesCount}>
-              {totalVouches} {totalVouches === 1 ? "vouch" : "vouches"}{" "}
-              <AppText style={styles.vouchesSelf}>· +1 from you</AppText>
+            <AppText style={styles.successTitle}>Vouched.</AppText>
+            <AppText style={styles.successSub}>
+              You&apos;ve vouched for {displayName}. Their reputation just got stronger.
             </AppText>
+
+            <View style={styles.successStat}>
+              <AppText style={styles.successStatValue}>{totalVouches}</AppText>
+              <AppText style={styles.successStatLabel}>
+                {totalVouches === 1 ? "VOUCH · INCLUDING YOURS" : "VOUCHES · INCLUDING YOURS"}
+              </AppText>
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.primarySuccessBtn}
-            onPress={() => router.replace("/(app)/(tabs)/vouches")}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Vouch another business"
-          >
-            <AppText style={styles.primarySuccessBtnText}>Vouch another business</AppText>
-          </TouchableOpacity>
+          <View style={styles.successActions}>
+            <TouchableOpacity
+              style={styles.successPrimary}
+              onPress={() => router.replace("/(app)/give-vouch")}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="Vouch for someone else"
+            >
+              <AppText style={styles.successPrimaryText}>Vouch for someone else</AppText>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.secondarySuccessBtn}
-            onPress={() => router.replace("/(app)/(tabs)/home")}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Back to home"
-          >
-            <AppText style={styles.secondarySuccessBtnText}>Back to home</AppText>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
+            <TouchableOpacity
+              style={styles.successSecondary}
+              onPress={() => router.replace("/(app)/(tabs)/home")}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Back to home"
+            >
+              <AppText style={styles.successSecondaryText}>Back to home</AppText>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </SuccessReveal>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScreenHeader
         showBack
         eyebrow="Give a vouch"
@@ -206,32 +214,77 @@ export default function AttributesScreen() {
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.vouchBtn, !canVouch && styles.vouchBtnDisabled]}
-          onPress={onVouch}
-          disabled={!canVouch || submitting}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Submit vouch"
-          accessibilityState={{ disabled: !canVouch || submitting }}
-        >
-          {submitting ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <AppText style={styles.vouchBtnText}>Submit vouch</AppText>
-          )}
-        </TouchableOpacity>
-        {submitError ? (
-          <AppText style={[styles.vouchHint, { color: Colors.red }]}>{submitError}</AppText>
-        ) : !canVouch ? (
-          <AppText style={styles.vouchHint}>Select at least 2 attributes to continue</AppText>
-        ) : null}
+        {/* Slide rather than tap: this is the point of no return — a given
+            vouch is your name on someone else's work and can't be withdrawn. */}
+        <SlideToConfirm
+          label={`Vouch for ${displayName}`}
+          confirmingLabel="Sending your vouch…"
+          onConfirm={onVouch}
+          disabled={!canVouch}
+          busy={submitting}
+          accessibilityLabel={`Vouch for ${displayName}`}
+        />
+        {/* Always rendered: letting this line disappear once 2 are picked made
+            the slider jump down as the footer collapsed. */}
+        <AppText style={[styles.vouchHint, !!submitError && styles.vouchHintError]}>
+          {submitError
+            ? submitError
+            : !canVouch
+              ? "Select at least 2 to continue"
+              : "Slide to send your vouch"}
+        </AppText>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── Success (white content on the green reveal) ──────────────────────
+  successSafe: { flex: 1, paddingHorizontal: 24 },
+  successBody: { flex: 1, justifyContent: "center", gap: 18 },
+  successTitle: {
+    fontSize: 34,
+    fontFamily: Fonts.extraBold,
+    color: Colors.white,
+    marginTop: 8,
+  },
+  successSub: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    opacity: 0.9,
+    lineHeight: 23,
+  },
+  successStat: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 10,
+    marginTop: 6,
+  },
+  successStatValue: { fontSize: 30, fontFamily: Fonts.extraBold, color: Colors.white },
+  successStatLabel: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    opacity: 0.75,
+    letterSpacing: 0.8,
+  },
+  successActions: { gap: 6, paddingBottom: 8 },
+  successPrimary: {
+    height: 54,
+    borderRadius: 28,
+    backgroundColor: Colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successPrimaryText: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.vouchGreen },
+  successSecondary: { height: 52, alignItems: "center", justifyContent: "center" },
+  successSecondaryText: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.white,
+    opacity: 0.9,
+  },
   container: { flex: 1, backgroundColor: Colors.vouchGreen },
   scroll: {
     paddingHorizontal: 16,
@@ -298,126 +351,22 @@ const styles = StyleSheet.create({
 
   // Footer
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 20,
     gap: 8,
-  },
-  vouchBtn: {
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  vouchBtnDisabled: {
-    opacity: 0.4,
-  },
-  vouchBtnText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: Fonts.bold,
+    // The screen container is green so the header's safe area is green; the
+    // pinned bar has to paint white or that shows through behind the CTA.
+    backgroundColor: Colors.white,
   },
   vouchHint: {
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
     textAlign: "center",
+    minHeight: 16,
   },
+  vouchHintError: { color: Colors.red },
 
   // Success screen
-  successScroll: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 28,
-    paddingTop: 48,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  successIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.vouchGreenLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  successTitle: {
-    fontSize: 26,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    textAlign: "center",
-  },
-  successSub: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey700,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  bizCard: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    marginTop: 8,
-  },
-  bizCardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  bizIconSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.vouchGreenLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bizName: {
-    fontSize: 15,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
-  vouchesCount: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-  },
-  vouchesSelf: {
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
-  },
-  primarySuccessBtn: {
-    width: "100%",
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 14,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  primarySuccessBtnText: {
-    fontSize: 16,
-    fontFamily: Fonts.bold,
-    color: Colors.white,
-  },
-  secondarySuccessBtn: {
-    width: "100%",
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 14,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondarySuccessBtnText: {
-    fontSize: 16,
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
-  },
 });

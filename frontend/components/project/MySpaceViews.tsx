@@ -88,8 +88,8 @@ export function InvoiceUploaderView({
       <View style={styles.bodyContent}>
         {subTab === "myInvoices" && (
           <>
-            <View style={[styles.statRow, { flexDirection: "column" }]}>
-              <View style={[styles.statBox, { flex: 0 }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Outstanding</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
@@ -98,7 +98,7 @@ export function InvoiceUploaderView({
                   {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
                 </AppText>
               </View>
-              <View style={[styles.statBox, { flex: 0 }]}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Paid</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
@@ -288,8 +288,8 @@ export function DualRoleMySpace({
       <View style={styles.bodyContent}>
         {subTab === "myInvoices" && (
           <>
-            <View style={[styles.statRow, { flexDirection: "column" }]}>
-              <View style={[styles.statBox, { flex: 0 }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Outstanding</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${myOutstanding.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
@@ -298,7 +298,7 @@ export function DualRoleMySpace({
                   {myOutstanding.length} invoice{myOutstanding.length !== 1 ? "s" : ""}
                 </AppText>
               </View>
-              <View style={[styles.statBox, { flex: 0 }]}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Paid</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   ${myPaid.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
@@ -325,8 +325,8 @@ export function DualRoleMySpace({
 
         {subTab === "toApprove" && (
           <>
-            <View style={[styles.statRow, { flexDirection: "column" }]}>
-              <View style={[styles.statBox, { flex: 0 }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>To Action</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   {canSeeToActionAmounts
@@ -339,7 +339,7 @@ export function DualRoleMySpace({
                   </AppText>
                 )}
               </View>
-              <View style={[styles.statBox, { flex: 0 }]}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Actioned</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   {canSeeToActionAmounts
@@ -573,8 +573,8 @@ export function OwnerMySpace({
       <View style={styles.bodyContent}>
         {subTab === "toApprove" && (
           <>
-            <View style={[styles.statRow, { flexDirection: "column" }]}>
-              <View style={[styles.statBox, { flex: 0 }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>To Action</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.amber }]}>
                   ${toAction.reduce((a, i) => a + (i.amount ?? 0), 0).toLocaleString()}
@@ -583,7 +583,7 @@ export function OwnerMySpace({
                   {toAction.length} invoice{toAction.length !== 1 ? "s" : ""}
                 </AppText>
               </View>
-              <View style={[styles.statBox, { flex: 0 }]}>
+              <View style={styles.statBox}>
                 <AppText style={styles.statBoxLabel}>Approved/Paid</AppText>
                 <AppText style={[styles.statBoxNum, { color: Colors.green }]}>
                   $
@@ -772,7 +772,7 @@ export function ObserverMySpace({
 
   return (
     <View style={styles.bodyContent}>
-      <View style={[styles.statRow, { flexDirection: "column" }]}>
+      <View style={styles.statRow}>
         {(
           [
             ["Total", activeCount, Colors.black],
@@ -780,7 +780,7 @@ export function ObserverMySpace({
             ["Paid", paidCount, Colors.green],
           ] as const
         ).map(([label, count, color]) => (
-          <View key={label} style={[styles.statBox, { flex: 0 }]}>
+          <View key={label} style={styles.statBox}>
             <AppText style={styles.statBoxLabel}>{label}</AppText>
             <AppText style={[styles.statBoxNum, { color }]}>{count}</AppText>
             <AppText style={styles.statBoxSub}>invoices</AppText>
@@ -915,24 +915,32 @@ function AllInvoicesStats({
   const outstanding = [...allPending, ...allApproved];
   const paidVal = val(allPaid, Colors.green);
   const outstandingVal = val(outstanding, Colors.amber);
+  // "$1,240,000" doesn't fit a half-width card at the full stat size.
+  const money = canSeeAmounts ? styles.statBoxNumMoney : null;
 
   return (
-    <View style={[styles.statRow, { flexDirection: "column" }]}>
-      <View style={[styles.statBox, { flex: 0 }]}>
-        <AppText style={styles.statBoxLabel}>Total</AppText>
-        <AppText style={[styles.statBoxNum, { color: Colors.black, fontSize: 16 }]}>
-          {val(allActive, Colors.black).text}
-        </AppText>
-        {canSeeAmounts && (
-          <AppText style={styles.statBoxSub}>
-            {allActive.length} invoice{allActive.length !== 1 ? "s" : ""}
+    <View style={styles.statGrid}>
+      {/* Total leads on its own line; the two figures it splits into sit
+          together beneath it. All three were previously forced into one row
+          with the inner pair un-flexed, so the widths never lined up. */}
+      <View style={styles.statGridRow}>
+        <View style={styles.statBox}>
+          <AppText style={styles.statBoxLabel}>Total</AppText>
+          <AppText style={[styles.statBoxNum, money, { color: Colors.black }]}>
+            {val(allActive, Colors.black).text}
           </AppText>
-        )}
+          {canSeeAmounts && (
+            <AppText style={styles.statBoxSub}>
+              {allActive.length} invoice{allActive.length !== 1 ? "s" : ""}
+            </AppText>
+          )}
+        </View>
       </View>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <View style={[styles.statBox, { flex: 1 }]}>
+
+      <View style={styles.statGridRow}>
+        <View style={styles.statBox}>
           <AppText style={styles.statBoxLabel}>Paid</AppText>
-          <AppText style={[styles.statBoxNum, { color: paidVal.color, fontSize: 16 }]}>
+          <AppText style={[styles.statBoxNum, money, { color: paidVal.color }]}>
             {paidVal.text}
           </AppText>
           {canSeeAmounts && (
@@ -941,9 +949,9 @@ function AllInvoicesStats({
             </AppText>
           )}
         </View>
-        <View style={[styles.statBox, { flex: 1 }]}>
+        <View style={styles.statBox}>
           <AppText style={styles.statBoxLabel}>Outstanding</AppText>
-          <AppText style={[styles.statBoxNum, { color: outstandingVal.color, fontSize: 16 }]}>
+          <AppText style={[styles.statBoxNum, money, { color: outstandingVal.color }]}>
             {outstandingVal.text}
           </AppText>
           {canSeeAmounts && (

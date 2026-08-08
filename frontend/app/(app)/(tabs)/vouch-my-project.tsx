@@ -37,9 +37,13 @@ const FEATURES = [
   },
 ];
 
+// Remembered across mounts, so returning to this screen doesn't show the
+// locked copy for a frame before the real strength arrives.
+let lastKnownStrength: number | null = null;
+
 export default function VouchMyProjectScreen() {
   const { fetchWithAuth } = useAuth();
-  const [strength, setStrength] = useState(0);
+  const [strength, setStrength] = useState<number | null>(lastKnownStrength);
   const [loading, setLoading] = useState(true);
   const hasLoadedRef = useRef(false);
 
@@ -59,6 +63,7 @@ export default function VouchMyProjectScreen() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!cancelled && data?.profileStrength !== undefined) {
+            lastKnownStrength = data.profileStrength;
             setStrength(data.profileStrength);
           }
         })
@@ -75,10 +80,12 @@ export default function VouchMyProjectScreen() {
     }, [fetchWithAuth])
   );
 
-  const isUnlocked = strength === 100;
+  // Treat "not yet known" as unlocked: claiming it's locked and then undoing
+  // that a moment later reads as the app changing its mind.
+  const isUnlocked = strength === null || strength === 100;
   // Each of the 5 profile steps is worth 20%, so this turns an abstract
   // percentage into the concrete number of things still to do.
-  const stepsLeft = Math.max(Math.round((100 - strength) / 20), 0);
+  const stepsLeft = Math.max(Math.round((100 - (strength ?? 100)) / 20), 0);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -101,9 +108,9 @@ export default function VouchMyProjectScreen() {
         {!loading && !isUnlocked && (
           <Animated.View style={[styles.meter, statusEntrance]}>
             <View style={styles.track}>
-              <View style={[styles.fill, { width: `${strength}%` as any }]} />
+              <View style={[styles.fill, { width: `${strength ?? 0}%` as any }]} />
             </View>
-            <AppText style={styles.meterPct}>{strength}%</AppText>
+            <AppText style={styles.meterPct}>{strength ?? 0}%</AppText>
           </Animated.View>
         )}
       </ScreenHeader>
@@ -256,8 +263,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
     backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.grey300,
   },
   ctaButton: {
     height: 54,

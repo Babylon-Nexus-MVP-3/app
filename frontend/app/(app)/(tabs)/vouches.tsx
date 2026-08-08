@@ -1,11 +1,16 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  Animated,
   View,
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -63,10 +68,33 @@ function AttributeChips({ attributes }: { attributes: string[] }) {
   );
 }
 
+// Page order — the pager and the segmented control both index into this.
+const TABS = ["received", "given", "requests"] as const;
+type VouchTab = (typeof TABS)[number];
+
 export default function VouchesScreen() {
   const { fetchWithAuth } = useAuth();
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<"given" | "received" | "requests">("received");
+  const [tab, setTab] = useState<VouchTab>("received");
+  const { width } = useWindowDimensions();
+  const pagerRef = useRef<ScrollView>(null);
+  // Drives the segmented control's highlight, so it tracks the swipe rather
+  // than jumping once the gesture settles.
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const pageProgress = Animated.divide(scrollX, Math.max(width, 1));
+
+  // Tapping a segment scrolls the pager; swiping sets the segment. Both write
+  // to the same `tab`, so they can't drift apart.
+  function goToTab(next: VouchTab) {
+    setTab(next);
+    pagerRef.current?.scrollTo({ x: TABS.indexOf(next) * width, animated: true });
+  }
+
+  function onPagerSettled(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    const next = TABS[index];
+    if (next && next !== tab) setTab(next);
+  }
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
   const [profileVerified, setProfileVerified] = useState(false);
@@ -77,6 +105,11 @@ export default function VouchesScreen() {
     useCallback(() => {
       if (tabParam === "received" || tabParam === "given" || tabParam === "requests") {
         setTab(tabParam);
+        // Arriving from a link (e.g. a nudge reminder) has to move the pager
+        // too, or the segment and the visible page disagree.
+        requestAnimationFrame(() =>
+          pagerRef.current?.scrollTo({ x: TABS.indexOf(tabParam) * width, animated: false })
+        );
       }
       let cancelled = false;
       if (!hasLoaded.current) setLoading(true);
@@ -101,7 +134,7 @@ export default function VouchesScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchWithAuth, tabParam])
+    }, [fetchWithAuth, tabParam, width])
   );
 
   return (
@@ -119,7 +152,8 @@ export default function VouchesScreen() {
         <View style={styles.segmentSlot}>
           <Segmented
             value={tab}
-            onChange={setTab}
+            onChange={goToTab}
+            progress={pageProgress}
             options={[
               { value: "received", label: "Received" },
               { value: "given", label: "Given" },
@@ -129,15 +163,129 @@ export default function VouchesScreen() {
         </View>
       </ScreenHeader>
 
-      <View style={sheetStyle.sheet}>
-        {tab === "requests" ? (
-          <SentRequests />
-        ) : loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={Colors.vouchGreen} />
-          </View>
-        ) : tab === "given" ? (
-          given.length === 0 ? (
+      {/* Swipeable pager: the segmented control and the swipe drive the same
+          index, so either way of moving between views stays in sync. */}
+      <Animated.ScrollView
+        ref={pagerRef}
+        style={sheetStyle.sheet}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: true,
+          // Flip the label colours as the highlight passes the halfway point;
+          // waiting for the gesture to settle leaves white text sitting on the
+          // white pill mid-swipe.
+          listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const index = Math.round(e.nativeEvent.contentOffset.x / width);
+            const next = TABS[index];
+            if (next && next !== tab) setTab(next);
+          },
+        })}
+        onMomentumScrollEnd={onPagerSettled}
+      >
+        <View style={{ width }}>
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={Colors.vouchGreen} />
+            </View>
+          ) : received.length === 0 ? (
+            <EmptyState
+              icon="shield-outline"
+              title="No vouches received yet"
+              subtitle="Complete your vouch profile and send requests to build your reputation."
+              actionLabel="Build your profile"
+              onAction={() => router.push("/(app)/get-vouched")}
+            />
+          ) : (
+            <FlatList
+              data={received}
+              keyExtractor={(v) => v._id}
+              contentContainerStyle={styles.scroll}
+              showsVerticalScrollIndicator={false}
+              contentInsetAdjustmentBehavior="automatic"
+              extraData={profileVerified}
+              ListHeaderComponent={
+                <AppText style={styles.countLabel}>
+                  {received.length} {received.length === 1 ? "vouch" : "vouches"} received
+                </AppText>
+              }
+              renderItem={({ item: v }) => {
+                const displayName = v.fromBusinessName || v.fromName || "this business";
+                function onVouchBack() {
+                  if (!v.fromAbn || v.alreadyVouchedBack) return;
+                  if (!profileVerified) {
+                    Alert.alert(
+                      "Complete your profile first",
+                      "Add your details and trade licence before you vouch for someone else.",
+                      [
+                        { text: "Not now", style: "cancel" },
+                        {
+                          text: "Build profile",
+                          onPress: () => router.push("/(app)/get-vouched"),
+                        },
+                      ]
+                    );
+                    return;
+                  }
+                  router.push({
+                    pathname: "/(app)/give-vouch/attributes",
+                    params: { abn: v.fromAbn, businessName: displayName },
+                  });
+                }
+                return (
+                  <View style={styles.card}>
+                    <View style={styles.cardTop}>
+                      <View style={styles.iconBadge}>
+                        <Ionicons
+                          name="person-circle-outline"
+                          size={18}
+                          color={Colors.vouchGreen}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <AppText style={styles.businessName}>
+                          {v.fromName || "Someone"}
+                          {v.fromBusinessName ? (
+                            <AppText
+                              style={styles.fromBusiness}
+                            >{`  ·  ${v.fromBusinessName}`}</AppText>
+                          ) : null}
+                        </AppText>
+                        <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                      </View>
+                      {v.fromAbn ? (
+                        v.alreadyVouchedBack ? (
+                          <Pill label="Vouched" tone="green" icon="checkmark" />
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.vouchBackBtn}
+                            onPress={onVouchBack}
+                            activeOpacity={0.75}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Vouch back for ${displayName}`}
+                          >
+                            <AppText style={styles.vouchBackBtnText}>Vouch back</AppText>
+                          </TouchableOpacity>
+                        )
+                      ) : null}
+                    </View>
+                    <AttributeChips attributes={v.attributes} />
+                    {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
+                  </View>
+                );
+              }}
+            />
+          )}
+        </View>
+
+        <View style={{ width }}>
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={Colors.vouchGreen} />
+            </View>
+          ) : given.length === 0 ? (
             <EmptyState
               icon="shield-outline"
               title="No vouches given yet"
@@ -185,92 +333,13 @@ export default function VouchesScreen() {
                 </View>
               )}
             />
-          )
-        ) : received.length === 0 ? (
-          <EmptyState
-            icon="shield-outline"
-            title="No vouches received yet"
-            subtitle="Complete your vouch profile and send requests to build your reputation."
-            actionLabel="Build your profile"
-            onAction={() => router.push("/(app)/get-vouched")}
-          />
-        ) : (
-          <FlatList
-            data={received}
-            keyExtractor={(v) => v._id}
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-            contentInsetAdjustmentBehavior="automatic"
-            extraData={profileVerified}
-            ListHeaderComponent={
-              <AppText style={styles.countLabel}>
-                {received.length} {received.length === 1 ? "vouch" : "vouches"} received
-              </AppText>
-            }
-            renderItem={({ item: v }) => {
-              const displayName = v.fromBusinessName || v.fromName || "this business";
-              function onVouchBack() {
-                if (!v.fromAbn || v.alreadyVouchedBack) return;
-                if (!profileVerified) {
-                  Alert.alert(
-                    "Complete your profile first",
-                    "Add your details and trade licence before you vouch for someone else.",
-                    [
-                      { text: "Not now", style: "cancel" },
-                      {
-                        text: "Build profile",
-                        onPress: () => router.push("/(app)/get-vouched"),
-                      },
-                    ]
-                  );
-                  return;
-                }
-                router.push({
-                  pathname: "/(app)/give-vouch/attributes",
-                  params: { abn: v.fromAbn, businessName: displayName },
-                });
-              }
-              return (
-                <View style={styles.card}>
-                  <View style={styles.cardTop}>
-                    <View style={styles.iconBadge}>
-                      <Ionicons name="person-circle-outline" size={18} color={Colors.vouchGreen} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText style={styles.businessName}>
-                        {v.fromName || "Someone"}
-                        {v.fromBusinessName ? (
-                          <AppText
-                            style={styles.fromBusiness}
-                          >{`  ·  ${v.fromBusinessName}`}</AppText>
-                        ) : null}
-                      </AppText>
-                      <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
-                    </View>
-                    {v.fromAbn ? (
-                      v.alreadyVouchedBack ? (
-                        <Pill label="Vouched" tone="green" icon="checkmark" />
-                      ) : (
-                        <TouchableOpacity
-                          style={styles.vouchBackBtn}
-                          onPress={onVouchBack}
-                          activeOpacity={0.75}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Vouch back for ${displayName}`}
-                        >
-                          <AppText style={styles.vouchBackBtnText}>Vouch back</AppText>
-                        </TouchableOpacity>
-                      )
-                    ) : null}
-                  </View>
-                  <AttributeChips attributes={v.attributes} />
-                  {v.note ? <AppText style={styles.note}>{v.note}</AppText> : null}
-                </View>
-              );
-            }}
-          />
-        )}
-      </View>
+          )}
+        </View>
+
+        <View style={{ width }}>
+          <SentRequests />
+        </View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

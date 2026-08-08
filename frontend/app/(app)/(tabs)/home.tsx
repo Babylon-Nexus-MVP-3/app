@@ -18,7 +18,7 @@ import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { ListRow } from "@/components/ListRow";
-import { ActionTile, tileRow } from "@/components/ActionTile";
+import { ActionTile } from "@/components/ActionTile";
 import { SectionLabel } from "@/components/ui";
 import { useEntrance, useReduceMotion } from "@/lib/motion";
 
@@ -80,12 +80,17 @@ function StrengthMeter({ pct, reduceMotion }: { pct: number; reduceMotion: boole
   );
 }
 
+// Remembered across mounts. The tab bar re-mounts this screen on every visit,
+// and starting from 0 each time made the gated actions render locked for a
+// frame before the fetch corrected them.
+let lastKnownStrength: number | null = null;
+
 export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [profileStrength, setProfileStrength] = useState(0);
+  const [profileStrength, setProfileStrength] = useState<number | null>(lastKnownStrength);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -114,7 +119,9 @@ export default function HomeScreen() {
       setUnreadCount(vouchUnread + projectUnread);
       const requests: SentRequest[] = sentData?.requests ?? [];
       setSentRequests(requests);
-      setProfileStrength(profileData?.profileStrength ?? 0);
+      const nextStrength = profileData?.profileStrength ?? 0;
+      lastKnownStrength = nextStrength;
+      setProfileStrength(nextStrength);
     } catch {}
   }, [fetchWithAuth]);
 
@@ -130,12 +137,16 @@ export default function HomeScreen() {
     setRefreshing(false);
   }
 
-  const strength = profileStrength;
+  const strength = profileStrength ?? 0;
+  // Until the profile has actually loaded we don't know whether anything is
+  // locked, so don't assert that it is — a padlock that disappears a moment
+  // later reads as the app changing its mind.
+  const strengthKnown = profileStrength !== null;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
-  const canCreateProject = strength === 100;
+  const canCreateProject = !strengthKnown || strength === 100;
   // Giving a vouch puts your name behind someone else's work, so your own
   // profile has to be complete first. Receiving one is open to everyone.
-  const profileVerified = strength === 100;
+  const profileVerified = !strengthKnown || strength === 100;
 
   const reduceMotion = useReduceMotion();
   const heroEntrance = useEntrance(0, reduceMotion);
@@ -220,7 +231,13 @@ export default function HomeScreen() {
             icon="shield-checkmark-outline"
             tone="primary"
             title="Build your profile"
-            subtitle={strength === 100 ? "Fully verified" : `${strength}% complete`}
+            subtitle={
+              !strengthKnown
+                ? "Your details and trade licence"
+                : strength === 100
+                  ? "Fully verified"
+                  : `${strength}% complete`
+            }
             onPress={() => router.push("/(app)/get-vouched")}
             accessibilityLabel="Build your profile"
             delay={90}
@@ -228,7 +245,7 @@ export default function HomeScreen() {
           />
 
           {/* The two halves of a vouch, given equal weight side by side. */}
-          <View style={tileRow.row}>
+          <View style={styles.tileRow}>
             <ActionTile
               icon="person-add-outline"
               title="Request a vouch"
@@ -271,7 +288,7 @@ export default function HomeScreen() {
           <SectionLabel>Projects</SectionLabel>
         </Animated.View>
         <View style={styles.section}>
-          <View style={tileRow.row}>
+          <View style={styles.tileRow}>
             <ActionTile
               icon="enter-outline"
               title="Join a project"
@@ -395,6 +412,10 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
   },
   section: { gap: 10, marginBottom: 24 },
+  // Defined here rather than imported: an imported style object can be
+  // undefined for a frame, and an undefined style falls back to column —
+  // which made the tiles stack vertically before snapping side by side.
+  tileRow: { flexDirection: "row", gap: 10 },
   bellBadge: {
     position: "absolute",
     top: -4,

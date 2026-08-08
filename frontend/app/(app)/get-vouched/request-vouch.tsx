@@ -444,8 +444,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
     backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.grey300,
   },
   primaryBtn: {
     backgroundColor: Colors.vouchGreen,

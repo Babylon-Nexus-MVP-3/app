@@ -109,10 +109,8 @@ export function ActionTile({
   );
 }
 
-/** Row wrapper that lays two tiles out side by side. */
-export const tileRow = StyleSheet.create({
-  row: { flexDirection: "row", gap: 10 },
-});
+// Pair two tiles by wrapping them in a row: { flexDirection: "row", gap: 10 }
+// declared in the screen's own StyleSheet.
 
 const styles = StyleSheet.create({
   wrap: {
