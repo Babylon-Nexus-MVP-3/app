@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 4,
   },
-  headerTitle: { fontSize: 24, fontFamily: Fonts.extraBold, color: Colors.white },
+  headerTitle: { fontSize: 28, fontFamily: Fonts.bold, color: Colors.white },
   countBadge: {
     backgroundColor: Colors.amber,
     borderRadius: 20,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   projectCard: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: Colors.black,

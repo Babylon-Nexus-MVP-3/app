@@ -1,23 +1,60 @@
-import { useCallback, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import {
+  Animated,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SectionLabel } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { useEntrance, usePressScale, useReduceMotion, STAGGER } from "@/lib/motion";
+
+const FEATURES = [
+  {
+    icon: "people-outline" as const,
+    title: "Invite your team",
+    desc: "Add subbies, PMs and consultants with role-based invite codes.",
+  },
+  {
+    icon: "pulse-outline" as const,
+    title: "Track payment health",
+    desc: "See invoice status, approvals and payment timing in real time.",
+  },
+  {
+    icon: "shield-checkmark-outline" as const,
+    title: "Back it with your profile",
+    desc: "Your verified profile vouches for the project, so the team knows who they are working for.",
+  },
+];
 
 export default function VouchMyProjectScreen() {
   const { fetchWithAuth } = useAuth();
   const [strength, setStrength] = useState(0);
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
+
+  const reduceMotion = useReduceMotion();
+  const statusEntrance = useEntrance(0, reduceMotion);
+  const featuresEntrance = useEntrance(STAGGER, reduceMotion);
+  const noteEntrance = useEntrance(STAGGER * 2, reduceMotion);
+  const ctaPress = usePressScale(reduceMotion, 0.97);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      setLoading(true);
+      // Only the first load shows a spinner — refocusing after a back
+      // navigation refetches quietly instead of flashing the screen.
+      if (!hasLoadedRef.current) setLoading(true);
       fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
@@ -27,167 +64,111 @@ export default function VouchMyProjectScreen() {
         })
         .catch(() => {})
         .finally(() => {
-          if (!cancelled) setLoading(false);
+          if (!cancelled) {
+            hasLoadedRef.current = true;
+            setLoading(false);
+          }
         });
       return () => {
         cancelled = true;
       };
     }, [fetchWithAuth])
   );
+
   const isUnlocked = strength === 100;
+  // Each of the 5 profile steps is worth 20%, so this turns an abstract
+  // percentage into the concrete number of things still to do.
+  const stepsLeft = Math.max(Math.round((100 - strength) / 20), 0);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle} numberOfLines={1}>
-          CREATE MY PROJECT
-        </AppText>
-        <TouchableOpacity hitSlop={10}>
-          <Ionicons name="help-circle-outline" size={24} color={Colors.grey500} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        showBack
+        eyebrow="Project owner"
+        title={isUnlocked ? "You're ready to create" : "Almost ready to create"}
+        subtitle={
+          loading
+            ? " "
+            : isUnlocked
+              ? "Your profile is verified."
+              : stepsLeft === 1
+                ? "1 step left on your profile."
+                : `${stepsLeft} steps left on your profile.`
+        }
+      >
+        {/* Progress lives in the header rather than a card below it — the two
+            were saying the same thing and eating half the screen. */}
+        {!loading && !isUnlocked && (
+          <Animated.View style={[styles.meter, statusEntrance]}>
+            <View style={styles.track}>
+              <View style={[styles.fill, { width: `${strength}%` as any }]} />
+            </View>
+            <AppText style={styles.meterPct}>{strength}%</AppText>
+          </Animated.View>
+        )}
+      </ScreenHeader>
 
       <ScrollView
-        style={styles.scroll}
+        style={sheetStyle.sheet}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero illustration */}
-        <View style={styles.heroContainer}>
-          <View style={[styles.heroBigCircle, isUnlocked && styles.heroBigCircleUnlocked]}>
-            <Ionicons
-              name={isUnlocked ? "shield-checkmark-outline" : "radio-button-on-outline"}
-              size={38}
-              color={isUnlocked ? Colors.vouchGreen : Colors.amber}
-            />
+        <Animated.View style={featuresEntrance}>
+          <SectionLabel>What a project owner can do</SectionLabel>
+          <View style={styles.features}>
+            {FEATURES.map((f) => (
+              <View key={f.title} style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name={f.icon} size={20} color={Colors.vouchGreen} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.featureTitle}>{f.title}</AppText>
+                  <AppText style={styles.featureDesc}>{f.desc}</AppText>
+                </View>
+              </View>
+            ))}
           </View>
-          {!isUnlocked && (
-            <View style={styles.heroLockBadge}>
-              <Ionicons name="lock-closed-outline" size={14} color={Colors.black} />
-            </View>
-          )}
-        </View>
+        </Animated.View>
 
-        {/* Heading */}
-        <AppText style={styles.heading}>
-          {isUnlocked ? "Your project is ready." : "Your project health is locked."}
-        </AppText>
-        <AppText style={styles.subheading}>
-          {isUnlocked
-            ? "Connect a project to start tracking payment health and building trust."
-            : `Connect a project to start tracking${"\n"}payment health and build trust.`}
-        </AppText>
-
-        {/* Vouch gate notice */}
-        {!loading && (
-          <View style={styles.gateCard}>
-            <Ionicons
-              name={isUnlocked ? "shield-checkmark-outline" : "lock-closed-outline"}
-              size={18}
-              color={isUnlocked ? Colors.vouchGreen : Colors.amber}
-            />
-            <View style={styles.gateText}>
-              <AppText style={styles.gateTitle}>
-                {isUnlocked ? "Profile complete" : "Complete your profile to unlock"}
-              </AppText>
-              <AppText style={styles.gateDesc}>
-                {isUnlocked
-                  ? "Your profile is 100% — you can now set up your project."
-                  : `Your profile is ${strength}% complete. Finish all 6 steps to unlock project creation.`}
-              </AppText>
-            </View>
-          </View>
-        )}
-
-        {/* What you unlock */}
-        <View style={[styles.featureCard, isUnlocked && styles.featureCardUnlocked]}>
-          <AppText style={[styles.featureCardLabel, isUnlocked && styles.featureCardLabelUnlocked]}>
-            WHAT YOU CAN DO AS A PROJECT OWNER
+        <Animated.View style={[styles.note, noteEntrance]}>
+          <Ionicons name="lock-closed-outline" size={16} color={Colors.grey700} />
+          <AppText style={styles.noteText}>
+            Invoice amounts stay private to the project team. VouchPay tracks payment timing, not
+            dollar amounts.
           </AppText>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons
-                name="people-outline"
-                size={20}
-                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <View style={styles.featureText}>
-              <AppText style={styles.featureTitle}>Invite your team</AppText>
-              <AppText style={styles.featureDesc}>
-                Add subbies, PMs, and consultants with role-based invite codes.
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons
-                name="pulse-outline"
-                size={20}
-                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <View style={styles.featureText}>
-              <AppText style={styles.featureTitle}>Track payment health</AppText>
-              <AppText style={styles.featureDesc}>
-                See invoice status, approvals, and payment timing in real time.
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={isUnlocked ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <View style={styles.featureText}>
-              <AppText style={styles.featureTitle}>Build verified project credibility</AppText>
-              <AppText style={styles.featureDesc}>
-                Your verified profile backs the project — giving your team confidence.
-              </AppText>
-            </View>
-          </View>
-        </View>
-
-        {/* Privacy card */}
-        <View style={styles.privacyCard}>
-          <Ionicons name="lock-closed-outline" size={18} color={Colors.vouchGreen} />
-          <View style={styles.privacyText}>
-            <AppText style={styles.privacyTitle}>Amounts stay off your public profile</AppText>
-            <AppText style={styles.privacyDesc}>
-              Invoice values are visible to your project team only. Vouch tracks payment timing —
-              not dollar amounts.
-            </AppText>
-          </View>
-        </View>
+        </Animated.View>
       </ScrollView>
 
-      {/* CTA */}
+      {/* The button always does something: create the project, or go finish
+          the profile that's blocking it. */}
       <View style={styles.ctaContainer}>
-        <TouchableOpacity
-          style={[styles.ctaButton, (!isUnlocked || loading) && styles.ctaButtonLocked]}
-          activeOpacity={isUnlocked ? 0.85 : 1}
-          onPress={() => {
-            if (isUnlocked) router.push("/(app)/(tabs)/projects");
-          }}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <AppText style={styles.ctaText}>
-              {isUnlocked ? "Set up my project →" : "Set up my project"}
-            </AppText>
-          )}
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: ctaPress.scale }] }}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.9}
+            onPressIn={ctaPress.onPressIn}
+            onPressOut={ctaPress.onPressOut}
+            disabled={loading}
+            onPress={() => {
+              router.push(isUnlocked ? "/(app)/create-project" : "/(app)/get-vouched");
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isUnlocked
+                ? "Create project"
+                : `Finish your profile, ${stepsLeft} steps left before you can create a project`
+            }
+            accessibilityState={{ disabled: loading }}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <AppText style={styles.ctaText}>
+                {isUnlocked ? "Create project" : "Finish your profile"}
+              </AppText>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -196,95 +177,39 @@ export default function VouchMyProjectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
-  scroll: {
-    flex: 1,
+    backgroundColor: Colors.vouchGreen,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 22,
+    paddingBottom: 28,
+  },
+  meter: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    marginTop: 16,
   },
-  heroContainer: {
-    marginBottom: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 84,
-    height: 84,
+  track: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.whiteInactive,
+    overflow: "hidden",
   },
-  heroBigCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: Colors.beige,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroBigCircleUnlocked: {
-    backgroundColor: Colors.vouchGreenLight,
-  },
-  heroLockBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  fill: {
+    height: 6,
+    borderRadius: 3,
     backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
-    alignItems: "center",
-    justifyContent: "center",
   },
-  heading: {
-    fontSize: 26,
+  meterPct: {
+    fontSize: 14,
     fontFamily: Fonts.extraBold,
-    color: Colors.black,
-    textAlign: "center",
-    marginBottom: 10,
+    color: Colors.white,
   },
-  subheading: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey700,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  featureCard: {
-    width: "100%",
-    backgroundColor: Colors.beige,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    gap: 16,
-  },
-  featureCardLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.amber,
-    letterSpacing: 0.8,
-  },
-  featureCardUnlocked: {
-    backgroundColor: Colors.vouchGreenLight,
-  },
-  featureCardLabelUnlocked: {
-    color: Colors.vouchGreen,
+  features: {
+    gap: 18,
+    marginBottom: 26,
   },
   featureItem: {
     flexDirection: "row",
@@ -292,18 +217,15 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.white,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: Colors.vouchGreenLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  featureText: {
-    flex: 1,
-  },
   featureTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: Fonts.bold,
     color: Colors.black,
     marginBottom: 2,
@@ -311,78 +233,42 @@ const styles = StyleSheet.create({
   featureDesc: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.grey700,
+    color: Colors.grey500,
     lineHeight: 19,
   },
-  privacyCard: {
-    width: "100%",
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 16,
-    padding: 18,
+  note: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 10,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 12,
+    padding: 14,
   },
-  privacyText: {
+  noteText: {
     flex: 1,
-  },
-  privacyTitle: {
-    fontSize: 15,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    marginBottom: 4,
-  },
-  privacyDesc: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontFamily: Fonts.regular,
     color: Colors.grey700,
-    lineHeight: 19,
+    lineHeight: 18,
   },
   ctaContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 20,
     backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: Colors.grey300,
   },
   ctaButton: {
+    height: 54,
     backgroundColor: Colors.vouchGreen,
-    borderRadius: 14,
-    paddingVertical: 18,
+    borderRadius: 28,
     alignItems: "center",
-  },
-  ctaButtonLocked: {
-    backgroundColor: Colors.grey300,
+    justifyContent: "center",
   },
   ctaText: {
     fontSize: 16,
     fontFamily: Fonts.bold,
     color: Colors.white,
-  },
-  gateCard: {
-    width: "100%",
-    backgroundColor: Colors.beige,
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
-  },
-  gateText: {
-    flex: 1,
-  },
-  gateTitle: {
-    fontSize: 14,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    marginBottom: 4,
-  },
-  gateDesc: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey700,
-    lineHeight: 19,
   },
 });

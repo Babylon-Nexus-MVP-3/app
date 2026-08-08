@@ -82,7 +82,6 @@ export default function ForgotPassword() {
             autoCorrect={false}
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
-            autoFocus
           />
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}

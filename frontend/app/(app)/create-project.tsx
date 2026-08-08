@@ -183,7 +183,7 @@ export default function CreateProject() {
         <SafeAreaView edges={["top"]}>
           <View style={appStyles.headerInner}>
             <TouchableOpacity
-              onPress={() => router.replace("/(app)/projects" as any)}
+              onPress={() => router.replace("/(app)/(tabs)/projects")}
               style={appStyles.headerIconBtn}
               hitSlop={HEADER_HIT_SLOP}
               accessibilityRole="button"
@@ -191,7 +191,7 @@ export default function CreateProject() {
             >
               <Ionicons name="arrow-back" size={20} color={Colors.white} />
             </TouchableOpacity>
-            <AppText style={appStyles.headerTitle}>New Project</AppText>
+            <AppText style={appStyles.headerTitle}>Create project</AppText>
             <View style={{ width: 36 }} />
           </View>
         </SafeAreaView>
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   inviteeCard: {
     borderWidth: 1,
     borderColor: Colors.grey300,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     backgroundColor: Colors.white,

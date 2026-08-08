@@ -1,110 +1,92 @@
 import {
   Alert,
+  Animated,
+  Easing,
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  Modal,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { ListRow } from "@/components/ListRow";
+import { ActionTile, tileRow } from "@/components/ActionTile";
+import { SectionLabel } from "@/components/ui";
+import { useEntrance, useReduceMotion } from "@/lib/motion";
 
 type SentRequest = {
   _id: string;
-  toMobile: string;
-  toEmail?: string;
-  relationship: string;
-  projectName: string;
   status: "pending" | "responded";
   createdAt: string;
+  respondedAt?: string;
 };
 
-function MiniStrengthBar({ pct }: { pct: number }) {
-  const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
+/**
+ * Profile strength meter — the bar fills and the percentage counts up to the
+ * real value whenever it changes, so progress is felt rather than just read.
+ */
+function StrengthMeter({ pct, reduceMotion }: { pct: number; reduceMotion: boolean }) {
+  // Width can't be native-driven, but this is one small view so the JS-driven
+  // interpolation is cheap. The label counts up off the same value.
+  const anim = useRef(new Animated.Value(0)).current;
+  const [displayPct, setDisplayPct] = useState(0);
+
+  useEffect(() => {
+    const id = anim.addListener(({ value }) => setDisplayPct(Math.round(value)));
+    return () => anim.removeListener(id);
+  }, [anim]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      anim.setValue(pct);
+      setDisplayPct(pct);
+      return;
+    }
+    const animation = Animated.timing(anim, {
+      toValue: pct,
+      duration: 900,
+      delay: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [anim, pct, reduceMotion]);
+
+  const width = anim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+    extrapolate: "clamp",
+  });
+
   return (
-    <View style={msb.wrap}>
-      <View style={msb.track}>
-        <View style={[msb.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
+    <>
+      <View style={styles.strengthRow}>
+        <AppText style={styles.strengthLabel}>Profile strength</AppText>
+        <AppText style={styles.strengthPct}>{displayPct}%</AppText>
       </View>
-      <AppText style={[msb.label, { color }]}>{pct}%</AppText>
-    </View>
+      <View style={styles.strengthTrack}>
+        <Animated.View style={[styles.strengthFill, { width }]} />
+      </View>
+    </>
   );
 }
-
-const msb = StyleSheet.create({
-  wrap: { gap: 4 },
-  track: {
-    height: 4,
-    backgroundColor: Colors.grey300,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  fill: { height: 4, borderRadius: 2 },
-  label: { fontSize: 11, fontFamily: Fonts.bold },
-});
-
-function StrengthBar({ pct }: { pct: number }) {
-  const color = pct >= 80 ? Colors.vouchGreen : pct >= 40 ? Colors.amber : Colors.red;
-  return (
-    <View style={sb.wrap}>
-      <View style={sb.row}>
-        <AppText style={sb.label}>Profile strength</AppText>
-        <AppText style={[sb.pct, { color }]}>{pct}%</AppText>
-      </View>
-      <View style={sb.track}>
-        <View style={[sb.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
-      </View>
-      {pct < 100 && (
-        <AppText style={sb.hint}>
-          {pct === 0
-            ? "Complete your profile to unlock all features."
-            : pct < 60
-              ? "Keep going — add vouches to strengthen your profile."
-              : "Almost there! Verify your ID for 100%."}
-        </AppText>
-      )}
-    </View>
-  );
-}
-
-const sb = StyleSheet.create({
-  wrap: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 24,
-  },
-  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  label: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
-  pct: { fontSize: 13, fontFamily: Fonts.bold },
-  track: {
-    height: 6,
-    backgroundColor: Colors.grey300,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  fill: { height: 6, borderRadius: 3 },
-  hint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
-});
 
 export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
-  const insets = useSafeAreaInsets();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileStrength, setProfileStrength] = useState(0);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
-  const [requestModalVisible, setRequestModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -149,25 +131,22 @@ export default function HomeScreen() {
   }
 
   const strength = profileStrength;
-  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
-  const step1Done = !!(user?.name && user?.abn && user?.businessTrade);
+  const canCreateProject = strength === 100;
+  // Giving a vouch puts your name behind someone else's work, so your own
+  // profile has to be complete first. Receiving one is open to everyone.
+  const profileVerified = strength === 100;
+
+  const reduceMotion = useReduceMotion();
+  const heroEntrance = useEntrance(0, reduceMotion);
+  const reputationLabelEntrance = useEntrance(60, reduceMotion);
+  const projectsLabelEntrance = useEntrance(270, reduceMotion);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.vouchGreen}
-          />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      {/* ── Hero: brand, greeting and profile strength on one green block ── */}
+      <Animated.View style={[styles.hero, heroEntrance]}>
+        <View style={styles.heroTopRow}>
           <AppText style={styles.logo}>VouchPay</AppText>
           <TouchableOpacity
             hitSlop={8}
@@ -178,7 +157,7 @@ export default function HomeScreen() {
             }
           >
             <View>
-              <Ionicons name="notifications-outline" size={24} color={Colors.vouchGreen} />
+              <Ionicons name="notifications-outline" size={24} color={Colors.white} />
               {unreadCount > 0 && (
                 <View style={styles.bellBadge}>
                   <AppText style={styles.bellBadgeText}>
@@ -190,167 +169,138 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Greeting */}
-        <View style={styles.greetingSection}>
-          <View style={styles.greetingRow}>
-            <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
-            {strength === 100 && (
-              <Ionicons name="shield-checkmark" size={30} color={Colors.vouchGreen} />
-            )}
+        <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
+
+        {strength === 100 ? (
+          <View style={styles.verifiedPill}>
+            <Ionicons name="shield-checkmark" size={15} color={Colors.white} />
+            <AppText style={styles.verifiedPillText}>Profile fully verified</AppText>
           </View>
-          <AppText style={styles.subtitle}>
-            {strength === 100 ? "Profile fully verified." : "What do you want to do today?"}
-          </AppText>
-        </View>
-
-        {/* Profile Strength — hidden once fully complete */}
-        {strength < 100 && <StrengthBar pct={strength} />}
-
-        {/* 2x2 Card Grid */}
-        <View style={styles.grid}>
-          {/* Request a Vouch — view pending requests / send new ones */}
+        ) : (
           <TouchableOpacity
-            style={[styles.card, styles.cardDefault]}
-            activeOpacity={0.75}
-            onPress={() => setRequestModalVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              pendingSentCount > 0
-                ? `Request a Vouch, ${pendingSentCount} pending`
-                : "Request a Vouch"
-            }
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name="person-add-outline" size={26} color={Colors.black} />
-              {pendingSentCount > 0 && (
-                <View style={styles.dotBadge}>
-                  <AppText style={styles.dotBadgeText}>{pendingSentCount}</AppText>
-                </View>
-              )}
-            </View>
-            <AppText style={styles.cardTitle}>Request a Vouch</AppText>
-            <AppText style={styles.cardDesc}>
-              {sentRequests.length === 0 ? "Ask someone to vouch" : "View status"}
-            </AppText>
-          </TouchableOpacity>
-
-          {/* Give a Vouch — locked until 1 vouch received */}
-          <TouchableOpacity
-            style={[styles.card, respondedCount >= 1 ? styles.cardDefault : styles.cardLocked]}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={
-              respondedCount >= 1
-                ? `Give a Vouch${pendingCount > 0 ? `, ${pendingCount} pending` : ""}`
-                : "Give a Vouch, requires 1 vouch first"
-            }
-            onPress={() => {
-              if (respondedCount >= 1) {
-                router.push("/(app)/give-vouch");
-              } else {
-                Alert.alert(
-                  "1 Vouch Required",
-                  "You need at least 1 person to vouch for you before you can vouch for others. Head to Build your profile to request your first vouch.",
-                  [{ text: "Got it" }]
-                );
-              }
-            }}
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons
-                name="person-outline"
-                size={26}
-                color={respondedCount >= 1 ? Colors.black : Colors.grey500}
-              />
-              {pendingCount > 0 && respondedCount >= 1 && (
-                <View style={styles.dotBadge}>
-                  <AppText style={styles.dotBadgeText}>{pendingCount}</AppText>
-                </View>
-              )}
-            </View>
-            <AppText style={[styles.cardTitle, respondedCount < 1 && styles.cardTitleLocked]}>
-              Give a Vouch
-            </AppText>
-            {respondedCount >= 1 ? (
-              <AppText style={styles.cardDesc}>Vouch for others</AppText>
-            ) : (
-              <>
-                <AppText style={styles.cardDesc}>Needs 1 vouch</AppText>
-                <MiniStrengthBar pct={strength} />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.grid}>
-          {/* Build your profile */}
-          <TouchableOpacity
-            style={[styles.card, styles.cardGetVouched]}
-            activeOpacity={0.75}
+            style={styles.strengthBlock}
+            activeOpacity={0.8}
             onPress={() => router.push("/(app)/get-vouched")}
             accessibilityRole="button"
-            accessibilityLabel="Build your profile"
+            accessibilityLabel={`Profile strength ${strength} percent. Open build your profile.`}
           >
-            <View style={styles.cardIcon}>
-              <Ionicons name="shield-checkmark-outline" size={26} color={Colors.vouchGreen} />
-            </View>
-            <AppText style={styles.cardTitle}>Build your profile</AppText>
-            <AppText style={styles.cardDesc}>Get vouched</AppText>
+            <StrengthMeter pct={strength} reduceMotion={reduceMotion} />
+            <AppText style={styles.strengthHint}>
+              {strength === 0
+                ? "Complete your profile to unlock all features."
+                : strength < 60
+                  ? "Keep going — add vouches to strengthen your profile."
+                  : "Almost there! Add your trade licence for 100%."}
+            </AppText>
           </TouchableOpacity>
+        )}
+      </Animated.View>
 
-          {/* Join a Project */}
-          <TouchableOpacity
-            style={[styles.card, styles.cardDefault]}
-            activeOpacity={0.75}
-            onPress={() => router.push("/(app)/join-project")}
-            accessibilityRole="button"
-            accessibilityLabel="Join a Project"
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name="enter-outline" size={26} color={Colors.black} />
-            </View>
-            <AppText style={styles.cardTitle}>Join a Project</AppText>
-            <AppText style={styles.cardDesc}>Enter invite code</AppText>
-          </TouchableOpacity>
+      {/* ── Actions ─────────────────────────────────────────────────────── */}
+      <ScrollView
+        style={styles.sheet}
+        contentContainerStyle={styles.sheetContent}
+        showsVerticalScrollIndicator={false}
+        // The native tab bar is translucent and sits over the content, so the
+        // scroll view has to inset for it or the last row stays under it.
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.vouchGreen}
+          />
+        }
+      >
+        <Animated.View style={reputationLabelEntrance}>
+          <SectionLabel>Your reputation</SectionLabel>
+        </Animated.View>
+        <View style={styles.section}>
+          <ListRow
+            icon="shield-checkmark-outline"
+            tone="primary"
+            title="Build your profile"
+            subtitle={strength === 100 ? "Fully verified" : `${strength}% complete`}
+            onPress={() => router.push("/(app)/get-vouched")}
+            accessibilityLabel="Build your profile"
+            delay={90}
+            reduceMotion={reduceMotion}
+          />
+
+          {/* The two halves of a vouch, given equal weight side by side. */}
+          <View style={tileRow.row}>
+            <ActionTile
+              icon="person-add-outline"
+              title="Request a vouch"
+              subtitle="Ask someone you've worked with"
+              count={pendingSentCount}
+              onPress={() => router.push("/(app)/get-vouched/request-vouch")}
+              accessibilityLabel={
+                pendingSentCount > 0
+                  ? `Request a vouch, ${pendingSentCount} pending`
+                  : "Request a vouch"
+              }
+              delay={230}
+              reduceMotion={reduceMotion}
+            />
+            <ActionTile
+              icon="people-outline"
+              tone={profileVerified ? "default" : "locked"}
+              title="Give a vouch"
+              subtitle={profileVerified ? "Vouch for someone" : "Complete your profile first"}
+              count={profileVerified ? pendingCount : 0}
+              onPress={() => {
+                if (profileVerified) {
+                  router.push("/(app)/give-vouch");
+                } else {
+                  router.push("/(app)/get-vouched");
+                }
+              }}
+              accessibilityLabel={
+                profileVerified
+                  ? `Give a vouch${pendingCount > 0 ? `, ${pendingCount} pending` : ""}`
+                  : "Give a vouch, complete your profile first"
+              }
+              delay={270}
+              reduceMotion={reduceMotion}
+            />
+          </View>
         </View>
 
-        <View style={styles.grid}>
-          {/* Create my Project */}
-          <TouchableOpacity
-            style={[styles.card, strength === 100 ? styles.cardDefault : styles.cardLocked]}
-            activeOpacity={0.75}
-            onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
-            accessibilityRole="button"
-            accessibilityLabel={
-              strength === 100 ? "Create my Project" : "Create my Project, complete profile first"
-            }
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons
-                name="sync-circle-outline"
-                size={26}
-                color={strength === 100 ? Colors.black : Colors.grey500}
-              />
-            </View>
-            <AppText style={[styles.cardTitle, strength < 100 && styles.cardTitleLocked]}>
-              Create my Project
-            </AppText>
-            {strength === 100 ? (
-              <AppText style={styles.cardDesc}>Set up your project</AppText>
-            ) : (
-              <>
-                <AppText style={styles.cardDesc}>Complete profile first</AppText>
-                <MiniStrengthBar pct={strength} />
-              </>
-            )}
-          </TouchableOpacity>
+        <Animated.View style={projectsLabelEntrance}>
+          <SectionLabel>Projects</SectionLabel>
+        </Animated.View>
+        <View style={styles.section}>
+          <View style={tileRow.row}>
+            <ActionTile
+              icon="enter-outline"
+              title="Join a project"
+              subtitle="Enter your invite code"
+              onPress={() => router.push("/(app)/join-project")}
+              accessibilityLabel="Join a project"
+              delay={330}
+              reduceMotion={reduceMotion}
+            />
+            <ActionTile
+              icon="business-outline"
+              tone={canCreateProject ? "default" : "locked"}
+              title="Create a project"
+              subtitle={canCreateProject ? "Invite your team" : "Complete your profile first"}
+              onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
+              accessibilityLabel={
+                canCreateProject ? "Create a project" : "Create a project, complete profile first"
+              }
+              delay={370}
+              reduceMotion={reduceMotion}
+            />
+          </View>
 
-          {/* Apply for supplier credit — locked */}
-          <TouchableOpacity
-            style={[styles.card, styles.cardLocked]}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Apply for supplier credit, locked"
+          <ListRow
+            icon="card-outline"
+            tone="locked"
+            title="Supplier credit"
+            subtitle="Apply using your profile"
+            tag="Coming soon"
             onPress={() =>
               Alert.alert(
                 "Supplier Credit",
@@ -358,240 +308,93 @@ export default function HomeScreen() {
                 [{ text: "Got it" }]
               )
             }
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name="card-outline" size={26} color={Colors.grey500} />
-            </View>
-            <AppText style={[styles.cardTitle, styles.cardTitleLocked]}>
-              Apply for supplier credit
-            </AppText>
-            <AppText style={styles.cardDesc}>Submit using your profile</AppText>
-          </TouchableOpacity>
+            accessibilityLabel="Supplier credit, coming soon"
+            delay={440}
+            reduceMotion={reduceMotion}
+          />
         </View>
       </ScrollView>
-
-      <Modal
-        visible={requestModalVisible}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setRequestModalVisible(false)}
-      >
-        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              hitSlop={8}
-              onPress={() => setRequestModalVisible(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <Ionicons name="arrow-back" size={24} color={Colors.black} />
-            </TouchableOpacity>
-            <AppText style={styles.headerTitle}>VOUCH REQUESTS</AppText>
-            <View style={{ width: 24 }} />
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.modalScroll}
-            showsVerticalScrollIndicator={false}
-          >
-            <View
-              style={[
-                styles.modalIconCircle,
-                respondedCount >= 1 ? styles.modalIconCircleGreen : styles.modalIconCircleAmber,
-              ]}
-            >
-              <Ionicons
-                name={respondedCount >= 1 ? "shield-checkmark-outline" : "person-add-outline"}
-                size={36}
-                color={respondedCount >= 1 ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <AppText style={styles.modalTitle}>
-              {sentRequests.length === 0
-                ? "No requests yet"
-                : `${respondedCount} of ${sentRequests.length} vouched`}
-            </AppText>
-            <AppText style={styles.modalSubtitle}>
-              {sentRequests.length === 0
-                ? "Ask people you've worked with to vouch for you."
-                : respondedCount === sentRequests.length
-                  ? "Everyone has responded."
-                  : "Waiting on the rest to respond."}
-            </AppText>
-
-            {sentRequests.length > 0 && (
-              <View style={styles.modalListSection}>
-                <AppText style={styles.sectionLabel}>YOUR REQUESTS</AppText>
-                {sentRequests.map((r) => {
-                  const done = r.status === "responded";
-                  return (
-                    <View key={r._id} style={styles.requestCard}>
-                      <View style={[styles.dot, done ? styles.dotDone : styles.dotPending]} />
-                      <View style={{ flex: 1 }}>
-                        <AppText style={styles.requestContact}>{r.toEmail || r.toMobile}</AppText>
-                        <AppText style={styles.requestMeta}>
-                          {[r.relationship, r.projectName].filter(Boolean).join(" · ")}
-                        </AppText>
-                      </View>
-                      <View style={[styles.badge, done ? styles.badgeDone : styles.badgePending]}>
-                        <AppText
-                          style={[
-                            styles.badgeText,
-                            done ? styles.badgeTextDone : styles.badgeTextPending,
-                          ]}
-                        >
-                          {done ? "Vouched" : "Pending"}
-                        </AppText>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={styles.addRefBtn}
-              activeOpacity={0.75}
-              onPress={() => {
-                if (!step1Done) {
-                  Alert.alert(
-                    "Complete your profile first",
-                    "Please complete Step 1 of Build your Profile before requesting a vouch."
-                  );
-                  return;
-                }
-                setRequestModalVisible(false);
-                router.push("/(app)/get-vouched/step3?fresh=true" as any);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={
-                sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"
-              }
-            >
-              <Ionicons name="person-add-outline" size={16} color={Colors.vouchGreen} />
-              <AppText style={styles.addRefBtnText}>
-                {sentRequests.length === 0 ? "Request a vouch" : "Request another vouch"}
-              </AppText>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // The safe area carries the hero colour so the status bar area is green too.
+  safe: {
+    flex: 1,
+    backgroundColor: Colors.vouchGreen,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.white,
   },
-  scroll: {
-    padding: 24,
-    paddingBottom: 40,
+  hero: {
+    backgroundColor: Colors.vouchGreen,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 22,
   },
-  header: {
+  heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 18,
   },
   logo: {
-    fontSize: 26,
+    fontSize: 22,
     fontFamily: Fonts.extraBold,
-    color: Colors.vouchGreen,
-    letterSpacing: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
-  greetingSection: {
-    marginBottom: 20,
-  },
-  greetingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
   greeting: {
-    fontSize: 36,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 14,
-    marginBottom: 14,
-  },
-  card: {
-    width: "47%",
-    borderRadius: 16,
-    padding: 18,
-    gap: 8,
-    minHeight: 130,
-  },
-  cardGetVouched: {
-    backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-  },
-  cardDefault: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-  },
-  cardLocked: {
-    backgroundColor: Colors.beige,
-  },
-  cardIcon: {
-    marginBottom: 4,
-  },
-  dotBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.red,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  dotBadgeText: {
-    fontSize: 9,
+    fontSize: 30,
     fontFamily: Fonts.bold,
     color: Colors.white,
+    marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
+  verifiedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 7,
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  cardTitleLocked: {
-    color: Colors.grey700,
+  verifiedPillText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.white },
+  strengthBlock: {
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 16,
+    padding: 14,
   },
-  cardDesc: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
+  strengthRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
+  strengthLabel: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.white },
+  strengthPct: { fontSize: 15, fontFamily: Fonts.extraBold, color: Colors.white },
+  strengthTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.whiteInactive,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  strengthFill: { height: 6, borderRadius: 3, backgroundColor: Colors.white },
+  strengthHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.white, opacity: 0.85 },
+  sheet: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
+  sheetContent: {
+    paddingHorizontal: 16,
+    paddingTop: 22,
+    paddingBottom: 44,
+  },
+  section: { gap: 10, marginBottom: 24 },
   bellBadge: {
     position: "absolute",
     top: -4,
@@ -609,80 +412,4 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
-  modalScroll: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
-    alignItems: "center",
-  },
-  modalIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  modalIconCircleGreen: { backgroundColor: Colors.vouchGreenLight },
-  modalIconCircleAmber: { backgroundColor: Colors.amberBg },
-  modalTitle: {
-    fontSize: 22,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  modalListSection: {
-    width: "100%",
-    marginTop: 28,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  requestCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    width: "100%",
-    marginBottom: 8,
-  },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  dotDone: { backgroundColor: Colors.vouchGreen },
-  dotPending: { backgroundColor: Colors.amber },
-  requestContact: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
-  requestMeta: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 2 },
-  badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeDone: { backgroundColor: Colors.vouchGreenLight },
-  badgePending: { backgroundColor: Colors.amberBg },
-  badgeText: { fontSize: 11, fontFamily: Fonts.bold },
-  badgeTextDone: { color: Colors.vouchGreen },
-  badgeTextPending: { color: Colors.amber },
-  addRefBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 52,
-    width: "100%",
-  },
-  addRefBtnText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 });

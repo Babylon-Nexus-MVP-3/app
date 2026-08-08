@@ -214,7 +214,6 @@ export default function SignUp() {
                   placeholder="XX XXX XXX XXX"
                   keyboardType="numeric"
                   returnKeyType="next"
-                  autoFocus
                 />
                 <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
                 <TouchableOpacity
@@ -246,7 +245,6 @@ export default function SignUp() {
                     returnKeyType="search"
                     onSubmitEditing={onNameSearch}
                     autoCapitalize="words"
-                    autoFocus
                   />
                   <TouchableOpacity
                     style={styles.nameSearchBtn}
@@ -420,7 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40,
   },

@@ -79,7 +79,7 @@ export default function AddAbn() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
           <AppText style={styles.title}>{isLocked ? "Your ABN" : "Add ABN"}</AppText>
@@ -104,7 +104,6 @@ export default function AddAbn() {
               keyboardType="numeric"
               returnKeyType="done"
               onSubmitEditing={handleSave}
-              autoFocus
             />
           )}
 

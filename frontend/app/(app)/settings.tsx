@@ -73,50 +73,52 @@ export default function Settings() {
         </SafeAreaView>
       </View>
 
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <AppText style={styles.avatarText}>{initials}</AppText>
+      <View style={appStyles.body}>
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <AppText style={styles.avatarText}>{initials}</AppText>
+          </View>
+          <View style={styles.profileInfo}>
+            <AppText style={styles.name}>{user?.name}</AppText>
+            <AppText style={styles.email}>{user?.email}</AppText>
+          </View>
         </View>
-        <View style={styles.profileInfo}>
-          <AppText style={styles.name}>{user?.name}</AppText>
-          <AppText style={styles.email}>{user?.email}</AppText>
+
+        <View style={styles.menu}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => router.push("/(app)/change-password" as any)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Change Password"
+          >
+            <Ionicons name="lock-closed-outline" size={20} color={Colors.grey500} />
+            <AppText style={styles.menuRowText}>Change Password</AppText>
+            <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      <View style={styles.menu}>
-        <TouchableOpacity
-          style={styles.menuRow}
-          onPress={() => router.push("/(app)/change-password" as any)}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Change Password"
-        >
-          <Ionicons name="lock-closed-outline" size={20} color={Colors.grey500} />
-          <AppText style={styles.menuRowText}>Change Password</AppText>
-          <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.signOutBtn}
-          onPress={handleLogoutPress}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Sign Out"
-        >
-          <AppText style={styles.signOutText}>Sign Out</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={handleDeleteAccountPress}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Delete Account"
-        >
-          <Ionicons name="trash-outline" size={15} color={Colors.red} />
-          <AppText style={styles.deleteBtnText}>Delete Account</AppText>
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.signOutBtn}
+            onPress={handleLogoutPress}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Sign Out"
+          >
+            <AppText style={styles.signOutText}>Sign Out</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={handleDeleteAccountPress}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Delete Account"
+          >
+            <Ionicons name="trash-outline" size={15} color={Colors.red} />
+            <AppText style={styles.deleteBtnText}>Delete Account</AppText>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -124,10 +126,10 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   headerTaller: {
-    paddingBottom: 48,
+    paddingBottom: 22,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 28,
     fontFamily: Fonts.bold,
     color: Colors.white,
     paddingHorizontal: 20,
@@ -135,23 +137,20 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   profileCard: {
-    marginHorizontal: 20,
-    marginTop: -32,
+    marginHorizontal: 16,
+    marginTop: 22,
     backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
     borderRadius: 16,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
   },
   avatar: {
     width: 56,
-    height: 56,
+    height: 54,
     borderRadius: 28,
     backgroundColor: Colors.vouchGreen,
     alignItems: "center",

@@ -157,7 +157,7 @@ export default function VerifyMobile() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+            <Ionicons name="arrow-back" size={24} color={Colors.black} />
           </TouchableOpacity>
 
           {step === "enter" ? (
@@ -180,7 +180,6 @@ export default function VerifyMobile() {
                 maxLength={12}
                 returnKeyType="done"
                 onSubmitEditing={handleSendCode}
-                autoFocus
               />
 
               {error ? <AppText style={styles.errorText}>{error}</AppText> : null}

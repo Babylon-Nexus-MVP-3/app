@@ -1,73 +1,58 @@
-import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Icon, Label, NativeTabs, VectorIcon } from "expo-router/unstable-native-tabs";
 import { Colors } from "@/constants/colors";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+/**
+ * Native tab bar — a real UITabBarController on iOS and a Material 3
+ * BottomNavigationView on Android, rather than a JS-drawn bar. That buys the
+ * platform behaviour for free: iOS 26 Liquid Glass, scroll-edge transparency,
+ * correct safe-area handling, and system accessibility.
+ *
+ * Icons: SF Symbols on iOS, and Ionicons rendered through `VectorIcon` on
+ * Android so we don't have to ship drawable resources into the native project.
+ */
 export default function TabsLayout() {
-  const { bottom } = useSafeAreaInsets();
-
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopWidth: 1,
-          borderTopColor: Colors.grey300,
-          paddingTop: 8,
-          paddingBottom: bottom,
-          height: 60 + bottom,
-        },
-        tabBarActiveTintColor: Colors.vouchGreen,
-        tabBarInactiveTintColor: Colors.grey500,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
-      }}
+    <NativeTabs
+      tintColor={Colors.vouchGreen}
+      iconColor={{ default: Colors.grey500, selected: Colors.vouchGreen }}
+      labelStyle={{ color: Colors.grey500 }}
+      backgroundColor={Colors.white}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="vouches"
-        options={{
-          title: "Vouches",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "shield-checkmark" : "shield-checkmark-outline"}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="projects"
-        options={{
-          title: "Projects",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "briefcase" : "briefcase-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="me"
-        options={{
-          title: "Me",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      {/* Hidden — accessible from home grid's "Vouch my Project" card */}
-      <Tabs.Screen name="vouch-my-project" options={{ href: null }} />
-    </Tabs>
+      <NativeTabs.Trigger name="home">
+        <Label>Home</Label>
+        <Icon
+          sf={{ default: "house", selected: "house.fill" }}
+          androidSrc={<VectorIcon family={Ionicons} name="home-outline" />}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="vouches">
+        <Label>Vouches</Label>
+        <Icon
+          sf={{ default: "checkmark.shield", selected: "checkmark.shield.fill" }}
+          androidSrc={<VectorIcon family={Ionicons} name="shield-checkmark-outline" />}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="projects">
+        <Label>Projects</Label>
+        <Icon
+          sf={{ default: "briefcase", selected: "briefcase.fill" }}
+          androidSrc={<VectorIcon family={Ionicons} name="briefcase-outline" />}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="me">
+        <Label>Me</Label>
+        <Icon
+          sf={{ default: "person", selected: "person.fill" }}
+          androidSrc={<VectorIcon family={Ionicons} name="person-outline" />}
+        />
+      </NativeTabs.Trigger>
+
+      {/* Reached from the home screen's "Create a project" row, not the bar. */}
+      <NativeTabs.Trigger name="vouch-my-project" hidden />
+    </NativeTabs>
   );
 }

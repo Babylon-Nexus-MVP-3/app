@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
 
@@ -151,27 +152,22 @@ export default function AttributesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>Vouch for {displayName}</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        showBack
+        eyebrow="Give a vouch"
+        title="What would you say about them?"
+        subtitle="Pick at least 2."
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <AppText style={styles.attrHeading}>What would you say about them?</AppText>
-          <AppText style={styles.attrSub}>Pick at least 2.</AppText>
-
+        <ScrollView
+          style={sheetStyle.sheet}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.chipWrap}>
             {ATTRIBUTES.map((attr) => {
               const active = selected.includes(attr);
@@ -236,40 +232,15 @@ export default function AttributesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    flex: 1,
-    textAlign: "center",
-  },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
+    paddingTop: 22,
     paddingBottom: 32,
     gap: 16,
   },
 
   // Attributes
-  attrHeading: {
-    fontSize: 18,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    marginTop: 4,
-  },
-  attrSub: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginTop: -8,
-  },
   chipWrap: {
     flexDirection: "row",
     flexWrap: "wrap",

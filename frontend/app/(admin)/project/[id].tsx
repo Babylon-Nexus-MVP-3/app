@@ -486,8 +486,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: Fonts.extraBold,
+    fontSize: 28,
+    fontFamily: Fonts.bold,
     color: Colors.white,
     paddingHorizontal: 20,
   },
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   },
   membersCard: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },

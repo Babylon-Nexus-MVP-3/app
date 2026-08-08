@@ -256,7 +256,7 @@ export default function ProjectDetail() {
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity
-              onPress={() => router.replace("/(app)/projects" as any)}
+              onPress={() => router.replace("/(app)/(tabs)/projects")}
               style={styles.backBtn}
               hitSlop={HEADER_HIT_SLOP}
               accessibilityRole="button"

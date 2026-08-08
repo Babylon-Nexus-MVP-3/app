@@ -1,11 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
+  Animated,
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,54 +13,80 @@ import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { SectionLabel } from "@/components/ui";
 import { useWizard } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { useEntrance, useReduceMotion, STAGGER } from "@/lib/motion";
 
 type SentRequest = {
   _id: string;
-  toMobile: string;
-  toEmail?: string;
-  relationship: string;
-  projectName: string;
   status: "pending" | "responded";
-  createdAt: string;
 };
 
+// Only facts about the user themselves. Vouches received depend on other
+// people responding, and project membership comes and goes — neither belongs
+// in a profile that decides what the user is allowed to do.
 const STEPS = [
-  { n: 1, title: "Your details", desc: "Name, ABN & trade", pct: 20 },
-  { n: 2, title: "Current project", desc: "Your active work site", pct: 15 },
-  { n: 3, title: "First vouch", desc: "Someone you've worked with", pct: 20 },
-  { n: 4, title: "Second vouch", desc: "Another colleague", pct: 20 },
-  { n: 5, title: "Past project", desc: "Previous work experience", pct: 15 },
-  { n: 6, title: "ID verification", desc: "Driver's licence, passport or trade licence", pct: 10 },
+  {
+    n: 1,
+    icon: "person-outline" as const,
+    title: "Your details",
+    desc: "Your name, ABN and the trade you work in.",
+    pct: 50,
+  },
+  {
+    n: 2,
+    icon: "ribbon-outline" as const,
+    title: "Trade licence",
+    desc: "Your licence number and the state that issued it.",
+    pct: 50,
+  },
 ];
 
-const STEP_ROUTES = [
-  "/(app)/get-vouched/step1",
-  "/(app)/get-vouched/step2",
-  "/(app)/get-vouched/step3",
-  "/(app)/get-vouched/step4",
-  "/(app)/get-vouched/step5",
-  "/(app)/get-vouched/step6",
-] as const;
+const STEP_ROUTES = ["/(app)/get-vouched/step1", "/(app)/get-vouched/step2"] as const;
 
-type StepState = "done" | "active" | "locked";
+// What finishing the profile actually buys — the reason to bother.
+const UNLOCKS = [
+  {
+    icon: "people-outline" as const,
+    title: "Give vouches",
+    desc: "Vouch for people you've worked with.",
+  },
+  {
+    icon: "business-outline" as const,
+    title: "Create projects",
+    desc: "Set one up and invite your team.",
+  },
+  {
+    icon: "card-outline" as const,
+    title: "Supplier credit",
+    desc: "Apply using your verified profile.",
+  },
+];
 
 export default function GetVouchedIntro() {
   const { user, fetchWithAuth } = useAuth();
-  const { step1, step2 } = useWizard();
+  const { step1 } = useWizard();
   const mobileVerified = user?.mobileVerified ?? false;
 
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [profileStrength, setProfileStrength] = useState<number | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [selectedSlot, setSelectedSlot] = useState<3 | 4 | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  const reduceMotion = useReduceMotion();
+  const stepsEntrance = useEntrance(0, reduceMotion);
+  const unlocksEntrance = useEntrance(STAGGER * 2, reduceMotion);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      setLoadingStatus(true);
+      // Returning from a step refetches to pick up what changed, but swapping
+      // to a spinner for that makes the screen flash. Only the first load
+      // shows one; later loads update in place.
+      if (!hasLoadedRef.current) setLoadingStatus(true);
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
@@ -75,7 +101,10 @@ export default function GetVouchedIntro() {
         })
         .catch(() => {})
         .finally(() => {
-          if (!cancelled) setLoadingStatus(false);
+          if (!cancelled) {
+            hasLoadedRef.current = true;
+            setLoadingStatus(false);
+          }
         });
       return () => {
         cancelled = true;
@@ -83,21 +112,45 @@ export default function GetVouchedIntro() {
     }, [fetchWithAuth])
   );
 
+  // ── Step completion ──────────────────────────────────────────────────────
+  const step1Done =
+    !!(user?.name && user?.abn && user?.businessTrade) ||
+    !!(step1.name && step1.abn && step1.trade);
+  const step2Done = !!step1.idNumber;
+  const stepDone = [step1Done, step2Done];
+
+  // Server-computed strength is the source of truth; the local sum only covers
+  // the gap while that request is in flight.
+  const localStrength = STEPS.reduce((acc, s, i) => acc + (stepDone[i] ? s.pct : 0), 0);
+  const strength = profileStrength ?? localStrength;
+  const complete = strength === 100;
+  const stepsLeft = stepDone.filter((d) => !d).length;
+
+  const hasAnySentRequest = sentRequests.length >= 1;
+  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
+
+  function canTap(n: number) {
+    return n === 1 || step1Done;
+  }
+
+  const btnLabel = !step1Done
+    ? "Start — add your details"
+    : !step2Done
+      ? "Add your trade licence"
+      : hasAnySentRequest
+        ? "Request another vouch"
+        : "Request a vouch";
+
+  function onPrimaryPress() {
+    if (!step1Done) return router.push(STEP_ROUTES[0]);
+    if (!step2Done) return router.push(STEP_ROUTES[1]);
+    return router.push("/(app)/get-vouched/request-vouch");
+  }
+
   if (loadingStatus) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.black} />
-          </TouchableOpacity>
-          <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader showBack title="Build your profile" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.vouchGreen} />
         </View>
@@ -105,487 +158,273 @@ export default function GetVouchedIntro() {
     );
   }
 
-  // Responded requests always fill the earliest slots so that "First vouch"
-  // and "Second vouch" show the people who actually responded, regardless of
-  // which request they were chronologically. Pending requests fill remaining
-  // slots after that.
-  const sortedRequests = [...sentRequests].sort((a, b) => {
-    if (a.status === "responded" && b.status !== "responded") return -1;
-    if (b.status === "responded" && a.status !== "responded") return 1;
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-  });
-  const slot3Request = sortedRequests[0];
-  const slot4Request = sortedRequests[1];
-  const respondedCount = sentRequests.filter((r) => r.status === "responded").length;
-  const hasAnySentRequest = sentRequests.length >= 1;
-
-  // ── Step completion ──────────────────────────────────────────────────────
-  const step1Done =
-    !!(user?.name && user?.abn && user?.businessTrade) ||
-    !!(step1.name && step1.abn && step1.trade);
-  const step2Done = !!(step2.currentProjectName && step2.suburb && step2.state);
-  const step3Done = respondedCount >= 1;
-  const step4Done = respondedCount >= 2;
-  const step5Done = !!(step2.pastProjectName && step2.pastSuburb && step2.pastState);
-  const step6Done = !!step1.idNumber;
-
-  const stepDone = [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done];
-
-  // Use server-computed strength as the single source of truth; fall back to
-  // local calculation only while the API response is still loading.
-  const localStrength = STEPS.reduce((acc, s, i) => acc + (stepDone[i] ? s.pct : 0), 0);
-  const strength = profileStrength ?? localStrength;
-
-  function stepState(n: number): StepState {
-    if (stepDone[n - 1]) return "done";
-    if (n === 4 && !hasAnySentRequest) return "locked";
-    if (!mobileVerified && n > 1) return "locked";
-    if (!step1Done && n > 1) return "locked";
-    return "active";
-  }
-
-  function canTap(n: number) {
-    if (!mobileVerified) return n === 1;
-    if (n === 4) return hasAnySentRequest;
-    if (n > 1) return step1Done;
-    return true;
-  }
-
-  // ── State: Build profile wizard ──────────────────────────────────────────
-  const btnLabel = !mobileVerified
-    ? "Verify mobile to continue"
-    : !step1Done
-      ? "Start — add your details"
-      : hasAnySentRequest
-        ? "Request another vouch"
-        : "Request a vouch";
-
-  function onPrimaryPress() {
-    if (!mobileVerified) {
-      router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } });
-      return;
-    }
-    if (!step1Done) {
-      router.push(STEP_ROUTES[0]);
-      return;
-    }
-    router.push(STEP_ROUTES[2]);
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>VOUCH PROFILE</AppText>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.wizardScroll} showsVerticalScrollIndicator={false}>
-        {/* Strength */}
-        <View style={styles.strengthCard}>
-          <View style={styles.strengthRow}>
-            <AppText style={styles.strengthLabel}>Profile strength</AppText>
-            <AppText
-              style={[
-                styles.strengthPct,
-                {
-                  color:
-                    strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
-                },
-              ]}
-            >
-              {strength}%
-            </AppText>
+      <ScreenHeader
+        showBack
+        title={complete ? "Your profile is verified" : "Build your profile"}
+        subtitle={
+          complete
+            ? "You can give vouches and create projects."
+            : stepsLeft === 1
+              ? "One step left."
+              : "Two short steps. Built once, used everywhere."
+        }
+      >
+        <View style={styles.meter}>
+          <View style={styles.meterTrack}>
+            <View style={[styles.meterFill, { width: `${strength}%` as any }]} />
           </View>
-          <View style={styles.strengthTrack}>
-            <View
-              style={[
-                styles.strengthFill,
-                {
-                  width: `${strength}%` as any,
-                  backgroundColor:
-                    strength >= 80 ? Colors.vouchGreen : strength >= 40 ? Colors.amber : Colors.red,
-                },
-              ]}
-            />
-          </View>
-          <AppText style={styles.strengthHint}>
-            {strength === 100
-              ? "Full profile — you can create your own project."
-              : strength >= 60
-                ? "Almost there! Verify your ID for 100%."
-                : "Built once, used everywhere."}
-          </AppText>
+          <AppText style={styles.meterPct}>{strength}%</AppText>
         </View>
+      </ScreenHeader>
 
+      <ScrollView
+        style={sheetStyle.sheet}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         {!mobileVerified && (
           <TouchableOpacity
-            style={styles.stepRow}
-            activeOpacity={0.75}
+            style={styles.prereq}
+            activeOpacity={0.8}
             onPress={() =>
               router.push({ pathname: "/(app)/verify-mobile", params: { returnTo: "get-vouched" } })
             }
             accessibilityRole="button"
-            accessibilityLabel="Verify mobile number"
+            accessibilityLabel="Verify your mobile number"
           >
-            <View style={[styles.stepCircle, styles.stepCircleActive]}>
-              <Ionicons name="phone-portrait-outline" size={16} color={Colors.vouchGreen} />
-            </View>
+            <Ionicons name="phone-portrait-outline" size={18} color={Colors.amber} />
             <View style={{ flex: 1 }}>
-              <AppText style={styles.stepTitle}>Verify mobile number</AppText>
-              <AppText style={styles.prereqHint}>Required before you can request vouches</AppText>
+              <AppText style={styles.prereqTitle}>Verify your mobile number</AppText>
+              <AppText style={styles.prereqDesc}>Required before you can request vouches</AppText>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
           </TouchableOpacity>
         )}
 
-        <View style={styles.stepList}>
-          {STEPS.map(({ n, title, desc, pct }) => {
-            const state = stepState(n);
+        {/* Two steps, so each gets a full card rather than a thin row. */}
+        <Animated.View style={stepsEntrance}>
+          {STEPS.map(({ n, icon, title, desc, pct }) => {
+            const done = stepDone[n - 1];
             const tappable = canTap(n);
             return (
               <TouchableOpacity
                 key={n}
-                style={[styles.stepRow, !tappable && styles.stepRowLocked]}
-                activeOpacity={tappable ? 0.75 : 1}
-                onPress={() => {
-                  if (!tappable) return;
-                  if (n === 3 && slot3Request) {
-                    setSelectedSlot(3);
-                    return;
-                  }
-                  if (n === 4 && slot4Request) {
-                    setSelectedSlot(4);
-                    return;
-                  }
-                  router.push(STEP_ROUTES[n - 1]);
-                }}
+                style={[
+                  styles.stepCard,
+                  done && styles.stepCardDone,
+                  !tappable && styles.stepCardLocked,
+                ]}
+                activeOpacity={tappable ? 0.85 : 1}
+                onPress={() => tappable && router.push(STEP_ROUTES[n - 1])}
                 disabled={!tappable}
                 accessibilityRole="button"
-                accessibilityLabel={`${title}: ${stepDone[n - 1] ? "completed" : state === "locked" ? "locked" : "incomplete"}`}
+                accessibilityLabel={`${title}: ${done ? "completed" : tappable ? "incomplete" : "locked"}`}
                 accessibilityState={{ disabled: !tappable }}
               >
-                <View
-                  style={[
-                    styles.stepCircle,
-                    state === "done" && styles.stepCircleDone,
-                    state === "active" && styles.stepCircleActive,
-                    state === "locked" && styles.stepCircleLocked,
-                  ]}
-                >
-                  {state === "done" ? (
-                    <Ionicons name="checkmark" size={16} color={Colors.white} />
-                  ) : (
-                    <AppText
-                      style={[
-                        styles.stepNum,
-                        state === "active" && styles.stepNumActive,
-                        state === "locked" && styles.stepNumLocked,
-                      ]}
-                    >
-                      {n}
-                    </AppText>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText style={[styles.stepTitle, state === "locked" && styles.stepTitleLocked]}>
-                    {title}
-                  </AppText>
-                  <AppText style={styles.stepDesc}>{desc}</AppText>
-                  {n === 3 && slot3Request?.status === "pending" && (
-                    <AppText style={styles.stepPendingTag}>Pending response</AppText>
-                  )}
-                  {n === 4 && slot4Request?.status === "pending" && (
-                    <AppText style={styles.stepPendingTag}>Pending response</AppText>
-                  )}
-                  {state === "done" &&
-                    (n === 3 || n === 4 ? (
-                      <AppText style={styles.stepDoneTag}>Vouched</AppText>
-                    ) : (
-                      <AppText style={styles.stepDoneTag}>Completed</AppText>
-                    ))}
-                </View>
-                <View style={styles.stepRight}>
-                  <AppText style={styles.stepPct}>+{pct}%</AppText>
-                  {tappable && (
+                <View style={styles.stepHead}>
+                  <View style={[styles.stepIcon, done && styles.stepIconDone]}>
                     <Ionicons
-                      name="chevron-forward"
-                      size={16}
-                      color={state === "locked" ? Colors.grey300 : Colors.grey500}
+                      name={done ? "checkmark" : icon}
+                      size={22}
+                      color={done ? Colors.white : tappable ? Colors.vouchGreen : Colors.grey500}
                     />
-                  )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.stepEyebrow}>
+                      STEP {n} · {done ? "COMPLETED" : `+${pct}%`}
+                    </AppText>
+                    <AppText style={[styles.stepTitle, !tappable && styles.stepTitleLocked]}>
+                      {title}
+                    </AppText>
+                  </View>
+                  <Ionicons
+                    name={tappable ? "chevron-forward" : "lock-closed"}
+                    size={tappable ? 18 : 15}
+                    color={Colors.grey500}
+                  />
                 </View>
+                <AppText style={styles.stepDesc}>{desc}</AppText>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </Animated.View>
+
+        <Animated.View style={unlocksEntrance}>
+          <SectionLabel>{complete ? "What you can do" : "What this unlocks"}</SectionLabel>
+          <View style={styles.unlocks}>
+            {UNLOCKS.map((u) => (
+              <View key={u.title} style={styles.unlockRow}>
+                <View style={[styles.unlockIcon, complete && styles.unlockIconOn]}>
+                  <Ionicons
+                    name={u.icon}
+                    size={18}
+                    color={complete ? Colors.vouchGreen : Colors.grey500}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText style={[styles.unlockTitle, !complete && styles.unlockTitleOff]}>
+                    {u.title}
+                  </AppText>
+                  <AppText style={styles.unlockDesc}>{u.desc}</AppText>
+                </View>
+                {complete && (
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreen} />
+                )}
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {hasAnySentRequest && (
+          <TouchableOpacity
+            style={styles.requestsRow}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push({ pathname: "/(app)/(tabs)/vouches", params: { tab: "requests" } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`Your vouch requests, ${respondedCount} of ${sentRequests.length} responded`}
+          >
+            <Ionicons name="paper-plane-outline" size={18} color={Colors.vouchGreen} />
+            <AppText style={styles.requestsText}>
+              {respondedCount} of {sentRequests.length} request
+              {sentRequests.length === 1 ? "" : "s"} answered
+            </AppText>
+            <Ionicons name="chevron-forward" size={16} color={Colors.vouchGreen} />
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, !mobileVerified && styles.primaryBtnDisabled]}
-          activeOpacity={0.85}
+          style={styles.primaryBtn}
+          activeOpacity={0.9}
           onPress={onPrimaryPress}
           accessibilityRole="button"
           accessibilityLabel={btnLabel}
-          accessibilityState={{ disabled: !mobileVerified }}
         >
           <AppText style={styles.primaryBtnText}>{btnLabel}</AppText>
         </TouchableOpacity>
       </View>
-
-      {/* Request detail sheet */}
-      <Modal
-        visible={selectedSlot !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedSlot(null)}
-      >
-        <TouchableOpacity
-          style={styles.sheetOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedSlot(null)}
-        />
-        {(() => {
-          const req = selectedSlot === 3 ? slot3Request : slot4Request;
-          if (!req) return null;
-          const isResponded = req.status === "responded";
-          return (
-            <View style={styles.sheet}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetBadge}>
-                <Ionicons
-                  name={isResponded ? "shield-checkmark" : "time-outline"}
-                  size={28}
-                  color={isResponded ? Colors.vouchGreen : Colors.amber}
-                />
-              </View>
-              <AppText style={styles.sheetTitle}>
-                {isResponded ? "Vouch received" : "Waiting for response"}
-              </AppText>
-              <AppText style={styles.sheetContact}>{req.toMobile}</AppText>
-              {req.toEmail ? <AppText style={styles.sheetContactSub}>{req.toEmail}</AppText> : null}
-              <View style={styles.sheetRow}>
-                <AppText style={styles.sheetRowLabel}>Relationship</AppText>
-                <AppText style={styles.sheetRowValue}>{req.relationship}</AppText>
-              </View>
-              <View style={styles.sheetRow}>
-                <AppText style={styles.sheetRowLabel}>Project</AppText>
-                <AppText style={styles.sheetRowValue}>{req.projectName}</AppText>
-              </View>
-              <View
-                style={[
-                  styles.sheetStatusBadge,
-                  isResponded ? styles.sheetStatusBadgeGreen : styles.sheetStatusBadgeAmber,
-                ]}
-              >
-                <AppText
-                  style={[
-                    styles.sheetStatusText,
-                    isResponded ? styles.sheetStatusTextGreen : styles.sheetStatusTextAmber,
-                  ]}
-                >
-                  {isResponded ? "Vouched" : "Pending"}
-                </AppText>
-              </View>
-              {!isResponded && (
-                <TouchableOpacity
-                  style={styles.sheetSecondaryBtn}
-                  activeOpacity={0.75}
-                  onPress={() => {
-                    setSelectedSlot(null);
-                    router.push(STEP_ROUTES[(selectedSlot ?? 3) - 1]);
-                  }}
-                >
-                  <AppText style={styles.sheetSecondaryBtnText}>Send to someone else</AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          );
-        })()}
-      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: {
-    flexDirection: "row",
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
+  centered: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    justifyContent: "center",
+    backgroundColor: Colors.white,
   },
-  headerTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-    letterSpacing: 1,
-  },
-  wizardScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 8,
-  },
+  scroll: { paddingHorizontal: 16, paddingTop: 22, paddingBottom: 28 },
 
-  // Strength card
-  strengthCard: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-  },
-  strengthRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    width: "100%",
-  },
-  strengthLabel: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
-  strengthPct: { fontSize: 13, fontFamily: Fonts.bold },
-  strengthTrack: {
+  // Strength meter, on the header
+  meter: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
+  meterTrack: {
+    flex: 1,
     height: 6,
-    backgroundColor: Colors.grey300,
     borderRadius: 3,
+    backgroundColor: Colors.whiteInactive,
     overflow: "hidden",
-    marginBottom: 8,
-    width: "100%",
   },
-  strengthFill: { height: 6, borderRadius: 3 },
-  strengthHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
+  meterFill: { height: 6, borderRadius: 3, backgroundColor: Colors.white },
+  meterPct: { fontSize: 14, fontFamily: Fonts.extraBold, color: Colors.white },
 
-  // Steps
-  stepList: { gap: 10 },
-  stepRow: {
+  prereq: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.offWhite,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 2,
-  },
-  stepRowLocked: { opacity: 0.45 },
-  stepCircle: {
-    width: 32,
-    height: 32,
+    backgroundColor: Colors.amberBg,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
+    padding: 16,
+    marginBottom: 18,
   },
-  stepCircleDone: { backgroundColor: Colors.vouchGreen },
-  stepCircleActive: {
-    backgroundColor: Colors.white,
-    borderWidth: 2,
-    borderColor: Colors.vouchGreen,
-  },
-  stepCircleLocked: { backgroundColor: Colors.grey300 },
-  stepNum: { fontSize: 13, fontFamily: Fonts.bold },
-  stepNumActive: { color: Colors.vouchGreen },
-  stepNumLocked: { color: Colors.grey700 },
-  stepTitle: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.black },
-  stepTitleLocked: { color: Colors.grey700 },
-  stepDesc: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
-  stepDoneTag: { fontSize: 11, fontFamily: Fonts.medium, color: Colors.vouchGreen, marginTop: 2 },
-  stepPendingTag: { fontSize: 11, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
-  stepRight: { flexDirection: "row", alignItems: "center", gap: 4 },
-  stepPct: { fontSize: 12, fontFamily: Fonts.semiBold, color: Colors.grey500 },
-  prereqHint: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.amber, marginTop: 2 },
-  footer: { paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12 },
-  primaryBtn: {
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
+  prereqTitle: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.black },
+  prereqDesc: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey700, marginTop: 2 },
 
-  // Request detail sheet
-  sheetOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.overlay,
-  },
-  sheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+  // Step cards
+  stepCard: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    paddingTop: 12,
-    alignItems: "center",
-    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
   },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.grey300,
-    marginBottom: 8,
-  },
-  sheetBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.offWhite,
+  stepCardDone: { borderColor: Colors.vouchGreen, backgroundColor: Colors.vouchGreenLight },
+  stepCardLocked: { backgroundColor: Colors.offWhite, borderColor: Colors.grey100 },
+  stepHead: { flexDirection: "row", alignItems: "center", gap: 14 },
+  stepIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: Colors.vouchGreenLight,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
-  sheetTitle: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.black },
-  sheetContact: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.black },
-  sheetContactSub: {
+  stepIconDone: { backgroundColor: Colors.vouchGreen },
+  stepEyebrow: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  stepTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.black },
+  stepTitleLocked: { color: Colors.grey700 },
+  stepDesc: {
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
-    marginTop: -6,
+    lineHeight: 19,
+    marginTop: 12,
   },
-  sheetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey100,
-  },
-  sheetRowLabel: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500 },
-  sheetRowValue: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.black },
-  sheetStatusBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginTop: 4,
-  },
-  sheetStatusBadgeGreen: { backgroundColor: Colors.vouchGreenLight },
-  sheetStatusBadgeAmber: { backgroundColor: Colors.amberBg },
-  sheetStatusText: { fontSize: 13, fontFamily: Fonts.bold },
-  sheetStatusTextGreen: { color: Colors.vouchGreen },
-  sheetStatusTextAmber: { color: Colors.amber },
-  sheetSecondaryBtn: {
-    width: "100%",
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: Colors.vouchGreen,
+
+  // Unlocks
+  unlocks: { gap: 16, marginTop: 2, marginBottom: 22 },
+  unlockRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  unlockIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.grey100,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
   },
-  sheetSecondaryBtnText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
+  unlockIconOn: { backgroundColor: Colors.vouchGreenLight },
+  unlockTitle: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.black },
+  unlockTitleOff: { color: Colors.grey700 },
+  unlockDesc: { fontSize: 13, fontFamily: Fonts.regular, color: Colors.grey500, marginTop: 1 },
+
+  requestsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  requestsText: { flex: 1, fontSize: 14, fontFamily: Fonts.bold, color: Colors.vouchGreen },
+
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.grey300,
+  },
+  primaryBtn: {
+    height: 54,
+    backgroundColor: Colors.vouchGreen,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryBtnText: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
 });

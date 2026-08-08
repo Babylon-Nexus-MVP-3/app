@@ -1,15 +1,31 @@
 import { useEffect } from "react";
-import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole } from "@/types/roles";
+import { useEntrance, usePressScale, useReduceMotion, STAGGER } from "@/lib/motion";
+
+const PROOF = [
+  "Build a profile that proves your work",
+  "Check who you're working with first",
+  "Track every invoice on your projects",
+];
 
 export default function Index() {
   const { user, isLoading } = useAuth();
+  const reduceMotion = useReduceMotion();
+  const wordmarkEntrance = useEntrance(0, reduceMotion);
+  const headlineEntrance = useEntrance(STAGGER, reduceMotion);
+  const proofEntrance = useEntrance(STAGGER * 3, reduceMotion);
+  const trustEntrance = useEntrance(STAGGER * 4, reduceMotion);
+  const ctaEntrance = useEntrance(STAGGER * 5, reduceMotion);
+  const primaryPress = usePressScale(reduceMotion, 0.97);
 
   useEffect(() => {
     if (isLoading) return;
@@ -21,147 +37,178 @@ export default function Index() {
   if (isLoading || user) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.body}>
-          <Image source={require("../assets/appIconWithName.png")} style={styles.logo} />
+    <LinearGradient
+      colors={[Colors.vouchGreenMid, Colors.vouchGreen, Colors.vouchGreen]}
+      locations={[0, 0.55, 1]}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <Animated.View style={wordmarkEntrance}>
+          <AppText style={styles.wordmark}>VouchPay</AppText>
+        </Animated.View>
 
-          <AppText style={styles.headlineBlack} maxFontSizeMultiplier={1}>
+        {/* Headline owns the screen — this is a brand moment, not a dashboard. */}
+        <Animated.View style={[styles.headlineBlock, headlineEntrance]}>
+          <AppText style={styles.headline} maxFontSizeMultiplier={1}>
             {"Stop losing money on bad jobs. "}
-            <AppText style={styles.headlineGreen} maxFontSizeMultiplier={1}>
+            <AppText style={styles.headlineAccent} maxFontSizeMultiplier={1}>
               Work with people you trust.
             </AppText>
           </AppText>
+        </Animated.View>
 
-          <View style={styles.nswRow}>
-            <View style={styles.nswLogoBox}>
-              <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
+        <Animated.View style={[styles.proof, proofEntrance]}>
+          {PROOF.map((line) => (
+            <View key={line} style={styles.proofRow}>
+              <Ionicons name="checkmark-circle" size={18} color={Colors.vouchGreenLight} />
+              <AppText style={styles.proofText}>{line}</AppText>
             </View>
-            <View style={styles.nswTextBlock}>
-              <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
-              <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
-            </View>
+          ))}
+        </Animated.View>
+
+        <View style={{ flex: 1 }} />
+
+        <Animated.View style={[styles.trustRow, trustEntrance]}>
+          <View style={styles.nswLogoBox}>
+            <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
           </View>
-        </View>
+          <View style={{ flex: 1 }}>
+            <AppText style={styles.trustTitle}>Backed by NSW Government</AppText>
+            <AppText style={styles.trustDesc}>MVP Innovation Grant</AppText>
+          </View>
+        </Animated.View>
 
-        <View style={styles.footer}>
+        <Animated.View style={[styles.footer, ctaEntrance]}>
+          <Animated.View style={{ transform: [{ scale: primaryPress.scale }] }}>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => router.push("/(auth)/sign-up")}
+              onPressIn={primaryPress.onPressIn}
+              onPressOut={primaryPress.onPressOut}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="Create an account"
+            >
+              <AppText style={styles.primaryBtnText}>Create an account</AppText>
+            </TouchableOpacity>
+          </Animated.View>
+
           <TouchableOpacity
-            style={styles.signInButton}
+            style={styles.secondaryBtn}
             onPress={() => router.push("/(auth)/sign-in")}
-            activeOpacity={0.85}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to an existing account"
           >
-            <AppText style={styles.signInButtonText}>Sign in</AppText>
+            <AppText style={styles.secondaryBtnText}>I already have an account</AppText>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.signUpButton}
-            onPress={() => router.push("/(auth)/sign-up")}
-            activeOpacity={0.85}
-          >
-            <AppText style={styles.signUpText}>Sign up</AppText>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </Animated.View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: { flex: 1 },
+  safe: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: "space-between",
-  },
-  body: {
     paddingHorizontal: 24,
-    paddingTop: 48,
-    gap: 32,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
-  logo: {
-    width: 140,
-    height: 140,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-  },
-  headlineBlack: {
-    fontSize: 42,
-    lineHeight: 52,
+  wordmark: {
+    fontSize: 20,
     fontFamily: Fonts.extraBold,
-    color: Colors.black,
+    color: Colors.white,
+    letterSpacing: 0.5,
+    opacity: 0.9,
   },
-  headlineGreen: {
-    fontSize: 42,
-    lineHeight: 52,
+  headlineBlock: {
+    marginTop: 44,
+  },
+  headline: {
+    fontSize: 38,
+    lineHeight: 47,
     fontFamily: Fonts.extraBold,
-    color: Colors.vouchGreen,
+    color: Colors.white,
   },
-  nswRow: {
+  headlineAccent: {
+    fontSize: 38,
+    lineHeight: 47,
+    fontFamily: Fonts.extraBold,
+    color: Colors.vouchGreenLight,
+  },
+  proof: {
+    marginTop: 30,
+    gap: 13,
+  },
+  proofRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 11,
+  },
+  proofText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
+    opacity: 0.92,
+  },
+  trustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 22,
   },
   nswLogoBox: {
-    borderWidth: 1,
-    borderColor: Colors.grey300,
+    width: 46,
+    height: 46,
     borderRadius: 10,
-    padding: 8,
+    backgroundColor: Colors.white,
     alignItems: "center",
     justifyContent: "center",
   },
   nswLogo: {
-    width: 72,
-    height: 72,
+    width: 36,
+    height: 36,
     resizeMode: "contain",
   },
-  nswTextBlock: {
-    gap: 2,
-  },
-  nswBacked: {
-    fontSize: 18,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
-  nswGrant: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 48,
-    gap: 16,
-  },
-  signUpButton: {
-    height: 58,
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signUpText: {
-    fontSize: 17,
+  trustTitle: {
+    fontSize: 14,
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
-  signInButton: {
-    height: 58,
+  trustDesc: {
+    fontSize: 12.5,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    opacity: 0.75,
+    marginTop: 1,
+  },
+  footer: {
+    gap: 6,
+  },
+  primaryBtn: {
+    height: 54,
+    backgroundColor: Colors.white,
     borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: Colors.grey300,
     alignItems: "center",
     justifyContent: "center",
   },
-  signInButtonText: {
-    fontSize: 17,
+  primaryBtnText: {
+    fontSize: 16,
     fontFamily: Fonts.bold,
-    color: Colors.black,
+    color: Colors.vouchGreen,
+  },
+  secondaryBtn: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryBtnText: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.white,
+    opacity: 0.9,
   },
 });

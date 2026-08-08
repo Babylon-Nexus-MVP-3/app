@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { formatAbn, type AbrResult } from "@/lib/useAbrLookup";
@@ -143,24 +144,22 @@ export default function VerifyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.black} />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>Verify business</AppText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        showBack
+        eyebrow="Give a vouch"
+        title="Confirm the business"
+        subtitle="Check this is who you mean before you vouch."
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={sheetStyle.sheet}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
           {/* ABN confirmed row */}
           <AppText style={styles.fieldLabel}>ABN</AppText>
           <View style={styles.abnConfirmed}>
@@ -336,21 +335,10 @@ export default function VerifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: Fonts.semiBold,
-    color: Colors.black,
-  },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
+    paddingTop: 22,
     paddingBottom: 32,
     gap: 16,
   },
@@ -383,7 +371,7 @@ const styles = StyleSheet.create({
   // ABR card
   abrCard: {
     backgroundColor: Colors.offWhite,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     gap: 4,
   },
@@ -434,7 +422,7 @@ const styles = StyleSheet.create({
   // Neutral vouch count card (for pending requests)
   neutralCard: {
     backgroundColor: Colors.offWhite,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     alignItems: "center",
     gap: 4,
@@ -454,7 +442,7 @@ const styles = StyleSheet.create({
   activeCard: {
     borderWidth: 1.5,
     borderColor: Colors.vouchGreen,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     backgroundColor: Colors.vouchGreenLight,
     gap: 8,
@@ -510,7 +498,7 @@ const styles = StyleSheet.create({
   pendingCard: {
     borderWidth: 1.5,
     borderColor: Colors.amber,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     backgroundColor: Colors.amberBg,
     gap: 10,
@@ -576,7 +564,7 @@ const styles = StyleSheet.create({
     gap: 14,
     borderWidth: 1.5,
     borderColor: Colors.vouchGreen,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     backgroundColor: Colors.vouchGreenLight,
   },

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,24 +23,32 @@ import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { Pill, SectionLabel } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 
 function VerifiedBadge() {
-  return (
-    <View style={styles.verifiedBadge}>
-      <Ionicons name="checkmark-circle" size={13} color={Colors.vouchGreen} />
-      <AppText style={styles.verifiedBadgeText}>Verified</AppText>
-    </View>
-  );
+  return <Pill label="Verified" tone="green" icon="checkmark-circle" />;
 }
 
 function UnverifiedBadge({ label }: { label: string }) {
-  return (
-    <View style={styles.unverifiedBadge}>
-      <AppText style={styles.unverifiedBadgeText}>{label}</AppText>
-    </View>
-  );
+  return <Pill label={label} tone="amber" />;
+}
+
+type ProjectHistoryEntry = {
+  id: string;
+  name: string;
+  council?: string;
+  location?: string;
+  status: string;
+  role?: string;
+  startedAt: string;
+};
+
+function formatStarted(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
 }
 
 export default function MeScreen() {
@@ -47,6 +56,8 @@ export default function MeScreen() {
   const [vouchCount, setVouchCount] = useState<number | null>(null);
   const [vouchesSent, setVouchesSent] = useState<number | null>(null);
   const [topAttributes, setTopAttributes] = useState<{ attr: string; count: number }[]>([]);
+  const [projectHistory, setProjectHistory] = useState<ProjectHistoryEntry[]>([]);
+  const [hasLicence, setHasLicence] = useState(false);
   const [cardModalVisible, setCardModalVisible] = useState(false);
   const [sharing, setSharing] = useState(false);
   const cardRef = useRef<View>(null);
@@ -82,14 +93,6 @@ export default function MeScreen() {
     setSharing(false);
   }
 
-  const initials =
-    user?.name
-      ?.split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) ?? "?";
-
   useFocusEffect(
     useCallback(() => {
       const abn = user?.abn;
@@ -98,6 +101,16 @@ export default function MeScreen() {
           .then((r) => (r.ok ? r.json() : null))
           .then((d) => {
             if (d) setVouchesSent(d.vouches?.length ?? 0);
+          }),
+        fetchWithAuth(`${API_BASE_URL}/projects/history`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d) setProjectHistory(d.projects ?? []);
+          }),
+        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d) setHasLicence(!!d.idNumber);
           }),
       ];
       if (abn) {
@@ -173,6 +186,9 @@ export default function MeScreen() {
     }
   }
 
+  // Same rule the rest of the app gates giving a vouch on.
+  const profileVerified = !!(user?.name && user?.abn && user?.businessTrade && hasLicence);
+
   const displayMobile = user?.mobile
     ? (() => {
         const m = user.mobile.replace(/^\+61/, "");
@@ -188,41 +204,111 @@ export default function MeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
-        style={styles.scrollView}
+        style={styles.body}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
       >
-        {/* VouchPay credential card — tap to expand */}
-        <TouchableOpacity
-          activeOpacity={0.75}
-          onPress={openCardModal}
-          accessibilityRole="button"
-          accessibilityLabel="View your VouchPay credential card"
-        >
-          <View style={styles.vpCard}>
-            <View style={styles.vpCardTop}>
-              <AppText style={styles.vpWordmark}>VouchPay</AppText>
-              <Ionicons name="expand-outline" size={16} color={Colors.white} />
+        {/* Green band the credential card sits across — the card is the one
+            piece of identity on this screen, so nothing above repeats it. */}
+        <View style={styles.band}>
+          {/* The band scrolls with the content, so dragging past the top would
+              otherwise expose the scroll view's white background above it.
+              This extends the green upward beyond the bounce. */}
+          <View style={styles.bandOverscroll} pointerEvents="none" />
+          <AppText style={styles.bandTitle}>Me</AppText>
+        </View>
+
+        <View style={styles.cardWrap}>
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={openCardModal}
+            accessibilityRole="button"
+            accessibilityLabel="Open your shareable VouchPay card"
+          >
+            {/* Lit surface and a cast shadow so it sits on the page as an
+                object rather than a panel. */}
+            <View style={styles.cardShadow}>
+              <LinearGradient
+                colors={["#FFFFFF", "#F2F5F3"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.card}
+              >
+                {/* Specular sheen — a diagonal band of light across the face. */}
+                <LinearGradient
+                  colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.75)", "rgba(255,255,255,0)"]}
+                  locations={[0.25, 0.45, 0.7]}
+                  start={{ x: 0, y: 1 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+
+                <View style={styles.cardTop}>
+                  <AppText style={styles.cardWordmark}>VouchPay</AppText>
+                  {profileVerified ? (
+                    <Pill label="Verified" tone="green" icon="shield-checkmark" />
+                  ) : (
+                    <Pill label="Unverified" tone="amber" />
+                  )}
+                </View>
+
+                <View style={styles.cardNumberBlock}>
+                  <AppText style={styles.cardNumberLabel}>ABN</AppText>
+                  <AppText style={styles.cardNumber}>{displayAbn ?? "— — — —"}</AppText>
+                </View>
+
+                <View style={styles.cardBottom}>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.cardHolder} numberOfLines={1}>
+                      {user?.name?.toUpperCase()}
+                    </AppText>
+                    {user?.businessName ? (
+                      <AppText style={styles.cardBusiness} numberOfLines={1}>
+                        {user.businessName}
+                      </AppText>
+                    ) : null}
+                  </View>
+                  {user?.businessTrade ? (
+                    <AppText style={styles.cardTrade}>{user.businessTrade.toUpperCase()}</AppText>
+                  ) : null}
+                </View>
+              </LinearGradient>
             </View>
-            <View style={styles.vpIdentity}>
-              <View style={styles.vpAvatar}>
-                <AppText style={styles.vpAvatarText}>{initials}</AppText>
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText style={styles.vpName}>{user?.name}</AppText>
-                {user?.businessName ? (
-                  <AppText style={styles.vpBusiness}>{user.businessName}</AppText>
-                ) : null}
-              </View>
+          </TouchableOpacity>
+
+          {/* Stats sit below the card — a credential shows identity, not
+              analytics, and this keeps the card at true card proportions. */}
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <AppText style={styles.statValue}>{vouchCount ?? 0}</AppText>
+              <AppText style={styles.statLabel}>RECEIVED</AppText>
             </View>
-            <View style={styles.vpCardBottom}>
-              <View style={styles.vpStat}>
-                <AppText style={styles.vpStatLabel}>VOUCHES RECEIVED</AppText>
-                <AppText style={styles.vpStatValue}>{vouchCount ?? 0}</AppText>
-              </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <AppText style={styles.statValue}>{vouchesSent ?? 0}</AppText>
+              <AppText style={styles.statLabel}>GIVEN</AppText>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <AppText style={styles.statValue}>{projectHistory.length}</AppText>
+              <AppText style={styles.statLabel}>PROJECTS</AppText>
             </View>
           </View>
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.shareHint}
+            activeOpacity={0.75}
+            onPress={openCardModal}
+            accessibilityRole="button"
+            accessibilityLabel="Open your shareable card"
+          >
+            <Ionicons name="share-outline" size={15} color={Colors.vouchGreen} />
+            <AppText style={styles.shareHintText}>Open your shareable card</AppText>
+            <Ionicons name="chevron-forward" size={15} color={Colors.vouchGreen} />
+          </TouchableOpacity>
+        </View>
 
         {/* Expanded profile card modal */}
         <Modal
@@ -246,80 +332,76 @@ export default function MeScreen() {
             <Animated.View
               style={{ transform: [{ scale: cardAnim }], opacity: backdropAnim, width: "100%" }}
             >
-              {/* Card to capture */}
+              {/* Card to capture. Built as one designed object: a green
+                  masthead the identity sits on, then the evidence below. */}
               <View ref={cardRef} style={styles.expandedCard} collapsable={false}>
-                <View style={styles.vpCardTop}>
-                  <View style={styles.expandedLogoWrap}>
-                    <View style={styles.expandedLogoBox}>
-                      <Image
-                        source={require("../../../assets/appIconMono.png")}
-                        style={styles.expandedLogoIcon}
-                      />
-                    </View>
-                    <AppText style={styles.expandedLogoName}>VouchPay</AppText>
+                <View style={styles.expHeader}>
+                  <View style={styles.expHeaderRow}>
+                    <AppText style={styles.expWordmark}>VouchPay</AppText>
+                    {profileVerified && (
+                      <View style={styles.expVerified}>
+                        <Ionicons name="shield-checkmark" size={13} color={Colors.white} />
+                        <AppText style={styles.expVerifiedText}>VERIFIED</AppText>
+                      </View>
+                    )}
                   </View>
-                  <Ionicons name="shield-checkmark" size={20} color={Colors.vouchGreen} />
-                </View>
 
-                <View style={styles.expandedIdentity}>
-                  <AppText style={styles.expandedName}>{user?.name}</AppText>
+                  <AppText style={styles.expName} numberOfLines={2}>
+                    {user?.name}
+                  </AppText>
                   {user?.businessName ? (
-                    <AppText style={styles.expandedBusiness}>{user.businessName}</AppText>
+                    <AppText style={styles.expBusiness} numberOfLines={1}>
+                      {user.businessName}
+                    </AppText>
                   ) : null}
-                  {user?.businessTrade ? (
-                    <AppText style={styles.expandedTrade}>{user.businessTrade}</AppText>
-                  ) : null}
-                  {displayAbn ? (
-                    <AppText style={styles.expandedAbn}>ABN {displayAbn}</AppText>
-                  ) : null}
-                </View>
-
-                <View style={styles.expandedStats}>
-                  <View style={styles.expandedStat}>
-                    <AppText style={styles.expandedStatValue}>{vouchCount ?? 0}</AppText>
-                    <AppText style={styles.expandedStatLabel}>VOUCHES</AppText>
-                  </View>
-                  <View style={styles.expandedStatDivider} />
-                  <View style={styles.expandedStat}>
-                    <AppText style={styles.expandedStatValue}>{vouchesSent ?? 0}</AppText>
-                    <AppText style={styles.expandedStatLabel}>VOUCHED</AppText>
+                  <View style={styles.expMetaRow}>
+                    {user?.businessTrade ? (
+                      <AppText style={styles.expMeta}>{user.businessTrade}</AppText>
+                    ) : null}
+                    {user?.businessTrade && displayAbn ? <View style={styles.expMetaDot} /> : null}
+                    {displayAbn ? <AppText style={styles.expMeta}>ABN {displayAbn}</AppText> : null}
                   </View>
                 </View>
 
-                {topAttributes.length > 0 && (
-                  <View style={styles.expandedAttributes}>
-                    <AppText style={styles.expandedAttributesLabel}>TOP VOUCHES</AppText>
-                    <View style={styles.expandedAttributeChips}>
-                      {topAttributes.map(({ attr, count }) => (
-                        <View key={attr} style={styles.attributeChip}>
-                          <AppText style={styles.attributeChipText}>{attr}</AppText>
-                          {count > 0 && (
-                            <View style={styles.attributeChipCount}>
-                              <AppText style={styles.attributeChipCountText}>{count}</AppText>
-                            </View>
-                          )}
-                        </View>
-                      ))}
+                <View style={styles.expBody}>
+                  <View style={styles.expStats}>
+                    <View style={styles.expStat}>
+                      <AppText style={styles.expStatValue}>{vouchCount ?? 0}</AppText>
+                      <AppText style={styles.expStatLabel}>VOUCHES RECEIVED</AppText>
+                    </View>
+                    <View style={styles.expStatDivider} />
+                    <View style={styles.expStat}>
+                      <AppText style={styles.expStatValue}>{vouchesSent ?? 0}</AppText>
+                      <AppText style={styles.expStatLabel}>VOUCHES GIVEN</AppText>
                     </View>
                   </View>
-                )}
-                <View style={styles.expandedDivider} />
 
-                <View style={styles.taglineRow}>
-                  <AppText style={styles.taglineBlack}>Stop losing money on bad jobs. </AppText>
-                  <AppText style={styles.taglineGreen}>Work with people you trust.</AppText>
-                </View>
+                  {topAttributes.length > 0 && (
+                    <View style={styles.expAttributes}>
+                      <AppText style={styles.expSectionLabel}>WHAT PEOPLE SAY</AppText>
+                      <View style={styles.expChips}>
+                        {topAttributes.map(({ attr, count }) => (
+                          <View key={attr} style={styles.attributeChip}>
+                            <AppText style={styles.attributeChipText}>{attr}</AppText>
+                            {count > 0 && (
+                              <View style={styles.attributeChipCount}>
+                                <AppText style={styles.attributeChipCountText}>{count}</AppText>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
-                <View style={styles.nswRow}>
-                  <View style={styles.nswLogoBox}>
+                  <View style={styles.expFooter}>
                     <Image
                       source={require("../../../assets/nsw-government-logo.png")}
-                      style={styles.nswLogo}
+                      style={styles.expNswLogo}
                     />
-                  </View>
-                  <View style={styles.nswTextBlock}>
-                    <AppText style={styles.nswBacked}>Backed by NSW Government</AppText>
-                    <AppText style={styles.nswGrant}>MVP Innovation Grant</AppText>
+                    <AppText style={styles.expFooterText}>
+                      VouchPay is backed by the NSW Government MVP Innovation Grant.
+                    </AppText>
                   </View>
                 </View>
               </View>
@@ -352,220 +434,373 @@ export default function MeScreen() {
           </View>
         </Modal>
 
-        {/* Credentials */}
-        <AppText style={styles.sectionLabel}>CREDENTIALS</AppText>
-        <View style={styles.credCard}>
-          {/* Email */}
-          <TouchableOpacity
-            style={styles.credRow}
-            onPress={() => router.push("/(app)/email-status" as any)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={`Email, ${user?.email ?? "—"}, verified`}
-          >
-            <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
-              <Ionicons name="mail-outline" size={18} color={Colors.vouchGreen} />
-            </View>
-            <View style={styles.credBody}>
-              <AppText style={styles.credTitle}>Email</AppText>
-              <AppText style={styles.credValue}>{user?.email ?? "—"}</AppText>
-            </View>
-            <VerifiedBadge />
-            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
-          </TouchableOpacity>
-
-          <View style={styles.credDivider} />
-
-          {/* Mobile */}
-          <TouchableOpacity
-            style={styles.credRow}
-            onPress={() =>
-              router.push(
-                user?.mobileVerified ? ("/(app)/mobile-status" as any) : "/(app)/verify-mobile"
-              )
-            }
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={`Mobile, ${displayMobile ?? "Not added"}, ${user?.mobileVerified ? "verified" : displayMobile ? "tap to verify" : "tap to add"}`}
-          >
-            <View
-              style={[
-                styles.credIcon,
-                { backgroundColor: user?.mobileVerified ? Colors.vouchGreenLight : Colors.amberBg },
-              ]}
-            >
-              <Ionicons
-                name="phone-portrait-outline"
-                size={18}
-                color={user?.mobileVerified ? Colors.vouchGreen : Colors.amber}
-              />
-            </View>
-            <View style={styles.credBody}>
-              <AppText style={styles.credTitle}>Mobile</AppText>
-              <AppText style={styles.credValue}>{displayMobile ?? "Not added"}</AppText>
-            </View>
-            {user?.mobileVerified ? (
-              <VerifiedBadge />
-            ) : (
-              <UnverifiedBadge label={displayMobile ? "Verify" : "Add"} />
-            )}
-            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
-          </TouchableOpacity>
-
-          <View style={styles.credDivider} />
-
-          {/* ABN — display only if set (write-once), tappable only to add */}
-          {user?.abn ? (
-            <View style={styles.credRow}>
-              <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
-                <Ionicons name="business-outline" size={18} color={Colors.vouchGreen} />
-              </View>
-              <View style={styles.credBody}>
-                <AppText style={styles.credTitle}>ABN</AppText>
-                <AppText style={styles.credValue}>{displayAbn}</AppText>
-              </View>
-              <VerifiedBadge />
+        <View style={styles.sections}>
+          {/* Project history — a timeline, because this is a record over time
+            rather than a list of settings. */}
+          <SectionLabel>Project history</SectionLabel>
+          {projectHistory.length === 0 ? (
+            <View style={styles.historyEmpty}>
+              <Ionicons name="briefcase-outline" size={18} color={Colors.grey500} />
+              <AppText style={styles.historyEmptyText}>
+                Projects you join will appear here as you work.
+              </AppText>
             </View>
           ) : (
+            <View style={styles.timeline}>
+              {projectHistory.map((p, i) => {
+                const isLast = i === projectHistory.length - 1;
+                return (
+                  <View key={p.id} style={styles.timelineItem}>
+                    <View style={styles.timelineRail}>
+                      <View
+                        style={[
+                          styles.timelineDot,
+                          p.status !== "Active" && styles.timelineDotPast,
+                        ]}
+                      />
+                      {!isLast && <View style={styles.timelineLine} />}
+                    </View>
+                    <View style={[styles.timelineContent, isLast && { paddingBottom: 0 }]}>
+                      <View style={styles.timelineHeadRow}>
+                        <AppText style={styles.timelineName} numberOfLines={1}>
+                          {p.name}
+                        </AppText>
+                        {p.status === "Active" && <Pill label="Active" tone="green" />}
+                      </View>
+                      <AppText style={styles.timelineMeta}>
+                        {[p.role, p.council || p.location, formatStarted(p.startedAt)]
+                          .filter(Boolean)
+                          .join("  ·  ")}
+                      </AppText>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Verification */}
+          <SectionLabel>Verification</SectionLabel>
+          <View style={styles.credCard}>
+            {/* Email */}
             <TouchableOpacity
               style={styles.credRow}
-              onPress={() => router.push("/(app)/add-abn")}
+              onPress={() => router.push("/(app)/email-status" as any)}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel="ABN, not added, tap to add"
+              accessibilityLabel={`Email, ${user?.email ?? "—"}, verified`}
             >
-              <View style={[styles.credIcon, { backgroundColor: Colors.amberBg }]}>
-                <Ionicons name="business-outline" size={18} color={Colors.amber} />
+              <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
+                <Ionicons name="mail-outline" size={18} color={Colors.vouchGreen} />
               </View>
               <View style={styles.credBody}>
-                <AppText style={styles.credTitle}>ABN</AppText>
-                <AppText style={styles.credValue}>Not added</AppText>
+                <AppText style={styles.credTitle}>Email</AppText>
+                <AppText style={styles.credValue}>{user?.email ?? "—"}</AppText>
               </View>
-              <UnverifiedBadge label="Add" />
+              <VerifiedBadge />
               <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
             </TouchableOpacity>
-          )}
-        </View>
 
-        {/* Settings */}
-        <AppText style={styles.sectionLabel}>SETTINGS</AppText>
-        <View style={styles.credCard}>
+            <View style={styles.credDivider} />
+
+            {/* Mobile */}
+            <TouchableOpacity
+              style={styles.credRow}
+              onPress={() =>
+                router.push(
+                  user?.mobileVerified ? ("/(app)/mobile-status" as any) : "/(app)/verify-mobile"
+                )
+              }
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={`Mobile, ${displayMobile ?? "Not added"}, ${user?.mobileVerified ? "verified" : displayMobile ? "tap to verify" : "tap to add"}`}
+            >
+              <View
+                style={[
+                  styles.credIcon,
+                  {
+                    backgroundColor: user?.mobileVerified ? Colors.vouchGreenLight : Colors.amberBg,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="phone-portrait-outline"
+                  size={18}
+                  color={user?.mobileVerified ? Colors.vouchGreen : Colors.amber}
+                />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>Mobile</AppText>
+                <AppText style={styles.credValue}>{displayMobile ?? "Not added"}</AppText>
+              </View>
+              {user?.mobileVerified ? (
+                <VerifiedBadge />
+              ) : (
+                <UnverifiedBadge label={displayMobile ? "Verify" : "Add"} />
+              )}
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+            </TouchableOpacity>
+
+            <View style={styles.credDivider} />
+
+            {/* ABN — display only if set (write-once), tappable only to add */}
+            {user?.abn ? (
+              <View style={styles.credRow}>
+                <View style={[styles.credIcon, { backgroundColor: Colors.vouchGreenLight }]}>
+                  <Ionicons name="business-outline" size={18} color={Colors.vouchGreen} />
+                </View>
+                <View style={styles.credBody}>
+                  <AppText style={styles.credTitle}>ABN</AppText>
+                  <AppText style={styles.credValue}>{displayAbn}</AppText>
+                </View>
+                <VerifiedBadge />
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.credRow}
+                onPress={() => router.push("/(app)/add-abn")}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="ABN, not added, tap to add"
+              >
+                <View style={[styles.credIcon, { backgroundColor: Colors.amberBg }]}>
+                  <Ionicons name="business-outline" size={18} color={Colors.amber} />
+                </View>
+                <View style={styles.credBody}>
+                  <AppText style={styles.credTitle}>ABN</AppText>
+                  <AppText style={styles.credValue}>Not added</AppText>
+                </View>
+                <UnverifiedBadge label="Add" />
+                <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Account */}
+          <SectionLabel>Account</SectionLabel>
+          <View style={styles.credCard}>
+            <TouchableOpacity
+              style={styles.credRow}
+              onPress={() => router.push("/(app)/change-password" as any)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Change password"
+            >
+              <View style={[styles.credIcon, { backgroundColor: Colors.grey100 }]}>
+                <Ionicons name="lock-closed-outline" size={18} color={Colors.grey700} />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>Change password</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+            </TouchableOpacity>
+
+            <View style={styles.credDivider} />
+
+            <TouchableOpacity
+              style={styles.credRow}
+              onPress={() => router.push("/(app)/notifications")}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+            >
+              <View style={[styles.credIcon, { backgroundColor: Colors.grey100 }]}>
+                <Ionicons name="notifications-outline" size={18} color={Colors.grey700} />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>Notifications</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign out is an exit, not the main thing to do here — it reads as a
+            quiet outline button rather than the page's primary action. */}
           <TouchableOpacity
-            style={styles.credRow}
-            onPress={() => router.push("/(app)/change-password" as any)}
+            style={styles.signOutBtn}
+            onPress={handleSignOut}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+          >
+            <Ionicons name="log-out-outline" size={18} color={Colors.vouchGreen} />
+            <AppText style={styles.signOutText}>Sign out</AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={handleDeleteAccount}
             activeOpacity={0.75}
             accessibilityRole="button"
-            accessibilityLabel="Change Password"
+            accessibilityLabel="Delete account"
           >
-            <View style={[styles.credIcon, { backgroundColor: Colors.offWhite }]}>
-              <Ionicons name="lock-closed-outline" size={18} color={Colors.grey500} />
-            </View>
-            <View style={styles.credBody}>
-              <AppText style={styles.credTitle}>Change Password</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.grey300} />
+            <Ionicons name="trash-outline" size={15} color={Colors.red} />
+            <AppText style={styles.deleteText}>Delete account</AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
+            activeOpacity={0.75}
+            style={styles.feedbackRow}
+            accessibilityRole="button"
+            accessibilityLabel="Email us at support@vouchpay.app"
+          >
+            <AppText style={styles.feedbackText}>Have feedback or suggestions? </AppText>
+            <AppText style={styles.feedbackLink}>Email us</AppText>
+            <AppText style={styles.feedbackEmail}>support@vouchpay.app</AppText>
           </TouchableOpacity>
         </View>
-
-        {/* Actions */}
-        <TouchableOpacity
-          style={styles.signOutBtn}
-          onPress={handleSignOut}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Sign Out"
-        >
-          <AppText style={styles.signOutText}>Sign Out</AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={handleDeleteAccount}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Delete Account"
-        >
-          <Ionicons name="trash-outline" size={15} color={Colors.red} />
-          <AppText style={styles.deleteText}>Delete Account</AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => Linking.openURL("mailto:support@vouchpay.app")}
-          activeOpacity={0.75}
-          style={styles.feedbackRow}
-          accessibilityRole="button"
-          accessibilityLabel="Email us at support@vouchpay.app"
-        >
-          <AppText style={styles.feedbackText}>Have feedback or suggestions? </AppText>
-          <AppText style={styles.feedbackLink}>Email us</AppText>
-          <AppText style={styles.feedbackEmail}>support@vouchpay.app</AppText>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  scrollView: { flex: 1 },
-  scroll: { paddingHorizontal: 24, paddingBottom: 48, paddingTop: 12, gap: 8 },
+  container: { flex: 1, backgroundColor: Colors.vouchGreen },
+  body: { flex: 1, backgroundColor: Colors.white },
+  scroll: { paddingBottom: 56 },
+  sections: { paddingHorizontal: 16 },
 
-  // VouchPay credential card
-  vpCard: {
+  // Green band behind the top of the card. Short on purpose — it exists to
+  // give the card something to sit against, not to hold content.
+  band: {
     backgroundColor: Colors.vouchGreen,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 64,
   },
-  vpCardTop: {
+  bandOverscroll: {
+    position: "absolute",
+    top: -600,
+    left: 0,
+    right: 0,
+    height: 600,
+    backgroundColor: Colors.vouchGreen,
+  },
+  bandTitle: {
+    fontSize: 28,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+  },
+
+  // The card straddles the band/body boundary. Extra bottom room because the
+  // tilt and its cast shadow extend past the card's own box.
+  cardWrap: { paddingHorizontal: 20, marginTop: -52, marginBottom: 30 },
+
+  // Shadow lives on the outer view: the gradient face clips its own overflow,
+  // and a real card casts light downward and slightly out.
+  cardShadow: {
+    shadowColor: "#0B2B1B",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    elevation: 12,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+  },
+  card: {
+    // Card-shaped but not locked to a ratio — a profile with no business name
+    // or trade should produce a shorter card, not empty space.
+    borderRadius: 18,
+    padding: 20,
+    gap: 22,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.07)",
+  },
+  cardTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  vpWordmark: {
-    fontSize: 16,
-    fontFamily: Fonts.extraBold,
-    color: Colors.white,
-    letterSpacing: 1.5,
-    opacity: 0.9,
-  },
-  vpIdentity: { flexDirection: "row", alignItems: "center", gap: 14 },
-  vpAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: Colors.whiteGloss,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  vpAvatarText: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
-  vpName: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.white },
-  vpBusiness: {
+  cardWordmark: {
     fontSize: 15,
+    fontFamily: Fonts.extraBold,
+    color: Colors.vouchGreen,
+    letterSpacing: 1.2,
+  },
+  cardNumberBlock: { gap: 3 },
+  cardNumberLabel: {
+    fontSize: 9,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 1.2,
+  },
+  cardNumber: {
+    fontSize: 18,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
+    letterSpacing: 3,
+  },
+  cardBottom: { flexDirection: "row", alignItems: "flex-end", gap: 12 },
+  cardHolder: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.black,
+    letterSpacing: 1.1,
+  },
+  cardBusiness: {
+    fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.grey700,
     marginTop: 2,
   },
-  vpCardBottom: {
+  cardTrade: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.grey500,
+    letterSpacing: 1,
+  },
+
+  // Stats and share hint, below the card
+  statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.15)",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    gap: 12,
+    marginTop: 26,
   },
-  vpStat: { flex: 1, gap: 2 },
-  vpStatLabel: {
-    fontSize: 11,
+  stat: { flex: 1, alignItems: "center", gap: 3 },
+  statDivider: { width: 1, height: 30, backgroundColor: Colors.grey300 },
+  statValue: { fontSize: 22, fontFamily: Fonts.extraBold, color: Colors.black },
+  statLabel: {
+    fontSize: 10,
     fontFamily: Fonts.bold,
-    color: Colors.white,
+    color: Colors.grey500,
     letterSpacing: 0.8,
   },
-  vpStatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  vpStatValue: { fontSize: 28, fontFamily: Fonts.extraBold, color: Colors.white },
+  shareHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: Colors.vouchGreenLight,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 20,
+  },
+  shareHintText: { fontSize: 13, fontFamily: Fonts.bold, color: Colors.vouchGreen },
+
+  // Timeline
+  timeline: { marginTop: 2, marginBottom: 26 },
+  timelineItem: { flexDirection: "row", gap: 14 },
+  timelineRail: { width: 12, alignItems: "center" },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.vouchGreen,
+    marginTop: 4,
+  },
+  timelineDotPast: { backgroundColor: Colors.grey300 },
+  timelineLine: { flex: 1, width: 2, backgroundColor: Colors.grey100, marginVertical: 4 },
+  timelineContent: { flex: 1, paddingBottom: 22 },
+  timelineHeadRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  timelineName: { flex: 1, fontSize: 16, fontFamily: Fonts.bold, color: Colors.black },
+  timelineMeta: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    marginTop: 3,
+  },
 
   sectionLabel: {
     fontSize: 12,
@@ -576,12 +811,28 @@ const styles = StyleSheet.create({
     marginBottom: -2,
   },
 
+  historyEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.offWhite,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 26,
+  },
+  historyEmptyText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+  },
   credCard: {
     backgroundColor: Colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.grey300,
     overflow: "hidden",
+    marginBottom: 26,
   },
   credDivider: { height: 1, backgroundColor: Colors.grey300, marginHorizontal: 16 },
   credRow: {
@@ -622,14 +873,17 @@ const styles = StyleSheet.create({
   unverifiedBadgeText: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.amber },
 
   signOutBtn: {
-    backgroundColor: Colors.vouchGreen,
-    borderRadius: 28,
-    height: 54,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.vouchGreen,
+    borderRadius: 28,
+    height: 54,
+    marginTop: 14,
   },
-  signOutText: { color: Colors.white, fontSize: 17, fontFamily: Fonts.bold },
+  signOutText: { color: Colors.vouchGreen, fontSize: 16, fontFamily: Fonts.bold },
 
   deleteBtn: {
     flexDirection: "row",
@@ -640,6 +894,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1,
     borderColor: Colors.red,
+    marginTop: 14,
   },
   deleteText: { color: Colors.red, fontSize: 15, fontFamily: Fonts.semiBold },
   feedbackRow: {
@@ -674,69 +929,112 @@ const styles = StyleSheet.create({
   expandedCard: {
     backgroundColor: Colors.white,
     borderRadius: 24,
-    padding: 24,
     width: "100%",
+    overflow: "hidden",
+  },
+  // Green masthead: identity reversed out of brand colour, so the shared image
+  // is unmistakably a VouchPay credential at thumbnail size.
+  expHeader: {
+    backgroundColor: Colors.vouchGreen,
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 24,
+  },
+  expHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+  expWordmark: {
+    fontSize: 15,
+    fontFamily: Fonts.extraBold,
+    color: Colors.white,
+    letterSpacing: 1.2,
+  },
+  expVerified: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  expVerifiedText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    letterSpacing: 0.8,
+  },
+  expName: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.white },
+  expBusiness: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    opacity: 0.9,
+    marginTop: 3,
+  },
+  expMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  expMeta: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
+    opacity: 0.75,
+  },
+  expMetaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.white,
+    opacity: 0.5,
+  },
+  expBody: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 20,
     gap: 20,
   },
-  expandedIdentity: {
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-  },
-  expandedLogoWrap: {
-    alignItems: "center",
-    gap: 6,
-  },
-  expandedLogoBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: Colors.vouchGreen,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  expandedLogoIcon: {
-    width: 34,
-    height: 34,
-    resizeMode: "contain",
-  },
-  expandedLogoName: {
-    fontSize: 13,
-    fontFamily: Fonts.extraBold,
-    color: Colors.black,
-    letterSpacing: 0.5,
-  },
-  expandedName: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.black },
-  expandedBusiness: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.grey700,
-  },
-  expandedTrade: {
-    fontSize: 14,
-    fontFamily: Fonts.semiBold,
+  expStats: { flexDirection: "row", alignItems: "center" },
+  expStat: { flex: 1, alignItems: "center", gap: 4 },
+  expStatDivider: { width: 1, height: 32, backgroundColor: Colors.grey100 },
+  expStatValue: { fontSize: 24, fontFamily: Fonts.extraBold, color: Colors.black },
+  expStatLabel: {
+    fontSize: 9,
+    fontFamily: Fonts.bold,
     color: Colors.grey500,
-    marginTop: 1,
+    letterSpacing: 0.6,
+    textAlign: "center",
   },
-  expandedAbn: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginTop: 2,
-  },
-  expandedAttributes: {
-    gap: 8,
-  },
-  expandedAttributesLabel: {
+  expAttributes: { gap: 8 },
+  expSectionLabel: {
     fontSize: 10,
     fontFamily: Fonts.bold,
     color: Colors.grey500,
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
-  expandedAttributeChips: {
+  expChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  expFooter: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+    alignItems: "center",
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.grey100,
+    paddingTop: 16,
+  },
+  expNswLogo: { width: 30, height: 30, resizeMode: "contain" },
+  expFooterText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+    lineHeight: 15,
   },
   attributeChip: {
     flexDirection: "row",
@@ -768,35 +1066,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.white,
   },
-  expandedStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.vouchGreenLight,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  expandedStat: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  expandedStatDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: Colors.grey300,
-  },
-  expandedStatValue: {
-    fontSize: 32,
-    fontFamily: Fonts.extraBold,
-    color: Colors.black,
-  },
-  expandedStatLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.bold,
-    color: Colors.grey500,
-    letterSpacing: 0.8,
-  },
   shareBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -822,61 +1091,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.white,
-  },
-
-  expandedDivider: {
-    height: 1,
-    backgroundColor: Colors.grey300,
-  },
-
-  taglineRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  taglineBlack: {
-    fontSize: 14,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    lineHeight: 20,
-  },
-  taglineGreen: {
-    fontSize: 14,
-    fontFamily: Fonts.bold,
-    color: Colors.vouchGreen,
-    lineHeight: 20,
-  },
-
-  nswRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 12,
-    padding: 12,
-  },
-  nswLogoBox: {
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    padding: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-  },
-  nswLogo: {
-    width: 44,
-    height: 44,
-    resizeMode: "contain",
-  },
-  nswTextBlock: { gap: 1 },
-  nswBacked: {
-    fontSize: 13,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-  },
-  nswGrant: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
   },
 });

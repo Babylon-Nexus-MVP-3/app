@@ -117,7 +117,7 @@ export default function VerifyOtp() {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Ionicons name="arrow-back" size={24} color={Colors.vouchGreen} />
+        <Ionicons name="arrow-back" size={24} color={Colors.black} />
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: Fonts.extraBold,
     color: Colors.black,
     marginBottom: 8,

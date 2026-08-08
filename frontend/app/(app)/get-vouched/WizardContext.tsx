@@ -7,26 +7,12 @@ export type Step1Data = {
   name: string;
   abn: string;
   trade: string;
-  idType: "passport" | "licence" | "trade-licence";
+  idType: "trade-licence";
+  /** Licence class, e.g. "Electrical" — distinct from the free-text business trade. */
+  tradeType: string;
   idNumber: string;
   idExpiry: string;
   idState: string;
-  idCountry: string;
-};
-
-export type Step2Data = {
-  currentProjectName: string;
-  address: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  value: string;
-  pastProjectName: string;
-  pastSuburb: string;
-  pastState: string;
-  pastPostcode: string;
-  pastMonthYear: string;
-  pastValue: string;
 };
 
 export type Reference = {
@@ -40,10 +26,8 @@ export type Reference = {
 
 type WizardContextType = {
   step1: Step1Data;
-  step2: Step2Data;
   references: Reference[];
   setStep1: (d: Step1Data) => void;
-  setStep2: (d: Step2Data) => void;
   setReferences: (refs: Reference[]) => void;
 };
 
@@ -68,26 +52,11 @@ const emptyStep1: Step1Data = {
   name: "",
   abn: "",
   trade: "",
-  idType: "licence",
+  idType: "trade-licence",
+  tradeType: "",
   idNumber: "",
   idExpiry: "",
   idState: "",
-  idCountry: "",
-};
-
-const emptyStep2: Step2Data = {
-  currentProjectName: "",
-  address: "",
-  suburb: "",
-  state: "",
-  postcode: "",
-  value: "",
-  pastProjectName: "",
-  pastSuburb: "",
-  pastState: "",
-  pastPostcode: "",
-  pastMonthYear: "",
-  pastValue: "",
 };
 
 // Scoped per logged-in user — otherwise switching accounts on the same device
@@ -98,7 +67,6 @@ function storageKeyFor(userId: string | undefined): string {
 
 async function loadDraft(storageKey: string): Promise<{
   step1: Step1Data;
-  step2: Step2Data;
   references: Reference[];
 } | null> {
   try {
@@ -109,14 +77,9 @@ async function loadDraft(storageKey: string): Promise<{
   }
 }
 
-async function saveDraft(
-  storageKey: string,
-  step1: Step1Data,
-  step2: Step2Data,
-  references: Reference[]
-) {
+async function saveDraft(storageKey: string, step1: Step1Data, references: Reference[]) {
   try {
-    await AsyncStorage.setItem(storageKey, JSON.stringify({ step1, step2, references }));
+    await AsyncStorage.setItem(storageKey, JSON.stringify({ step1, references }));
   } catch {}
 }
 
@@ -124,29 +87,22 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const { user, fetchWithAuth } = useAuth();
   const storageKey = storageKeyFor(user?.id);
   const [step1, setStep1Raw] = useState<Step1Data>(emptyStep1);
-  const [step2, setStep2Raw] = useState<Step2Data>(emptyStep2);
   const [references, setReferencesRaw] = useState<Reference[]>([emptyRef(), emptyRef()]);
 
   function setStep1(d: Step1Data) {
     setStep1Raw(d);
-    saveDraft(storageKey, d, step2, references);
-  }
-
-  function setStep2(d: Step2Data) {
-    setStep2Raw(d);
-    saveDraft(storageKey, step1, d, references);
+    saveDraft(storageKey, d, references);
   }
 
   function setReferences(refs: Reference[]) {
     setReferencesRaw(refs);
-    saveDraft(storageKey, step1, step2, refs);
+    saveDraft(storageKey, step1, refs);
   }
 
   useEffect(() => {
     // Reset to defaults first — guards against stale in-memory state from a
     // previous account if this provider doesn't unmount between logins.
     setStep1Raw(emptyStep1);
-    setStep2Raw(emptyStep2);
     setReferencesRaw([emptyRef(), emptyRef()]);
 
     // Load this user's local draft immediately so the UI restores without
@@ -154,7 +110,6 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     loadDraft(storageKey).then((draft) => {
       if (draft) {
         setStep1Raw(draft.step1);
-        setStep2Raw(draft.step2);
         setReferencesRaw(draft.references);
       }
     });
@@ -168,34 +123,17 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           name: p.name ?? "",
           abn: p.abn ?? "",
           trade: p.trade ?? "",
-          idType:
-            p.idType === "licence"
-              ? "licence"
-              : p.idType === "trade-licence"
-                ? "trade-licence"
-                : "passport",
+          // Legacy profiles may carry "licence"/"passport"; trade licence is now
+          // the only ID type, so old values collapse onto it.
+          idType: "trade-licence",
+          tradeType: p.tradeType ?? "",
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",
-          idCountry: p.idCountry ?? "",
         };
-        const s2: Step2Data = {
-          currentProjectName: p.currentProjectName ?? "",
-          address: p.address ?? "",
-          suburb: p.suburb ?? "",
-          state: p.state ?? "",
-          postcode: p.postcode ?? "",
-          value: p.value ?? "",
-          pastProjectName: p.pastProjectName ?? "",
-          pastSuburb: p.pastSuburb ?? "",
-          pastState: p.pastState ?? "",
-          pastPostcode: p.pastPostcode ?? "",
-          pastMonthYear: p.pastMonthYear ?? "",
-          pastValue: p.pastValue ?? "",
-        };
-        // A profile with fewer than 2 saved references is still valid (e.g. only
-        // step 3 has been completed) — pad to 2 slots instead of discarding it,
-        // otherwise a real saved reference gets wiped back to blank locally.
+        // A profile with fewer than 2 saved references is still valid — pad to
+        // 2 slots instead of discarding it, otherwise a real saved reference
+        // gets wiped back to blank locally.
         const loadedRefs: Reference[] = Array.isArray(p.references)
           ? p.references.map((r: Record<string, string>) => ({
               name: r.name ?? "",
@@ -213,15 +151,14 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         ];
 
         setStep1Raw(s1);
-        setStep2Raw(s2);
         setReferencesRaw(refs);
-        saveDraft(storageKey, s1, s2, refs);
+        saveDraft(storageKey, s1, refs);
       })
       .catch(() => {});
   }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <WizardContext.Provider value={{ step1, step2, references, setStep1, setStep2, setReferences }}>
+    <WizardContext.Provider value={{ step1, references, setStep1, setReferences }}>
       {children}
     </WizardContext.Provider>
   );
