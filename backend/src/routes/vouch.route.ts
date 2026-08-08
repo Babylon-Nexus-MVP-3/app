@@ -127,10 +127,13 @@ vouchRouter.post(
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
+        // A request the reference ignored doesn't count as "already requested" —
+        // otherwise re-adding them after an ignore silently does nothing forever.
         const dupConditions: object[] = [{ toMobile: ref.mobile }];
         if (ref.email) dupConditions.push({ toEmail: ref.email });
         const alreadyRequested = await VouchRequestModel.exists({
           fromUserId: userId,
+          status: { $ne: "ignored" },
           $or: dupConditions,
         });
         if (alreadyRequested) continue;
@@ -155,10 +158,15 @@ vouchRouter.post(
       for (const ref of references) {
         if (!ref.name || !ref.mobile) continue;
 
-        // Skip if a request was already sent to this reference
+        // Skip if a non-ignored request was already sent to this reference — an
+        // ignored one doesn't block a retry (see matching check above).
         const dupConditions: object[] = [{ toMobile: ref.mobile }];
         if (ref.email) dupConditions.push({ toEmail: ref.email });
-        const existing = await VouchRequestModel.exists({ fromUserId: userId, $or: dupConditions });
+        const existing = await VouchRequestModel.exists({
+          fromUserId: userId,
+          status: { $ne: "ignored" },
+          $or: dupConditions,
+        });
         if (existing) continue;
 
         const toEmail = ref.email?.trim().toLowerCase() ?? "";
