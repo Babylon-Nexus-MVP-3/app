@@ -9,11 +9,11 @@
     "seed:reset": "ts-node -T scripts/resetAndSeed.ts",
     "seed:vouched": "ts-node -T scripts/seedVouched.ts",
     "seed:vouchback": "ts-node -T scripts/seedVouchBack.ts",
+    "seed:demo": "ts-node -T scripts/seedDemo.ts",
+    "seed:demo:clear": "ts-node -T scripts/seedDemo.ts --clear",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint-fix": "eslint --fix 'src/**/*.{ts,js}'",
-    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand",
-    "seed:demo": "ts-node -T scripts/seedDemo.ts",
-    "seed:demo:clear": "ts-node -T scripts/seedDemo.ts --clear"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1073.0",
