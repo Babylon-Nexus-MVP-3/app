@@ -7,7 +7,7 @@ import { ProjectModel } from "./models/projectModel";
 import { ProjectError } from "./service/project.service";
 import { ProjectParticipant, ProjectParticipantModel } from "./models/projectParticipantModel";
 import { AuthError } from "./service/auth.service";
-import { UserRole } from "./models/userModel";
+import { UserModel, UserRole } from "./models/userModel";
 
 export interface JwtPayload {
   sub: string;
@@ -191,14 +191,23 @@ export function requireProjectRole(...allowedRoles: UserRole[]) {
 
 /**
  * Requires req.user.role to match one of the allowed roles. Use after requireAuth.
+ *
+ * Also re-checks the role against the database, not just the JWT payload — the
+ * token is only refreshed periodically, so without this a demoted admin would
+ * keep admin access for up to the token's remaining TTL after being demoted.
  */
 export function requireRole(...allowedRoles: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({ error: "Authentication Required" });
       return;
     }
     if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const currentUser = await UserModel.findById(req.user.sub).select("role").lean();
+    if (!currentUser || !allowedRoles.includes(currentUser.role)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
