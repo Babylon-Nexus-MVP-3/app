@@ -42,7 +42,7 @@ describe("Success", () => {
 describe("Error", () => {
   test("Invalid Verification Code", async () => {
     await requestAuthRegister("Mubashir", "Hussain", "Abcdefgh123456$", "example@gmail.com");
-    const res = await requestVerifyEmail("123456");
+    const res = await requestVerifyEmail("example@gmail.com", "123456");
     expect(res.statusCode).toStrictEqual(400);
   });
 });

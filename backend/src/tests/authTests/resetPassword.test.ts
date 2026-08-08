@@ -21,7 +21,7 @@ beforeEach(async () => {
   const res = await requestForgotPassword(EMAIL);
   resetCode = res.body.code;
 
-  const res1 = await requestVerifyResetCode(resetCode);
+  const res1 = await requestVerifyResetCode(EMAIL, resetCode);
   expect(res1.statusCode).toStrictEqual(200);
   expect(res1.body).toStrictEqual({ success: true });
 });
@@ -49,7 +49,7 @@ beforeAll(async () => {
 
 describe("POST /auth/reset-password", () => {
   it("returns 200 when password is reset successfully", async () => {
-    const res = await resetPassword(resetCode, "NewerPassword1234*");
+    const res = await resetPassword(EMAIL, resetCode, "NewerPassword1234*");
 
     expect(res.statusCode).toStrictEqual(200);
     expect(res.body).toStrictEqual({
@@ -67,7 +67,7 @@ describe("POST /auth/reset-password", () => {
   });
 
   it("returns 400 when using the same password", async () => {
-    const res = await resetPassword(resetCode, PASSWORD);
+    const res = await resetPassword(EMAIL, resetCode, PASSWORD);
 
     expect(res.statusCode).toStrictEqual(400);
     expect(res.body).toStrictEqual({ error: expect.any(String) });

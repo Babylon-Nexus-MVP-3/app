@@ -19,8 +19,8 @@ export const requestAuthRegister = async (
   return await request(app).post("/auth/register").send(body);
 };
 
-export const requestVerifyEmail = async (verificationCode: string) => {
-  return await request(app).post("/auth/verify-email").send({ verificationCode });
+export const requestVerifyEmail = async (email: string, verificationCode: string) => {
+  return await request(app).post("/auth/verify-email").send({ email, verificationCode });
 };
 
 export const requestResendVerification = async (email: string) => {
@@ -47,12 +47,14 @@ export const requestResendResetCode = async (email: string) => {
   return await request(app).post("/auth/resend-reset-code").send({ email });
 };
 
-export const requestVerifyResetCode = async (resetCode: string) => {
-  return await request(app).post("/auth/verify-reset-code").send({ resetCode });
+export const requestVerifyResetCode = async (email: string, resetCode: string) => {
+  return await request(app).post("/auth/verify-reset-code").send({ email, resetCode });
 };
 
-export const resetPassword = async (resetCode: string, newPassword: string) => {
-  return await request(app).post("/auth/reset-password").send({ resetCode, newPassword });
+export const resetPassword = async (email: string, resetCode: string, newPassword: string) => {
+  return await request(app)
+    .post("/auth/reset-password")
+    .send({ email, resetCode, newPassword });
 };
 
 export const requestChangePassword = async (
@@ -172,7 +174,7 @@ export async function getToken(
 }
 
 export async function verifyEmail(email: string, verificationCode: string) {
-  const response = await requestVerifyEmail(verificationCode);
+  const response = await requestVerifyEmail(email, verificationCode);
   expect(response.statusCode).toBe(200);
 
   // Verify user is actually verified from db

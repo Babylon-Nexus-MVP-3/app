@@ -42,14 +42,14 @@ describe("POST /auth/verify-reset-code", () => {
     const res = await requestForgotPassword(EMAIL);
 
     const resetCode = res.body.code;
-    const res1 = await requestVerifyResetCode(resetCode);
+    const res1 = await requestVerifyResetCode(EMAIL, resetCode);
 
     expect(res1.statusCode).toBe(200);
   });
 
   it("returns 400 when reset code is invalid", async () => {
     await requestAuthRegister("Mubashir", "Hussain", PASSWORD, EMAIL);
-    const res = await requestVerifyResetCode("123456");
+    const res = await requestVerifyResetCode(EMAIL, "123456");
 
     expect(res.statusCode).toStrictEqual(400);
   });
