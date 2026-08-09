@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
 import { UserRole } from "@/types/roles";
 import { registerForPushNotifications } from "@/lib/notifications";
+import { clearVouchProfileCache } from "@/lib/vouchProfileCache";
 
 export interface AuthUser {
   id: string;
@@ -107,6 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await deleteItem("accessToken");
     await deleteItem("refreshToken");
     await deleteItem("user");
+    // The vouch profile cache outlives screen mounts, so drop it here or the
+    // next user to sign in on this device sees the previous user's strength.
+    clearVouchProfileCache();
     setAccessToken(null);
     setUser(null);
   }

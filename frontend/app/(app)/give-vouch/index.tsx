@@ -20,7 +20,8 @@ import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel, Segmented } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-import { formatAbn } from "@/lib/useAbrLookup";
+import { formatAbn } from "@/lib/format";
+import { showAlert } from "@/lib/errors";
 
 type VouchRequest = {
   _id: string;
@@ -127,14 +128,25 @@ export default function GiveAVouchScreen() {
     }, [load])
   );
 
+  // Ignoring is permanent and invisible to the sender, so it stays behind a
+  // deliberate two-part gesture: swipe the row open, then tap the revealed
+  // panel. That is the confirmation — no extra dialog on top of it.
   async function onIgnore(id: string) {
     setIgnoring(id);
     try {
-      await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, { method: "PATCH" });
+      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, {
+        method: "PATCH",
+      });
+      if (!res.ok) {
+        // Say so, and snap the row back closed rather than leaving it stuck
+        // open on a request that's still actually pending.
+        showAlert("Couldn't ignore", "Please try again.");
+        swipeRefs.current[id]?.close();
+        return;
+      }
       setRequests((prev) => prev.filter((r) => r._id !== id));
     } catch {
-      // Failed — snap the row back closed rather than leaving it stuck open
-      // on a request that's still actually pending.
+      showAlert("Couldn't ignore", "Check your connection and try again.");
       swipeRefs.current[id]?.close();
     } finally {
       setIgnoring(null);

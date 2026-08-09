@@ -3,20 +3,30 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
-
-const RULES = [
-  { label: "At least 12 characters", test: (p: string) => p.length >= 12 },
-  { label: "Uppercase letter (A–Z)", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Lowercase letter (a–z)", test: (p: string) => /[a-z]/.test(p) },
-  { label: "Number (0–9)", test: (p: string) => /[0-9]/.test(p) },
-  { label: "Special character (!@#$ …)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-];
+import {
+  PASSWORD_COMPLEXITY_REQUIRED,
+  PASSWORD_COMPLEXITY_RULES,
+  PASSWORD_LENGTH_RULE,
+  countPasswordComplexity,
+} from "@/lib/validation";
 
 export function PasswordStrengthHints({ password }: { password: string }) {
   if (!password) return null;
+
+  // The server wants the length rule plus any 3 of the 4 complexity rules.
+  // Listing all five as flat requirements used to imply all five were needed.
+  const complexityMet = countPasswordComplexity(password);
+  const rules = [
+    PASSWORD_LENGTH_RULE,
+    {
+      label: `Any ${PASSWORD_COMPLEXITY_REQUIRED} of: uppercase, lowercase, number, special character (${complexityMet}/${PASSWORD_COMPLEXITY_REQUIRED})`,
+      test: () => complexityMet >= PASSWORD_COMPLEXITY_REQUIRED,
+    },
+  ];
+
   return (
     <View style={styles.container}>
-      {RULES.map(({ label, test }) => {
+      {rules.map(({ label, test }) => {
         const met = test(password);
         return (
           <View key={label} style={styles.row}>
@@ -29,6 +39,17 @@ export function PasswordStrengthHints({ password }: { password: string }) {
           </View>
         );
       })}
+      <View style={styles.subRules}>
+        {PASSWORD_COMPLEXITY_RULES.map(({ label, test }) => {
+          const met = test(password);
+          return (
+            <AppText key={label} style={[styles.subLabel, met && styles.labelMet]}>
+              {met ? "· " : "· "}
+              {label}
+            </AppText>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -52,5 +73,14 @@ const styles = StyleSheet.create({
   labelMet: {
     color: Colors.vouchGreen,
     fontFamily: Fonts.medium,
+  },
+  subRules: {
+    paddingLeft: 21,
+    gap: 2,
+  },
+  subLabel: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
   },
 });

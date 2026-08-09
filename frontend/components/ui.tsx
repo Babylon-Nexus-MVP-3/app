@@ -170,6 +170,7 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
 }
 
 const styles = StyleSheet.create({
+  complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
   sectionLabel: {
     fontSize: 11,
     fontFamily: Fonts.bold,
@@ -259,3 +260,38 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 });
+
+/*
+  Licence / insurance badges for a project participant.
+
+  The admin approval screen and the admin project detail screen rendered this
+  same block, with their own identical copies of the four badge styles. Null
+  means "not answered" and renders nothing — only an explicit yes/no shows.
+*/
+export function ComplianceBadges({
+  hasLicence,
+  hasInsurance,
+  style,
+}: {
+  hasLicence?: boolean | null;
+  hasInsurance?: boolean | null;
+  style?: object;
+}) {
+  if (hasLicence == null && hasInsurance == null) return null;
+  return (
+    <View style={[styles.complianceRow, style]}>
+      {hasLicence != null && (
+        <Pill
+          label={hasLicence ? "✓ Licenced" : "✗ No Licence"}
+          tone={hasLicence ? "green" : "red"}
+        />
+      )}
+      {hasInsurance != null && (
+        <Pill
+          label={hasInsurance ? "✓ Insured" : "✗ Not Insured"}
+          tone={hasInsurance ? "green" : "red"}
+        />
+      )}
+    </View>
+  );
+}

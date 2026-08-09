@@ -20,6 +20,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { ListRow } from "@/components/ListRow";
 import { ActionTile } from "@/components/ActionTile";
 import { SectionLabel } from "@/components/ui";
+import { useVouchProfile } from "@/lib/useVouchProfile";
 import { useEntrance, useReduceMotion } from "@/lib/motion";
 
 type SentRequest = {
@@ -80,34 +81,30 @@ function StrengthMeter({ pct, reduceMotion }: { pct: number; reduceMotion: boole
   );
 }
 
-// Remembered across mounts. The tab bar re-mounts this screen on every visit,
-// and starting from 0 each time made the gated actions render locked for a
-// frame before the fetch corrected them.
-let lastKnownStrength: number | null = null;
-
 export default function HomeScreen() {
   const { user, fetchWithAuth } = useAuth();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [profileStrength, setProfileStrength] = useState<number | null>(lastKnownStrength);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Profile strength comes from the shared hook, which owns the fetch and the
+  // cross-mount cache for every screen that shows it.
+  const { profileStrength, stepsDone, isComplete, refresh: refreshProfile } = useVouchProfile();
+
   const fetchData = useCallback(async () => {
     try {
-      const [vouchRes, vouchNotifRes, projectNotifRes, sentRes, profileRes] = await Promise.all([
+      const [vouchRes, vouchNotifRes, projectNotifRes, sentRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`),
         fetchWithAuth(`${API_BASE_URL}/vouch/notifications`),
         fetchWithAuth(`${API_BASE_URL}/notifications`),
         fetchWithAuth(`${API_BASE_URL}/vouch/requests/sent`),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`),
       ]);
       const vouchData = await vouchRes.json();
       const vouchNotifData = vouchNotifRes.ok ? await vouchNotifRes.json() : null;
       const projectNotifData = projectNotifRes.ok ? await projectNotifRes.json() : null;
       const sentData = sentRes.ok ? await sentRes.json() : null;
-      const profileData = profileRes.ok ? await profileRes.json() : null;
 
       setPendingCount(vouchData.requests?.length ?? 0);
       const vouchUnread = (vouchNotifData?.notifications ?? []).filter(
@@ -119,9 +116,6 @@ export default function HomeScreen() {
       setUnreadCount(vouchUnread + projectUnread);
       const requests: SentRequest[] = sentData?.requests ?? [];
       setSentRequests(requests);
-      const nextStrength = profileData?.profileStrength ?? 0;
-      lastKnownStrength = nextStrength;
-      setProfileStrength(nextStrength);
     } catch {}
   }, [fetchWithAuth]);
 
@@ -133,7 +127,7 @@ export default function HomeScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
-    await fetchData();
+    await Promise.all([fetchData(), refreshProfile()]);
     setRefreshing(false);
   }
 
@@ -143,10 +137,12 @@ export default function HomeScreen() {
   // later reads as the app changing its mind.
   const strengthKnown = profileStrength !== null;
   const pendingSentCount = sentRequests.filter((r) => r.status === "pending").length;
-  const canCreateProject = !strengthKnown || strength === 100;
+  // Both gates are the same rule — a complete profile — and both come from the
+  // server rather than being re-derived from the percentage here.
+  const canCreateProject = isComplete !== false;
   // Giving a vouch puts your name behind someone else's work, so your own
   // profile has to be complete first. Receiving one is open to everyone.
-  const profileVerified = !strengthKnown || strength === 100;
+  const profileVerified = isComplete !== false;
 
   const reduceMotion = useReduceMotion();
   const heroEntrance = useEntrance(0, reduceMotion);
@@ -196,12 +192,12 @@ export default function HomeScreen() {
             accessibilityLabel={`Profile strength ${strength} percent. Open build your profile.`}
           >
             <StrengthMeter pct={strength} reduceMotion={reduceMotion} />
+            {/* Strength is your details plus your trade licence — vouches and
+                projects deliberately don't count, so don't suggest they do. */}
             <AppText style={styles.strengthHint}>
-              {strength === 0
-                ? "Complete your profile to unlock all features."
-                : strength < 60
-                  ? "Keep going — add vouches to strengthen your profile."
-                  : "Almost there! Add your trade licence for 100%."}
+              {!stepsDone[0]
+                ? "Add your details and trade licence to reach 100% and unlock giving vouches and creating projects."
+                : "Almost there — add your trade licence to reach 100%."}
             </AppText>
           </TouchableOpacity>
         )}

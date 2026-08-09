@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -11,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
@@ -20,7 +20,10 @@ import { AppInput } from "@/components/AppInput";
 import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
-import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
+import { useAbrLookup } from "@/lib/useAbrLookup";
+import { formatAbn } from "@/lib/format";
+import { saveVouchProfileStep } from "@/lib/useVouchProfile";
+import { showAlert } from "@/lib/errors";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -36,6 +39,7 @@ export default function Step1() {
   const { step1, setStep1 } = useWizard();
 
   const [trade, setTrade] = useState(step1.trade || user?.businessTrade || "");
+  const [saving, setSaving] = useState(false);
   const syncedRef = useRef(false);
 
   // WizardContext fetch is async — sync once it resolves, preferring the saved vouch profile value
@@ -71,13 +75,15 @@ export default function Step1() {
 
   async function onSave() {
     const updatedStep1 = persistTrade(trade);
-    try {
-      await fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
-        method: "POST",
-        body: JSON.stringify({ ...updatedStep1, references: [] }),
-      });
-    } catch {
-      alert("Failed to save. Please check your connection and try again.");
+    setSaving(true);
+    const error = await saveVouchProfileStep(fetchWithAuth, {
+      ...updatedStep1,
+      references: [],
+    });
+    setSaving(false);
+    // Only leave the screen once the server has actually accepted the save.
+    if (error) {
+      showAlert("Couldn't save", error);
       return;
     }
     router.back();
@@ -140,12 +146,17 @@ export default function Step1() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, !canSave && styles.primaryBtnDisabled]}
+          style={[styles.primaryBtn, (!canSave || saving) && styles.primaryBtnDisabled]}
           onPress={onSave}
-          disabled={!canSave}
+          disabled={!canSave || saving}
           activeOpacity={0.85}
+          accessibilityState={{ disabled: !canSave || saving, busy: saving }}
         >
-          <AppText style={styles.primaryBtnText}>Save &amp; continue</AppText>
+          {saving ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <AppText style={styles.primaryBtnText}>Save &amp; continue</AppText>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

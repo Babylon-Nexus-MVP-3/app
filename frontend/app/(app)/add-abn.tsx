@@ -17,7 +17,8 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { AbrCard } from "@/components/AbrCard";
-import { formatAbn, useAbrLookup } from "@/lib/useAbrLookup";
+import { useAbrLookup } from "@/lib/useAbrLookup";
+import { formatAbn } from "@/lib/format";
 
 export default function AddAbn() {
   const { user, fetchWithAuth, updateUser } = useAuth();

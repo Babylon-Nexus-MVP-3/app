@@ -2,8 +2,6 @@ import { API_BASE_URL } from "@/constants/api";
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -23,6 +21,8 @@ import { FinancierMySpace } from "@/components/project/MySpaceViews";
 import { InvoiceDetailModal } from "@/components/project/InvoiceDetailModal";
 import { ApiInvoice } from "@/components/project/types";
 import { AppText } from "@/components/AppText";
+import { ComplianceBadges } from "@/components/ui";
+import { confirmAction, showAlert } from "@/lib/errors";
 
 type Participant = {
   participantId: string;
@@ -106,30 +106,23 @@ export default function AdminProjectDetail() {
       const res = await fetchWithAuth(`${API_BASE_URL}/admin/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        const msg = data.error ?? "Failed to archive project.";
-        if (Platform.OS === "web") window.alert(msg);
-        else Alert.alert("Error", msg);
+        showAlert("Error", data.error ?? "Failed to archive project.");
       } else {
         router.replace("/(admin)/archives");
       }
     } catch {
-      const msg = "Network error. Please try again.";
-      if (Platform.OS === "web") window.alert(msg);
-      else Alert.alert("Error", msg);
+      showAlert("Error", "Network error. Please try again.");
     }
   }
 
-  function handleDeleteProject() {
-    const msg = `Are you sure you want to archive "${projectName}"? It will be moved to the Archives tab.`;
-    if (Platform.OS === "web") {
-      if (!window.confirm(msg)) return;
-      void doDeleteProject();
-    } else {
-      Alert.alert("Archive Project", msg, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Archive", style: "destructive", onPress: () => void doDeleteProject() },
-      ]);
-    }
+  async function handleDeleteProject() {
+    const confirmed = await confirmAction({
+      title: "Archive Project",
+      message: `Are you sure you want to archive "${projectName}"? It will be moved to the Archives tab.`,
+      confirmLabel: "Archive",
+      destructive: true,
+    });
+    if (confirmed) await doDeleteProject();
   }
 
   async function doRemove(participant: Participant) {
@@ -140,32 +133,25 @@ export default function AdminProjectDetail() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data.error ?? "Failed to remove participant.";
-        if (Platform.OS === "web") window.alert(msg);
-        else Alert.alert("Error", msg);
+        showAlert("Error", data.error ?? "Failed to remove participant.");
       } else {
         setParticipants((prev) =>
           prev.filter((p) => !(p.email === participant.email && p.role === participant.role))
         );
       }
     } catch {
-      const msg = "Network error. Please try again.";
-      if (Platform.OS === "web") window.alert(msg);
-      else Alert.alert("Error", msg);
+      showAlert("Error", "Network error. Please try again.");
     }
   }
 
-  function handleRemove(participant: Participant) {
-    const msg = `Remove ${participant.email} (${participant.role}) from this project?`;
-    if (Platform.OS === "web") {
-      if (!window.confirm(msg)) return;
-      void doRemove(participant);
-    } else {
-      Alert.alert("Remove Participant", msg, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => void doRemove(participant) },
-      ]);
-    }
+  async function handleRemove(participant: Participant) {
+    const confirmed = await confirmAction({
+      title: "Remove Participant",
+      message: `Remove ${participant.email} (${participant.role}) from this project?`,
+      confirmLabel: "Remove",
+      destructive: true,
+    });
+    if (confirmed) await doRemove(participant);
   }
 
   return (
@@ -400,26 +386,7 @@ function MembersTab({
                     </AppText>
                   </View>
                 </View>
-                {(p.hasLicence != null || p.hasInsurance != null) && (
-                  <View style={styles.complianceRow}>
-                    {p.hasLicence != null && (
-                      <View style={p.hasLicence ? styles.badgeGreen : styles.badgeRed}>
-                        <AppText style={p.hasLicence ? styles.badgeGreenText : styles.badgeRedText}>
-                          {p.hasLicence ? "✓ Licenced" : "✗ No Licence"}
-                        </AppText>
-                      </View>
-                    )}
-                    {p.hasInsurance != null && (
-                      <View style={p.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
-                        <AppText
-                          style={p.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}
-                        >
-                          {p.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
-                        </AppText>
-                      </View>
-                    )}
-                  </View>
-                )}
+                <ComplianceBadges hasLicence={p.hasLicence} hasInsurance={p.hasInsurance} />
               </View>
               <TouchableOpacity
                 style={styles.removeBtn}
@@ -607,21 +574,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
-  complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
-  badgeGreen: {
-    backgroundColor: Colors.greenBg,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  badgeGreenText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.green },
-  badgeRed: {
-    backgroundColor: Colors.redBg,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  badgeRedText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.red },
   deleteProjectBtn: {
     flexDirection: "row",
     alignItems: "center",

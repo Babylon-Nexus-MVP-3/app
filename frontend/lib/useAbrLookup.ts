@@ -10,14 +10,6 @@ export type AbrResult = {
   isActive: boolean;
 };
 
-export function formatAbn(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-  return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8)}`;
-}
-
 export function useAbrLookup(digits: string) {
   const [abrResult, setAbrResult] = useState<AbrResult | null>(null);
   const [abrLoading, setAbrLoading] = useState(false);

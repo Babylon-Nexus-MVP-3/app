@@ -2,8 +2,6 @@ import { API_BASE_URL } from "@/constants/api";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -17,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { useAuth } from "@/context/AuthContext";
 import { AppText } from "@/components/AppText";
+import { confirmAction } from "@/lib/errors";
 
 type AdminProject = {
   _id: string;
@@ -69,15 +68,13 @@ export default function AdminProjects() {
   const total = projects.length;
 
   async function handleSignOutPress() {
-    if (Platform.OS === "web") {
-      if (!window.confirm("Are you sure you want to log out?")) return;
-      void logout();
-    } else {
-      Alert.alert("Sign out", "Are you sure you want to log out?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Sign out", style: "destructive", onPress: () => void logout() },
-      ]);
-    }
+    const confirmed = await confirmAction({
+      title: "Sign out",
+      message: "Are you sure you want to log out?",
+      confirmLabel: "Sign out",
+      destructive: true,
+    });
+    if (confirmed) await logout();
   }
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -11,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
-import { API_BASE_URL } from "@/constants/api";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
@@ -20,6 +20,8 @@ import { AppInput } from "@/components/AppInput";
 import { NativeSelect } from "@/components/NativeSelect";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
+import { saveVouchProfileStep } from "@/lib/useVouchProfile";
+import { showAlert } from "@/lib/errors";
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
 
@@ -77,6 +79,7 @@ export default function Step5() {
   const { step1, setStep1 } = useWizard();
 
   const [form, setForm] = useState(step1);
+  const [saving, setSaving] = useState(false);
 
   function update(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -109,10 +112,16 @@ export default function Step5() {
 
   async function onSave() {
     setStep1(form);
-    fetchWithAuth(`${API_BASE_URL}/vouch/profile`, {
-      method: "POST",
-      body: JSON.stringify({ ...form, references: [] }),
-    }).catch(() => {});
+    setSaving(true);
+    const error = await saveVouchProfileStep(fetchWithAuth, { ...form, references: [] });
+    setSaving(false);
+    // This step is what takes the profile to 100%, so a save that silently
+    // failed used to leave people believing they were verified when they
+    // weren't — and every gate downstream still said no.
+    if (error) {
+      showAlert("Couldn't save", error);
+      return;
+    }
     router.back();
   }
 
@@ -189,12 +198,17 @@ export default function Step5() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+          style={[styles.primaryBtn, (!canContinue || saving) && styles.primaryBtnDisabled]}
           onPress={onSave}
-          disabled={!canContinue}
+          disabled={!canContinue || saving}
           activeOpacity={0.85}
+          accessibilityState={{ disabled: !canContinue || saving, busy: saving }}
         >
-          <AppText style={styles.primaryBtnText}>Save</AppText>
+          {saving ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <AppText style={styles.primaryBtnText}>Save</AppText>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -38,6 +38,7 @@ import { displayRole } from "@/components/project/helpers";
 import { CalendarTab } from "@/components/project/CalendarTab";
 import { MySpaceTab } from "@/components/project/MySpaceTab";
 import { MembersModal } from "@/components/project/MembersModal";
+import { isValidEmail } from "@/lib/validation";
 
 export default function ProjectDetail() {
   const params = useLocalSearchParams<{ id: string; name: string; openInvoice?: string }>();
@@ -133,8 +134,7 @@ export default function ProjectDetail() {
   }
 
   async function handleInvite() {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail.trim())) {
+    if (!isValidEmail(inviteEmail)) {
       setInviteError("Please enter a valid email address.");
       return;
     }

@@ -7,6 +7,7 @@ import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { AppText } from "@/components/AppText";
+import { ComplianceBadges } from "@/components/ui";
 
 type Member = {
   name?: string;
@@ -93,28 +94,7 @@ export default function ApprovalProjectDetail() {
                       </View>
                     )}
                   </View>
-                  {(m.hasLicence != null || m.hasInsurance != null) && (
-                    <View style={styles.complianceRow}>
-                      {m.hasLicence != null && (
-                        <View style={m.hasLicence ? styles.badgeGreen : styles.badgeRed}>
-                          <AppText
-                            style={m.hasLicence ? styles.badgeGreenText : styles.badgeRedText}
-                          >
-                            {m.hasLicence ? "✓ Licenced" : "✗ No Licence"}
-                          </AppText>
-                        </View>
-                      )}
-                      {m.hasInsurance != null && (
-                        <View style={m.hasInsurance ? styles.badgeGreen : styles.badgeRed}>
-                          <AppText
-                            style={m.hasInsurance ? styles.badgeGreenText : styles.badgeRedText}
-                          >
-                            {m.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
-                          </AppText>
-                        </View>
-                      )}
-                    </View>
-                  )}
+                  <ComplianceBadges hasLicence={m.hasLicence} hasInsurance={m.hasInsurance} />
                 </View>
               </View>
             ))
@@ -219,21 +199,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   creatorPillText: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.vouchGreen },
-  complianceRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
-  badgeGreen: {
-    backgroundColor: Colors.greenBg,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  badgeGreenText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.green },
-  badgeRed: {
-    backgroundColor: Colors.redBg,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  badgeRedText: { fontSize: 10, fontFamily: Fonts.bold, color: Colors.red },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",

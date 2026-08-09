@@ -18,11 +18,7 @@ import { FlowHeader } from "@/components/FlowHeader";
 import { AppInput } from "@/components/AppInput";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
-
-const ROLE_DISPLAY: Record<string, string> = { PM: "Project Manager", Subbie: "Subcontractor" };
-function displayRole(role: string): string {
-  return ROLE_DISPLAY[role] ?? role;
-}
+import { displayRole } from "@/components/project/helpers";
 
 export default function JoinProject() {
   const { fetchWithAuth } = useAuth();

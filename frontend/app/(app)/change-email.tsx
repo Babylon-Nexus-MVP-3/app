@@ -17,6 +17,7 @@ import { AppText } from "@/components/AppText";
 import { AppInput } from "@/components/AppInput";
 import { OtpInput, OtpInputRef } from "@/components/OtpInput";
 import { useAuth } from "@/context/AuthContext";
+import { isValidEmail } from "@/lib/validation";
 
 const CODE_LENGTH = 6;
 
@@ -57,7 +58,7 @@ export default function ChangeEmail() {
   }
 
   const trimmedEmail = newEmail.trim().toLowerCase();
-  const canSend = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+  const canSend = isValidEmail(trimmedEmail);
 
   async function handleSendCode() {
     if (!canSend) return;

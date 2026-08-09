@@ -23,6 +23,7 @@ import { EmptyState, Pill, Segmented } from "@/components/ui";
 import { SentRequests } from "@/components/SentRequests";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { useVouchProfile } from "@/lib/useVouchProfile";
 
 type GivenVouch = {
   _id: string;
@@ -97,7 +98,10 @@ export default function VouchesScreen() {
   }
   const [given, setGiven] = useState<GivenVouch[]>([]);
   const [received, setReceived] = useState<ReceivedVouch[]>([]);
-  const [profileVerified, setProfileVerified] = useState(false);
+  // Vouching back is still giving a vouch, so it needs the same complete
+  // profile that giving one anywhere else does — same source, same answer.
+  const { isComplete } = useVouchProfile();
+  const profileVerified = isComplete === true;
   const [loading, setLoading] = useState(true);
   const hasLoaded = useRef(false);
 
@@ -116,15 +120,11 @@ export default function VouchesScreen() {
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
-        fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`).then((r) => (r.ok ? r.json() : null)),
       ])
-        .then(([givenData, receivedData, profileData]) => {
+        .then(([givenData, receivedData]) => {
           if (cancelled) return;
           setGiven(givenData?.vouches ?? []);
           setReceived(receivedData?.vouches ?? []);
-          // Vouching back is still giving a vouch, so it needs the same
-          // complete profile that giving one anywhere else does.
-          setProfileVerified(profileData?.profileStrength === 100);
           hasLoaded.current = true;
         })
         .catch(() => {})
