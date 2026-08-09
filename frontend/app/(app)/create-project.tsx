@@ -3,7 +3,6 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 import { authStyles } from "@/constants/authStyles";
 import { appStyles } from "@/constants/appStyles";
 import { AppText } from "@/components/AppText";
+import { NativeSelect } from "@/components/NativeSelect";
 
 const ROLES = [
   "Owner",
@@ -39,7 +39,6 @@ const ROLE_MAP: Record<string, string> = {
 };
 
 type Invitee = { email: string; role: string };
-type RoleTarget = "creator" | number;
 
 export default function CreateProject() {
   const { user, fetchWithAuth } = useAuth();
@@ -65,7 +64,6 @@ export default function CreateProject() {
   const [council, setCouncil] = useState("");
   const [role, setRole] = useState("");
   const [invitees, setInvitees] = useState<Invitee[]>([]);
-  const [rolePickerTarget, setRolePickerTarget] = useState<RoleTarget | null>(null);
   const [hasInsurance, setHasInsurance] = useState<"yes" | "no" | "na" | null>(null);
   const [hasLicence, setHasLicence] = useState<"yes" | "no" | "na" | null>(null);
   const [daApproved, setDaApproved] = useState<"yes" | "no" | null>(null);
@@ -73,17 +71,6 @@ export default function CreateProject() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-
-  function handleRoleSelect(r: string) {
-    if (rolePickerTarget === "creator") {
-      setRole(r);
-    } else if (typeof rolePickerTarget === "number") {
-      setInvitees((prev) =>
-        prev.map((inv, i) => (i === rolePickerTarget ? { ...inv, role: r } : inv))
-      );
-    }
-    setRolePickerTarget(null);
-  }
 
   function addInvitee() {
     setInvitees((prev) => [...prev, { email: "", role: "" }]);
@@ -97,10 +84,8 @@ export default function CreateProject() {
     setInvitees((prev) => prev.map((inv, i) => (i === index ? { ...inv, email } : inv)));
   }
 
-  function getActiveRoleValue(): string {
-    if (rolePickerTarget === "creator") return role;
-    if (typeof rolePickerTarget === "number") return invitees[rolePickerTarget]?.role ?? "";
-    return "";
+  function updateInviteeRole(index: number, role: string) {
+    setInvitees((prev) => prev.map((inv, i) => (i === index ? { ...inv, role } : inv)));
   }
 
   const REQUIRED_FIELDS = [
@@ -289,17 +274,15 @@ export default function CreateProject() {
             </>
           )}
 
-          <AppText style={authStyles.fieldLabel}>YOUR ROLE</AppText>
-          <TouchableOpacity
-            style={styles.roleSelector}
-            onPress={() => setRolePickerTarget("creator")}
-            activeOpacity={0.75}
-          >
-            <AppText style={role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}>
-              {role || "Select role..."}
-            </AppText>
-            <Ionicons name="chevron-down" size={18} color={Colors.grey500} />
-          </TouchableOpacity>
+          <View style={styles.roleSelectWrap}>
+            <NativeSelect
+              label="YOUR ROLE"
+              value={role}
+              options={ROLES}
+              placeholder="Select role..."
+              onChange={setRole}
+            />
+          </View>
 
           {/* ── Invite team members ── */}
           <View style={styles.sectionDivider} />
@@ -329,19 +312,13 @@ export default function CreateProject() {
                 returnKeyType="next"
               />
 
-              <AppText style={styles.inviteeFieldLabel}>ROLE</AppText>
-              <TouchableOpacity
-                style={styles.inviteeRoleSelector}
-                onPress={() => setRolePickerTarget(index)}
-                activeOpacity={0.75}
-              >
-                <AppText
-                  style={inv.role ? styles.roleSelectorText : styles.roleSelectorPlaceholder}
-                >
-                  {inv.role || "Select role..."}
-                </AppText>
-                <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
-              </TouchableOpacity>
+              <NativeSelect
+                label="ROLE"
+                value={inv.role}
+                options={ROLES}
+                placeholder="Select role..."
+                onChange={(r) => updateInviteeRole(index, r)}
+              />
             </View>
           ))}
 
@@ -419,38 +396,6 @@ export default function CreateProject() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Role picker modal */}
-      <Modal visible={rolePickerTarget !== null} transparent animationType="slide">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setRolePickerTarget(null)}
-        >
-          <View style={styles.modalSheet}>
-            <AppText style={styles.modalTitle}>Select Role</AppText>
-            {ROLES.map((r) => {
-              const active = getActiveRoleValue();
-              return (
-                <TouchableOpacity
-                  key={r}
-                  style={styles.roleOption}
-                  onPress={() => handleRoleSelect(r)}
-                >
-                  <AppText
-                    style={[styles.roleOptionText, active === r && styles.roleOptionSelected]}
-                  >
-                    {r}
-                  </AppText>
-                  {active === r && (
-                    <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -482,27 +427,8 @@ const styles = StyleSheet.create({
     textTransform: "none",
     letterSpacing: 0,
   },
-  roleSelector: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+  roleSelectWrap: {
     marginBottom: 20,
-    backgroundColor: Colors.white,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  roleSelectorText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  roleSelectorPlaceholder: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.grey300,
   },
   sectionDivider: {
     height: 1,
@@ -563,17 +489,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     color: Colors.black,
   },
-  inviteeRoleSelector: {
-    height: 46,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.white,
-  },
   addInviteeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -626,42 +541,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 16,
-  },
-  // Role picker modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    marginBottom: 16,
-  },
-  roleOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey100,
-  },
-  roleOptionText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  roleOptionSelected: {
-    fontFamily: Fonts.semiBold,
-    color: Colors.vouchGreen,
   },
 });

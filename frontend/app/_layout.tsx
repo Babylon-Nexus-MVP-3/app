@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Stack, router } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -102,13 +103,15 @@ export default function RootLayout() {
   if (!fontsReady) return null;
 
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="(admin)" options={{ gestureEnabled: false }} />
-      </Stack>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(app)" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="(admin)" options={{ gestureEnabled: false }} />
+        </Stack>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

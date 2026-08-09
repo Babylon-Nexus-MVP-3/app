@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useFocusEffect, router } from "expo-router";
 import {
   View,
@@ -8,7 +8,9 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Animated,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
@@ -19,7 +21,7 @@ import { SectionLabel, Segmented } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { formatAbn } from "@/lib/format";
-import { confirmAction, showAlert } from "@/lib/errors";
+import { showAlert } from "@/lib/errors";
 
 type VouchRequest = {
   _id: string;
@@ -40,6 +42,35 @@ function timeAgo(dateStr: string): string {
   if (hrs < 24) return `${hrs} hrs ago`;
   if (hrs < 48) return "yesterday";
   return `${Math.floor(hrs / 24)} days ago`;
+}
+
+// Revealed behind a request card as the user swipes left. Fades and scales in
+// with the drag itself, so the gesture's own motion is the affordance — the
+// swipe only opens this panel to a resting position; tapping it is the
+// actual confirmation, so a stray drag can't dismiss a request by accident.
+function renderIgnoreAction(progress: Animated.AnimatedInterpolation<number>, onPress: () => void) {
+  const opacity = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const scale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.7, 1],
+    extrapolate: "clamp",
+  });
+  return (
+    <TouchableOpacity
+      style={styles.ignoreAction}
+      onPress={onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel="Ignore this vouch request"
+    >
+      <Animated.View style={{ opacity, transform: [{ scale }] }}>
+        <AppText style={styles.ignoreActionText}>Ignore</AppText>
+      </Animated.View>
+    </TouchableOpacity>
+  );
 }
 
 function nameInitials(name: string): string {
@@ -71,6 +102,7 @@ export default function GiveAVouchScreen() {
   const [requests, setRequests] = useState<VouchRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [ignoring, setIgnoring] = useState<string | null>(null);
+  const swipeRefs = useRef<Record<string, Swipeable | null>>({});
   const [abn, setAbn] = useState("");
   const [abnError, setAbnError] = useState("");
   const [checking, setChecking] = useState(false);
@@ -96,29 +128,26 @@ export default function GiveAVouchScreen() {
     }, [load])
   );
 
-  async function onIgnore(id: string, fromCompany: string) {
-    // Ignoring is permanent and invisible to the sender, so it should not be
-    // one stray tap away — the same courtesy Sign Out and Withdraw already get.
-    const confirmed = await confirmAction({
-      title: "Ignore this request?",
-      message: `${fromCompany} won't be told, and this request will disappear from your list.`,
-      confirmLabel: "Ignore",
-      destructive: true,
-    });
-    if (!confirmed) return;
-
+  // Ignoring is permanent and invisible to the sender, so it stays behind a
+  // deliberate two-part gesture: swipe the row open, then tap the revealed
+  // panel. That is the confirmation — no extra dialog on top of it.
+  async function onIgnore(id: string) {
     setIgnoring(id);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/vouch/requests/${id}/ignore`, {
         method: "PATCH",
       });
       if (!res.ok) {
+        // Say so, and snap the row back closed rather than leaving it stuck
+        // open on a request that's still actually pending.
         showAlert("Couldn't ignore", "Please try again.");
+        swipeRefs.current[id]?.close();
         return;
       }
       setRequests((prev) => prev.filter((r) => r._id !== id));
     } catch {
       showAlert("Couldn't ignore", "Check your connection and try again.");
+      swipeRefs.current[id]?.close();
     } finally {
       setIgnoring(null);
     }
@@ -278,15 +307,28 @@ export default function GiveAVouchScreen() {
           </View>
         ) : (
           requests.map((r, i) => (
-            <View key={r._id}>
+            <Swipeable
+              key={r._id}
+              ref={(ref) => {
+                swipeRefs.current[r._id] = ref;
+              }}
+              renderRightActions={(progress) => renderIgnoreAction(progress, () => onIgnore(r._id))}
+              rightThreshold={40}
+              overshootRight={false}
+              containerStyle={styles.swipeContainer}
+              childrenContainerStyle={styles.swipeChildren}
+            >
               <TouchableOpacity
                 style={styles.requestCard}
                 activeOpacity={0.75}
+                disabled={ignoring === r._id}
                 onPress={() =>
                   router.push(`/(app)/give-vouch/verify?abn=${r.fromAbn ?? ""}&requestId=${r._id}`)
                 }
                 accessibilityRole="button"
                 accessibilityLabel={`Vouch request from ${r.fromCompany} · ${r.fromName}`}
+                accessibilityActions={[{ name: "activate", label: "Ignore" }]}
+                onAccessibilityAction={() => onIgnore(r._id)}
               >
                 <Avatar name={r.fromName} index={i} />
                 <View style={{ flex: 1, gap: 2 }}>
@@ -302,20 +344,7 @@ export default function GiveAVouchScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Colors.grey500} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.ignoreBtn}
-                onPress={() => onIgnore(r._id, r.fromCompany)}
-                disabled={ignoring === r._id}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={`Ignore vouch request from ${r.fromCompany}`}
-                accessibilityState={{ disabled: ignoring === r._id }}
-              >
-                <AppText style={styles.ignoreText}>
-                  {ignoring === r._id ? "Ignoring…" : "Ignore"}
-                </AppText>
-              </TouchableOpacity>
-            </View>
+            </Swipeable>
           ))
         )}
 
@@ -470,6 +499,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grey500,
   },
+  // A sliver of this shows past the card's right edge at rest — the
+  // permanent hint that the row is swipeable, without a hint animation.
+  swipeContainer: {
+    backgroundColor: Colors.grey100,
+    borderRadius: 16,
+  },
+  swipeChildren: {
+    marginRight: 10,
+  },
   requestCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -508,17 +546,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.vouchGreen,
   },
-  ignoreBtn: {
-    alignSelf: "flex-end",
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    marginTop: -4,
-    marginBottom: 4,
+  ignoreAction: {
+    width: 88,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.grey100,
+    borderRadius: 16,
   },
-  ignoreText: {
-    fontSize: 12,
-    fontFamily: Fonts.medium,
-    color: Colors.grey500,
+  ignoreActionText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.grey700,
   },
   divider: {
     height: 1,

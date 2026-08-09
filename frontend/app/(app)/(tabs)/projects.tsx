@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/constants/api";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -61,6 +61,10 @@ export default function Projects() {
   // locked here. One source now answers both.
   const { isComplete } = useVouchProfile();
   const canCreateProject = isComplete !== false;
+
+  const addBtnRef = useRef<View>(null);
+  const [addMenuVisible, setAddMenuVisible] = useState(false);
+  const [addMenuTop, setAddMenuTop] = useState(60);
 
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -159,48 +163,22 @@ export default function Projects() {
           {/* Header row */}
           <View style={[appStyles.headerInner, styles.topRow]}>
             <AppText style={appStyles.headerTitle}>My Projects</AppText>
-          </View>
-
-          {/* Action buttons */}
-          <View style={styles.actionRow}>
             <TouchableOpacity
-              style={[styles.actionBtn, !canCreateProject && styles.actionBtnDisabled]}
-              activeOpacity={0.85}
+              ref={addBtnRef}
+              style={appStyles.headerIconBtn}
+              hitSlop={HEADER_HIT_SLOP}
               accessibilityRole="button"
-              accessibilityLabel={
-                canCreateProject
-                  ? "Create new project"
-                  : "Create new project, complete profile first"
-              }
-              accessibilityState={{ disabled: !canCreateProject }}
+              accessibilityLabel="Create or join a project"
               onPress={() => {
-                if (canCreateProject) {
-                  router.push("/(app)/create-project");
-                } else {
-                  router.push("/(app)/project-locked");
-                }
+                addBtnRef.current?.measure(
+                  (_x: number, _y: number, _w: number, h: number, _px: number, py: number) => {
+                    setAddMenuTop(py + h + 4);
+                  }
+                );
+                setAddMenuVisible(true);
               }}
             >
-              <Ionicons
-                name="add"
-                size={15}
-                color={canCreateProject ? Colors.vouchGreen : Colors.grey500}
-              />
-              <AppText
-                style={[styles.actionBtnText, !canCreateProject && styles.actionBtnTextDisabled]}
-              >
-                New Project
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtnOutline}
-              activeOpacity={0.85}
-              onPress={openJoinModal}
-              accessibilityRole="button"
-              accessibilityLabel="Join a project"
-            >
-              <Ionicons name="enter-outline" size={15} color={Colors.white} />
-              <AppText style={styles.actionBtnOutlineText}>Join Project</AppText>
+              <Ionicons name="add" size={26} color={Colors.white} />
             </TouchableOpacity>
           </View>
 
@@ -313,6 +291,49 @@ export default function Projects() {
           </TouchableOpacity>
         )}
       />
+
+      {/* ── Create/Join menu ── */}
+      <Modal visible={addMenuVisible} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setAddMenuVisible(false)}
+        >
+          <View style={[styles.menu, { top: addMenuTop }]}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              accessibilityRole="button"
+              accessibilityLabel={
+                canCreateProject
+                  ? "Create new project"
+                  : "Create new project, complete profile first"
+              }
+              onPress={() => {
+                setAddMenuVisible(false);
+                if (canCreateProject) {
+                  router.push("/(app)/create-project");
+                } else {
+                  router.push("/(app)/project-locked");
+                }
+              }}
+            >
+              <AppText style={styles.menuItemText}>New Project</AppText>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              accessibilityRole="button"
+              accessibilityLabel="Join a project"
+              onPress={() => {
+                setAddMenuVisible(false);
+                openJoinModal();
+              }}
+            >
+              <AppText style={styles.menuItemText}>Join Project</AppText>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── Join a Project modal ── */}
       <Modal visible={joinModalVisible} animationType="slide" presentationStyle="fullScreen">
@@ -482,48 +503,33 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  actionRow: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 20,
-  },
-  actionBtn: {
+  menuOverlay: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
+  },
+  menu: {
+    position: "absolute",
+    right: 16,
     backgroundColor: Colors.white,
-    borderRadius: 28,
-    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    minWidth: 180,
   },
-  actionBtnText: {
-    color: Colors.vouchGreen,
-    fontFamily: Fonts.bold,
-    fontSize: 13,
+  menuItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  actionBtnDisabled: {
-    opacity: 0.45,
+  menuItemText: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.black,
   },
-  actionBtnTextDisabled: {
-    color: Colors.grey500,
-  },
-  actionBtnOutline: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.white,
-    borderRadius: 28,
-    paddingVertical: 10,
-  },
-  actionBtnOutlineText: {
-    color: Colors.white,
-    fontFamily: Fonts.bold,
-    fontSize: 13,
+  menuDivider: {
+    height: 1,
+    backgroundColor: Colors.grey100,
   },
   statValueRow: {
     flexDirection: "row",

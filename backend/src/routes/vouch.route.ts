@@ -21,6 +21,22 @@ function isQuerySafeString(value: unknown): value is string {
   return typeof value === "string";
 }
 
+// Mirrors the frontend's own check (step2.tsx) — enforced again here since the
+// frontend control is trivially bypassed by calling this endpoint directly.
+function isValidExpiryDate(expiry: string): boolean {
+  const parts = expiry.split("/");
+  if (parts.length !== 3 || parts[2].length !== 4) return false;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+  if (day < 1 || day > 31 || month < 1 || month > 12) return false;
+  const now = new Date();
+  return (
+    new Date(year, month - 1, day) >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+}
+
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
   "/profile",
@@ -106,6 +122,15 @@ vouchRouter.post(
         "idExpiry",
         "idState",
       ] as const;
+
+      if (
+        typeof body.idExpiry === "string" &&
+        body.idExpiry !== "" &&
+        !isValidExpiryDate(body.idExpiry)
+      ) {
+        res.status(400).json({ error: "Enter a valid, non-expired expiry date." });
+        return;
+      }
 
       const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
       for (const key of WRITABLE_FIELDS) {
@@ -537,7 +562,10 @@ async function createNudgeReminders(userId: string): Promise<void> {
     fromUserId: userId,
     status: "pending",
     lastSentAt: { $lt: staleBefore },
-    $or: [{ lastNudgeReminderAt: { $exists: false } }, { lastNudgeReminderAt: { $lt: staleBefore } }],
+    $or: [
+      { lastNudgeReminderAt: { $exists: false } },
+      { lastNudgeReminderAt: { $lt: staleBefore } },
+    ],
   })
     .select("_id toEmail toMobile relationship")
     .lean();

@@ -4,7 +4,7 @@ import { app } from "../../app";
 import { requestDelete, getToken } from "../requestHelpers";
 import { ProjectModel } from "../../models/projectModel";
 import { ProjectParticipantModel } from "../../models/projectParticipantModel";
-import { UserModel } from "../../models/userModel";
+import { UserModel, UserRole } from "../../models/userModel";
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
@@ -36,7 +36,7 @@ afterAll(async () => {
   }
 }, 10000);
 
-async function addParticipant(projectId: string, userId: string, email: string, role: string) {
+async function addParticipant(projectId: string, userId: string, email: string, role: UserRole) {
   await ProjectParticipantModel.create({
     projectId,
     userId,
