@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +17,7 @@ import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
 import { AppInput } from "@/components/AppInput";
+import { NativeSelect } from "@/components/NativeSelect";
 import { useWizard, Reference } from "./WizardContext";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, NETWORK_ERROR_MESSAGE } from "@/constants/api";
@@ -34,124 +32,6 @@ const RELATIONSHIPS = [
   "Colleague",
   "Other",
 ];
-
-function PickerModal({
-  visible,
-  options,
-  onSelect,
-  onClose,
-}: {
-  visible: boolean;
-  options: string[];
-  onSelect: (v: string) => void;
-  onClose: () => void;
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 140, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 300, duration: 180, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
-
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
-        <Animated.View
-          style={[StyleSheet.absoluteFillObject, modal.overlay, { opacity: fadeAnim }]}
-        >
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        </Animated.View>
-        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
-          <Animated.View style={[modal.sheet, { transform: [{ translateY: slideAnim }] }]}>
-            <View style={modal.handle} />
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={modal.option}
-                  onPress={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
-                >
-                  <AppText style={modal.optionText}>{item}</AppText>
-                </TouchableOpacity>
-              )}
-            />
-          </Animated.View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const modal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: Colors.overlay },
-  sheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 40,
-    paddingTop: 12,
-    maxHeight: "50%",
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.grey300,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  option: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.grey100,
-  },
-  optionText: { fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
-});
-
-function Dropdown({
-  label,
-  value,
-  options,
-  onSelect,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onSelect: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)} activeOpacity={0.75}>
-        <AppText style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
-          {value || label}
-        </AppText>
-        <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
-      </TouchableOpacity>
-      <PickerModal
-        visible={open}
-        options={options}
-        onSelect={onSelect}
-        onClose={() => setOpen(false)}
-      />
-    </>
-  );
-}
 
 const emptyRef = (): Reference => ({
   name: "",
@@ -338,12 +218,12 @@ export default function RequestVouch() {
             </View>
 
             <View style={styles.divider} />
-            <AppText style={styles.dropdownLabel}>HOW DO YOU KNOW THEM?</AppText>
-            <Dropdown
-              label="Select relationship"
+            <NativeSelect
+              label="HOW DO YOU KNOW THEM?"
               value={ref.relationship}
               options={RELATIONSHIPS}
-              onSelect={(v) => update("relationship", v)}
+              placeholder="Select relationship"
+              onChange={(v) => update("relationship", v)}
             />
 
             {ref.relationship === "From another project" && (
@@ -381,7 +261,15 @@ export default function RequestVouch() {
 }
 
 const styles = StyleSheet.create({
-  requestsBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  requestsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   requestsBtnText: { fontSize: 13, fontFamily: Fonts.bold, color: Colors.white },
   requestsCount: {
     minWidth: 18,
@@ -426,19 +314,6 @@ const styles = StyleSheet.create({
   refInputError: { borderColor: Colors.red },
   fieldError: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.red, marginTop: 4 },
   dropdownLabel: { fontSize: 11, fontFamily: Fonts.bold, color: Colors.black, letterSpacing: 0.8 },
-  dropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 10,
-    height: 48,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.white,
-  },
-  dropdownText: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
-  dropdownPlaceholder: { color: Colors.grey300 },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,

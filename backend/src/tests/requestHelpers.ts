@@ -52,9 +52,7 @@ export const requestVerifyResetCode = async (email: string, resetCode: string) =
 };
 
 export const resetPassword = async (email: string, resetCode: string, newPassword: string) => {
-  return await request(app)
-    .post("/auth/reset-password")
-    .send({ email, resetCode, newPassword });
+  return await request(app).post("/auth/reset-password").send({ email, resetCode, newPassword });
 };
 
 export const requestChangePassword = async (
