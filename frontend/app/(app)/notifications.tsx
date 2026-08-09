@@ -268,7 +268,7 @@ export default function Notifications() {
             <TouchableOpacity
               onPress={() => router.back()}
               activeOpacity={0.75}
-              style={styles.headerSide}
+              style={[styles.headerSide, styles.headerSideLeft]}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
@@ -279,11 +279,13 @@ export default function Notifications() {
               <TouchableOpacity
                 onPress={markAllRead}
                 activeOpacity={0.75}
-                style={styles.headerSide}
+                style={[styles.headerSide, styles.headerSideRight]}
                 accessibilityRole="button"
                 accessibilityLabel="Mark all notifications as read"
               >
-                <AppText style={styles.markAllText}>Mark all read</AppText>
+                <View style={styles.markAllPill}>
+                  <AppText style={styles.markAllText}>Mark all read</AppText>
+                </View>
               </TouchableOpacity>
             ) : (
               <View style={styles.headerSide} />
@@ -327,7 +329,9 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  headerSide: { width: 80 },
+  headerSide: { flex: 1 },
+  headerSideLeft: { alignItems: "flex-start" },
+  headerSideRight: { alignItems: "flex-end" },
   headerTitle: {
     flex: 1,
     fontSize: 16,
@@ -335,11 +339,16 @@ const styles = StyleSheet.create({
     color: Colors.white,
     textAlign: "center",
   },
+  markAllPill: {
+    backgroundColor: Colors.whiteGloss,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   markAllText: {
     fontSize: 13,
     fontFamily: Fonts.semiBold,
     color: Colors.white,
-    textAlign: "right",
   },
   listContent: { padding: 16, gap: 10 },
   emptyContent: { flex: 1 },

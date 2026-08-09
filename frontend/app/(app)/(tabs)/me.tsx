@@ -639,7 +639,7 @@ export default function MeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.vouchGreen },
   body: { flex: 1, backgroundColor: Colors.white },
-  scroll: { paddingBottom: 56 },
+  scroll: { paddingBottom: 140 },
   sections: { paddingHorizontal: 16 },
 
   // Green band behind the top of the card. Short on purpose — it exists to

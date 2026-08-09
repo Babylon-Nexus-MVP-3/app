@@ -102,6 +102,7 @@ export default function VouchesScreen() {
   // profile that giving one anywhere else does — same source, same answer.
   const { isComplete } = useVouchProfile();
   const profileVerified = isComplete === true;
+  const [incomingCount, setIncomingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const hasLoaded = useRef(false);
 
@@ -120,11 +121,18 @@ export default function VouchesScreen() {
       Promise.all([
         fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
         fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
+        // Requests other people have sent asking *this* user to vouch for
+        // them — the actionable list itself still lives in Give a Vouch, but
+        // it should be discoverable from here too rather than hidden away.
+        fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`).then((r) =>
+          r.ok ? r.json() : null
+        ),
       ])
-        .then(([givenData, receivedData]) => {
+        .then(([givenData, receivedData, pendingData]) => {
           if (cancelled) return;
           setGiven(givenData?.vouches ?? []);
           setReceived(receivedData?.vouches ?? []);
+          setIncomingCount(pendingData?.requests?.length ?? 0);
           hasLoaded.current = true;
         })
         .catch(() => {})
@@ -149,6 +157,25 @@ export default function VouchesScreen() {
               : "Requests you've sent out"
         }
       >
+        {/* Incoming requests are answered in Give a Vouch, not here — this is
+            just a nudge so they're discoverable from the tab someone would
+            naturally check, rather than surfacing only inside that other
+            screen. Lives in the header, not the white body, so it never sits
+            at the seam between the two backgrounds. */}
+        {incomingCount > 0 && (
+          <TouchableOpacity
+            style={styles.incomingPill}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(app)/give-vouch")}
+            accessibilityRole="button"
+            accessibilityLabel={`${incomingCount} ${incomingCount === 1 ? "person is" : "people are"} waiting on your vouch`}
+          >
+            <Ionicons name="people-outline" size={13} color={Colors.white} />
+            <AppText style={styles.incomingPillText}>{incomingCount} waiting on you</AppText>
+            <Ionicons name="chevron-forward" size={12} color={Colors.white} />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.segmentSlot}>
           <Segmented
             value={tab}
@@ -157,7 +184,7 @@ export default function VouchesScreen() {
             options={[
               { value: "received", label: "Received" },
               { value: "given", label: "Given" },
-              { value: "requests", label: "Requests" },
+              { value: "requests", label: "Sent" },
             ]}
           />
         </View>
@@ -354,6 +381,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   segmentSlot: { marginTop: 18 },
+
+  incomingPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    backgroundColor: Colors.whiteGloss,
+    marginTop: 10,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  incomingPillText: {
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.white,
+  },
 
   // List
   scroll: {

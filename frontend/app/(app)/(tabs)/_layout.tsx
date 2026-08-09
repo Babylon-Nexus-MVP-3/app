@@ -18,6 +18,7 @@ export default function TabsLayout() {
       iconColor={{ default: Colors.grey500, selected: Colors.vouchGreen }}
       labelStyle={{ color: Colors.grey500 }}
       backgroundColor={Colors.white}
+      indicatorColor={Colors.vouchGreenLight}
     >
       <NativeTabs.Trigger name="home">
         <Label>Home</Label>
