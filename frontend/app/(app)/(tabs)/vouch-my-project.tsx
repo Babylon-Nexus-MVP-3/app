@@ -1,10 +1,10 @@
 import {
   Animated,
+  ScrollView,
   View,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
-import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
+import { HeaderBand, ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
 import { useVouchProfile } from "@/lib/useVouchProfile";
 import { useEntrance, usePressScale, useReduceMotion, STAGGER } from "@/lib/motion";
@@ -65,24 +65,27 @@ export default function VouchMyProjectScreen() {
                 ? "1 step left on your profile."
                 : `${stepsLeft ?? 0} steps left on your profile.`
         }
-      >
-        {/* Progress lives in the header rather than a card below it — the two
-            were saying the same thing and eating half the screen. */}
-        {!loading && !isUnlocked && (
-          <Animated.View style={[styles.meter, statusEntrance]}>
-            <View style={styles.track}>
-              <View style={[styles.fill, { width: `${strength ?? 0}%` as any }]} />
-            </View>
-            <AppText style={styles.meterPct}>{strength ?? 0}%</AppText>
-          </Animated.View>
-        )}
-      </ScreenHeader>
+      />
 
       <ScrollView
         style={sheetStyle.sheet}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Progress lives on the green rather than in a card below it — the two
+            were saying the same thing and eating half the screen. It scrolls
+            away with the content, leaving the header bar on its own. */}
+        {!loading && !isUnlocked && (
+          <HeaderBand flush={{ horizontal: 16, top: 22 }} style={styles.progressBand}>
+            <Animated.View style={[styles.meter, statusEntrance]}>
+              <View style={styles.track}>
+                <View style={[styles.fill, { width: `${strength ?? 0}%` as any }]} />
+              </View>
+              <AppText style={styles.meterPct}>{strength ?? 0}%</AppText>
+            </Animated.View>
+          </HeaderBand>
+        )}
+
         <Animated.View style={featuresEntrance}>
           <SectionLabel>What a project owner can do</SectionLabel>
           <View style={styles.features}>
@@ -154,11 +157,13 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 28,
   },
+  // Sits flush under the header, so it reads as the bottom of the green block
+  // rather than a separate strip.
+  progressBand: { marginBottom: 22 },
   meter: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 16,
   },
   track: {
     flex: 1,

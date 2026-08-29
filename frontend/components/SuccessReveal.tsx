@@ -7,14 +7,22 @@ import { useReduceMotion } from "@/lib/motion";
 const KNOB = 50;
 
 /**
- * Green wash that grows out of the slider's knob to fill the screen, then
- * reveals its children on top.
+ * Green wash that grows out of the control that triggered it to fill the
+ * screen, then reveals its children on top.
  *
- * The circle starts at the knob's resting place — bottom-right, inset to match
- * the slider track — so the confirmation visually continues the gesture that
- * caused it rather than appearing from nowhere.
+ * By default the circle starts at the slide-to-confirm knob's resting place —
+ * bottom-right, inset to match the slider track — so the confirmation visually
+ * continues the gesture that caused it rather than appearing from nowhere.
+ * Screens confirmed by a full-width button pass `origin="button"` instead, so
+ * the wash grows from the middle of that button for the same reason.
  */
-export function SuccessReveal({ children }: { children: ReactNode }) {
+export function SuccessReveal({
+  children,
+  origin = "knob",
+}: {
+  children: ReactNode;
+  origin?: "knob" | "button";
+}) {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
 
@@ -42,7 +50,8 @@ export function SuccessReveal({ children }: { children: ReactNode }) {
   }, [grow, contentIn, reduceMotion]);
 
   // Where the knob ends up: right-hand side of the track, above the footer.
-  const originX = width - 16 - KNOB / 2 - 4;
+  // A full-width button has no travel, so its wash starts from its centre.
+  const originX = origin === "button" ? width / 2 : width - 16 - KNOB / 2 - 4;
   const originY = height - 90;
 
   return (

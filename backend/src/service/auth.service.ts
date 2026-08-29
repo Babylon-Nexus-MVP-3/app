@@ -17,6 +17,7 @@ import {
   hashPassword,
 } from "../utils/authHelper";
 import { OtpModel } from "../models/otpModel";
+import { fullName } from "../utils/name";
 import { sendOtpSms, sendMobileVerification, checkMobileVerification } from "./sms.service";
 import {
   sendForgotPasswordEmail,
@@ -61,7 +62,6 @@ interface RegisterInput {
   mobile?: string;
   abn?: string;
   businessName?: string;
-  businessTrade?: string;
 }
 
 interface RegisterResponse {
@@ -74,11 +74,13 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
   const sanitizedFirstName = input.firstName.trim();
   const sanitizedLastName = input.lastName.trim();
   const normalisedEmail = input.email.toLowerCase().trim();
-  const name = `${sanitizedFirstName} ${sanitizedLastName}`;
 
   // Validate name, email uniqueness, and password strength before proceeding
   try {
-    checkName(name);
+    // Each half is validated on its own — joining them first let a junk surname
+    // slip through on the strength of a valid first name.
+    checkName(sanitizedFirstName, "First name");
+    if (sanitizedLastName) checkName(sanitizedLastName, "Last name");
     await checkEmail(normalisedEmail);
     if (input.abn) await checkAbn(input.abn);
     checkPassword(input.password);
@@ -93,7 +95,8 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
   const hashedPassword = await hashPassword(input.password);
   // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
-    name: name,
+    firstName: sanitizedFirstName,
+    lastName: sanitizedLastName,
     email: normalisedEmail,
     password: hashedPassword,
     loginAttempts: 0,
@@ -106,7 +109,6 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
     ...(input.mobile ? { mobile: input.mobile } : {}),
     ...(input.abn ? { abn: input.abn } : {}),
     ...(input.businessName ? { businessName: input.businessName } : {}),
-    ...(input.businessTrade ? { businessTrade: input.businessTrade } : {}),
   });
 
   await newUser.save();
@@ -131,6 +133,9 @@ interface LoginInput {
 // Prevent sending meta fields including codes or account information after login
 interface SafeUser {
   id: string;
+  firstName: string;
+  lastName: string;
+  /** Derived from the two fields above. Kept because live app builds read it. */
   name: string;
   email: string;
   role: string;
@@ -145,7 +150,9 @@ interface SafeUser {
 function toSafeUser(user: User): SafeUser {
   return {
     id: user._id.toString(),
-    name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: fullName(user.firstName, user.lastName),
     email: user.email ?? "",
     role: user.role,
     status: user.status,
@@ -185,7 +192,7 @@ function createAccessToken(user: User): string {
     sub: user.id,
     role: user.role,
     email: user.email ?? "",
-    name: user.name,
+    name: fullName(user.firstName, user.lastName),
     status: user.status,
   } satisfies JwtPayload;
 
@@ -457,7 +464,7 @@ async function backfillVouchNotifications(
       pending.map((r) => ({
         recipientUserId: userId,
         requestId: r._id,
-        fromName: r.fromName,
+        fromName: fullName(r.fromFirstName, r.fromLastName),
         fromCompany: r.fromCompany,
         projectName: r.projectName,
         type: "vouch_request",
@@ -712,14 +719,15 @@ export interface RequestOtpInput {
   abn?: string;
   businessName?: string;
   email?: string;
-  name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export async function requestOtp(input: RequestOtpInput): Promise<{ code?: string }> {
   const e164 = normalizeAuMobile(input.mobile);
 
   if (input.flow === "signup") {
-    if (!input.name?.trim()) throw new AuthError("Name is required");
+    if (!input.firstName?.trim()) throw new AuthError("First name is required");
     if (!input.abn) throw new AuthError("ABN is required");
 
     const au04 = toAuMobile(e164);
@@ -739,7 +747,8 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
     }
 
     const updateData: Record<string, unknown> = {
-      name: input.name.trim(),
+      firstName: input.firstName.trim(),
+      lastName: input.lastName?.trim() ?? "",
       abn: input.abn,
       businessName: input.businessName,
       status: "Pending",

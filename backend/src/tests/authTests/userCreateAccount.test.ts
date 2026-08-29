@@ -1,5 +1,6 @@
 import { requestDelete, requestAuthRegister } from "../requestHelpers";
 import mongoose from "mongoose";
+import { UserModel } from "../../models/userModel";
 
 // Allow time for MongoDB connection in beforeAll/afterAll (default 5s is too short)
 
@@ -203,5 +204,38 @@ describe("Success Cases", () => {
 
     expect(data.userId).toStrictEqual(expect.any(String));
     expect(result.statusCode).toStrictEqual(201);
+  });
+
+  /*
+    Some people go by a single name. Requiring a surname is what made the old
+    sign-up screen send a literal "-", so an empty last name must register and
+    store as "" rather than being rejected or padded.
+  */
+  test("Register user with no last name", async () => {
+    const result = await requestAuthRegister("Cher", "", "SecurePassword123*", "cher@example.com");
+
+    expect(result.body.userId).toStrictEqual(expect.any(String));
+    expect(result.statusCode).toStrictEqual(201);
+
+    const user = await UserModel.findById(result.body.userId).lean();
+    expect(user?.firstName).toBe("Cher");
+    expect(user?.lastName).toBe("");
+  });
+
+  test("Stores the two halves separately rather than one joined string", async () => {
+    const result = await requestAuthRegister(
+      "Mary",
+      "Van Der Berg",
+      "SecurePassword123*",
+      "mary@example.com"
+    );
+
+    expect(result.statusCode).toStrictEqual(201);
+    const user = await UserModel.findById(result.body.userId);
+    expect(user?.firstName).toBe("Mary");
+    expect(user?.lastName).toBe("Van Der Berg");
+    // Display name is derived, never stored.
+    expect(user?.name).toBe("Mary Van Der Berg");
+    expect(user?.toObject()).not.toHaveProperty("$__.name");
   });
 });

@@ -45,15 +45,23 @@ const ATTRIBUTES = [
 ];
 
 export default function AttributesScreen() {
-  const { abn, businessName, requestId, recipientName, recipientEmail, recipientMobile } =
-    useLocalSearchParams<{
-      abn: string;
-      businessName: string;
-      requestId?: string;
-      recipientName?: string;
-      recipientEmail?: string;
-      recipientMobile?: string;
-    }>();
+  const {
+    abn,
+    businessName,
+    requestId,
+    recipientFirstName,
+    recipientLastName,
+    recipientEmail,
+    recipientMobile,
+  } = useLocalSearchParams<{
+    abn: string;
+    businessName: string;
+    requestId?: string;
+    recipientFirstName?: string;
+    recipientLastName?: string;
+    recipientEmail?: string;
+    recipientMobile?: string;
+  }>();
   const { fetchWithAuth } = useAuth();
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -83,7 +91,8 @@ export default function AttributesScreen() {
           attributes: selected,
           note: note.trim() || undefined,
           requestId: requestId ?? undefined,
-          recipientName: recipientName ?? undefined,
+          recipientFirstName: recipientFirstName ?? undefined,
+          recipientLastName: recipientLastName ?? undefined,
           recipientEmail: recipientEmail ?? undefined,
           recipientMobile: recipientMobile ?? undefined,
         }),

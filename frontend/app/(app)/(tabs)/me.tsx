@@ -28,7 +28,12 @@ import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { useVouchProfile } from "@/lib/useVouchProfile";
 import { confirmAction } from "@/lib/errors";
-import { formatAbn, formatStoredMobile } from "@/lib/format";
+import { formatAbn, formatStoredMobile, fullName } from "@/lib/format";
+import { ProjectTimeline, type ProjectHistoryEntry } from "@/components/ProjectTimeline";
+import { HowToVideos } from "@/components/HowToVideos";
+
+/** How many recent projects the Me tab shows before deferring to the full screen. */
+const HISTORY_PREVIEW_COUNT = 3;
 
 function VerifiedBadge() {
   return <Pill label="Verified" tone="green" icon="checkmark-circle" />;
@@ -38,29 +43,13 @@ function UnverifiedBadge({ label }: { label: string }) {
   return <Pill label={label} tone="amber" />;
 }
 
-type ProjectHistoryEntry = {
-  id: string;
-  name: string;
-  council?: string;
-  location?: string;
-  status: string;
-  role?: string;
-  startedAt: string;
-};
-
-function formatStarted(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
-}
-
 export default function MeScreen() {
   const { user, logout, fetchWithAuth } = useAuth();
   const [vouchCount, setVouchCount] = useState<number | null>(null);
   const [vouchesSent, setVouchesSent] = useState<number | null>(null);
   const [topAttributes, setTopAttributes] = useState<{ attr: string; count: number }[]>([]);
   const [projectHistory, setProjectHistory] = useState<ProjectHistoryEntry[]>([]);
-  const { isComplete } = useVouchProfile();
+  const { isComplete, profile } = useVouchProfile();
   const [cardModalVisible, setCardModalVisible] = useState(false);
   const [sharing, setSharing] = useState(false);
   const cardRef = useRef<View>(null);
@@ -181,6 +170,10 @@ export default function MeScreen() {
 
   const displayMobile = user?.mobile ? formatStoredMobile(user.mobile) : null;
   const displayAbn = user?.abn ? formatAbn(user.abn) : null;
+  // Trade comes from step 1 of the profile wizard — sign-up no longer asks for
+  // it. The user record is only a fallback for a profile that hasn't loaded yet.
+  const displayTrade =
+    (typeof profile?.trade === "string" ? profile.trade.trim() : "") || user?.businessTrade || "";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -243,7 +236,7 @@ export default function MeScreen() {
                 <View style={styles.cardBottom}>
                   <View style={{ flex: 1 }}>
                     <AppText style={styles.cardHolder} numberOfLines={1}>
-                      {user?.name?.toUpperCase()}
+                      {fullName(user?.firstName, user?.lastName).toUpperCase()}
                     </AppText>
                     {user?.businessName ? (
                       <AppText style={styles.cardBusiness} numberOfLines={1}>
@@ -251,8 +244,8 @@ export default function MeScreen() {
                       </AppText>
                     ) : null}
                   </View>
-                  {user?.businessTrade ? (
-                    <AppText style={styles.cardTrade}>{user.businessTrade.toUpperCase()}</AppText>
+                  {displayTrade ? (
+                    <AppText style={styles.cardTrade}>{displayTrade.toUpperCase()}</AppText>
                   ) : null}
                 </View>
               </LinearGradient>
@@ -328,7 +321,7 @@ export default function MeScreen() {
                   </View>
 
                   <AppText style={styles.expName} numberOfLines={2}>
-                    {user?.name}
+                    {fullName(user?.firstName, user?.lastName)}
                   </AppText>
                   {user?.businessName ? (
                     <AppText style={styles.expBusiness} numberOfLines={1}>
@@ -336,10 +329,8 @@ export default function MeScreen() {
                     </AppText>
                   ) : null}
                   <View style={styles.expMetaRow}>
-                    {user?.businessTrade ? (
-                      <AppText style={styles.expMeta}>{user.businessTrade}</AppText>
-                    ) : null}
-                    {user?.businessTrade && displayAbn ? <View style={styles.expMetaDot} /> : null}
+                    {displayTrade ? <AppText style={styles.expMeta}>{displayTrade}</AppText> : null}
+                    {displayTrade && displayAbn ? <View style={styles.expMetaDot} /> : null}
                     {displayAbn ? <AppText style={styles.expMeta}>ABN {displayAbn}</AppText> : null}
                   </View>
                 </View>
@@ -417,7 +408,9 @@ export default function MeScreen() {
 
         <View style={styles.sections}>
           {/* Project history — a timeline, because this is a record over time
-            rather than a list of settings. */}
+            rather than a list of settings. Only the most recent few live here:
+            the full record grows without bound and would bury everything below
+            it, so the rest sits behind its own screen. */}
           <SectionLabel>Project history</SectionLabel>
           {projectHistory.length === 0 ? (
             <View style={styles.historyEmpty}>
@@ -427,36 +420,25 @@ export default function MeScreen() {
               </AppText>
             </View>
           ) : (
-            <View style={styles.timeline}>
-              {projectHistory.map((p, i) => {
-                const isLast = i === projectHistory.length - 1;
-                return (
-                  <View key={p.id} style={styles.timelineItem}>
-                    <View style={styles.timelineRail}>
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          p.status !== "Active" && styles.timelineDotPast,
-                        ]}
-                      />
-                      {!isLast && <View style={styles.timelineLine} />}
-                    </View>
-                    <View style={[styles.timelineContent, isLast && { paddingBottom: 0 }]}>
-                      <View style={styles.timelineHeadRow}>
-                        <AppText style={styles.timelineName} numberOfLines={1}>
-                          {p.name}
-                        </AppText>
-                        {p.status === "Active" && <Pill label="Active" tone="green" />}
-                      </View>
-                      <AppText style={styles.timelineMeta}>
-                        {[p.role, p.council || p.location, formatStarted(p.startedAt)]
-                          .filter(Boolean)
-                          .join("  ·  ")}
-                      </AppText>
-                    </View>
-                  </View>
-                );
-              })}
+            <View style={styles.historyCard}>
+              <ProjectTimeline
+                projects={projectHistory.slice(0, HISTORY_PREVIEW_COUNT)}
+                style={styles.historyCardBody}
+              />
+              <TouchableOpacity
+                style={styles.historyOpenRow}
+                onPress={() => router.push("/(app)/project-history" as any)}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={`See all ${projectHistory.length} projects`}
+              >
+                <AppText style={styles.historyOpenText}>
+                  {projectHistory.length > HISTORY_PREVIEW_COUNT
+                    ? `See all ${projectHistory.length} projects`
+                    : "Open project history"}
+                </AppText>
+                <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -556,6 +538,11 @@ export default function MeScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Sits above Account so the settings-and-exit rows below stay one
+            uninterrupted block, and so it's still in reach of a new user who
+            has only scrolled past their own details. */}
+          <HowToVideos />
 
           {/* Account */}
           <SectionLabel>Account</SectionLabel>
@@ -760,28 +747,28 @@ const styles = StyleSheet.create({
   },
   shareHintText: { fontSize: 13, fontFamily: Fonts.bold, color: Colors.vouchGreen },
 
-  // Timeline
-  timeline: { marginTop: 2, marginBottom: 26 },
-  timelineItem: { flexDirection: "row", gap: 14 },
-  timelineRail: { width: 12, alignItems: "center" },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.vouchGreen,
-    marginTop: 4,
+  // Project history preview card
+  historyCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    overflow: "hidden",
+    marginBottom: 26,
   },
-  timelineDotPast: { backgroundColor: Colors.grey300 },
-  timelineLine: { flex: 1, width: 2, backgroundColor: Colors.grey100, marginVertical: 4 },
-  timelineContent: { flex: 1, paddingBottom: 22 },
-  timelineHeadRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  timelineName: { flex: 1, fontSize: 16, fontFamily: Fonts.bold, color: Colors.black },
-  timelineMeta: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grey500,
-    marginTop: 3,
+  // The last timeline row zeroes its own bottom padding so the rail ends flush,
+  // so the card supplies the breathing room above the "see all" row itself.
+  historyCardBody: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  historyOpenRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: Colors.grey300,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
+  historyOpenText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.vouchGreen },
 
   sectionLabel: {
     fontSize: 12,

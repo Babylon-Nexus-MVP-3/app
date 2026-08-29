@@ -21,7 +21,7 @@ import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
 import { useAbrLookup } from "@/lib/useAbrLookup";
-import { formatAbn } from "@/lib/format";
+import { formatAbn, fullName } from "@/lib/format";
 import { saveVouchProfileStep } from "@/lib/useVouchProfile";
 import { showAlert } from "@/lib/errors";
 
@@ -57,7 +57,8 @@ export default function Step1() {
   function persistTrade(currentTrade: string) {
     const updatedStep1 = {
       ...step1,
-      name: user?.name ?? step1.name,
+      firstName: user?.firstName ?? step1.firstName,
+      lastName: user?.lastName ?? step1.lastName,
       abn: (user?.abn ?? step1.abn).replace(/\D/g, ""),
       trade: currentTrade,
     };
@@ -112,7 +113,13 @@ export default function Step1() {
         >
           <SectionLabel>From your account</SectionLabel>
           <View style={styles.detailsCard}>
-            <InfoRow label="NAME" value={user?.name ?? step1.name} />
+            <InfoRow
+              label="NAME"
+              value={
+                fullName(user?.firstName, user?.lastName) ||
+                fullName(step1.firstName, step1.lastName)
+              }
+            />
             <View style={styles.divider} />
             <InfoRow label="ABN" value={formatAbn((user?.abn ?? step1.abn).replace(/\D/g, ""))} />
             {(abrResult || abrLoading || abrError) && (

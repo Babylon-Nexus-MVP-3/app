@@ -8,6 +8,7 @@ import { appStyles } from "@/constants/appStyles";
 import { AppText } from "@/components/AppText";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { fullName, initials } from "@/lib/format";
 
 export default function Settings() {
   const { user, logout, fetchWithAuth } = useAuth();
@@ -58,12 +59,8 @@ export default function Settings() {
     }
   }
 
-  const initials = user?.name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const displayName = fullName(user?.firstName, user?.lastName);
+  const avatarInitials = initials(user?.firstName, user?.lastName);
 
   return (
     <View style={appStyles.screen}>
@@ -76,10 +73,10 @@ export default function Settings() {
       <View style={appStyles.body}>
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <AppText style={styles.avatarText}>{initials}</AppText>
+            <AppText style={styles.avatarText}>{avatarInitials}</AppText>
           </View>
           <View style={styles.profileInfo}>
-            <AppText style={styles.name}>{user?.name}</AppText>
+            <AppText style={styles.name}>{displayName}</AppText>
             <AppText style={styles.email}>{user?.email}</AppText>
           </View>
         </View>

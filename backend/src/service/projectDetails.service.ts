@@ -5,6 +5,7 @@ import { Invoice, InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { ProjectError } from "./project.service";
+import { fullName } from "../utils/name";
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
@@ -138,10 +139,10 @@ export async function getProjectDetails(
 
   const acceptedUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId!);
   const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
-    .select("name")
+    .select("firstName lastName")
     .lean();
   const participantUserMap = Object.fromEntries(
-    participantUsers.map((u) => [u._id.toString(), u.name])
+    participantUsers.map((u) => [u._id.toString(), fullName(u.firstName, u.lastName)])
   );
 
   // Build role → user names map for approver name lookup

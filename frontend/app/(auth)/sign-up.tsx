@@ -26,11 +26,11 @@ import { isValidEmail, isValidPassword } from "@/lib/validation";
 type SearchResult = { abn: string; entityName: string; state: string };
 
 export default function SignUp() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
-  const [trade, setTrade] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -106,18 +106,17 @@ export default function SignUp() {
     setNameQuery("");
   }
 
-  const trimmedName = name.trim();
-  const nameParts = trimmedName.split(" ");
-  const firstName = nameParts[0] ?? "";
-  const lastName = nameParts.slice(1).join(" ") || "-";
+  const trimmedFirstName = firstName.trim();
+  const trimmedLastName = lastName.trim();
 
   const passwordValid = isValidPassword(password);
 
+  // Last name is intentionally not required — a single-name account is valid,
+  // and demanding a surname is what made this screen send a literal "-".
   const canSubmit =
-    firstName.length > 0 &&
+    trimmedFirstName.length > 0 &&
     isValidEmail(email) &&
     passwordValid &&
-    trade.trim().length > 0 &&
     abnDigits.length === 11 &&
     !abrLoading &&
     !abrError &&
@@ -133,14 +132,13 @@ export default function SignUp() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName,
-          lastName,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
           email: email.trim().toLowerCase(),
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
           ...(businessName.trim() ? { businessName: businessName.trim() } : {}),
-          ...(trade.trim() ? { businessTrade: trade.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -310,13 +308,27 @@ export default function SignUp() {
             returnKeyType="next"
           />
 
-          <AppText style={styles.label}>YOUR NAME</AppText>
+          <AppText style={styles.label}>FIRST NAME</AppText>
           <AppInput
             style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Alex Smith"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="Alex"
             autoCapitalize="words"
+            textContentType="givenName"
+            autoComplete="given-name"
+            returnKeyType="next"
+          />
+
+          <AppText style={styles.label}>LAST NAME</AppText>
+          <AppInput
+            style={styles.input}
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder="Smith"
+            autoCapitalize="words"
+            textContentType="familyName"
+            autoComplete="family-name"
             returnKeyType="next"
           />
 
@@ -352,16 +364,6 @@ export default function SignUp() {
             maxLength={12}
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
-          />
-
-          <AppText style={styles.label}>TRADE / BUSINESS TYPE</AppText>
-          <AppInput
-            style={styles.input}
-            value={trade}
-            onChangeText={setTrade}
-            placeholder="e.g. Plumbing, Electrical, Carpentry"
-            autoCapitalize="words"
-            returnKeyType="next"
           />
 
           {error ? <AppText style={styles.errorText}>{error}</AppText> : null}

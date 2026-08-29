@@ -89,6 +89,8 @@ export default function VerifyOtp() {
         // Network error — backend not live, mock login for dev
         await login("mock-access-token", "mock-refresh-token", {
           id: "mock-id",
+          firstName: "Tom",
+          lastName: "Cheng",
           name: "Tom Cheng",
           email: "tom@example.com",
           role: "Subbie" as never,

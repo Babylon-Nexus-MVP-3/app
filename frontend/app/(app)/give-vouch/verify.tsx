@@ -33,13 +33,15 @@ export default function VerifyScreen() {
   const {
     abn,
     requestId,
-    recipientName: recipientNameParam,
+    recipientFirstName: recipientFirstNameParam,
+    recipientLastName: recipientLastNameParam,
     recipientEmail: recipientEmailParam,
     recipientMobile: recipientMobileParam,
   } = useLocalSearchParams<{
     abn: string;
     requestId?: string;
-    recipientName?: string;
+    recipientFirstName?: string;
+    recipientLastName?: string;
     recipientEmail?: string;
     recipientMobile?: string;
   }>();
@@ -50,7 +52,8 @@ export default function VerifyScreen() {
   const [abrInactive, setAbrInactive] = useState(false);
   const [vouchStatus, setVouchStatus] = useState<VouchStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const recipientName = recipientNameParam ?? "";
+  const recipientFirstName = recipientFirstNameParam ?? "";
+  const recipientLastName = recipientLastNameParam ?? "";
   const [recipientEmail, setRecipientEmail] = useState(recipientEmailParam ?? "");
   const [recipientMobile, setRecipientMobile] = useState(recipientMobileParam ?? "");
   const [contactError, setContactError] = useState("");
@@ -126,7 +129,8 @@ export default function VerifyScreen() {
       businessName: abrData?.entityName ?? displayName,
     };
     if (requestId) params.requestId = requestId;
-    if (recipientName.trim()) params.recipientName = recipientName.trim();
+    if (recipientFirstName.trim()) params.recipientFirstName = recipientFirstName.trim();
+    if (recipientLastName.trim()) params.recipientLastName = recipientLastName.trim();
     if (recipientEmail.trim()) params.recipientEmail = recipientEmail.trim().toLowerCase();
     if (mobileDigits.length >= 10) params.recipientMobile = mobileDigits;
     router.push({

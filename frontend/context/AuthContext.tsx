@@ -4,9 +4,13 @@ import { saveItem, getItem, deleteItem } from "@/lib/storage";
 import { UserRole } from "@/types/roles";
 import { registerForPushNotifications } from "@/lib/notifications";
 import { clearVouchProfileCache } from "@/lib/vouchProfileCache";
+import { splitLegacyName } from "@/lib/format";
 
 export interface AuthUser {
   id: string;
+  firstName: string;
+  lastName: string;
+  /** Derived server-side from the two fields above — display only. */
   name: string;
   email: string;
   role: UserRole;
@@ -16,6 +20,18 @@ export interface AuthUser {
   abn?: string;
   businessName?: string;
   businessTrade?: string;
+}
+
+/*
+  A user object cached on a device before names were split carries only `name`.
+  Normalise on the way in so an existing signed-in user never renders a blank
+  name — this matters when /auth/me can't be reached on boot and the cached
+  object is all we have.
+*/
+function normaliseUser(u: AuthUser): AuthUser {
+  if (u.firstName) return u;
+  const { firstName, lastName } = splitLegacyName(u.name);
+  return { ...u, firstName, lastName };
 }
 
 interface AuthState {
@@ -51,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedToken && storedUser) {
           accessTokenRef.current = storedToken;
           setAccessToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          setUser(normaliseUser(JSON.parse(storedUser)));
 
           // Fetch fresh user data so fields like mobileVerified are never stale
           try {
@@ -61,8 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (res.ok) {
               const data = await res.json();
               if (data.user) {
-                setUser(data.user);
-                await saveItem("user", JSON.stringify(data.user));
+                const fresh = normaliseUser(data.user);
+                setUser(fresh);
+                await saveItem("user", JSON.stringify(fresh));
               }
             }
           } catch {
@@ -81,10 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(newAccessToken: string, refreshToken: string, newUser: AuthUser) {
     await saveItem("accessToken", newAccessToken);
     await saveItem("refreshToken", refreshToken);
-    await saveItem("user", JSON.stringify(newUser));
+    const normalised = normaliseUser(newUser);
+    await saveItem("user", JSON.stringify(normalised));
     accessTokenRef.current = newAccessToken;
     setAccessToken(newAccessToken);
-    setUser(newUser);
+    setUser(normalised);
 
     // Register device for push notifications — failure must not block login
     registerForPushNotifications(fetchWithAuth).catch((err) => {

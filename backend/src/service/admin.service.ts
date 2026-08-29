@@ -13,6 +13,7 @@ import {
   notifyProjectParticipantRemoved,
   notifyProjectRejected,
 } from "./notification.service";
+import { fullName } from "../utils/name";
 
 export class AdminError extends Error {
   statusCode: number;
@@ -48,7 +49,7 @@ export async function listPendingProjects(): Promise<any[]> {
     .map((p) => p.userId!);
 
   const creatorUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
-    .select("name email")
+    .select("firstName lastName email")
     .lean();
   const creatorUserMap = Object.fromEntries(creatorUsers.map((u) => [u._id.toString(), u]));
 
@@ -61,7 +62,7 @@ export async function listPendingProjects(): Promise<any[]> {
     if (creatorParticipant) {
       const user = creatorUserMap[creatorParticipant.userId!];
       creator = {
-        name: user?.name ?? "—",
+        name: fullName(user?.firstName, user?.lastName) || "—",
         email: creatorParticipant.email,
         role: creatorParticipant.role,
         hasLicence: creatorParticipant.hasLicence,
@@ -334,10 +335,10 @@ export async function getAdminProjectDetail(projectId: string) {
 
   const acceptedUserIds = participants.filter((p) => p.userId).map((p) => p.userId!);
   const participantUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
-    .select("name")
+    .select("firstName lastName")
     .lean();
   const participantUserMap = Object.fromEntries(
-    participantUsers.map((u) => [u._id.toString(), u.name])
+    participantUsers.map((u) => [u._id.toString(), fullName(u.firstName, u.lastName)])
   );
 
   const now = new Date();

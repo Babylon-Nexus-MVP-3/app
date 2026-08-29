@@ -61,7 +61,8 @@ describe("Push notifications", () => {
   async function createActiveUser(email: string, pushToken?: string) {
     const hashed = await hashPassword("SecurePassword123!");
     return UserModel.create({
-      name: "Test User",
+      firstName: "Test",
+      lastName: "User",
       email,
       password: hashed,
       status: "Active",
@@ -141,7 +142,8 @@ describe("Push notifications", () => {
   it("PATCH /auth/push-token saves the push token to the user document", async () => {
     const hashed = await hashPassword("SecurePassword123!");
     await UserModel.create({
-      name: "Token User",
+      firstName: "Token",
+      lastName: "User",
       email: "push-register@test.com",
       password: hashed,
       status: "Active",
@@ -169,7 +171,8 @@ describe("Push notifications", () => {
   it("PATCH /auth/push-token returns 400 when push token is missing", async () => {
     const hashed = await hashPassword("SecurePassword123!");
     await UserModel.create({
-      name: "Token User",
+      firstName: "Token",
+      lastName: "User",
       email: "push-missing@test.com",
       password: hashed,
       status: "Active",

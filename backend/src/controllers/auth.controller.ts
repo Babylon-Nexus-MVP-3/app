@@ -35,26 +35,25 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { firstName, lastName, email, password, mobile, abn, businessName, businessTrade } =
-      req.body;
-    if (
-      !isNonEmptyString(firstName) ||
-      !isNonEmptyString(lastName) ||
-      !isNonEmptyString(email) ||
-      !isNonEmptyString(password)
-    ) {
+    const { firstName, lastName, email, password, mobile, abn, businessName } = req.body;
+    // Last name is optional: some people go by a single name, and requiring it
+    // is what made the old sign-up screen send a literal "-" as the surname.
+    if (!isNonEmptyString(firstName) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
       res.status(400).json({ error: "All fields are required" });
+      return;
+    }
+    if (lastName != null && typeof lastName !== "string") {
+      res.status(400).json({ error: "Invalid last name" });
       return;
     }
     const result = await registerUser({
       firstName,
-      lastName,
+      lastName: lastName ?? "",
       password,
       email,
       mobile,
       abn,
       businessName,
-      businessTrade,
     });
     res.status(201).json(result);
   } catch (err) {
@@ -254,7 +253,7 @@ export const deleteUserAccount = async (req: Request, res: Response, next: NextF
 };
 
 export const requestOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const { mobile, flow, abn, businessName, email, name } = req.body;
+  const { mobile, flow, abn, businessName, email, firstName, lastName } = req.body;
   if (!isNonEmptyString(mobile)) {
     return res.status(400).json({ error: "Mobile number is required" });
   }
@@ -263,7 +262,15 @@ export const requestOtpHandler = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    const result = await requestOtp({ mobile, flow, abn, businessName, email, name });
+    const result = await requestOtp({
+      mobile,
+      flow,
+      abn,
+      businessName,
+      email,
+      firstName,
+      lastName,
+    });
     res.status(200).json(result);
   } catch (err) {
     next(err);

@@ -14,7 +14,8 @@ const USER_PASSWORD = "SecurePassword123!";
 async function getUserToken(): Promise<string> {
   const hashed = await hashPassword(USER_PASSWORD);
   const user = await UserModel.create({
-    name: "Notify User",
+    firstName: "Notify",
+    lastName: "User",
     email: USER_EMAIL,
     password: hashed,
     status: "Active",

@@ -59,10 +59,10 @@ export function summariseSteps(stepsDone: boolean[]): ProfileCompletion {
 export async function getProfileCompletion(userId: string): Promise<ProfileCompletion> {
   const [profile, dbUser] = await Promise.all([
     VouchProfileModel.findOne({ userId }).select("idNumber").lean(),
-    UserModel.findById(userId).select("name abn businessTrade").lean(),
+    UserModel.findById(userId).select("firstName lastName abn businessTrade").lean(),
   ]);
 
-  const step1Done = !!(dbUser?.name && dbUser?.abn && dbUser?.businessTrade);
+  const step1Done = !!(dbUser?.firstName && dbUser?.abn && dbUser?.businessTrade);
   const step2Done = !!profile?.idNumber;
 
   return summariseSteps([step1Done, step2Done]);

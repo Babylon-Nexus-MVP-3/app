@@ -9,21 +9,21 @@ import { AuthError } from "../service/auth.service";
   Allows Unicode letters, spaces, hyphens, and apostrophes (e.g. for international names).
   Rejects numbers, most special characters, and consecutive spaces/symbols.
 */
-export function checkName(name: string): void {
+export function checkName(name: string, label = "Name"): void {
   if (typeof name !== "string") {
-    throw new Error("Invalid name format");
+    throw new Error(`Invalid ${label.toLowerCase()} format`);
   }
 
   const trimmedName = name.trim();
 
   if (trimmedName.length < 2 || trimmedName.length > 50) {
-    throw new Error("Name must be between 2 and 50 characters.");
+    throw new Error(`${label} must be between 2 and 50 characters.`);
   }
 
   // Allow letters, spaces, hyphens, apostrophes, and Unicode letters
   // Block numbers and most special characters
   if (!/^[\p{L}\p{M}\s'-]+$/u.test(trimmedName)) {
-    throw new Error("Name contains invalid characters");
+    throw new Error(`${label} contains invalid characters`);
   }
 
   // Prevent excessive spaces or special characters

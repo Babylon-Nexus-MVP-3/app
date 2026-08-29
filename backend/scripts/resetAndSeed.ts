@@ -61,7 +61,8 @@ async function resetAndSeed() {
 
   // ── 1. Users ─────────────────────────────────────────────────
   const admin = await UserModel.create({
-    name: "Admin",
+    firstName: "Admin",
+    lastName: "",
     email: "admin@vouchpay.dev",
     password: hashed,
     role: "Admin",
@@ -70,7 +71,8 @@ async function resetAndSeed() {
   });
 
   const alice = await UserModel.create({
-    name: "Alice Cooper",
+    firstName: "Alice",
+    lastName: "Cooper",
     email: "alice@vouchpay.dev",
     password: hashed,
     role: "Subbie",
@@ -83,7 +85,8 @@ async function resetAndSeed() {
   });
 
   const bob = await UserModel.create({
-    name: "Bob Smith",
+    firstName: "Bob",
+    lastName: "Smith",
     email: "bob@vouchpay.dev",
     password: hashed,
     role: "Builder",
@@ -96,7 +99,8 @@ async function resetAndSeed() {
   });
 
   await UserModel.create({
-    name: "Charlie Brown",
+    firstName: "Charlie",
+    lastName: "Brown",
     email: "charlie@vouchpay.dev",
     password: hashed,
     role: "Subbie",
@@ -107,7 +111,8 @@ async function resetAndSeed() {
   });
 
   const diana = await UserModel.create({
-    name: "Diana Prince",
+    firstName: "Diana",
+    lastName: "Prince",
     email: "diana@vouchpay.dev",
     password: hashed,
     role: "Consultant",
@@ -120,7 +125,8 @@ async function resetAndSeed() {
   });
 
   const evan = await UserModel.create({
-    name: "Evan Williams",
+    firstName: "Evan",
+    lastName: "Williams",
     email: "evan@vouchpay.dev",
     password: hashed,
     role: "PM",
@@ -137,7 +143,8 @@ async function resetAndSeed() {
   // ── 2. Alice — full vouch profile (step 1+2+3 complete) ──────
   await VouchProfileModel.create({
     userId: alice._id,
-    name: "Alice Cooper",
+    firstName: "Alice",
+    lastName: "Cooper",
     abn: "51824753556",
     trade: "Alice Cooper Electrical",
     idType: "licence",
@@ -157,7 +164,7 @@ async function resetAndSeed() {
     pastValue: "$250,000 – $500K",
     references: [
       {
-        name: "Diana Prince",
+        firstName: "Diana",        lastName: "Prince",
         company: "Prince Consulting",
         mobile: "+61400000004",
         email: "diana@vouchpay.dev",
@@ -165,7 +172,7 @@ async function resetAndSeed() {
         project: "Strathfield Residential",
       },
       {
-        name: "Evan Williams",
+        firstName: "Evan",        lastName: "Williams",
         company: "Williams Project Management",
         mobile: "+61400000005",
         email: "evan@vouchpay.dev",
@@ -197,7 +204,8 @@ async function resetAndSeed() {
   // ── 4. Bob — profile submitted, requests sent to Diana & Evan ─
   await VouchProfileModel.create({
     userId: bob._id,
-    name: "Bob Smith",
+    firstName: "Bob",
+    lastName: "Smith",
     abn: "83914571673",
     trade: "Smith Construction",
     idType: "passport",
@@ -217,7 +225,7 @@ async function resetAndSeed() {
     pastValue: "",
     references: [
       {
-        name: "Diana Prince",
+        firstName: "Diana",        lastName: "Prince",
         company: "Prince Consulting",
         mobile: "+61400000004",
         email: "diana@vouchpay.dev",
@@ -225,7 +233,7 @@ async function resetAndSeed() {
         project: "Parramatta Tower",
       },
       {
-        name: "Evan Williams",
+        firstName: "Evan",        lastName: "Williams",
         company: "Williams Project Management",
         mobile: "+61400000005",
         email: "evan@vouchpay.dev",
@@ -238,7 +246,8 @@ async function resetAndSeed() {
 
   const req1 = await VouchRequestModel.create({
     fromUserId: bob._id,
-    fromName: "Bob Smith",
+    fromFirstName: "Bob",
+    fromLastName: "Smith",
     fromCompany: "Smith Construction",
     fromAbn: "83914571673",
     toEmail: "diana@vouchpay.dev",
@@ -250,7 +259,8 @@ async function resetAndSeed() {
 
   const req2 = await VouchRequestModel.create({
     fromUserId: bob._id,
-    fromName: "Bob Smith",
+    fromFirstName: "Bob",
+    fromLastName: "Smith",
     fromCompany: "Smith Construction",
     fromAbn: "83914571673",
     toEmail: "evan@vouchpay.dev",
