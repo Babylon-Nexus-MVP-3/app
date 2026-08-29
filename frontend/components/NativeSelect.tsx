@@ -48,7 +48,11 @@ export function NativeSelect({
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setOpen(false)} />
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        />
         <View style={styles.sheet}>
           <View style={styles.sheetBar}>
             <TouchableOpacity onPress={() => setOpen(false)} hitSlop={8}>
@@ -81,9 +85,7 @@ export function NativeSelect({
                   <AppText style={selected ? styles.optionTextSelected : styles.optionText}>
                     {o}
                   </AppText>
-                  {selected && (
-                    <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />
-                  )}
+                  {selected && <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />}
                 </TouchableOpacity>
               );
             })}
