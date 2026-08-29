@@ -34,7 +34,8 @@ describe("Overdue escalation notifications", () => {
   it("sends overdue milestone notifications once and prevents duplicates", async () => {
     const hashed = await hashPassword("SecurePassword123!");
     const user = await UserModel.create({
-      name: "Escalation User",
+      firstName: "Escalation",
+      lastName: "User",
       email: "escalation-user@test.com",
       password: hashed,
       status: "Active",

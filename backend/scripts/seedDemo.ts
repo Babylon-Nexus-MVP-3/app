@@ -33,6 +33,13 @@ import { GivenVouchModel } from "../src/models/givenVouchModel";
 import { VouchNotificationModel } from "../src/models/vouchNotificationModel";
 import { ProjectModel } from "../src/models/projectModel";
 import { ProjectParticipantModel } from "../src/models/projectParticipantModel";
+import { splitLegacyName } from "../src/utils/name";
+
+/** splitLegacyName with a field prefix, e.g. "from" -> fromFirstName/fromLastName. */
+function splitLegacyNameAs(name: string, prefix: "from" | "recipient") {
+  const { firstName, lastName } = splitLegacyName(name);
+  return { [`${prefix}FirstName`]: firstName, [`${prefix}LastName`]: lastName };
+}
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -151,7 +158,7 @@ async function seed() {
 
   for (const u of USERS) {
     users[u.key] = await UserModel.create({
-      name: u.name,
+      ...splitLegacyName(u.name),
       email: u.email,
       password: hashed,
       role: "Subbie",
@@ -174,7 +181,7 @@ async function seed() {
      account has no profile at all. */
   const completeProfile = (u: DemoUser, licence: string, tradeType: string, state: string) => ({
     userId: users[u.key]._id,
-    name: u.name,
+    ...splitLegacyName(u.name),
     abn: u.abn,
     trade: u.businessTrade ?? "",
     idType: "trade-licence" as const,
@@ -202,7 +209,7 @@ async function seed() {
     {
       $set: {
         userId: users.sam._id,
-        name: USERS[1].name,
+        ...splitLegacyName(USERS[1].name),
         abn: USERS[1].abn,
         trade: USERS[1].businessTrade,
         idType: "trade-licence",
@@ -270,7 +277,7 @@ async function seed() {
      and the sender-side nudge reminder will generate. */
   await VouchRequestModel.create({
     fromUserId: users.dave._id,
-    fromName: USERS[0].name,
+    ...splitLegacyNameAs(USERS[0].name, "from"),
     fromCompany: USERS[0].businessName,
     fromAbn: USERS[0].abn,
     toEmail: USERS[5].email,
@@ -284,7 +291,7 @@ async function seed() {
   });
   await VouchRequestModel.create({
     fromUserId: users.dave._id,
-    fromName: USERS[0].name,
+    ...splitLegacyNameAs(USERS[0].name, "from"),
     fromCompany: USERS[0].businessName,
     fromAbn: USERS[0].abn,
     toEmail: "kate.builder@example.com",
@@ -300,7 +307,7 @@ async function seed() {
   /* ── A request sitting in Dave's inbox, so Give a Vouch has something ── */
   const inbound = await VouchRequestModel.create({
     fromUserId: users.sam._id,
-    fromName: USERS[1].name,
+    ...splitLegacyNameAs(USERS[1].name, "from"),
     fromCompany: USERS[1].businessName,
     fromAbn: USERS[1].abn,
     toEmail: USERS[0].email,

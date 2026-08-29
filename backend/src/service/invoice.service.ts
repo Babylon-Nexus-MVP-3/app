@@ -14,6 +14,7 @@ import {
   notifyInvoiceSubmitted,
 } from "./notification.service";
 import { notifySafely } from "./notificationScheduler.service";
+import { fullName } from "../utils/name";
 export class InvoiceError extends Error {
   statusCode: number;
 
@@ -379,12 +380,12 @@ export async function getProjectAuditLog(
   const participantUserIds = allParticipants.filter((p) => p.userId).map((p) => p.userId as string);
 
   const users = await UserModel.find({ _id: { $in: participantUserIds } })
-    .select("_id name")
+    .select("_id firstName lastName")
     .lean();
 
   const userNameMap = new Map<string, string>();
   for (const u of users) {
-    userNameMap.set(u._id.toString(), u.name);
+    userNameMap.set(u._id.toString(), fullName(u.firstName, u.lastName));
   }
 
   const participantRoleMap = new Map<string, string>();

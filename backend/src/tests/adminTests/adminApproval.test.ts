@@ -16,7 +16,8 @@ const ADMIN_PASSWORD = "SecurePassword123!";
 async function getAdminToken(): Promise<string> {
   const hashed = await hashPassword(ADMIN_PASSWORD);
   await UserModel.create({
-    name: "Admin User",
+    firstName: "Admin",
+    lastName: "User",
     email: ADMIN_EMAIL,
     password: hashed,
     role: "Admin",
@@ -90,7 +91,8 @@ describe("Admin endpoints", () => {
     const token = await getAdminToken();
     const hashed = await hashPassword("CreatorPassword123!");
     const creator = await UserModel.create({
-      name: "Project Creator",
+      firstName: "Project",
+      lastName: "Creator",
       email: "creator@project-approval-test.com",
       password: hashed,
       role: "PM",
@@ -142,7 +144,8 @@ describe("Admin endpoints", () => {
     const token = await getAdminToken();
     const hashed = await hashPassword("CreatorPassword123!");
     const creator = await UserModel.create({
-      name: "Rejected Project Creator",
+      firstName: "Rejected",
+      lastName: "Project Creator",
       email: "creator@project-rejection-test.com",
       password: hashed,
       role: "PM",

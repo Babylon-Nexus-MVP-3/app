@@ -14,6 +14,7 @@ import path from "path";
 import mongoose from "mongoose";
 import { UserModel } from "../src/models/userModel";
 import { VouchProfileModel } from "../src/models/vouchProfileModel";
+import { splitLegacyName } from "../src/utils/name";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -39,7 +40,7 @@ async function main() {
   // Bal references Tom, Tom references Bal — the two founders vouching for
   // each other as the second reference.
   const tomAsRef = {
-    name: tom.name,
+    ...splitLegacyName(tom.name),
     company: "Cheng Darcy",
     mobile: tom.mobile ?? "",
     email: tom.email,
@@ -47,7 +48,7 @@ async function main() {
     project: "",
   };
   const balAsRef = {
-    name: bal.name,
+    ...splitLegacyName(bal.name),
     company: "Ladder",
     mobile: bal.mobile ?? "",
     email: bal.email,

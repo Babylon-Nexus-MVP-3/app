@@ -16,7 +16,8 @@ const ADMIN_PASSWORD = "SecurePassword123!";
 async function getAdminToken(): Promise<string> {
   const hashed = await hashPassword(ADMIN_PASSWORD);
   await UserModel.create({
-    name: "Admin User",
+    firstName: "Admin",
+    lastName: "User",
     email: ADMIN_EMAIL,
     password: hashed,
     role: "Admin",
@@ -143,7 +144,8 @@ describe("Admin participant removal endpoints", () => {
     const token = await getAdminToken();
     const hashed = await hashPassword("AcceptedPassword123!");
     const participantUser = await UserModel.create({
-      name: "Accepted Participant",
+      firstName: "Accepted",
+      lastName: "Participant",
       email: "accepted-remove@test.com",
       password: hashed,
       role: UserRole.PM,
@@ -207,7 +209,8 @@ describe("Admin participant removal endpoints", () => {
     // Create a non-admin user token (role can be undefined; requireRole will still 403)
     const hashed = await hashPassword("SecurePassword123!");
     await UserModel.create({
-      name: "Normal User",
+      firstName: "Normal",
+      lastName: "User",
       email: "normal@remove-participant-test.com",
       password: hashed,
       status: "Active",

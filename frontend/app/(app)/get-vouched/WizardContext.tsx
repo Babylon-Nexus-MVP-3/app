@@ -2,9 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
+import { splitLegacyName } from "@/lib/format";
 
 export type Step1Data = {
-  name: string;
+  firstName: string;
+  lastName: string;
   abn: string;
   trade: string;
   idType: "trade-licence";
@@ -16,9 +18,15 @@ export type Step1Data = {
 };
 
 export type Reference = {
-  name: string;
+  firstName: string;
+  lastName: string;
+  /** The reference's employer — a business, not a person, so it stays one field. */
   company: string;
-  mobile: string;
+  /**
+   * Legacy — references are contacted by email and this is no longer collected.
+   * Kept so drafts and profiles saved before that change still load.
+   */
+  mobile?: string;
   email: string;
   relationship: string;
   project: string;
@@ -40,16 +48,17 @@ export function useWizard() {
 }
 
 const emptyRef = (): Reference => ({
-  name: "",
+  firstName: "",
+  lastName: "",
   company: "",
-  mobile: "",
   email: "",
   relationship: "",
   project: "",
 });
 
 const emptyStep1: Step1Data = {
-  name: "",
+  firstName: "",
+  lastName: "",
   abn: "",
   trade: "",
   idType: "trade-licence",
@@ -120,7 +129,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       .then((p) => {
         if (!p) return;
         const s1: Step1Data = {
-          name: p.name ?? "",
+          // Profiles saved before names were split carry only `name`.
+          ...splitLegacyName(p.name),
+          ...(p.firstName ? { firstName: p.firstName, lastName: p.lastName ?? "" } : {}),
           abn: p.abn ?? "",
           trade: p.trade ?? "",
           // Legacy profiles may carry "licence"/"passport"; trade licence is now
@@ -136,7 +147,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         // gets wiped back to blank locally.
         const loadedRefs: Reference[] = Array.isArray(p.references)
           ? p.references.map((r: Record<string, string>) => ({
-              name: r.name ?? "",
+              ...splitLegacyName(r.name),
+              ...(r.firstName ? { firstName: r.firstName, lastName: r.lastName ?? "" } : {}),
               company: r.company ?? "",
               mobile: r.mobile ?? "",
               email: r.email ?? "",

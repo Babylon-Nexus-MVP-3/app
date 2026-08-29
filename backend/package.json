@@ -4,6 +4,7 @@
     "prestart": "npm run build",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "dev": "cross-env NODE_ENV=development ts-node -T src/server.ts",
+    "migrate:split-names": "ts-node -T scripts/splitNames.ts",
     "seed:admin": "ts-node -T scripts/seedAdmin.ts",
     "seed:dev": "ts-node -T scripts/seedDev.ts",
     "seed:reset": "ts-node -T scripts/resetAndSeed.ts",

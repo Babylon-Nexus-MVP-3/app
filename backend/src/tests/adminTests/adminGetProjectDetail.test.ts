@@ -15,7 +15,8 @@ const ADMIN_PASSWORD = "SecurePassword123!";
 async function getAdminToken(): Promise<string> {
   const hashed = await hashPassword(ADMIN_PASSWORD);
   await UserModel.create({
-    name: "Admin User",
+    firstName: "Admin",
+    lastName: "User",
     email: ADMIN_EMAIL,
     password: hashed,
     role: "Admin",
@@ -63,7 +64,8 @@ describe("GET /admin/projects/:projectId", () => {
   it("returns 403 for non-admin user", async () => {
     const hashed = await hashPassword("SecurePassword123!");
     await UserModel.create({
-      name: "Regular User",
+      firstName: "Regular",
+      lastName: "User",
       email: "regular@admin-project-detail-test.com",
       password: hashed,
       role: UserRole.Subbie,
@@ -199,7 +201,8 @@ describe("GET /admin/projects/:projectId", () => {
 
     const hashed = await hashPassword("SecurePassword123!");
     const user = await UserModel.create({
-      name: "Jane Builder",
+      firstName: "Jane",
+      lastName: "Builder",
       email: "jane@admin-project-detail-test.com",
       password: hashed,
       role: UserRole.Builder,

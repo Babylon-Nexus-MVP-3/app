@@ -40,7 +40,8 @@ afterAll(async () => {
 async function createRequest(fromUserId: string, overrides: Record<string, unknown> = {}) {
   return VouchRequestModel.create({
     fromUserId,
-    fromName: "Owner Test",
+    fromFirstName: "Owner",
+    fromLastName: "Test",
     fromCompany: "Owner Co",
     fromAbn: "12345678901",
     toEmail: "reference@nudge-test.com",

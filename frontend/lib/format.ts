@@ -58,3 +58,38 @@ export function formatMobileDisplay(digits: string): string {
 export function formatStoredMobile(raw: string): string {
   return formatMobileDisplay(toLocalMobile(raw));
 }
+
+// ── Person names ─────────────────────────────────────────────────────────────
+
+/*
+  People are stored as two fields, firstName and lastName, everywhere in the app
+  and the database. A single free-text "full name" box gave us no reliable way to
+  tell which word was the surname — sign-up used to split on the first space and
+  write a literal "-" when someone typed a single word.
+
+  Business names are not people and stay as one field.
+*/
+
+/** Display form of a person's name. Safe when either half is missing. */
+export function fullName(firstName?: string | null, lastName?: string | null): string {
+  return [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
+}
+
+/*
+  Best-effort split of a legacy single-field name. Only for reading data written
+  before names were split — never for handling new input, which arrives already
+  separated. First word is the first name, the remainder is the surname.
+*/
+export function splitLegacyName(name?: string | null): { firstName: string; lastName: string } {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  const [first, ...rest] = parts;
+  // Legacy rows carry a literal "-" where the old sign-up screen had no surname.
+  const last = rest.join(" ");
+  return { firstName: first, lastName: last === "-" ? "" : last };
+}
+
+/** Up to two initials, e.g. "Jo Bloggs" → "JB". Falls back to one. */
+export function initials(firstName?: string | null, lastName?: string | null): string {
+  return [firstName?.trim()[0], lastName?.trim()[0]].filter(Boolean).join("").toUpperCase();
+}

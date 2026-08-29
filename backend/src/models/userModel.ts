@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { fullName } from "../utils/name";
 
 // All valid user roles — `as const` locks values to literal types and keeps the object;
 export const UserRole = {
@@ -18,7 +19,10 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export interface User extends Document {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  /** Derived virtual — `firstName lastName`. Not stored; never assign to it. */
+  readonly name: string;
   email?: string;
   password?: string;
   mobile?: string;
@@ -49,7 +53,10 @@ export interface User extends Document {
 
 const userSchema = new Schema<User>(
   {
-    name: { type: String, required: true },
+    firstName: { type: String, required: true },
+    // Not required: plenty of people go by a single name, and forcing a surname
+    // is what produced the literal "-" values in legacy rows.
+    lastName: { type: String, default: "" },
     email: {
       type: String,
       required: false,
@@ -91,7 +98,17 @@ const userSchema = new Schema<User>(
   },
   {
     timestamps: true,
+    // Virtuals must be serialised so the composed `name` survives toObject/toJSON.
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Display name is derived, never stored, so the two fields stay the single
+// source of truth. Note `.lean()` and `.select()` queries do not return
+// virtuals — those must select "firstName lastName" and compose with fullName().
+userSchema.virtual("name").get(function (this: { firstName?: string; lastName?: string }) {
+  return fullName(this.firstName, this.lastName);
+});
 
 export const UserModel = mongoose.model<User>("User", userSchema);

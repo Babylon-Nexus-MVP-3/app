@@ -10,6 +10,7 @@ import { UserModel } from "../models/userModel";
 import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
 import { getProfileCompletion } from "../service/vouchProfile.service";
 import { validateEmailFormat } from "../utils/authHelper";
+import { fullName } from "../utils/name";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -37,6 +38,41 @@ function isValidExpiryDate(expiry: string): boolean {
   );
 }
 
+/** A reference as the request-a-vouch screen submits it. */
+type IncomingReference = {
+  firstName: string;
+  lastName?: string;
+  company: string;
+  /** Legacy — no longer collected, but older saved profiles still carry one. */
+  mobile?: string;
+  email: string;
+  relationship: string;
+  project: string;
+};
+
+/** Display name for a reference, for error messages addressed to the user. */
+function refName(ref: IncomingReference): string {
+  return fullName(ref.firstName, ref.lastName);
+}
+
+/*
+  References are addressed by email. Mobile is still matched where a legacy
+  reference happens to carry one, so a request sent before the switch is not
+  duplicated when the same person is submitted again.
+*/
+function dupConditionsFor(ref: IncomingReference): object[] {
+  const conditions: object[] = [{ toEmail: ref.email.trim().toLowerCase() }];
+  if (ref.mobile) conditions.push({ toMobile: ref.mobile });
+  return conditions;
+}
+
+/** The same idea, against user accounts rather than requests. */
+function accountConditionsFor(ref: IncomingReference): object[] {
+  const conditions: object[] = [{ email: ref.email.trim().toLowerCase() }];
+  if (ref.mobile) conditions.push({ mobile: ref.mobile });
+  return conditions;
+}
+
 // POST /vouch/profile — save or update the logged-in user's vouch profile, then notify references
 vouchRouter.post(
   "/profile",
@@ -47,18 +83,14 @@ vouchRouter.post(
       const userId = req.user!.sub;
       const body = req.body;
 
-      const references: Array<{
-        name: string;
-        company: string;
-        mobile: string;
-        email?: string;
-        relationship: string;
-        project: string;
-      }> = Array.isArray(req.body.references) ? req.body.references : [];
+      const references: IncomingReference[] = Array.isArray(req.body.references)
+        ? req.body.references
+        : [];
 
       for (const ref of references) {
         const fields = [
-          ref.name,
+          ref.firstName,
+          ref.lastName,
           ref.company,
           ref.mobile,
           ref.email,
@@ -67,6 +99,16 @@ vouchRouter.post(
         ];
         if (fields.some((v) => v !== undefined && v !== null && !isQuerySafeString(v))) {
           res.status(400).json({ error: "Invalid reference details" });
+          return;
+        }
+
+        // Email is the only way a reference is contacted, so a reference without
+        // one is rejected outright rather than skipped — a silent skip looks
+        // like a sent request that never arrives.
+        if (ref.firstName && !ref.email?.trim()) {
+          res.status(400).json({
+            error: `Add an email address for ${refName(ref)} — that's how we send the request.`,
+          });
           return;
         }
       }
@@ -83,8 +125,14 @@ vouchRouter.post(
       }
 
       // Source identity fields from DB — not the request body — to prevent impersonation
-      const dbUser = await UserModel.findById(userId).select("name abn businessName").lean();
-      const fromName = dbUser?.name ?? "";
+      const dbUser = await UserModel.findById(userId)
+        .select("firstName lastName abn businessName")
+        .lean();
+      const fromFirstName = dbUser?.firstName ?? "";
+      const fromLastName = dbUser?.lastName ?? "";
+      // Composed once for notification/email copy. VouchNotification.fromName is
+      // rendered message text, not a person record, so it stays a single field.
+      const fromName = fullName(fromFirstName, fromLastName);
       const fromAbn = dbUser?.abn ?? "";
       const fromCompany = dbUser?.businessName || "";
 
@@ -113,7 +161,8 @@ vouchRouter.post(
       // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
       // would reassign this profile document to someone else's account.
       const WRITABLE_FIELDS = [
-        "name",
+        "firstName",
+        "lastName",
         "abn",
         "trade",
         "idType",
@@ -157,22 +206,20 @@ vouchRouter.post(
       // otherwise an old, already-responded reference earlier in the array blocks
       // a brand-new reference added later before the loop ever reaches it.
       for (const ref of references) {
-        if (!ref.name || !ref.mobile) continue;
+        if (!ref.firstName || !ref.email) continue;
 
         // A request the reference ignored doesn't count as "already requested" —
         // otherwise re-adding them after an ignore silently does nothing forever.
-        const dupConditions: object[] = [{ toMobile: ref.mobile }];
-        if (ref.email) dupConditions.push({ toEmail: ref.email });
         const alreadyRequested = await VouchRequestModel.exists({
           fromUserId: userId,
           status: { $ne: "ignored" },
-          $or: dupConditions,
+          $or: dupConditionsFor(ref),
         });
         if (alreadyRequested) continue;
 
-        const orConditions: object[] = [{ mobile: ref.mobile }];
-        if (ref.email) orConditions.push({ email: ref.email });
-        const refUser = await UserModel.findOne({ $or: orConditions }).select("_id").lean();
+        const refUser = await UserModel.findOne({ $or: accountConditionsFor(ref) })
+          .select("_id")
+          .lean();
         if (refUser && fromAbn) {
           const alreadyVouched = await GivenVouchModel.exists({
             fromUserId: refUser._id,
@@ -180,7 +227,7 @@ vouchRouter.post(
           });
           if (alreadyVouched) {
             res.status(400).json({
-              error: `${ref.name} has already vouched for you. You cannot send them another request.`,
+              error: `${refName(ref)} has already vouched for you. You cannot send them another request.`,
             });
             return;
           }
@@ -188,38 +235,32 @@ vouchRouter.post(
       }
 
       for (const ref of references) {
-        if (!ref.name || !ref.mobile) continue;
+        if (!ref.firstName || !ref.email) continue;
 
         // Skip if a non-ignored request was already sent to this reference — an
         // ignored one doesn't block a retry (see matching check above).
-        const dupConditions: object[] = [{ toMobile: ref.mobile }];
-        if (ref.email) dupConditions.push({ toEmail: ref.email });
         const existing = await VouchRequestModel.exists({
           fromUserId: userId,
           status: { $ne: "ignored" },
-          $or: dupConditions,
+          $or: dupConditionsFor(ref),
         });
         if (existing) continue;
 
-        const toEmail = ref.email?.trim().toLowerCase() ?? "";
+        const toEmail = ref.email.trim().toLowerCase();
 
         const request = await VouchRequestModel.create({
           fromUserId: userId,
-          fromName,
+          fromFirstName,
+          fromLastName,
           fromCompany,
           fromAbn,
           toEmail,
-          toMobile: ref.mobile,
           relationship: ref.relationship,
           projectName: ref.project,
           status: "pending",
         });
 
-        // Find the reference's user account — match by either mobile or email
-        const orConditions: object[] = [{ mobile: ref.mobile }];
-        if (toEmail) orConditions.push({ email: toEmail });
-
-        const refUser = await UserModel.findOne({ $or: orConditions })
+        const refUser = await UserModel.findOne({ $or: accountConditionsFor(ref) })
           .select("_id pushToken")
           .lean();
 
@@ -274,10 +315,15 @@ vouchRouter.post(
           });
           return;
         }
-        await UserModel.findByIdAndUpdate(userId, {
-          abn: body.abn,
-          ...(body.trade || body.name ? { businessName: body.trade ?? body.name } : {}),
-        });
+        await UserModel.findByIdAndUpdate(userId, { abn: body.abn });
+      }
+
+      // Trade is only collected here now — sign-up no longer asks for it — so
+      // wizard step 1 is what puts businessTrade on the User document, which is
+      // what getProfileCompletion() reads. It is deliberately not written into
+      // businessName: that is the ABR entity name, not the trade.
+      if (body.trade) {
+        await UserModel.findByIdAndUpdate(userId, { businessTrade: body.trade });
       }
 
       res.status(201).json(profile);
@@ -460,12 +506,12 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
+      // Not .lean(): these documents are sent to the client, which reads the
+      // composed `fromName`, and virtuals are dropped by lean queries.
       const requests = await VouchRequestModel.find({
         fromUserId: userId,
         status: { $ne: "ignored" },
-      })
-        .sort({ createdAt: -1 })
-        .lean();
+      }).sort({ createdAt: -1 });
       res.status(200).json({ requests });
     } catch (err) {
       next(err);
@@ -533,12 +579,11 @@ vouchRouter.get(
         return;
       }
 
+      // Not .lean() — see /requests/sent above.
       const requests = await VouchRequestModel.find({
         $or: orConditions,
         status: "pending",
-      })
-        .sort({ createdAt: -1 })
-        .lean();
+      }).sort({ createdAt: -1 });
 
       res.status(200).json({ requests });
     } catch (err) {
@@ -661,7 +706,8 @@ vouchRouter.post(
         attributes,
         note,
         requestId,
-        recipientName,
+        recipientFirstName,
+        recipientLastName,
         recipientEmail,
         recipientMobile,
       } = req.body;
@@ -672,7 +718,7 @@ vouchRouter.post(
       }
 
       const giver = await UserModel.findById(userId)
-        .select("email mobile abn name businessName businessTrade")
+        .select("email mobile abn firstName lastName businessName businessTrade")
         .lean();
 
       // Giving a vouch puts your name behind someone else's work, so the giver
@@ -719,7 +765,7 @@ vouchRouter.post(
         return;
       }
 
-      const giverName = giver?.name ?? "Someone";
+      const giverName = fullName(giver?.firstName, giver?.lastName) || "Someone";
       const giverCompany = giver?.businessName ?? "";
 
       const vouch = await GivenVouchModel.create({
@@ -729,7 +775,8 @@ vouchRouter.post(
         attributes,
         note: note ?? undefined,
         requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
-        recipientName: recipientName ?? undefined,
+        recipientFirstName: recipientFirstName ?? undefined,
+        recipientLastName: recipientLastName ?? undefined,
         recipientEmail: recipientEmail ?? undefined,
         recipientMobile: recipientMobile ?? undefined,
       });
@@ -787,7 +834,7 @@ vouchRouter.post(
           const safeRecipientEmail = validateEmailFormat(recipientEmail);
           sendVouchedForEmail(
             safeRecipientEmail,
-            recipientName ?? "there",
+            fullName(recipientFirstName, recipientLastName) || "there",
             giverName,
             giverCompany,
             attributes ?? [],
@@ -834,9 +881,8 @@ vouchRouter.post(
 vouchRouter.get("/given", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.sub;
-    const vouches = await GivenVouchModel.find({ fromUserId: userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    // Not .lean() — the client reads the composed `recipientName`.
+    const vouches = await GivenVouchModel.find({ fromUserId: userId }).sort({ createdAt: -1 });
     res.status(200).json({ vouches });
   } catch (err) {
     next(err);
@@ -860,7 +906,7 @@ vouchRouter.get(
         .lean();
       const giverIds = [...new Set(vouches.map((v) => v.fromUserId.toString()))];
       const givers = await UserModel.find({ _id: { $in: giverIds } })
-        .select("name businessName abn")
+        .select("firstName lastName businessName abn")
         .lean();
       const giverMap = Object.fromEntries(givers.map((g) => [g._id.toString(), g]));
 
@@ -878,7 +924,7 @@ vouchRouter.get(
         const fromAbn = giver?.abn ?? "";
         return {
           ...v,
-          fromName: giver?.name ?? "Someone",
+          fromName: fullName(giver?.firstName, giver?.lastName) || "Someone",
           fromBusinessName: giver?.businessName ?? "",
           fromAbn,
           alreadyVouchedBack: !!(fromAbn && vouchedBackSet.has(fromAbn)),

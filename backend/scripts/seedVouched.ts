@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { UserModel } from "../src/models/userModel";
 import { VouchRequestModel } from "../src/models/vouchRequestModel";
 import { GivenVouchModel } from "../src/models/givenVouchModel";
+import { splitLegacyName } from "../src/utils/name";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -73,7 +74,8 @@ async function seedVouched() {
   const hashed = await bcrypt.hash(PASSWORD, 10);
 
   const vouched = await UserModel.create({
-    name: "Casey Vouched",
+    firstName: "Casey",
+    lastName: "Vouched",
     email: VOUCHED_EMAIL,
     password: hashed,
     role: "Subbie",
@@ -91,7 +93,7 @@ async function seedVouched() {
     let voucher = await UserModel.findOne({ email: v.email });
     if (!voucher) {
       voucher = await UserModel.create({
-        name: v.name,
+        ...splitLegacyName(v.name),
         email: v.email,
         password: hashed,
         role: "Builder",

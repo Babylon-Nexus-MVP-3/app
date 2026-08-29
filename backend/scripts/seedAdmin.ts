@@ -40,7 +40,8 @@ async function seedAdmin(): Promise<void> {
 
     const hashedPassword = await hashPassword(ADMIN_PASSWORD);
     await UserModel.create({
-      name: "Platform Admin",
+      firstName: "Platform",
+      lastName: "Admin",
       email,
       password: hashedPassword,
       role: "Admin",

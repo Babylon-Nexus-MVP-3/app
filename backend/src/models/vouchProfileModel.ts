@@ -1,18 +1,27 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { fullName } from "../utils/name";
 
 export interface VouchReference {
-  name: string;
+  firstName: string;
+  lastName: string;
+  /** Derived virtual — `firstName lastName`. Not stored. */
+  readonly name?: string;
+  /** The reference's employer. A business, not a person, so it stays one field. */
   company: string;
-  mobile: string;
-  email?: string;
+  /** Legacy — references are contacted by email now. Kept so older profiles load. */
+  mobile?: string;
+  email: string;
   relationship: string;
   project: string;
 }
 
 export interface VouchProfile extends Document {
   userId: mongoose.Types.ObjectId;
-  // Step 1 — identity
-  name: string;
+  // Step 1 — identity. Mirrored from the user record, never from the request body.
+  firstName: string;
+  lastName: string;
+  /** Derived virtual — `firstName lastName`. Not stored. */
+  readonly name?: string;
   abn: string;
   trade: string;
   idType: "trade-licence";
@@ -31,20 +40,22 @@ export interface VouchProfile extends Document {
 
 const vouchReferenceSchema = new Schema<VouchReference>(
   {
-    name: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, default: "" },
     company: { type: String, required: true },
-    mobile: { type: String, required: true },
-    email: { type: String },
+    mobile: { type: String, default: "" },
+    email: { type: String, required: true },
     relationship: { type: String, required: true },
     project: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: false, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 const vouchProfileSchema = new Schema<VouchProfile>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-    name: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, default: "" },
     abn: { type: String, required: true },
     trade: { type: String, required: true },
     // Trade licence is the only accepted ID — driver's licence and passport were
@@ -58,7 +69,16 @@ const vouchProfileSchema = new Schema<VouchProfile>(
     references: { type: [vouchReferenceSchema], required: true },
     submittedAt: { type: Date, required: true, default: Date.now },
   },
-  { timestamps: true }
+  // Virtuals must be serialised: the composed display name is what live app
+  // builds still read off these documents.
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+const nameGetter = function (this: { firstName?: string; lastName?: string }) {
+  return fullName(this.firstName, this.lastName);
+};
+// Display-only; `.lean()` and `.select()` queries do not return virtuals.
+vouchReferenceSchema.virtual("name").get(nameGetter);
+vouchProfileSchema.virtual("name").get(nameGetter);
 
 export const VouchProfileModel = mongoose.model<VouchProfile>("VouchProfile", vouchProfileSchema);

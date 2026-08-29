@@ -1,18 +1,21 @@
 import { useState } from "react";
-import { Modal, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 
 /**
- * A dropdown backed by the platform's own picker — UIPickerView on iOS,
- * Spinner on Android — rather than a hand-built sheet. Users already know how
- * these behave, which matters more than matching our own styling.
+ * A dropdown rendered entirely in-app rather than by the platform picker.
  *
- * iOS shows the wheel in a sheet with a Done button (a bare inline wheel has
- * no way to confirm); Android opens its native dropdown on tap.
+ * We used to use @react-native-picker/picker here. The app runs with
+ * userInterfaceStyle "automatic", and the native picker draws its rows in the
+ * system label colour — white in dark mode — on top of our hardcoded white
+ * sheet, so the options were invisible on every device in dark mode. Owning the
+ * list means it uses our own tokens and can't be re-themed out from under us.
+ *
+ * One tap opens the sheet, one tap picks a value and closes it — no separate
+ * confirm step, since there's no wheel to scroll past values.
  */
 export function NativeSelect({
   label,
@@ -28,85 +31,67 @@ export function NativeSelect({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  // The wheel reports every value it scrolls past, so iOS holds a draft until
-  // the user confirms.
-  const [draft, setDraft] = useState(value);
-
-  function openPicker() {
-    setDraft(value || options[0]);
-    setOpen(true);
-  }
 
   return (
     <View style={styles.wrap}>
       <AppText style={styles.label}>{label}</AppText>
 
-      {Platform.OS === "ios" ? (
-        <>
-          <TouchableOpacity
-            style={styles.field}
-            onPress={openPicker}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={`${label}: ${value || placeholder}`}
-          >
-            <AppText style={value ? styles.value : styles.placeholder}>
-              {value || placeholder}
-            </AppText>
-            <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
-          </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.field}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value || placeholder}`}
+      >
+        <AppText style={value ? styles.value : styles.placeholder}>{value || placeholder}</AppText>
+        <Ionicons name="chevron-down" size={16} color={Colors.grey500} />
+      </TouchableOpacity>
 
-          <Modal
-            visible={open}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setOpen(false)}
+      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        />
+        <View style={styles.sheet}>
+          <View style={styles.sheetBar}>
+            <TouchableOpacity onPress={() => setOpen(false)} hitSlop={8}>
+              <AppText style={styles.cancel}>Cancel</AppText>
+            </TouchableOpacity>
+            <AppText style={styles.sheetTitle}>{label}</AppText>
+            {/* Balances the bar so the title stays centred. */}
+            <View style={styles.cancelSpacer} />
+          </View>
+
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           >
-            <TouchableOpacity
-              style={styles.backdrop}
-              activeOpacity={1}
-              onPress={() => setOpen(false)}
-            />
-            <View style={styles.sheet}>
-              <View style={styles.sheetBar}>
-                <TouchableOpacity onPress={() => setOpen(false)} hitSlop={8}>
-                  <AppText style={styles.cancel}>Cancel</AppText>
-                </TouchableOpacity>
-                <AppText style={styles.sheetTitle}>{label}</AppText>
+            {options.map((o) => {
+              const selected = o === value;
+              return (
                 <TouchableOpacity
+                  key={o}
+                  style={styles.option}
                   onPress={() => {
-                    onChange(draft);
+                    onChange(o);
                     setOpen(false);
                   }}
-                  hitSlop={8}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
                 >
-                  <AppText style={styles.done}>Done</AppText>
+                  <AppText style={selected ? styles.optionTextSelected : styles.optionText}>
+                    {o}
+                  </AppText>
+                  {selected && <Ionicons name="checkmark" size={18} color={Colors.vouchGreen} />}
                 </TouchableOpacity>
-              </View>
-              <Picker selectedValue={draft} onValueChange={(v) => setDraft(String(v))}>
-                {options.map((o) => (
-                  <Picker.Item key={o} label={o} value={o} />
-                ))}
-              </Picker>
-            </View>
-          </Modal>
-        </>
-      ) : (
-        <View style={styles.field}>
-          <Picker
-            selectedValue={value}
-            onValueChange={(v) => onChange(String(v))}
-            style={styles.androidPicker}
-            dropdownIconColor={Colors.grey500}
-            prompt={label}
-          >
-            <Picker.Item label={placeholder} value="" color={Colors.grey500} />
-            {options.map((o) => (
-              <Picker.Item key={o} label={o} value={o} />
-            ))}
-          </Picker>
+              );
+            })}
+          </ScrollView>
         </View>
-      )}
+      </Modal>
     </View>
   );
 }
@@ -126,10 +111,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   value: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.black },
-  placeholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey300 },
-  androidPicker: { flex: 1, marginHorizontal: -8, color: Colors.black },
+  placeholder: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey500 },
   backdrop: { flex: 1, backgroundColor: Colors.overlay },
-  sheet: { backgroundColor: Colors.white, paddingBottom: 24 },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+    maxHeight: "70%",
+  },
   sheetBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -141,5 +131,18 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 14, fontFamily: Fonts.bold, color: Colors.black },
   cancel: { fontSize: 15, fontFamily: Fonts.regular, color: Colors.grey500 },
-  done: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.vouchGreen },
+  cancelSpacer: { width: 48 },
+  list: { flexGrow: 0 },
+  listContent: { paddingVertical: 4 },
+  option: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  optionText: { flex: 1, fontSize: 16, fontFamily: Fonts.regular, color: Colors.black },
+  optionTextSelected: { flex: 1, fontSize: 16, fontFamily: Fonts.bold, color: Colors.vouchGreen },
 });

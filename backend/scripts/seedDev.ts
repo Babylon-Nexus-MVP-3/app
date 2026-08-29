@@ -23,6 +23,7 @@ import { ProjectParticipantModel } from "../src/models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../src/models/invoiceModel";
 import { EventModel } from "../src/models/eventModel";
 import { getNextSequence } from "../src/models/counterModel";
+import { splitLegacyName } from "../src/utils/name";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -63,7 +64,7 @@ async function seedDev() {
     let user = await UserModel.findOne({ email: u.email });
     if (!user) {
       user = await UserModel.create({
-        name: u.name,
+        ...splitLegacyName(u.name),
         email: u.email,
         password: hashed,
         role: u.role,

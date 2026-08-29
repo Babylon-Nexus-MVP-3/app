@@ -24,6 +24,7 @@ import { AppText } from "@/components/AppText";
 import CircularProgress from "@/components/CircularProgress";
 import { useVouchProfile } from "@/lib/useVouchProfile";
 import { displayRole } from "@/components/project/helpers";
+import { HeaderBand } from "@/components/ScreenHeader";
 
 type Project = {
   id: string;
@@ -155,10 +156,47 @@ export default function Projects() {
     }
   }
 
+  // Portfolio numbers are supporting detail: they ride at the top of the list
+  // so they scroll away with it, leaving the green header bar on its own.
+  const statsBand = (
+    <HeaderBand flush={{ horizontal: 16, top: 22 }} style={styles.statsBand}>
+      <View style={appStyles.statsRow}>
+        <View style={appStyles.statChip}>
+          <AppText style={appStyles.statChipLabel}>{"PORTFOLIO\nHEALTH"}</AppText>
+          <View style={styles.statValueRow}>
+            <AppText style={appStyles.statChipNum}>{avgHealth}%</AppText>
+            <AppText style={appStyles.statChipSuffix}> avg</AppText>
+          </View>
+        </View>
+
+        <View style={appStyles.statChip}>
+          <AppText style={appStyles.statChipLabel}>{"ACTIVE\nPROJECTS"}</AppText>
+          <View style={styles.statValueRow}>
+            <AppText style={appStyles.statChipNum}>{projects.length}</AppText>
+            <AppText style={appStyles.statChipSuffix}> projects</AppText>
+          </View>
+        </View>
+
+        <View style={[appStyles.statChip, totalOverdue > 0 && appStyles.statChipAlert]}>
+          <AppText style={appStyles.statChipLabel}>OVERDUE</AppText>
+          <View style={styles.statValueRow}>
+            <AppText style={[appStyles.statChipNum, totalOverdue > 0 && styles.overdueNum]}>
+              {totalOverdue}
+            </AppText>
+            <AppText style={[appStyles.statChipSuffix, totalOverdue > 0 && styles.overdueNum]}>
+              {" "}
+              invoices
+            </AppText>
+          </View>
+        </View>
+      </View>
+    </HeaderBand>
+  );
+
   return (
     <View style={appStyles.screen}>
       {/* ── Header ── */}
-      <View style={[appStyles.header, styles.headerTaller]}>
+      <View style={[appStyles.header, styles.headerFlat]}>
         <SafeAreaView edges={["top"]}>
           {/* Header row */}
           <View style={[appStyles.headerInner, styles.topRow]}>
@@ -181,38 +219,6 @@ export default function Projects() {
               <Ionicons name="add" size={26} color={Colors.white} />
             </TouchableOpacity>
           </View>
-
-          {/* Stat chips */}
-          <View style={appStyles.statsRow}>
-            <View style={appStyles.statChip}>
-              <AppText style={appStyles.statChipLabel}>{"PORTFOLIO\nHEALTH"}</AppText>
-              <View style={styles.statValueRow}>
-                <AppText style={appStyles.statChipNum}>{avgHealth}%</AppText>
-                <AppText style={appStyles.statChipSuffix}> avg</AppText>
-              </View>
-            </View>
-
-            <View style={appStyles.statChip}>
-              <AppText style={appStyles.statChipLabel}>{"ACTIVE\nPROJECTS"}</AppText>
-              <View style={styles.statValueRow}>
-                <AppText style={appStyles.statChipNum}>{projects.length}</AppText>
-                <AppText style={appStyles.statChipSuffix}> projects</AppText>
-              </View>
-            </View>
-
-            <View style={[appStyles.statChip, totalOverdue > 0 && appStyles.statChipAlert]}>
-              <AppText style={appStyles.statChipLabel}>OVERDUE</AppText>
-              <View style={styles.statValueRow}>
-                <AppText style={[appStyles.statChipNum, totalOverdue > 0 && styles.overdueNum]}>
-                  {totalOverdue}
-                </AppText>
-                <AppText style={[appStyles.statChipSuffix, totalOverdue > 0 && styles.overdueNum]}>
-                  {" "}
-                  invoices
-                </AppText>
-              </View>
-            </View>
-          </View>
         </SafeAreaView>
       </View>
 
@@ -231,7 +237,12 @@ export default function Projects() {
             colors={[Colors.vouchGreen]}
           />
         }
-        ListHeaderComponent={<AppText style={appStyles.sectionLabel}>YOUR PROJECTS</AppText>}
+        ListHeaderComponent={
+          <>
+            {statsBand}
+            <AppText style={appStyles.sectionLabel}>YOUR PROJECTS</AppText>
+          </>
+        }
         ListEmptyComponent={
           projectsLoading ? (
             <ActivityIndicator color={Colors.vouchGreen} style={{ marginTop: 32 }} />
@@ -496,9 +507,10 @@ export default function Projects() {
 }
 
 const styles = StyleSheet.create({
-  headerTaller: {
-    paddingBottom: 16,
-  },
+  // The green block's breathing room lives on the stats row, so it collapses
+  // with them instead of leaving an empty green strip under the title.
+  headerFlat: { paddingBottom: 0 },
+  statsBand: { paddingHorizontal: 0, marginBottom: 22 },
   topRow: {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,

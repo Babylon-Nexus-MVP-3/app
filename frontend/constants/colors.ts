@@ -19,6 +19,8 @@ export const Colors = {
   vouchGreen: "#1B5C38",
   vouchGreenMid: "#2D7A4F",
   vouchGreenLight: "#E8F5EE",
+  vouchGreenDeep: "#0C3220", // darkest stop in the welcome screen gradient
+  vouchGreenAccent: "#7BE0A8", // headline accent + icon glyphs on dark green
   beige: "#F5EFE6",
   black: "#1A1A1A",
   grey100: "#F3F3F3",
@@ -48,6 +50,9 @@ export const Colors = {
   // Overlays & frosted glass (on dark/green backgrounds)
   overlay: "rgba(0,0,0,0.35)",
   whiteGloss: "rgba(255,255,255,0.12)",
+  glassFill: "rgba(255,255,255,0.08)", // frosted card on dark green
+  glassBorder: "rgba(255,255,255,0.16)",
+  glow: "rgba(123,224,168,0.16)", // soft radial bloom behind the hero
   whiteInactive: "rgba(255,255,255,0.4)",
 } as const;
 
