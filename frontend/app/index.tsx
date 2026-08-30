@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
@@ -24,6 +25,27 @@ const PROOF: string[] = [
   "Vouched by the builders and subbies you've worked with",
   "See every invoice on the job move to paid",
 ];
+
+/**
+ * A diffuse disc of light. The softness is a radial gradient, not a blur — see
+ * the call sites for why nothing on this screen may use a BlurView.
+ */
+function Bloom({ id, size, style }: { id: string; size: number; style: ViewStyle }) {
+  return (
+    <View pointerEvents="none" style={[styles.bloom, style, { width: size, height: size }]}>
+      <Svg width={size} height={size}>
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={Colors.vouchGreenAccent} stopOpacity={0.22} />
+            <Stop offset="0.6" stopColor={Colors.vouchGreenAccent} stopOpacity={0.07} />
+            <Stop offset="1" stopColor={Colors.vouchGreenAccent} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width={size} height={size} fill={`url(#${id})`} />
+      </Svg>
+    </View>
+  );
+}
 
 export default function Index() {
   const { user, isLoading } = useAuth();
@@ -53,16 +75,11 @@ export default function Index() {
       style={styles.gradient}
     >
       {/* Soft blooms behind the hero — depth without a background image to ship.
-          The blur sits on top of them so they read as diffuse light, not discs. */}
-      <View pointerEvents="none" style={[styles.bloom, styles.bloomTop]} />
-      <View pointerEvents="none" style={[styles.bloom, styles.bloomBottom]} />
-      <BlurView
-        pointerEvents="none"
-        intensity={60}
-        tint="dark"
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFill}
-      />
+          The falloff is painted into the gradient itself rather than softened by
+          a BlurView on top: Android's blur samples the whole window, so a
+          full-screen one picked up the headline and haloed the white text. */}
+      <Bloom id="bloomTop" size={420} style={styles.bloomTop} />
+      <Bloom id="bloomBottom" size={340} style={styles.bloomBottom} />
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {/* Fixed layout — everything fits one screen, the spacer absorbs the slack. */}
@@ -151,23 +168,9 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  bloom: {
-    position: "absolute",
-    borderRadius: 999,
-    backgroundColor: Colors.glow,
-  },
-  bloomTop: {
-    width: 420,
-    height: 420,
-    top: -150,
-    right: -130,
-  },
-  bloomBottom: {
-    width: 340,
-    height: 340,
-    bottom: -140,
-    left: -120,
-  },
+  bloom: { position: "absolute" },
+  bloomTop: { top: -150, right: -130 },
+  bloomBottom: { bottom: -140, left: -120 },
   safe: { flex: 1 },
   content: {
     flex: 1,

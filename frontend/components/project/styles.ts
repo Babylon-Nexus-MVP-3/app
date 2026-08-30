@@ -425,7 +425,6 @@ export const styles = StyleSheet.create({
   // pushed over the tab bar, so the old fixed 80 left it floating mid-screen.
   fabWrap: { position: "absolute", right: 20, alignItems: "flex-end" },
   fabBackdrop: { ...StyleSheet.absoluteFillObject },
-  fabBackdropAndroid: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
   fabMenu: {
     backgroundColor: Colors.white,
     borderRadius: 16,

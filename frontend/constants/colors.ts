@@ -52,8 +52,11 @@ export const Colors = {
   whiteGloss: "rgba(255,255,255,0.12)",
   glassFill: "rgba(255,255,255,0.08)", // frosted card on dark green
   glassBorder: "rgba(255,255,255,0.16)",
-  glow: "rgba(123,224,168,0.16)", // soft radial bloom behind the hero
   whiteInactive: "rgba(255,255,255,0.4)",
+
+  // Scrims — the Android stand-in where a real blur cannot be drawn (AppBlur)
+  scrimDark: "rgba(0,0,0,0.72)",
+  scrimLight: "rgba(255,255,255,0.72)",
 } as const;
 
 export type ColorKey = keyof typeof Colors;
