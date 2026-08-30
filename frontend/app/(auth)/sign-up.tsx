@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -33,8 +33,6 @@ export default function SignUp() {
   const [mobile, setMobile] = useState("");
   const [abn, setAbn] = useState("");
   const [abnDigits, setAbnDigits] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [businessNameLocked, setBusinessNameLocked] = useState(false);
 
   const [searchMode, setSearchMode] = useState<"abn" | "name">("abn");
   const [nameQuery, setNameQuery] = useState("");
@@ -44,11 +42,14 @@ export default function SignUp() {
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(abnDigits);
 
-  useEffect(() => {
-    if (!businessNameLocked) {
-      setBusinessName(abrResult ? abrResult.tradingName || abrResult.entityName : "");
-    }
-  }, [abrResult, businessNameLocked]);
+  /*
+    Business name is not a field the user fills in — it is whatever the ABR has
+    registered against the ABN, and the server derives it from the ABN again on
+    register rather than trusting anything sent from here. It was an editable
+    box prefilled from the ABR, and people typed their trade over it, so that is
+    what got stored as their business name.
+  */
+  const businessName = abrResult ? abrResult.tradingName || abrResult.entityName : "";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,7 +60,6 @@ export default function SignUp() {
     const digits = text.replace(/\D/g, "").slice(0, 11);
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
-    setBusinessNameLocked(false);
   }
 
   async function onNameSearch() {
@@ -99,8 +99,8 @@ export default function SignUp() {
     const digits = item.abn.replace(/\D/g, "");
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
-    setBusinessName(item.entityName);
-    setBusinessNameLocked(true);
+    // No setBusinessName — picking a search result sets the ABN, and the name
+    // follows from the ABR lookup that ABN triggers.
     setSearchMode("abn");
     setNameResults([]);
     setNameQuery("");
@@ -138,7 +138,6 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
-          ...(businessName.trim() ? { businessName: businessName.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -296,17 +295,11 @@ export default function SignUp() {
           </View>
 
           <AppText style={styles.label}>BUSINESS NAME</AppText>
-          <AppInput
-            style={styles.input}
-            value={businessName}
-            onChangeText={(t) => {
-              setBusinessName(t);
-              setBusinessNameLocked(true);
-            }}
-            placeholder="Your business name"
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
+          <View style={styles.readOnlyField}>
+            <AppText style={businessName ? styles.readOnlyValue : styles.readOnlyPlaceholder}>
+              {businessName || "Set from your ABN"}
+            </AppText>
+          </View>
 
           <AppText style={styles.label}>FIRST NAME</AppText>
           <AppInput
@@ -439,6 +432,27 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 20,
+  },
+  // Business name is derived from the ABN, so it reads as a filled-in fact
+  // rather than an empty box asking to be typed in.
+  readOnlyField: {
+    backgroundColor: Colors.grey100,
+    borderWidth: 1,
+    borderColor: Colors.grey300,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  readOnlyValue: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.black,
+  },
+  readOnlyPlaceholder: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
   },
   passwordRow: {
     marginBottom: 20,

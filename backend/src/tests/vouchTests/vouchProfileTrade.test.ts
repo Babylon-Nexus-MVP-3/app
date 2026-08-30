@@ -43,14 +43,14 @@ async function signedInUser() {
 }
 
 /*
-  Trade used to be asked twice — free text in wizard step 1 and as the licence
-  class in step 2 — and the two answers drifted apart. Step 2 is now the only
-  place it is collected, so these cover the seam that move created: the User's
-  businessTrade must follow tradeType, and step 1 must still be able to complete
-  now that it has no field of its own.
+  Trade used to live in three places — VouchProfile.trade (free text, wizard
+  step 1), VouchProfile.tradeType (licence class, step 2) and User.businessTrade
+  — and they drifted apart, so different screens showed different answers for
+  the same person. There is one field now, User.businessTrade, and these cover
+  the seams that collapse created.
 */
-describe("trade is collected once, in step 2", () => {
-  it("mirrors tradeType onto the user's businessTrade", async () => {
+describe("trade has exactly one home", () => {
+  it("writes businessTrade straight onto the user", async () => {
     const { token, userId } = await signedInUser();
     await UserModel.findByIdAndUpdate(userId, { abn: "12345678901" });
 
@@ -59,7 +59,7 @@ describe("trade is collected once, in step 2", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({
         idType: "trade-licence",
-        tradeType: "Carpentry",
+        businessTrade: "Carpentry",
         idNumber: "BLD123456",
         idExpiry: "01/01/2030",
         idState: "NSW",
@@ -71,7 +71,7 @@ describe("trade is collected once, in step 2", () => {
     expect(user?.businessTrade).toBe("Carpentry");
   });
 
-  it("ignores a `trade` field in the body — it is no longer writable", async () => {
+  it("does not store a copy of the trade on the profile document", async () => {
     const { token, userId } = await signedInUser();
     await UserModel.findByIdAndUpdate(userId, { abn: "12345678901" });
 
@@ -80,8 +80,10 @@ describe("trade is collected once, in step 2", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({
         idType: "trade-licence",
-        tradeType: "Plumbing",
+        businessTrade: "Plumbing",
+        // Both retired fields — neither may be written back onto the profile.
         trade: "Carpentry",
+        tradeType: "Roofing",
         idNumber: "BLD123456",
         idExpiry: "01/01/2030",
         idState: "NSW",
@@ -89,11 +91,35 @@ describe("trade is collected once, in step 2", () => {
       });
 
     expect(res.status).toBe(201);
-    const profile = await VouchProfileModel.findOne({ userId }).lean();
-    expect(profile?.tradeType).toBe("Plumbing");
+    // Cast through unknown: the retired fields are gone from the type, and the
+    // point of this assertion is that they are gone from the document too.
+    const profile = (await VouchProfileModel.findOne({ userId }).lean()) as unknown as Record<
+      string,
+      unknown
+    > | null;
     expect(profile?.trade).toBeUndefined();
+    expect(profile?.tradeType).toBeUndefined();
     const user = await UserModel.findById(userId).lean();
     expect(user?.businessTrade).toBe("Plumbing");
+  });
+
+  it("serves businessTrade from GET /vouch/profile/me so the wizard can rehydrate", async () => {
+    const { token, userId } = await signedInUser();
+    await UserModel.findByIdAndUpdate(userId, { abn: "12345678901" });
+
+    await request(app).post("/vouch/profile").set("Authorization", `Bearer ${token}`).send({
+      idType: "trade-licence",
+      businessTrade: "Tiling",
+      idNumber: "BLD123456",
+      idExpiry: "01/01/2030",
+      idState: "NSW",
+      references: [],
+    });
+
+    const res = await request(app).get("/vouch/profile/me").set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.businessTrade).toBe("Tiling");
   });
 });
 

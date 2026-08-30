@@ -165,7 +165,6 @@ vouchRouter.post(
         "lastName",
         "abn",
         "idType",
-        "tradeType",
         "idNumber",
         "idExpiry",
         "idState",
@@ -317,16 +316,15 @@ vouchRouter.post(
         await UserModel.findByIdAndUpdate(userId, { abn: body.abn });
       }
 
-      // Trade is collected once, as step 2's licence class, and mirrored onto
-      // the User document as businessTrade — the copy every other screen reads.
-      // Step 1's free-text "trade / business type" box used to be a second,
-      // independent answer to the same question, so the Me card and the wizard
-      // could disagree about what the user does. There is only one field now.
+      // Trade has exactly one home: User.businessTrade. It is collected on the
+      // licence step and written straight through — the VouchProfile document
+      // does not carry a copy, because when it carried two they drifted and the
+      // Me card and the wizard showed different answers for the same person.
       //
-      // It is deliberately not written into businessName: that is the ABR
-      // entity name, not the trade.
-      if (body.tradeType) {
-        await UserModel.findByIdAndUpdate(userId, { businessTrade: body.tradeType });
+      // It is deliberately not written into businessName: that is the registered
+      // ABR name, derived from the ABN, not the trade.
+      if (body.businessTrade) {
+        await UserModel.findByIdAndUpdate(userId, { businessTrade: body.businessTrade });
       }
 
       res.status(201).json(profile);
@@ -343,15 +341,22 @@ vouchRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.sub;
-      const [profile, completion] = await Promise.all([
+      const [profile, completion, dbUser] = await Promise.all([
         VouchProfileModel.findOne({ userId }),
         getProfileCompletion(userId),
+        UserModel.findById(userId).select("businessTrade").lean(),
       ]);
 
       // stepsLeft and isComplete ship alongside the percentage so clients never
       // have to reverse-engineer either one from profileStrength.
+      //
+      // businessTrade rides along from the User document. It is not stored on
+      // the profile — there is one copy of the trade — but the wizard needs it
+      // to rehydrate its form, and this is the endpoint the wizard already
+      // calls.
       res.status(200).json({
         ...(profile ? profile.toObject() : {}),
+        businessTrade: dbUser?.businessTrade ?? "",
         profileStrength: completion.profileStrength,
         stepsDone: completion.stepsDone,
         stepsLeft: completion.stepsLeft,
@@ -721,7 +726,7 @@ vouchRouter.post(
       }
 
       const giver = await UserModel.findById(userId)
-        .select("email mobile abn firstName lastName businessName businessTrade")
+        .select("email mobile abn firstName lastName businessName")
         .lean();
 
       // Giving a vouch puts your name behind someone else's work, so the giver

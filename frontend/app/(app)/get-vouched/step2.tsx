@@ -55,7 +55,7 @@ function Field({
 }
 
 export default function Step5() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, updateUser } = useAuth();
   const { step1, setStep1 } = useWizard();
 
   const [form, setForm] = useState(step1);
@@ -88,11 +88,10 @@ export default function Step5() {
 
   const expiryInvalid = form.idExpiry.length >= 10 && !isExpiryValid(form.idExpiry);
 
-  // Trade type is required here because this screen is now the only place the
-  // app asks what someone does — it is what the Me card and every vouch profile
-  // display. Letting it save empty would leave the trade blank with no second
-  // field to fall back on.
-  const canContinue = form.idNumber.trim() && form.tradeType.trim() && !expiryInvalid;
+  // Trade is required here because this screen is the only place the app asks
+  // what someone does — it is what the Me card and every vouch profile display.
+  // There is no second field to fall back on if it saves empty.
+  const canContinue = form.idNumber.trim() && form.businessTrade.trim() && !expiryInvalid;
 
   async function onSave() {
     setStep1(form);
@@ -106,6 +105,10 @@ export default function Step5() {
       showAlert("Couldn't save", error);
       return;
     }
+    // The server has stored the trade on the user record; mirror it into the
+    // cached auth user so screens reading user.businessTrade don't show the
+    // previous value until the next cold start.
+    await updateUser({ businessTrade: form.businessTrade });
     router.back();
   }
 
@@ -138,10 +141,10 @@ export default function Step5() {
 
             <NativeSelect
               label="TRADE"
-              value={form.tradeType}
+              value={form.businessTrade}
               options={[...TRADE_TYPES]}
               placeholder="Select your trade"
-              onChange={(v) => update("tradeType", v)}
+              onChange={(v) => update("businessTrade", v)}
             />
 
             <NativeSelect

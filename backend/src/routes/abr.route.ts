@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { abrLookupLimiter } from "../middleware";
+import { lookupAbn, AbrCancelledError, AbrNotFoundError } from "../service/abr.service";
 
 export const abrRouter = express.Router();
 
@@ -14,55 +15,17 @@ abrRouter.get("/lookup", abrLookupLimiter, async (req: Request, res: Response) =
     return;
   }
 
-  const guid = process.env.ABR_GUID;
-
-  if (!guid) {
-    res.status(503).json({ error: "ABN lookup not configured" });
-    return;
-  }
-
   try {
-    const url = `https://abn.business.gov.au/json/AbnDetails.aspx?abn=${abn}&guid=${guid}`;
-    const upstream = await fetch(url);
-    if (!upstream.ok) throw new Error("ABR upstream error");
-
-    // ABR returns JSONP: `allback({...})` — strip the wrapper before parsing
-    const text = await upstream.text();
-    const jsonStr = text.replace(/^[^(]+\(/, "").replace(/\)\s*$/, "");
-    const raw = JSON.parse(jsonStr);
-
-    // The ABR JSON API returns EntityTypeCode + EntityTypeName, main + trading names
-    if (raw.AbnStatus === "Cancelled") {
+    res.status(200).json(await lookupAbn(abn));
+  } catch (err) {
+    if (err instanceof AbrCancelledError) {
       res.status(410).json({ error: "ABN cancelled" });
       return;
     }
-    if (raw.AbnStatus !== "Active") {
+    if (err instanceof AbrNotFoundError) {
       res.status(404).json({ error: "ABN not found" });
       return;
     }
-
-    const entityName: string =
-      raw.EntityName ||
-      [raw.LegalName?.GivenName, raw.LegalName?.FamilyName].filter(Boolean).join(" ") ||
-      "Unknown";
-
-    const tradingName: string | undefined = raw.BusinessName?.[0]?.OrganisationName || undefined;
-
-    const registeredDate: string = raw.AbnStatusEffectiveFrom ?? "";
-    const startYear = registeredDate ? parseInt(registeredDate.slice(0, 4), 10) : null;
-    const activeYears = startYear ? new Date().getFullYear() - startYear : 0;
-
-    const state: string = raw.MainBusinessPhysicalAddress?.[0]?.StateCode ?? "";
-
-    res.status(200).json({
-      entityName,
-      tradingName,
-      businessType: raw.EntityTypeName ?? raw.EntityTypeCode ?? "Business",
-      state,
-      activeYears,
-      isActive: true,
-    });
-  } catch {
     res.status(503).json({ error: "ABR lookup temporarily unavailable" });
   }
 });
