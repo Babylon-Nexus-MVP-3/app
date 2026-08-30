@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/constants/colors";
@@ -45,6 +45,8 @@ export default function VouchMyProjectScreen() {
   const featuresEntrance = useEntrance(STAGGER, reduceMotion);
   const noteEntrance = useEntrance(STAGGER * 2, reduceMotion);
   const ctaPress = usePressScale(reduceMotion, 0.97);
+  // No tab bar under this screen, so the CTA has to clear the home indicator itself.
+  const insets = useSafeAreaInsets();
 
   // Treat "not yet known" as unlocked: claiming it's locked and then undoing
   // that a moment later reads as the app changing its mind.
@@ -114,7 +116,7 @@ export default function VouchMyProjectScreen() {
 
       {/* The button always does something: create the project, or go finish
           the profile that's blocking it. */}
-      <View style={styles.ctaContainer}>
+      <View style={[styles.ctaContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <Animated.View style={{ transform: [{ scale: ctaPress.scale }] }}>
           <TouchableOpacity
             style={styles.ctaButton}
@@ -229,7 +231,6 @@ const styles = StyleSheet.create({
   ctaContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
     backgroundColor: Colors.white,
   },
   ctaButton: {
