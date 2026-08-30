@@ -1,13 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -16,7 +8,6 @@ import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
-import { AppInput } from "@/components/AppInput";
 import { AbrCard } from "@/components/AbrCard";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
@@ -35,50 +26,38 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function Step1() {
-  const { user, fetchWithAuth, updateUser } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { step1, setStep1 } = useWizard();
 
-  const [trade, setTrade] = useState(step1.trade || user?.businessTrade || "");
   const [saving, setSaving] = useState(false);
-  const syncedRef = useRef(false);
-
-  // WizardContext fetch is async — sync once it resolves, preferring the saved vouch profile value
-  useEffect(() => {
-    if (!syncedRef.current && step1.trade) {
-      setTrade(step1.trade);
-      syncedRef.current = true;
-    }
-  }, [step1.trade]);
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(
     user?.abn?.replace(/\D/g, "") ?? step1.abn
   );
 
-  function persistTrade(currentTrade: string) {
-    const updatedStep1 = {
+  /*
+    Everything on this step comes from the account itself, so there is nothing
+    to type. It used to carry a free-text "trade / business type" box, which was
+    a second, independent answer to the question step 2 already asks as the
+    licence class — the two drifted, and the Me card showed one while the wizard
+    showed the other. Trade is asked once, in step 2.
+  */
+  function currentDetails() {
+    const updated = {
       ...step1,
       firstName: user?.firstName ?? step1.firstName,
       lastName: user?.lastName ?? step1.lastName,
       abn: (user?.abn ?? step1.abn).replace(/\D/g, ""),
-      trade: currentTrade,
     };
-    setStep1(updatedStep1);
-    if (currentTrade !== user?.businessTrade) {
-      updateUser({ businessTrade: currentTrade });
-    }
-    return updatedStep1;
-  }
-
-  function handleBack() {
-    if (trade.trim()) persistTrade(trade);
-    router.back();
+    setStep1(updated);
+    return updated;
   }
 
   async function onSave() {
-    const updatedStep1 = persistTrade(trade);
+    const updated = currentDetails();
     setSaving(true);
     const error = await saveVouchProfileStep(fetchWithAuth, {
-      ...updatedStep1,
+      ...updated,
       references: [],
     });
     setSaving(false);
@@ -90,74 +69,55 @@ export default function Step1() {
     router.back();
   }
 
-  const canSave = trade.trim().length > 0;
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScreenHeader
         showBack
-        onBack={handleBack}
         eyebrow="Step 1 of 2"
         title="Your details"
-        subtitle="Who you are and what you do."
+        subtitle="Confirm the details on your account."
       />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <ScrollView
+        style={sheetStyle.sheet}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={sheetStyle.sheet}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <SectionLabel>From your account</SectionLabel>
-          <View style={styles.detailsCard}>
-            <InfoRow
-              label="NAME"
-              value={
-                fullName(user?.firstName, user?.lastName) ||
-                fullName(step1.firstName, step1.lastName)
-              }
-            />
-            <View style={styles.divider} />
-            <InfoRow label="ABN" value={formatAbn((user?.abn ?? step1.abn).replace(/\D/g, ""))} />
-            {(abrResult || abrLoading || abrError) && (
-              <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
-            )}
-            <View style={styles.divider} />
-            <InfoRow label="BUSINESS NAME" value={user?.businessName ?? ""} />
-            <View style={styles.lockNote}>
-              <Ionicons name="lock-closed-outline" size={12} color={Colors.grey500} />
-              <AppText style={styles.lockText}>
-                Name and ABN are locked to your account details.
-              </AppText>
-            </View>
-          </View>
-
-          <SectionLabel>What do you do?</SectionLabel>
-          <AppText style={styles.fieldLabel}>TRADE / BUSINESS TYPE</AppText>
-          <AppInput
-            style={styles.input}
-            value={trade}
-            onChangeText={setTrade}
-            placeholder="e.g. Plumbing, Electrical, Carpentry"
-            autoCapitalize="words"
-            autoCorrect={false}
+        <SectionLabel>From your account</SectionLabel>
+        <View style={styles.detailsCard}>
+          <InfoRow
+            label="NAME"
+            value={
+              fullName(user?.firstName, user?.lastName) || fullName(step1.firstName, step1.lastName)
+            }
           />
-          <AppText style={styles.fieldHint}>
-            This helps people understand what you do when they view your vouch profile.
-          </AppText>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.divider} />
+          <InfoRow label="ABN" value={formatAbn((user?.abn ?? step1.abn).replace(/\D/g, ""))} />
+          {(abrResult || abrLoading || abrError) && (
+            <AbrCard abrResult={abrResult} abrLoading={abrLoading} abrError={abrError} />
+          )}
+          <View style={styles.divider} />
+          <InfoRow label="BUSINESS NAME" value={user?.businessName ?? ""} />
+          <View style={styles.lockNote}>
+            <Ionicons name="lock-closed-outline" size={12} color={Colors.grey500} />
+            <AppText style={styles.lockText}>
+              Name and ABN are locked to your account details.
+            </AppText>
+          </View>
+        </View>
+
+        <AppText style={styles.fieldHint}>
+          Your trade is set on the next step, alongside your licence.
+        </AppText>
+      </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, (!canSave || saving) && styles.primaryBtnDisabled]}
+          style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
           onPress={onSave}
-          disabled={!canSave || saving}
+          disabled={saving}
           activeOpacity={0.85}
-          accessibilityState={{ disabled: !canSave || saving, busy: saving }}
+          accessibilityState={{ disabled: saving, busy: saving }}
         >
           {saving ? (
             <ActivityIndicator size="small" color={Colors.white} />
@@ -193,16 +153,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: Colors.grey300, marginVertical: 4 },
   lockNote: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
   lockText: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500 },
-  fieldLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.bold,
-    color: Colors.black,
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  input: {
-    marginBottom: 8,
-  },
   fieldHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.grey500, lineHeight: 18 },
   footer: {
     paddingHorizontal: 16,

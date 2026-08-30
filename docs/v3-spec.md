@@ -183,7 +183,12 @@ Three tappable action cards. Logic:
 ## 6. Get Vouched — 3-step wizard
 
 ### Step 1 — Your details
-Pre-filled from sign-up: name, ABN, trade. User confirms or edits.
+Pre-filled from sign-up: name, ABN. User confirms; nothing here is editable.
+
+> **Shipped:** trade is *not* on this step. It is asked once, on the trade
+> licence step, as `tradeType` picked from a fixed list, and mirrored onto
+> `User.businessTrade`. It was briefly asked in both places and the two answers
+> drifted. See the Trade rule in `CLAUDE.md`.
 
 ### Step 2 — Your project
 **Current project** (required): name, address, suburb, state, postcode, value (private)
@@ -204,7 +209,7 @@ VouchProfile {
   userId: ObjectId
   name: string
   abn: string
-  trade: string
+  trade: string        // RETIRED — see the note on step 1; use tradeType
   currentProject: {
     name: string
     address: string
