@@ -5,7 +5,6 @@ import {
   Image,
   Linking,
   Modal,
-  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -14,7 +13,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -23,6 +21,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
 import { AppText } from "@/components/AppText";
+import { AppBlur } from "@/components/AppBlur";
 import { Pill, SectionLabel } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
@@ -292,11 +291,9 @@ export default function MeScreen() {
           onRequestClose={closeCardModal}
         >
           <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropAnim }]}>
-            {Platform.OS === "ios" ? (
-              <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
-            ) : (
-              <View style={styles.modalBackdropAndroid} />
-            )}
+            {/* inModal: an Android modal is its own window, so a real blur has
+                nothing behind it to sample — AppBlur draws a scrim there. */}
+            <AppBlur inModal intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
           </Animated.View>
           <TouchableWithoutFeedback onPress={closeCardModal}>
             <View style={StyleSheet.absoluteFillObject} />
@@ -884,10 +881,6 @@ const styles = StyleSheet.create({
   },
 
   // Modal
-  modalBackdropAndroid: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.72)",
-  },
   modalContent: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",

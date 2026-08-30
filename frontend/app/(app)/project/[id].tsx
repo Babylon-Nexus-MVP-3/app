@@ -1,7 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
-import { BlurView } from "expo-blur";
 import {
   ActivityIndicator,
   Animated,
@@ -24,6 +23,7 @@ import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { useReduceMotion } from "@/lib/motion";
 import { AppText } from "@/components/AppText";
+import { AppBlur } from "@/components/AppBlur";
 import {
   ApiInvoice,
   InvoiceActionType,
@@ -433,13 +433,9 @@ export default function ProjectDetail() {
                 accessibilityLabel="Close menu"
               >
                 {/* Blur pushes the page back so the menu reads as a layer above
-                  it. Android gets a plain scrim — BlurView is expensive there
-                  and falls back to a flat colour anyway. */}
-                {Platform.OS === "ios" ? (
-                  <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-                ) : (
-                  <View style={styles.fabBackdropAndroid} />
-                )}
+                  it. This one lives in the screen's own view tree, so the
+                  Android blur is real rather than a scrim. */}
+                <AppBlur intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
               </TouchableOpacity>
             </Animated.View>
           )}
