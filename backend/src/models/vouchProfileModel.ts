@@ -23,15 +23,12 @@ export interface VouchProfile extends Document {
   /** Derived virtual — `firstName lastName`. Not stored. */
   readonly name?: string;
   abn: string;
-  /**
-   * @deprecated Legacy free-text business trade from the old wizard step 1.
-   * `tradeType` is the single source of truth for a user's trade — nothing
-   * writes this any more. Kept only so pre-existing documents still read back.
-   */
-  trade?: string;
+  // Trade is deliberately NOT here. It lives on the User document as
+  // `businessTrade` — one field, one home. This model briefly carried two of
+  // its own (`trade`, free text from wizard step 1, and `tradeType`, a licence
+  // class from step 2) which drifted apart and showed different answers on
+  // different screens. Both are gone; scripts/mergeTrade.ts folded them in.
   idType: "trade-licence";
-  /** The user's trade, picked from a fixed list. The one source of truth. */
-  tradeType: string;
   idNumber: string;
   idExpiry: string;
   /** State that issued the licence. */
@@ -62,14 +59,10 @@ const vouchProfileSchema = new Schema<VouchProfile>(
     firstName: { type: String, required: true },
     lastName: { type: String, default: "" },
     abn: { type: String, required: true },
-    // Deprecated — see the interface. Was `required` while step 1 collected it;
-    // leaving it required would reject every save now that nothing sends it.
-    trade: { type: String },
     // Trade licence is the only accepted ID — driver's licence and passport were
     // removed to simplify verification. Legacy documents may still hold the old
     // values; nothing revalidates them, and any save from the app overwrites them.
     idType: { type: String, enum: ["trade-licence"], default: "trade-licence", required: true },
-    tradeType: { type: String, default: "" },
     idNumber: { type: String, required: true },
     idExpiry: { type: String, required: true },
     idState: { type: String, default: "" },

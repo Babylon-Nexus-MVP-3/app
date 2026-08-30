@@ -44,10 +44,12 @@ export default function AddAbn() {
     setLoading(true);
     setError("");
     try {
+      // The server derives businessName from the ABN itself, so it is not sent.
+      // Kept locally only to update the cached auth user below.
       const businessName = abrResult?.tradingName || abrResult?.entityName;
       const res = await fetchWithAuth(`${API_BASE_URL}/auth/profile`, {
         method: "PATCH",
-        body: JSON.stringify({ abn: abnDigits, businessName }),
+        body: JSON.stringify({ abn: abnDigits }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

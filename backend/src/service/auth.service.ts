@@ -29,6 +29,7 @@ import {
 import { JwtPayload } from "../middleware";
 import { VouchRequestModel } from "../models/vouchRequestModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
+import { businessNameForAbn } from "./abr.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -93,6 +94,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
   }
   const { code, expiry } = generateCode();
   const hashedPassword = await hashPassword(input.password);
+  const derivedBusinessName = input.abn ? await businessNameForAbn(input.abn) : null;
   // Build new user document with default security state (locked: false, no tokens, unverified)
   const newUser = new UserModel({
     firstName: sanitizedFirstName,
@@ -108,7 +110,12 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
     accountExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete after 24h if unverified
     ...(input.mobile ? { mobile: input.mobile } : {}),
     ...(input.abn ? { abn: input.abn } : {}),
-    ...(input.businessName ? { businessName: input.businessName } : {}),
+    // businessName is derived from the ABN, never taken from the request body.
+    // The sign-up screen prefills it from the ABR but the box used to be
+    // editable, so people typed their trade or a nickname over it and that is
+    // what got stored. A null here means the ABR could not answer right now —
+    // registration carries on without it rather than failing on an outage.
+    ...(derivedBusinessName ? { businessName: derivedBusinessName } : {}),
   });
 
   await newUser.save();
@@ -170,14 +177,21 @@ export async function getMe(userId: string): Promise<SafeUser> {
   return toSafeUser(user);
 }
 
+/*
+  Updates the ABN, and with it the business name.
+
+  businessName is not accepted from the caller — it is looked up from the ABN so
+  the stored name is always the registered one. The parameter is still declared
+  so existing clients posting it get a clean ignore rather than a 400.
+*/
 export async function updateProfile(
   userId: string,
   patch: { abn?: string; businessName?: string }
 ): Promise<void> {
-  const update: Record<string, string> = {};
-  if (patch.abn) update.abn = patch.abn;
-  if (patch.businessName) update.businessName = patch.businessName;
-  if (!Object.keys(update).length) return;
+  if (!patch.abn) return;
+  const update: Record<string, string> = { abn: patch.abn };
+  const derived = await businessNameForAbn(patch.abn);
+  if (derived) update.businessName = derived;
   await UserModel.findByIdAndUpdate(userId, { $set: update });
 }
 
@@ -746,15 +760,18 @@ export async function requestOtp(input: RequestOtpInput): Promise<{ code?: strin
       );
     }
 
+    // Same rule as registerUser: the name comes from the ABN, not the caller.
+    const otpBusinessName = await businessNameForAbn(input.abn);
+
     const updateData: Record<string, unknown> = {
       firstName: input.firstName.trim(),
       lastName: input.lastName?.trim() ?? "",
       abn: input.abn,
-      businessName: input.businessName,
       status: "Pending",
       loginAttempts: 0,
       accountLocked: false,
     };
+    if (otpBusinessName) updateData.businessName = otpBusinessName;
     if (input.email) updateData.email = input.email.toLowerCase().trim();
 
     await UserModel.findOneAndUpdate({ mobile: au04 }, { $set: updateData }, { upsert: true });

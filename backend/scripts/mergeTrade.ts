@@ -1,38 +1,43 @@
 /**
- * One-off migration: collapse the two trade fields into one.
+ * One-off migration: collapse three trade fields into one, and repair business
+ * names that were typed rather than looked up.
  *
- * Trade used to be asked twice — free text as `vouchprofiles.trade` in wizard
- * step 1, and as the licence class `vouchprofiles.tradeType` in step 2. The two
- * answers drifted, so the Me card and the wizard could show different trades for
- * the same person. `tradeType` is now the only field the app collects or reads.
+ * Trade used to live in three places that drifted apart, so different screens
+ * showed different answers for the same person:
  *
- *   vouchprofiles.trade  -> vouchprofiles.tradeType   (when tradeType is empty)
- *   vouchprofiles.tradeType -> users.businessTrade    (the copy screens read)
+ *   vouchprofiles.trade      free text from the old wizard step 1
+ *   vouchprofiles.tradeType  a licence class picked in step 2
+ *   users.businessTrade      the copy the Me card reads
  *
- * A legacy `trade` is free text, so it is only carried over when it matches one
- * of TRADE_TYPES case-insensitively. Anything else is left for the user to pick
- * again — a select cannot render a value that is not one of its options, and a
- * blank that looks like a bug is worse than one question.
+ * `users.businessTrade` is now the only one. This folds the other two into it
+ * in precedence order — tradeType, then trade, then whatever businessTrade
+ * already held — and then unsets both profile-level copies.
  *
- * `users.businessTrade` is only filled where it is empty. Where it already holds
- * something that disagrees with tradeType, the disagreement is reported and left
- * alone: that is the very drift this merge is about, and which of the two the
- * user meant is not ours to guess. Re-run with --prefer-trade-type to overwrite
- * those once you have looked at the list.
+ * tradeType wins because it was picked from a fixed list on the licence step,
+ * which is a more deliberate answer than free text typed into a box. A legacy
+ * `trade` is only used when it matches one of TRADE_TYPES case-insensitively;
+ * anything else (a business name, a typo) loses to whatever businessTrade holds,
+ * and if that is empty too the user is asked once on their next visit.
  *
- * Idempotent, and leaves `trade` in place rather than unsetting it, so a
- * rollback to the previous build still works. Drop the field in a follow-up once
- * the new build is confirmed live.
+ * The second half repairs users.businessName. It was an editable box on sign-up
+ * prefilled from the ABR, so people typed over it and stored a trade or a
+ * nickname as their business name. The server now derives it from the ABN; this
+ * backfills the records created before that. Each repair costs one ABR call, so
+ * it is throttled and off by default — pass --fix-business-names.
  *
- * Run with:  npm run migrate:merge-trade        (add --apply to write)
+ * Idempotent. Run with:
+ *   npm run migrate:merge-trade                        dry run, trade only
+ *   npm run migrate:merge-trade -- --apply             write
+ *   npm run migrate:merge-trade -- --fix-business-names --apply
  */
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import { businessNameForAbn } from "../src/service/abr.service";
 
 dotenv.config();
 
 const APPLY = process.argv.includes("--apply");
-const PREFER_TRADE_TYPE = process.argv.includes("--prefer-trade-type");
+const FIX_BUSINESS_NAMES = process.argv.includes("--fix-business-names");
 
 // Mirrors frontend/constants/trades.ts. Kept as its own copy so this script has
 // no cross-package import; if the list changes there, change it here too.
@@ -61,83 +66,107 @@ function matchTradeType(legacy: unknown): string {
   return TRADE_TYPES.find((t) => t.toLowerCase() === needle) ?? "";
 }
 
-/** Step 1: fill an empty tradeType from the retired free-text trade. */
-async function fillTradeType(db: mongoose.mongo.Db): Promise<void> {
-  const coll = db.collection("vouchprofiles");
-  const cursor = coll.find({
-    trade: { $exists: true, $nin: ["", null] },
-    $or: [{ tradeType: { $exists: false } }, { tradeType: "" }],
+/*
+  Folds the two profile-level trade copies onto users.businessTrade, then unsets
+  them so there is only one field left.
+*/
+async function collapseTrade(db: mongoose.mongo.Db): Promise<void> {
+  const profiles = db.collection("vouchprofiles");
+  const users = db.collection("users");
+  const cursor = profiles.find({
+    $or: [{ trade: { $exists: true } }, { tradeType: { $exists: true } }],
   });
 
   let seen = 0;
-  let written = 0;
-  const unmatched: string[] = [];
+  let userUpdates = 0;
+  let unset = 0;
+  const changes: string[] = [];
+  const stillBlank: string[] = [];
 
   for await (const doc of cursor) {
     seen += 1;
-    const matched = matchTradeType(doc.trade);
-    if (!matched) {
-      if (unmatched.length < 10) unmatched.push(String(doc.trade));
-      continue;
-    }
-    if (APPLY) await coll.updateOne({ _id: doc._id }, { $set: { tradeType: matched } });
-    written += 1;
-  }
-
-  console.log(
-    `vouchprofiles.trade -> tradeType: ${seen} candidates, ${written} ${APPLY ? "updated" : "would update"}`
-  );
-  if (unmatched.length) {
-    console.log(`    ${unmatched.length}+ free-text values matched no option, left for the user:`);
-    unmatched.forEach((u) => console.log(`      "${u}"`));
-  }
-}
-
-/** Step 2: mirror tradeType onto the User record every screen reads. */
-async function syncBusinessTrade(db: mongoose.mongo.Db): Promise<void> {
-  const profiles = db.collection("vouchprofiles");
-  const users = db.collection("users");
-  const cursor = profiles.find({ tradeType: { $exists: true, $nin: ["", null] } });
-
-  let filled = 0;
-  let overwritten = 0;
-  const conflicts: string[] = [];
-
-  for await (const doc of cursor) {
-    const tradeType = String(doc.tradeType);
     const user = await users.findOne(
       { _id: new mongoose.Types.ObjectId(String(doc.userId)) },
       { projection: { businessTrade: 1, email: 1 } }
     );
-    if (!user) continue;
 
-    const current = typeof user.businessTrade === "string" ? user.businessTrade.trim() : "";
-    if (current === tradeType) continue;
+    const current = typeof user?.businessTrade === "string" ? user.businessTrade.trim() : "";
+    // Precedence: the fixed-list pick beats free text, which beats whatever the
+    // mirror already held. A free-text value only counts if it maps to an option.
+    const resolved = String(doc.tradeType ?? "").trim() || matchTradeType(doc.trade) || current;
 
-    if (current && !PREFER_TRADE_TYPE) {
-      if (conflicts.length < 20) {
-        conflicts.push(`${user.email}: businessTrade "${current}" vs tradeType "${tradeType}"`);
+    if (user && resolved && resolved !== current) {
+      if (changes.length < 20) {
+        changes.push(`${user.email}: "${current || "(empty)"}" -> "${resolved}"`);
       }
-      continue;
+      if (APPLY) {
+        await users.updateOne({ _id: user._id }, { $set: { businessTrade: resolved } });
+      }
+      userUpdates += 1;
+    }
+
+    if (user && !resolved && stillBlank.length < 20) {
+      stillBlank.push(`${user.email}: trade "${doc.trade ?? ""}" matched no option`);
     }
 
     if (APPLY) {
-      await users.updateOne({ _id: user._id }, { $set: { businessTrade: tradeType } });
+      await profiles.updateOne({ _id: doc._id }, { $unset: { trade: "", tradeType: "" } });
     }
-    if (current) overwritten += 1;
-    else filled += 1;
+    unset += 1;
   }
 
-  console.log(
-    `users.businessTrade: ${filled} empty ${APPLY ? "filled" : "would fill"}, ` +
-      `${overwritten} conflicting ${APPLY ? "overwritten" : "would overwrite"}`
-  );
-  if (conflicts.length) {
-    console.log(
-      `    ${conflicts.length} disagree and were left alone — re-run with --prefer-trade-type to take tradeType:`
-    );
-    conflicts.forEach((c) => console.log(`      ${c}`));
+  console.log(`vouchprofiles with a trade copy: ${seen}`);
+  console.log(`  users.businessTrade: ${userUpdates} ${APPLY ? "updated" : "would update"}`);
+  changes.forEach((c) => console.log(`      ${c}`));
+  console.log(`  profile copies: ${unset} ${APPLY ? "unset" : "would unset"}`);
+  if (stillBlank.length) {
+    console.log(`  ${stillBlank.length} left with no trade — they pick one on next visit:`);
+    stillBlank.forEach((b) => console.log(`      ${b}`));
   }
+}
+
+/*
+  Repairs users.businessName from the ABR.
+
+  One HTTP call per user, so it is sequential with a small delay rather than
+  parallel — this is a background repair, not something anyone is waiting on,
+  and the ABR is a shared public service.
+*/
+async function fixBusinessNames(db: mongoose.mongo.Db): Promise<void> {
+  const users = db.collection("users");
+  const cursor = users.find(
+    { abn: { $exists: true, $nin: ["", null] } },
+    { projection: { abn: 1, email: 1, businessName: 1 } }
+  );
+
+  let checked = 0;
+  let wrong = 0;
+  let unreachable = 0;
+  const fixes: string[] = [];
+
+  for await (const user of cursor) {
+    checked += 1;
+    const registered = await businessNameForAbn(String(user.abn));
+    if (!registered) {
+      unreachable += 1;
+      continue;
+    }
+    const current = typeof user.businessName === "string" ? user.businessName.trim() : "";
+    if (current === registered) continue;
+
+    wrong += 1;
+    if (fixes.length < 30)
+      fixes.push(`${user.email}: "${current || "(empty)"}" -> "${registered}"`);
+    if (APPLY) {
+      await users.updateOne({ _id: user._id }, { $set: { businessName: registered } });
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  console.log(`users with an ABN: ${checked}`);
+  console.log(`  businessName: ${wrong} ${APPLY ? "corrected" : "would correct"}`);
+  fixes.forEach((f) => console.log(`      ${f}`));
+  if (unreachable) console.log(`  ${unreachable} skipped — ABR could not answer`);
 }
 
 async function main(): Promise<void> {
@@ -148,9 +177,12 @@ async function main(): Promise<void> {
   if (!db) throw new Error("No database handle");
 
   console.log(APPLY ? "APPLYING changes" : "DRY RUN — pass --apply to write");
-  if (PREFER_TRADE_TYPE) console.log("Conflicts will be resolved in favour of tradeType");
-  await fillTradeType(db);
-  await syncBusinessTrade(db);
+  await collapseTrade(db);
+  if (FIX_BUSINESS_NAMES) {
+    await fixBusinessNames(db);
+  } else {
+    console.log("businessName repair skipped — pass --fix-business-names to include it");
+  }
 
   await mongoose.disconnect();
 }

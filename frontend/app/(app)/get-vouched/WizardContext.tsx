@@ -10,8 +10,12 @@ export type Step1Data = {
   lastName: string;
   abn: string;
   idType: "trade-licence";
-  /** What the user does, picked from TRADE_TYPES. Asked once, in step 2. */
-  tradeType: string;
+  /**
+   * What the user does, picked from TRADE_TYPES. Mirrors User.businessTrade —
+   * the single stored copy — and is served by GET /vouch/profile/me alongside
+   * the profile document.
+   */
+  businessTrade: string;
   idNumber: string;
   idExpiry: string;
   idState: string;
@@ -61,7 +65,7 @@ const emptyStep1: Step1Data = {
   lastName: "",
   abn: "",
   idType: "trade-licence",
-  tradeType: "",
+  businessTrade: "",
   idNumber: "",
   idExpiry: "",
   idState: "",
@@ -135,10 +139,11 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           // Legacy profiles may carry "licence"/"passport"; trade licence is now
           // the only ID type, so old values collapse onto it.
           idType: "trade-licence",
-          // `trade` is the retired step-1 free-text field. A profile saved
-          // before the merge may have it and no tradeType — carry the answer
-          // over when it maps onto an option so the user isn't asked twice.
-          tradeType: p.tradeType || matchTradeType(p.trade),
+          // `tradeType` and `trade` are the retired profile-level copies. A
+          // record the migration has not reached yet may still carry them and
+          // no businessTrade — take them in precedence order so the user is not
+          // asked again for something they already answered.
+          businessTrade: p.businessTrade || p.tradeType || matchTradeType(p.trade),
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",
