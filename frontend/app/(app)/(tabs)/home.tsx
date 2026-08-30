@@ -307,7 +307,7 @@ export default function HomeScreen() {
                 tone={canCreateProject ? "default" : "locked"}
                 title="Create a project"
                 subtitle={canCreateProject ? "Invite your team" : "Complete your profile first"}
-                onPress={() => router.push("/(app)/(tabs)/vouch-my-project")}
+                onPress={() => router.push("/(app)/vouch-my-project")}
                 accessibilityLabel={
                   canCreateProject ? "Create a project" : "Create a project, complete profile first"
                 }

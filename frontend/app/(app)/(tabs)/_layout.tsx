@@ -51,9 +51,6 @@ export default function TabsLayout() {
           androidSrc={<VectorIcon family={Ionicons} name="person-outline" />}
         />
       </NativeTabs.Trigger>
-
-      {/* Reached from the home screen's "Create a project" row, not the bar. */}
-      <NativeTabs.Trigger name="vouch-my-project" hidden />
     </NativeTabs>
   );
 }
