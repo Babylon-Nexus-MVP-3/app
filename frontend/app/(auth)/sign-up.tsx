@@ -69,6 +69,9 @@ export default function SignUp() {
     const digits = text.replace(/\D/g, "").slice(0, 11);
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
+    // A different ABN is a different business, so the previous name — typed or
+    // prefilled — no longer applies. Re-arm the prefill.
+    setBusinessNameEdited(false);
   }
 
   async function onNameSearch() {
