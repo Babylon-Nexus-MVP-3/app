@@ -3,14 +3,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/constants/api";
 import { splitLegacyName } from "@/lib/format";
+import { matchTradeType } from "@/constants/trades";
 
 export type Step1Data = {
   firstName: string;
   lastName: string;
   abn: string;
-  trade: string;
   idType: "trade-licence";
-  /** Licence class, e.g. "Electrical" — distinct from the free-text business trade. */
+  /** What the user does, picked from TRADE_TYPES. Asked once, in step 2. */
   tradeType: string;
   idNumber: string;
   idExpiry: string;
@@ -60,7 +60,6 @@ const emptyStep1: Step1Data = {
   firstName: "",
   lastName: "",
   abn: "",
-  trade: "",
   idType: "trade-licence",
   tradeType: "",
   idNumber: "",
@@ -133,11 +132,13 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           ...splitLegacyName(p.name),
           ...(p.firstName ? { firstName: p.firstName, lastName: p.lastName ?? "" } : {}),
           abn: p.abn ?? "",
-          trade: p.trade ?? "",
           // Legacy profiles may carry "licence"/"passport"; trade licence is now
           // the only ID type, so old values collapse onto it.
           idType: "trade-licence",
-          tradeType: p.tradeType ?? "",
+          // `trade` is the retired step-1 free-text field. A profile saved
+          // before the merge may have it and no tradeType — carry the answer
+          // over when it maps onto an option so the user isn't asked twice.
+          tradeType: p.tradeType || matchTradeType(p.trade),
           idNumber: p.idNumber ?? "",
           idExpiry: p.idExpiry ?? "",
           idState: p.idState ?? "",

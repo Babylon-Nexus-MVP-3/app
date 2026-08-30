@@ -170,10 +170,15 @@ export default function MeScreen() {
 
   const displayMobile = user?.mobile ? formatStoredMobile(user.mobile) : null;
   const displayAbn = user?.abn ? formatAbn(user.abn) : null;
-  // Trade comes from step 1 of the profile wizard — sign-up no longer asks for
-  // it. The user record is only a fallback for a profile that hasn't loaded yet.
+  // Trade comes from step 2 of the profile wizard, alongside the licence —
+  // sign-up doesn't ask for it. `profile.trade` is the retired step-1 free-text
+  // field, read only so a profile saved before the two were merged still shows
+  // something. The user record is the fallback for a profile that hasn't loaded.
   const displayTrade =
-    (typeof profile?.trade === "string" ? profile.trade.trim() : "") || user?.businessTrade || "";
+    (typeof profile?.tradeType === "string" ? profile.tradeType.trim() : "") ||
+    user?.businessTrade ||
+    (typeof profile?.trade === "string" ? profile.trade.trim() : "") ||
+    "";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

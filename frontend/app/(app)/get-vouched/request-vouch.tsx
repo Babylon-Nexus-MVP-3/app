@@ -129,7 +129,6 @@ export default function RequestVouch() {
           firstName: step1.firstName,
           lastName: step1.lastName,
           abn: step1.abn,
-          trade: step1.trade,
           idType: step1.idType,
           idNumber: step1.idNumber,
           idExpiry: step1.idExpiry,

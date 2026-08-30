@@ -18,33 +18,13 @@ import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { SectionLabel } from "@/components/ui";
 import { AppInput } from "@/components/AppInput";
 import { NativeSelect } from "@/components/NativeSelect";
+import { TRADE_TYPES } from "@/constants/trades";
 import { useAuth } from "@/context/AuthContext";
 import { useWizard } from "./WizardContext";
 import { saveVouchProfileStep } from "@/lib/useVouchProfile";
 import { showAlert } from "@/lib/errors";
 
 const AU_STATES = ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
-
-// Licence classes people actually hold on Australian sites. "Other" keeps the
-// list short without shutting anyone out.
-const TRADE_TYPES = [
-  "Builder",
-  "Carpentry",
-  "Electrical",
-  "Plumbing",
-  "Concreting",
-  "Bricklaying",
-  "Roofing",
-  "Painting",
-  "Plastering",
-  "Tiling",
-  "Waterproofing",
-  "Air conditioning & refrigeration",
-  "Landscaping",
-  "Glazing",
-  "Demolition",
-  "Other",
-];
 
 function Field({
   label,
@@ -108,7 +88,11 @@ export default function Step5() {
 
   const expiryInvalid = form.idExpiry.length >= 10 && !isExpiryValid(form.idExpiry);
 
-  const canContinue = form.idNumber.trim() && !expiryInvalid;
+  // Trade type is required here because this screen is now the only place the
+  // app asks what someone does — it is what the Me card and every vouch profile
+  // display. Letting it save empty would leave the trade blank with no second
+  // field to fall back on.
+  const canContinue = form.idNumber.trim() && form.tradeType.trim() && !expiryInvalid;
 
   async function onSave() {
     setStep1(form);
@@ -153,10 +137,10 @@ export default function Step5() {
             />
 
             <NativeSelect
-              label="TRADE TYPE"
+              label="TRADE"
               value={form.tradeType}
-              options={TRADE_TYPES}
-              placeholder="Select trade type"
+              options={[...TRADE_TYPES]}
+              placeholder="Select your trade"
               onChange={(v) => update("tradeType", v)}
             />
 

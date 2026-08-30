@@ -33,14 +33,14 @@ const STEPS = [
     n: 1,
     icon: "person-outline" as const,
     title: "Your details",
-    desc: "Your name, ABN and the trade you work in.",
+    desc: "Your name, ABN and business — straight from your account.",
     pct: 50,
   },
   {
     n: 2,
     icon: "ribbon-outline" as const,
     title: "Trade licence",
-    desc: "Your licence number and the state that issued it.",
+    desc: "Your trade, licence number and the state that issued it.",
     pct: 50,
   },
 ];

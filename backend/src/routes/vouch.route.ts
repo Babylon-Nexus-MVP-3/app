@@ -164,7 +164,6 @@ vouchRouter.post(
         "firstName",
         "lastName",
         "abn",
-        "trade",
         "idType",
         "tradeType",
         "idNumber",
@@ -318,12 +317,16 @@ vouchRouter.post(
         await UserModel.findByIdAndUpdate(userId, { abn: body.abn });
       }
 
-      // Trade is only collected here now — sign-up no longer asks for it — so
-      // wizard step 1 is what puts businessTrade on the User document, which is
-      // what getProfileCompletion() reads. It is deliberately not written into
-      // businessName: that is the ABR entity name, not the trade.
-      if (body.trade) {
-        await UserModel.findByIdAndUpdate(userId, { businessTrade: body.trade });
+      // Trade is collected once, as step 2's licence class, and mirrored onto
+      // the User document as businessTrade — the copy every other screen reads.
+      // Step 1's free-text "trade / business type" box used to be a second,
+      // independent answer to the same question, so the Me card and the wizard
+      // could disagree about what the user does. There is only one field now.
+      //
+      // It is deliberately not written into businessName: that is the ABR
+      // entity name, not the trade.
+      if (body.tradeType) {
+        await UserModel.findByIdAndUpdate(userId, { businessTrade: body.tradeType });
       }
 
       res.status(201).json(profile);

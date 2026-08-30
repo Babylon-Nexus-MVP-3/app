@@ -54,15 +54,18 @@ export function summariseSteps(stepsDone: boolean[]): ProfileCompletion {
 
   Step 1 (your details) reads from the User record rather than the VouchProfile
   because those fields are set at sign-up — they count even if the wizard has
-  never been opened. Step 2 (trade licence) is the wizard's own output.
+  never been opened. It no longer looks at businessTrade: trade moved to step 2
+  as the licence class, so step 1 has no input of its own left and is complete
+  for anyone who finished sign-up. Step 2 (trade licence) is the wizard's own
+  output, and is what now puts businessTrade on the User document.
 */
 export async function getProfileCompletion(userId: string): Promise<ProfileCompletion> {
   const [profile, dbUser] = await Promise.all([
     VouchProfileModel.findOne({ userId }).select("idNumber").lean(),
-    UserModel.findById(userId).select("firstName lastName abn businessTrade").lean(),
+    UserModel.findById(userId).select("firstName lastName abn").lean(),
   ]);
 
-  const step1Done = !!(dbUser?.firstName && dbUser?.abn && dbUser?.businessTrade);
+  const step1Done = !!(dbUser?.firstName && dbUser?.abn);
   const step2Done = !!profile?.idNumber;
 
   return summariseSteps([step1Done, step2Done]);
