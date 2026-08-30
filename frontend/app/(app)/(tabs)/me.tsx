@@ -550,6 +550,29 @@ export default function MeScreen() {
           <View style={styles.credCard}>
             <TouchableOpacity
               style={styles.credRow}
+              onPress={() => router.push("/(app)/change-business-name" as any)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Change business name"
+            >
+              <View style={[styles.credIcon, { backgroundColor: Colors.grey100 }]}>
+                <Ionicons name="business-outline" size={18} color={Colors.grey700} />
+              </View>
+              <View style={styles.credBody}>
+                <AppText style={styles.credTitle}>Business name</AppText>
+                {user?.businessName ? (
+                  <AppText style={styles.credValue} numberOfLines={1}>
+                    {user.businessName}
+                  </AppText>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.grey500} />
+            </TouchableOpacity>
+
+            <View style={styles.credDivider} />
+
+            <TouchableOpacity
+              style={styles.credRow}
               onPress={() => router.push("/(app)/change-password" as any)}
               activeOpacity={0.75}
               accessibilityRole="button"
