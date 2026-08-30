@@ -126,46 +126,52 @@ async function collapseTrade(db: mongoose.mongo.Db): Promise<void> {
 }
 
 /*
-  Repairs users.businessName from the ABR.
+  Fills blank users.businessName values from the ABR.
+
+  Only blanks. A name already stored is the user's own answer about what they
+  trade as, and the ABR cannot contradict it — trading under an unregistered
+  name is normal, and an individual's entity name comes back as
+  "SURNAME, GIVEN", which would replace a perfectly good business name with a
+  backwards personal one.
 
   One HTTP call per user, so it is sequential with a small delay rather than
-  parallel — this is a background repair, not something anyone is waiting on,
-  and the ABR is a shared public service.
+  parallel — this is a background fill, not something anyone is waiting on, and
+  the ABR is a shared public service.
 */
-async function fixBusinessNames(db: mongoose.mongo.Db): Promise<void> {
+async function fillBlankBusinessNames(db: mongoose.mongo.Db): Promise<void> {
   const users = db.collection("users");
   const cursor = users.find(
-    { abn: { $exists: true, $nin: ["", null] } },
-    { projection: { abn: 1, email: 1, businessName: 1 } }
+    {
+      abn: { $exists: true, $nin: ["", null] },
+      $or: [{ businessName: { $exists: false } }, { businessName: "" }, { businessName: null }],
+    },
+    { projection: { abn: 1, email: 1 } }
   );
 
-  let checked = 0;
-  let wrong = 0;
+  let blank = 0;
+  let filled = 0;
   let unreachable = 0;
-  const fixes: string[] = [];
+  const fills: string[] = [];
 
   for await (const user of cursor) {
-    checked += 1;
+    blank += 1;
     const registered = await businessNameForAbn(String(user.abn));
     if (!registered) {
       unreachable += 1;
       continue;
     }
-    const current = typeof user.businessName === "string" ? user.businessName.trim() : "";
-    if (current === registered) continue;
 
-    wrong += 1;
-    if (fixes.length < 30)
-      fixes.push(`${user.email}: "${current || "(empty)"}" -> "${registered}"`);
+    filled += 1;
+    if (fills.length < 30) fills.push(`${user.email}: (empty) -> "${registered}"`);
     if (APPLY) {
       await users.updateOne({ _id: user._id }, { $set: { businessName: registered } });
     }
     await new Promise((r) => setTimeout(r, 250));
   }
 
-  console.log(`users with an ABN: ${checked}`);
-  console.log(`  businessName: ${wrong} ${APPLY ? "corrected" : "would correct"}`);
-  fixes.forEach((f) => console.log(`      ${f}`));
+  console.log(`users with an ABN and no business name: ${blank}`);
+  console.log(`  businessName: ${filled} ${APPLY ? "filled" : "would fill"}`);
+  fills.forEach((f) => console.log(`      ${f}`));
   if (unreachable) console.log(`  ${unreachable} skipped — ABR could not answer`);
 }
 
@@ -179,9 +185,9 @@ async function main(): Promise<void> {
   console.log(APPLY ? "APPLYING changes" : "DRY RUN — pass --apply to write");
   await collapseTrade(db);
   if (FIX_BUSINESS_NAMES) {
-    await fixBusinessNames(db);
+    await fillBlankBusinessNames(db);
   } else {
-    console.log("businessName repair skipped — pass --fix-business-names to include it");
+    console.log("businessName fill skipped — pass --fix-business-names to include it");
   }
 
   await mongoose.disconnect();

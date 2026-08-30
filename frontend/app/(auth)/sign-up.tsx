@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -42,14 +42,23 @@ export default function SignUp() {
 
   const { abrResult, abrLoading, abrError } = useAbrLookup(abnDigits);
 
+  const [businessName, setBusinessName] = useState("");
+  const [businessNameEdited, setBusinessNameEdited] = useState(false);
+
   /*
-    Business name is not a field the user fills in — it is whatever the ABR has
-    registered against the ABN, and the server derives it from the ABN again on
-    register rather than trusting anything sent from here. It was an editable
-    box prefilled from the ABR, and people typed their trade over it, so that is
-    what got stored as their business name.
+    Prefill from the ABR, but let the user change it.
+
+    A business can trade under a name the ABR has never heard of — trading names
+    only appear there if someone registered them, and a sole trader's entity
+    name is their own surname-first legal name, which is rarely what they call
+    the business. So this is a suggestion, not a fact we can impose. Once the
+    user edits it, their answer sticks even if the ABN changes underneath.
   */
-  const businessName = abrResult ? abrResult.tradingName || abrResult.entityName : "";
+  useEffect(() => {
+    if (!businessNameEdited) {
+      setBusinessName(abrResult ? abrResult.tradingName || abrResult.entityName : "");
+    }
+  }, [abrResult, businessNameEdited]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -99,8 +108,8 @@ export default function SignUp() {
     const digits = item.abn.replace(/\D/g, "");
     setAbnDigits(digits);
     setAbn(formatAbn(digits));
-    // No setBusinessName — picking a search result sets the ABN, and the name
-    // follows from the ABR lookup that ABN triggers.
+    setBusinessName(item.entityName);
+    setBusinessNameEdited(true);
     setSearchMode("abn");
     setNameResults([]);
     setNameQuery("");
@@ -138,6 +147,7 @@ export default function SignUp() {
           password,
           ...(mobileDigits.length >= 10 ? { mobile: mobileDigits } : {}),
           ...(abnDigits.length === 11 ? { abn: abnDigits } : {}),
+          ...(businessName.trim() ? { businessName: businessName.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -295,11 +305,20 @@ export default function SignUp() {
           </View>
 
           <AppText style={styles.label}>BUSINESS NAME</AppText>
-          <View style={styles.readOnlyField}>
-            <AppText style={businessName ? styles.readOnlyValue : styles.readOnlyPlaceholder}>
-              {businessName || "Set from your ABN"}
-            </AppText>
-          </View>
+          <AppInput
+            style={styles.input}
+            value={businessName}
+            onChangeText={(t) => {
+              setBusinessName(t);
+              setBusinessNameEdited(true);
+            }}
+            placeholder="What you trade as"
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+          <AppText style={styles.fieldHint}>
+            Prefilled from your ABN — change it if you trade under a different name.
+          </AppText>
 
           <AppText style={styles.label}>FIRST NAME</AppText>
           <AppInput
@@ -433,26 +452,13 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 20,
   },
-  // Business name is derived from the ABN, so it reads as a filled-in fact
-  // rather than an empty box asking to be typed in.
-  readOnlyField: {
-    backgroundColor: Colors.grey100,
-    borderWidth: 1,
-    borderColor: Colors.grey300,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 20,
-  },
-  readOnlyValue: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.black,
-  },
-  readOnlyPlaceholder: {
-    fontSize: 16,
+  fieldHint: {
+    fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.grey500,
+    marginTop: -12,
+    marginBottom: 20,
+    lineHeight: 18,
   },
   passwordRow: {
     marginBottom: 20,
