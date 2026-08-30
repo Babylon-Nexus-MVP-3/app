@@ -84,6 +84,27 @@ export default function Settings() {
         <View style={styles.menu}>
           <TouchableOpacity
             style={styles.menuRow}
+            onPress={() => router.push("/(app)/change-business-name" as any)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Business Name"
+          >
+            <Ionicons name="business-outline" size={20} color={Colors.grey500} />
+            <View style={styles.menuRowBody}>
+              <AppText style={styles.menuRowLabel}>Business Name</AppText>
+              {user?.businessName ? (
+                <AppText style={styles.menuRowValue} numberOfLines={1}>
+                  {user.businessName}
+                </AppText>
+              ) : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.grey300} />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuRow}
             onPress={() => router.push("/(app)/change-password" as any)}
             activeOpacity={0.75}
             accessibilityRole="button"
@@ -195,6 +216,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.medium,
     color: Colors.black,
+  },
+  // Rows that show their current value stack it under the label, so the label
+  // must not take the flex — the wrapper does.
+  menuRowBody: {
+    flex: 1,
+    gap: 2,
+  },
+  menuRowLabel: {
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.black,
+  },
+  menuRowValue: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grey500,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: Colors.grey100,
+    marginLeft: 48,
   },
   footer: {
     position: "absolute",

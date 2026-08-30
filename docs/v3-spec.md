@@ -187,8 +187,8 @@ Pre-filled from sign-up: name, ABN. User confirms; nothing here is editable.
 
 > **Shipped:** trade is *not* on this step. It is asked once, on the trade
 > licence step, and stored only as `User.businessTrade` — the VouchProfile
-> document carries no copy. Business name is not asked at all: it is derived
-> from the ABN via the ABR. See the Trade and Business name rules in `CLAUDE.md`.
+> document carries no copy. Business name is asked on sign-up, prefilled from
+> the ABR but editable. See the Trade and Business name rules in `CLAUDE.md`.
 
 ### Step 2 — Your project
 **Current project** (required): name, address, suburb, state, postcode, value (private)

@@ -33,12 +33,13 @@ afterAll(async () => {
 }, 10000);
 
 /*
-  businessName is the registered name for the ABN, not something a caller may
-  set. It used to be an editable box on sign-up prefilled from the ABR, so
-  people typed their trade over it and that is what got stored.
+  businessName is the user's own answer about what they trade as. The ABR is a
+  prefill and a fallback: trading under an unregistered name is normal, and an
+  individual's registered name is their surname-first legal name, which is
+  rarely what they call the business.
 */
-describe("businessName is derived from the ABN, never from the request", () => {
-  it("ignores a businessName sent to /auth/register", async () => {
+describe("businessName is the user's, with the ABR as fallback", () => {
+  it("stores the businessName sent to /auth/register", async () => {
     // Posted directly rather than through requestAuthRegister — that helper
     // takes a fixed positional signature with no abn or businessName.
     const res = await request(app).post("/auth/register").send({
@@ -47,12 +48,28 @@ describe("businessName is derived from the ABN, never from the request", () => {
       password: "SecurePassword123!",
       email: "derive@abn-test.com",
       abn: "12345678901",
-      businessName: "Plumbing",
+      businessName: "Ritthick Plumbing Co",
     });
 
     expect([200, 201]).toContain(res.status);
     const user = await UserModel.findOne({ email: "derive@abn-test.com" }).lean();
-    expect(user?.businessName).not.toBe("Plumbing");
+    expect(user?.businessName).toBe("Ritthick Plumbing Co");
+  });
+
+  it("leaves businessName unset when neither the caller nor the ABR supplies one", async () => {
+    // The suite runs with the ABR disabled, so this is the outage path: no name
+    // given, none available, and registration still succeeds.
+    const res = await request(app).post("/auth/register").send({
+      firstName: "Trade",
+      lastName: "Tester",
+      password: "SecurePassword123!",
+      email: "noname@abn-test.com",
+      abn: "12345678902",
+    });
+
+    expect([200, 201]).toContain(res.status);
+    const user = await UserModel.findOne({ email: "noname@abn-test.com" }).lean();
+    expect(user?.businessName).toBeFalsy();
   });
 });
 
