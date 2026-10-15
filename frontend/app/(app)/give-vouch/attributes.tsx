@@ -217,6 +217,8 @@ export default function AttributesScreen() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            // Matches TEXT_LIMITS.note on the server, which rejects anything longer.
+            maxLength={1000}
           />
           <AppText style={styles.noteHint}>Notes are private and not shown publicly.</AppText>
         </ScrollView>

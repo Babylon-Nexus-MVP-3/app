@@ -1,4 +1,10 @@
-import { isAbn, isTradeType, normaliseVouchAttributes } from "../../utils/vouchRules";
+import {
+  isAbn,
+  isOptionalText,
+  isTradeType,
+  normaliseVouchAttributes,
+  referenceProblem,
+} from "../../utils/vouchRules";
 
 describe("normaliseVouchAttributes", () => {
   it("accepts two or more attributes from the fixed list", () => {
@@ -44,5 +50,39 @@ describe("isTradeType", () => {
     expect(isTradeType("carpentry")).toBe(false);
     expect(isTradeType("Anything I like")).toBe(false);
     expect(isTradeType(42)).toBe(false);
+  });
+});
+
+describe("referenceProblem", () => {
+  const ref = {
+    firstName: "Rae",
+    lastName: "Ference",
+    company: "Ference Co",
+    email: "rae@ference.co",
+    relationship: "Client",
+    project: "",
+  };
+
+  it("accepts a normal reference, including a legacy relationship", () => {
+    expect(referenceProblem(ref)).toBeNull();
+  });
+
+  it("rejects a malformed email", () => {
+    expect(referenceProblem({ ...ref, email: "rae at ference" })).toMatch(/valid email/);
+  });
+
+  it("rejects over-long text and non-string fields", () => {
+    expect(referenceProblem({ ...ref, company: "x".repeat(201) })).not.toBeNull();
+    expect(referenceProblem({ ...ref, email: { $ne: null } })).not.toBeNull();
+    expect(referenceProblem("not an object")).not.toBeNull();
+  });
+});
+
+describe("isOptionalText", () => {
+  it("allows missing values and short strings only", () => {
+    expect(isOptionalText(undefined, 10)).toBe(true);
+    expect(isOptionalText("short", 10)).toBe(true);
+    expect(isOptionalText("x".repeat(11), 10)).toBe(false);
+    expect(isOptionalText(5, 10)).toBe(false);
   });
 });

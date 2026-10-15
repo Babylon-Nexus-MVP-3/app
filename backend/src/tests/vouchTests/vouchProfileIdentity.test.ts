@@ -100,4 +100,17 @@ describe("POST /vouch/profile identity", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("rejects a trade that isn't on the list", async () => {
+    const { token, userId } = await signedInUser();
+
+    const res = await request(app)
+      .post("/vouch/profile")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ businessTrade: "Wizard", references: [] });
+
+    expect(res.status).toBe(400);
+    const user = await UserModel.findById(userId).lean();
+    expect(user?.businessTrade).toBeFalsy();
+  });
 });

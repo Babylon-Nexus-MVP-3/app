@@ -58,6 +58,10 @@ describe("POST /vouch/give validation", () => {
     ["an unlisted attribute", { toAbn: "51824753556", attributes: ["Honest", "Never pays"] }],
     ["no attributes", { toAbn: "51824753556" }],
     [
+      "an over-long note",
+      { toAbn: "51824753556", attributes: ["Honest", "Reliable"], note: "x".repeat(1001) },
+    ],
+    [
       "a non-string business name",
       { toAbn: "51824753556", attributes: ["Honest", "Reliable"], toBusinessName: { a: 1 } },
     ],

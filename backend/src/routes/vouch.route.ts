@@ -11,17 +11,19 @@ import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.ser
 import { getProfileCompletion } from "../service/vouchProfile.service";
 import { validateEmailFormat } from "../utils/authHelper";
 import { fullName } from "../utils/name";
-import { MIN_VOUCH_ATTRIBUTES, isAbn, normaliseVouchAttributes } from "../utils/vouchRules";
+import {
+  MAX_REFERENCES,
+  MIN_VOUCH_ATTRIBUTES,
+  TEXT_LIMITS,
+  isAbn,
+  isOptionalText,
+  isTradeType,
+  normaliseVouchAttributes,
+  referenceProblem,
+} from "../utils/vouchRules";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
-
-// Values that end up inside a query filter must be plain strings — an object
-// such as {"$ne": null} arriving in the body would otherwise be interpreted as
-// a Mongo operator and match records it shouldn't.
-function isQuerySafeString(value: unknown): value is string {
-  return typeof value === "string";
-}
 
 // Mirrors the frontend's own check (step2.tsx) — enforced again here since the
 // frontend control is trivially bypassed by calling this endpoint directly.
@@ -88,18 +90,17 @@ vouchRouter.post(
         ? req.body.references
         : [];
 
+      if (references.length > MAX_REFERENCES) {
+        res.status(400).json({ error: `You can have up to ${MAX_REFERENCES} references.` });
+        return;
+      }
+
+      // Also guarantees every field is a plain string, so none of them can be
+      // read as a Mongo operator in the duplicate lookups below.
       for (const ref of references) {
-        const fields = [
-          ref.firstName,
-          ref.lastName,
-          ref.company,
-          ref.mobile,
-          ref.email,
-          ref.relationship,
-          ref.project,
-        ];
-        if (fields.some((v) => v !== undefined && v !== null && !isQuerySafeString(v))) {
-          res.status(400).json({ error: "Invalid reference details" });
+        const problem = referenceProblem(ref);
+        if (problem) {
+          res.status(400).json({ error: problem });
           return;
         }
 
@@ -168,6 +169,16 @@ vouchRouter.post(
       // ABN goes through PATCH /auth/profile, which checks ownership.
       const WRITABLE_FIELDS = ["idNumber", "idExpiry", "idState"] as const;
 
+      // One field, picked from a fixed list — see utils/vouchRules.ts.
+      if (
+        body.businessTrade != null &&
+        body.businessTrade !== "" &&
+        !isTradeType(body.businessTrade)
+      ) {
+        res.status(400).json({ error: "Pick your trade from the list." });
+        return;
+      }
+
       if (
         typeof body.idExpiry === "string" &&
         body.idExpiry !== "" &&
@@ -195,8 +206,18 @@ vouchRouter.post(
         }
         setFields[key] = value.trim();
       }
-      if (Array.isArray(body.references) && body.references.length > 0) {
-        setFields.references = body.references;
+      if (references.length > 0) {
+        // Rebuilt field by field rather than stored as sent, so unknown keys in
+        // the body never reach the document.
+        setFields.references = references.map((ref) => ({
+          firstName: ref.firstName,
+          lastName: ref.lastName ?? "",
+          company: ref.company,
+          mobile: ref.mobile ?? "",
+          email: ref.email,
+          relationship: ref.relationship,
+          project: ref.project ?? "",
+        }));
       }
       setFields.userId = userId; // reassert — cannot be overridden by anything above
 
@@ -732,6 +753,11 @@ vouchRouter.post(
         return;
       }
 
+      if (!isOptionalText(note, TEXT_LIMITS.note)) {
+        res.status(400).json({ error: `Keep your note under ${TEXT_LIMITS.note} characters.` });
+        return;
+      }
+
       const optionalStrings = [
         toBusinessName,
         recipientFirstName,
@@ -800,7 +826,7 @@ vouchRouter.post(
         toAbn,
         toBusinessName,
         attributes,
-        note: note ?? undefined,
+        note: typeof note === "string" && note.trim() ? note.trim() : undefined,
         requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
         recipientFirstName: recipientFirstName ?? undefined,
         recipientLastName: recipientLastName ?? undefined,
