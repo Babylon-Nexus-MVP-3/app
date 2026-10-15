@@ -20,7 +20,6 @@
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1073.0",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "expo-server-sdk": "^3.15.0",
@@ -40,7 +39,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",

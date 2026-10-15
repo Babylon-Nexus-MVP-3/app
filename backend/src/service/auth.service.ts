@@ -1,5 +1,5 @@
 // Business Logic for Endpoints Involving Authentication
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../config";
@@ -15,6 +15,7 @@ import {
   generateCode,
   hashCode,
   hashPassword,
+  verifyPassword,
 } from "../utils/authHelper";
 import { fullName } from "../utils/name";
 import { sendMobileVerification, checkMobileVerification } from "./sms.service";
@@ -302,7 +303,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     );
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await verifyPassword(password, user.password);
 
   if (!passwordMatches) {
     const attempts = (user.loginAttempts ?? 0) + 1;
@@ -504,7 +505,7 @@ export async function resetPassword(email: string, resetCode: string, newPasswor
   const user = await consumeResetCode(normalisedEmail, resetCode);
 
   // Check if new password is same as current
-  if (await bcrypt.compare(newPassword, user.password)) {
+  if (await verifyPassword(newPassword, user.password)) {
     throw new AuthError("New password must be different from your current password");
   }
 
@@ -665,13 +666,13 @@ export async function userChangePassword(
   }
 
   // Verify current password is valid
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+  const isCurrentPasswordValid = await verifyPassword(currentPassword, user.password);
   if (!isCurrentPasswordValid) {
     throw new AuthError("Current password is incorrect");
   }
 
   // Check if new password is same as current
-  if (await bcrypt.compare(newPassword, user.password)) {
+  if (await verifyPassword(newPassword, user.password)) {
     throw new AuthError("New password must be different from your current password");
   }
 
@@ -744,7 +745,7 @@ export async function reactivateAccount(email: string, password: string) {
     throw new AuthError("Invalid credentials", 400);
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await verifyPassword(password, user.password);
   if (!passwordMatches) {
     throw new AuthError("Invalid credentials", 400);
   }
