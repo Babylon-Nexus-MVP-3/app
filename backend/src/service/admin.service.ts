@@ -3,16 +3,8 @@ import { UserModel, UserRole } from "../models/userModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { InvoiceModel } from "../models/invoiceModel";
-import { hashCode } from "../utils/authHelper";
-import { sendInviteEmail } from "./email.service";
 import { ProjectError } from "./project.service";
-import { randomInt } from "crypto";
-import {
-  notifyProjectApproved,
-  notifyProjectDeleted,
-  notifyProjectParticipantRemoved,
-  notifyProjectRejected,
-} from "./notification.service";
+import { notifyProjectDeleted, notifyProjectParticipantRemoved } from "./notification.service";
 import { fullName } from "../utils/name";
 
 export class AdminError extends Error {
@@ -24,68 +16,12 @@ export class AdminError extends Error {
   }
 }
 
-function generateOTP(): string {
-  return randomInt(100000, 999999).toString();
-}
-
 async function notifyAdminSafely(run: () => Promise<void>): Promise<void> {
   try {
     await run();
   } catch {
-    // intentionally silent — project approval is already committed
+    // intentionally silent — the admin action is already committed
   }
-}
-
-export async function listPendingProjects(): Promise<any[]> {
-  const projects = await ProjectModel.find({ status: "Pending" }).sort({ createdAt: -1 }).lean();
-
-  const projectIds = projects.map((p) => p._id.toString());
-  const allParticipants = await ProjectParticipantModel.find({
-    projectId: { $in: projectIds },
-  }).lean();
-
-  const acceptedUserIds = allParticipants
-    .filter((p) => p.status === "Accepted" && p.userId)
-    .map((p) => p.userId!);
-
-  const creatorUsers = await UserModel.find({ _id: { $in: acceptedUserIds } })
-    .select("firstName lastName email")
-    .lean();
-  const creatorUserMap = Object.fromEntries(creatorUsers.map((u) => [u._id.toString(), u]));
-
-  return projects.map((p) => {
-    const projectId = p._id.toString();
-    const participants = allParticipants.filter((pp) => pp.projectId === projectId);
-
-    const creatorParticipant = participants.find((pp) => pp.status === "Accepted" && pp.userId);
-    let creator = null;
-    if (creatorParticipant) {
-      const user = creatorUserMap[creatorParticipant.userId!];
-      creator = {
-        name: fullName(user?.firstName, user?.lastName) || "—",
-        email: creatorParticipant.email,
-        role: creatorParticipant.role,
-        hasLicence: creatorParticipant.hasLicence,
-        hasInsurance: creatorParticipant.hasInsurance,
-      };
-    }
-
-    const invitees = participants
-      .filter((pp) => pp.status === "Pending")
-      .map((pp) => ({ email: pp.email, role: pp.role }));
-
-    return {
-      _id: projectId,
-      name: p.name,
-      location: p.location,
-      council: p.council,
-      daNumber: p.daNumber,
-      status: p.status,
-      createdAt: p.createdAt,
-      creator,
-      invitees,
-    };
-  });
 }
 
 export async function listActiveProjects(): Promise<any[]> {
@@ -115,56 +51,6 @@ export async function listInactiveProjects(): Promise<any[]> {
     status: p.status,
     createdAt: p.createdAt,
   }));
-}
-
-export async function approveProject(projectId: string): Promise<void> {
-  if (!mongoose.isValidObjectId(projectId)) {
-    throw new AdminError("Invalid project id", 400);
-  }
-  const project = await ProjectModel.findOneAndUpdate(
-    { _id: projectId, status: "Pending" },
-    { $set: { status: "Active" } },
-    { returnDocument: "after" }
-  );
-  if (!project) {
-    throw new AdminError("Project not found or already processed", 404);
-  }
-
-  const pendingParticipants = await ProjectParticipantModel.find({
-    projectId,
-    status: "Pending",
-  });
-
-  await notifyAdminSafely(() => notifyProjectApproved(projectId, project.name));
-
-  for (const participant of pendingParticipants) {
-    if (!participant.email) continue;
-
-    const inviteCode = generateOTP();
-    participant.inviteCode = hashCode(inviteCode);
-    participant.dateInvited = new Date();
-    await participant.save();
-
-    await sendInviteEmail(participant.email, inviteCode, project.location).catch((err) => {
-      console.error(`Failed to send invite email to ${participant.email}:`, err);
-    });
-  }
-}
-
-export async function rejectProject(projectId: string): Promise<void> {
-  if (!mongoose.isValidObjectId(projectId)) {
-    throw new AdminError("Invalid project id", 400);
-  }
-  const result = await ProjectModel.updateOne(
-    { _id: projectId, status: "Pending" },
-    { $set: { status: "Rejected" } }
-  );
-
-  await notifyAdminSafely(() => notifyProjectRejected(projectId));
-
-  if (result.matchedCount === 0) {
-    throw new AdminError("Project not found or already processed", 404);
-  }
 }
 
 export interface RemoveProjectParticipantInput {

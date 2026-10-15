@@ -238,8 +238,8 @@ export async function getProjectDetails(
       email: p.email,
       role: p.role,
       status: p.status,
-      hasInsurance: canViewParticipantComplianceFields ? p.hasInsurance : undefined,
-      hasLicence: canViewParticipantComplianceFields ? p.hasLicence : undefined,
+      hasInsurance: canViewParticipantComplianceFields ? (p.hasInsurance ?? undefined) : undefined,
+      hasLicence: canViewParticipantComplianceFields ? (p.hasLicence ?? undefined) : undefined,
     })),
   };
 }

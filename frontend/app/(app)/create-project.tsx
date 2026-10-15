@@ -155,9 +155,9 @@ export default function CreateProject() {
             <View style={styles.successIconWrap}>
               <Ionicons name="checkmark" size={40} color={Colors.white} />
             </View>
-            <AppText style={styles.successTitle}>Project Submitted</AppText>
+            <AppText style={styles.successTitle}>Project created</AppText>
             <AppText style={styles.successSubtitle}>
-              {"Awaiting VouchPay admin approval. You'll be notified once it's reviewed."}
+              {"Your project is live. Anyone you invited will get an invite code by email."}
             </AppText>
           </View>
           <TouchableOpacity
@@ -288,7 +288,7 @@ export default function CreateProject() {
           <View style={styles.sectionDivider} />
           <AppText style={styles.sectionTitle}>Invite Team Members</AppText>
           <AppText style={styles.sectionHint}>
-            {"Add others to this project. They’ll receive an invite code once approved."}
+            {"Add others to this project. They’ll get an invite code by email."}
           </AppText>
 
           {invitees.map((inv, index) => (
@@ -331,8 +331,8 @@ export default function CreateProject() {
           <View style={styles.sectionDivider} />
           <AppText style={styles.sectionTitle}>Compliance</AppText>
           <AppText style={styles.sectionHelp}>
-            Shown to your team so everyone knows who is covered. It doesn&apos;t affect approval —
-            answer N/A if it doesn&apos;t apply to your trade.
+            Shown to your team so everyone knows who is covered. It doesn&apos;t stop you creating
+            the project — answer N/A if it doesn&apos;t apply to your trade.
           </AppText>
 
           <AppText style={authStyles.fieldLabel}>PUBLIC LIABILITY INSURANCE?</AppText>
@@ -391,7 +391,7 @@ export default function CreateProject() {
             {loading ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <AppText style={authStyles.primaryButtonText}>Submit for Approval</AppText>
+              <AppText style={authStyles.primaryButtonText}>Create project</AppText>
             )}
           </TouchableOpacity>
         </ScrollView>

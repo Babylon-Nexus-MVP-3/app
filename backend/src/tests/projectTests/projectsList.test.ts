@@ -54,7 +54,7 @@ describe("GET /projects", () => {
   it("returns projects where user is owner/builder/pm, plus participant projects", async () => {
     const { token, userId } = await registerActiveUser("dash@test.com");
 
-    // Direct association by stored IDs (status Active = admin-approved, visible on dashboard)
+    // Direct association by stored IDs (status Active = visible on dashboard)
     const ownerProj = await ProjectModel.create({
       name: "Owner Project",
       location: "L1",
@@ -128,7 +128,7 @@ describe("GET /projects", () => {
     expect(byId.get(ownerProj._id.toString())?.name).toBe("Owner Project");
   });
 
-  it("returns only Active (admin-approved) projects, not Pending or Rejected", async () => {
+  it("returns only Active projects, not legacy Pending or Rejected ones", async () => {
     const { token, userId } = await registerActiveUser("filter@test.com");
     const activeProj = await ProjectModel.create({
       name: "Active Project",
