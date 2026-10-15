@@ -12,7 +12,7 @@ export const abrRouter = express.Router();
 
 // ABR Lookup via the free ABN Lookup JSON API
 // Requires ABR_GUID env var (register at https://abr.business.gov.au/Tools/WebServices)
-// Falls back to mock in dev/test so the signup form works before the key is set up.
+// Without it, lookup returns 503 and /search (below) returns sample businesses.
 abrRouter.get("/lookup", abrLookupLimiter, async (req: Request, res: Response) => {
   const abn = String(req.query.abn ?? "").replace(/\D/g, "");
 
