@@ -159,3 +159,18 @@ describe("POST /project", () => {
     expect(res.body.error).toMatch(/required|missing/i);
   });
 });
+
+describe("POST /project — account without an email", () => {
+  it("returns 400 with a clear message instead of crashing", async () => {
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await UserModel.updateOne({ email: PM_EMAIL }, { $unset: { email: 1 } });
+
+    const res = await request(app)
+      .post("/project")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...validProjectBody, creatorRole: UserRole.PM });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/email address/i);
+  });
+});
