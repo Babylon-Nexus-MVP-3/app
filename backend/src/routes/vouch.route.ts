@@ -476,7 +476,7 @@ vouchRouter.post(
       if (request.toEmail) {
         sendVouchRequestEmail(
           request.toEmail,
-          request.fromName,
+          request.fromName ?? "",
           request.fromCompany,
           request.relationship,
           request.projectName
