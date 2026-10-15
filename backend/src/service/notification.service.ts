@@ -218,20 +218,12 @@ export async function notifyInvoiceReceived(
   );
 }
 
-export async function notifyProjectPendingApproval(
-  projectId: string,
-  recipientUserId: string,
-  projectName: string
-): Promise<void> {
-  await createNotification({
-    recipientUserId,
-    projectId,
-    type: NotificationType.ProjectPendingApproval,
-    message: `Project "${projectName}" is pending admin approval.`,
-  });
-}
-
-export async function notifyProjectApproved(projectId: string, projectName: string): Promise<void> {
+/*
+  Tells the creator their project is live. Still sent as the ProjectApproved
+  type: there is no approval step any more, but the app and existing
+  notification rows already know that type as "your project is active".
+*/
+export async function notifyProjectCreated(projectId: string, projectName: string): Promise<void> {
   // Creator can be derived as the first participant of the project.
   const creatorParticipant = await ProjectParticipantModel.findOne({
     projectId,
@@ -250,33 +242,6 @@ export async function notifyProjectApproved(projectId: string, projectName: stri
     projectId,
     type: NotificationType.ProjectApproved,
     message: `Project "${projectName}" is now active.`,
-  });
-}
-
-export async function notifyProjectRejected(projectId: string): Promise<void> {
-  // Creator can be derived as the first participant of the project.
-  const project = await ProjectModel.findById(projectId);
-  if (!project) {
-    throw new NotificationError("Project Doesnt Exist", 404);
-  }
-
-  const creatorParticipant = await ProjectParticipantModel.findOne({
-    projectId,
-    status: "Accepted",
-    userId: { $exists: true, $ne: null },
-  })
-    .select("userId")
-    .lean();
-
-  if (!creatorParticipant?.userId) {
-    throw new NotificationError("Project creator not found", 404);
-  }
-
-  await createNotification({
-    recipientUserId: creatorParticipant.userId.toString(),
-    projectId,
-    type: NotificationType.ProjectRejected,
-    message: `Project "${project.name}" has been rejected by the admin.`,
   });
 }
 

@@ -2,19 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import * as AdminService from "../service/admin.service";
 import { deleteProject } from "../service/admin.service";
 
-export async function listPendingProjects(
-  _req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const projects = await AdminService.listPendingProjects();
-    res.status(200).json({ success: true, projects });
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function listActiveProjects(
   _req: Request,
   res: Response,
@@ -36,34 +23,6 @@ export async function listInactiveProjects(
   try {
     const projects = await AdminService.listInactiveProjects();
     res.status(200).json({ success: true, projects });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function approveProject(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const projectId = req.params.projectId as string;
-    await AdminService.approveProject(projectId);
-    res.status(200).json({ success: true, message: "Project approved" });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function rejectProject(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const projectId = req.params.projectId as string;
-    await AdminService.rejectProject(projectId);
-    res.status(200).json({ success: true, message: "Project rejected" });
   } catch (err) {
     next(err);
   }

@@ -1,7 +1,7 @@
 import request from "supertest";
 import mongoose from "mongoose";
 import { app } from "../../app";
-import { getToken, requestDelete, validProjectBody } from "../requestHelpers";
+import { completeProfile, getToken, requestDelete, validProjectBody } from "../requestHelpers";
 import { NotificationModel, NotificationType } from "../../models/notificationModel";
 import { UserModel, UserRole } from "../../models/userModel";
 import { ProjectModel } from "../../models/projectModel";
@@ -42,6 +42,7 @@ beforeAll(async () => {
 describe("POST /project", () => {
   it("returns 200 and projectId when authenticated user creates project", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
     const daNumber = "DA-2026-1001";
 
     const res = await request(app)
@@ -69,6 +70,7 @@ describe("POST /project", () => {
 
   it("stores null when creator marks insurance and licence as N/A", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
     const daNumber = "DA-2026-1002";
 
     const res = await request(app)
@@ -95,6 +97,7 @@ describe("POST /project", () => {
 
   it("returns 200 with project active and a notification sent to the creator", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
     const creator = await UserModel.findOne({ email: PM_EMAIL.toLowerCase() }).lean();
 
     const res = await request(app)
@@ -137,6 +140,7 @@ describe("POST /project", () => {
 
   it("returns 200 when Subbie (any role) creates project", async () => {
     const token = await getToken("Sub", "Contract", SUBBIE_EMAIL, PASSWORD);
+    await completeProfile(token);
 
     const res = await request(app)
       .post("/project")
@@ -150,6 +154,7 @@ describe("POST /project", () => {
 
   it("returns 400 when required fields are missing", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
     const res = await request(app)
       .post("/project")
       .set("Authorization", `Bearer ${token}`)
@@ -163,6 +168,7 @@ describe("POST /project", () => {
 describe("POST /project — account without an email", () => {
   it("returns 400 with a clear message instead of crashing", async () => {
     const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
     await UserModel.updateOne({ email: PM_EMAIL }, { $unset: { email: 1 } });
 
     const res = await request(app)
@@ -172,5 +178,43 @@ describe("POST /project — account without an email", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/email address/i);
+  });
+});
+
+describe("POST /project — no admin approval", () => {
+  it("refuses a creator whose profile isn't complete", async () => {
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+
+    const res = await request(app)
+      .post("/project")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...validProjectBody, creatorRole: UserRole.PM });
+
+    expect(res.status).toBe(403);
+    expect(await ProjectModel.countDocuments({})).toBe(0);
+  });
+
+  it("creates the project Active and gives every invitee a code", async () => {
+    const token = await getToken("Project", "Manager", PM_EMAIL, PASSWORD);
+    await completeProfile(token);
+
+    const res = await request(app)
+      .post("/project")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        ...validProjectBody,
+        creatorRole: UserRole.PM,
+        invitees: [{ email: "invitee@project-test.com", role: UserRole.Subbie }],
+      });
+
+    expect(res.status).toBe(200);
+    const project = await ProjectModel.findById(res.body.projectId).lean();
+    expect(project?.status).toBe("Active");
+    const invitee = await ProjectParticipantModel.findOne({
+      projectId: res.body.projectId,
+      email: "invitee@project-test.com",
+    }).lean();
+    expect(invitee?.status).toBe("Pending");
+    expect(invitee?.inviteCode).toBeTruthy();
   });
 });

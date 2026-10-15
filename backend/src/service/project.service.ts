@@ -5,7 +5,8 @@ import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
 import { AuthError } from "./auth.service";
 import { sendInviteEmail } from "./email.service";
-import { notifyProjectApproved, notifyProjectInvited } from "./notification.service";
+import { notifyProjectCreated, notifyProjectInvited } from "./notification.service";
+import { getProfileCompletion } from "./vouchProfile.service";
 import { randomInt } from "crypto";
 import { hashCode } from "../utils/authHelper";
 import { notifySafely } from "./notificationScheduler.service";
@@ -65,9 +66,12 @@ export async function syncProjectRoleDisplayFields(
 }
 
 /**
- * Creates a new project. Any authenticated user can create a project — the frontend
- * only unlocks project creation once the creator's profile strength hits 100%, so
- * the project is activated immediately instead of sitting in an admin-approval queue.
+ * Creates a new project. There is no admin approval: a project is Active the
+ * moment it is created, and invitees are sent their codes straight away.
+ *
+ * The gate is the creator's profile — 100%, the same rule as giving a vouch.
+ * It is enforced here, not just by the app hiding the button, since the
+ * endpoint is callable directly.
  * Emits ProjectCreated event to the immutable event ledger.
  */
 export async function createProject(input: CreateProjectInput): Promise<string> {
@@ -93,6 +97,14 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
 
   if (!location || !council) {
     throw new ProjectError("Required fields missing: location, council");
+  }
+
+  const completion = await getProfileCompletion(creatorId);
+  if (!completion.isComplete) {
+    throw new ProjectError(
+      "Complete your profile — your details and trade licence — before creating a project.",
+      403
+    );
   }
 
   // email is optional on User, but every participant row is keyed by one.
@@ -154,15 +166,22 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
 
   // DB unique index on { projectId, email, role } prevents duplicates.
   // Catch the violation and surface it as a clean 400 instead of a 500.
+  // Each invitee gets a code now. Codes used to be issued by the admin approve
+  // step; once projects went live on creation nothing issued them, so people
+  // invited here were left pending with no way in.
+  const issuedInvites: { email: string; code: string }[] = [];
   try {
     for (const invitee of normalizedInvitees) {
+      const code = generateOTP();
       await ProjectParticipantModel.create({
         projectId: project._id.toString(),
         email: invitee.email,
         role: invitee.role,
+        inviteCode: hashCode(code),
         dateInvited: new Date(),
         status: "Pending",
       });
+      issuedInvites.push({ email: invitee.email, code });
     }
   } catch (error) {
     if (isDuplicateKeyError(error)) {
@@ -179,7 +198,16 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     payload: { name: name || location, location, council, daNumber, status },
   });
 
-  await notifySafely(() => notifyProjectApproved(project._id.toString(), project.name));
+  await notifySafely(() => notifyProjectCreated(project._id.toString(), project.name));
+
+  if (process.env.NODE_ENV !== "test") {
+    for (const { email, code } of issuedInvites) {
+      await sendInviteEmail(email, code, project.location).catch((err) => {
+        console.error(`Failed to send invite email to ${email}:`, err);
+      });
+      notifyProjectInvited(project._id.toString(), email, project.name).catch(() => {});
+    }
+  }
 
   return project._id.toString();
 }
@@ -225,7 +253,10 @@ export async function inviteParticipant(
   }
 
   if (project.status !== "Active") {
-    throw new ProjectError("Project must be approved by admin before inviting participants", 403);
+    throw new ProjectError(
+      "This project is no longer active, so you can't invite people to it.",
+      403
+    );
   }
 
   const requester = await ProjectParticipantModel.findOne({
