@@ -274,6 +274,9 @@ async function createRefreshToken(user: User): Promise<string> {
 // Per-account lockout. The per-IP login limiter alone is bypassable by rotating IPs.
 const MAX_LOGIN_ATTEMPTS = 10;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
+// A bcrypt hash (cost 14, matching hashPassword) of a throwaway string. Compared
+// against when no account matches, so unknown and known emails take as long.
+const TIMING_EQUALISER_HASH = "$2b$14$gY7Yq6FxphiyaXo2OOBvC.nkLXlQ6XUXTtBqfzzEBxEiTIVc25jn2";
 
 export async function loginUser(input: LoginInput): Promise<LoginResult> {
   const email = validateEmailFormat(input.email);
@@ -281,23 +284,16 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
 
   const user = await UserModel.findOne({ email });
   if (!user) {
+    // Same bcrypt cost as a real account, so response time doesn't reveal
+    // whether the email is registered.
+    await bcrypt.compare(password, TIMING_EQUALISER_HASH);
     throw new AuthError("Invalid credentials", 400);
   }
 
-  if (user.deletedAt) {
-    const daysRemaining = Math.ceil(
-      (user.deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)
-    );
-    const err = new AuthError("Account is deactivated", 403) as any;
-    err.code = "ACCOUNT_DEACTIVATED";
-    err.daysRemaining = Math.max(daysRemaining, 0);
-    throw err;
-  }
-
-  if (user.status !== "Active") {
-    throw new AuthError("User email is not verified", 400);
-  }
-
+  // The lock is checked before the password — otherwise a locked account could
+  // still be guessed at. Account state (deactivated, unverified) is only
+  // revealed after the password matches, so those answers can't be used to
+  // probe which emails are registered.
   if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
     const minutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
     throw new AuthError(
@@ -322,6 +318,20 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
       }
     );
     throw new AuthError("Invalid credentials", 400);
+  }
+
+  if (user.deletedAt) {
+    const daysRemaining = Math.ceil(
+      (user.deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    const err = new AuthError("Account is deactivated", 403) as any;
+    err.code = "ACCOUNT_DEACTIVATED";
+    err.daysRemaining = Math.max(daysRemaining, 0);
+    throw err;
+  }
+
+  if (user.status !== "Active") {
+    throw new AuthError("User email is not verified", 400);
   }
 
   if (user.loginAttempts || user.accountLocked || user.lockUntil) {
