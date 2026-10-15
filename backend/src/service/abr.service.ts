@@ -103,3 +103,29 @@ export async function businessNameForAbn(abn: string): Promise<string | null> {
     return null;
   }
 }
+
+/*
+  Rejects an ABN the ABR says does not exist or has been cancelled.
+
+  This proves the number is a real, active registration — it cannot prove the
+  caller owns it, which is why ABN uniqueness is checked separately. When the
+  ABR cannot answer (down, or no key configured) the ABN is let through: the
+  client has already run the same lookup as the user typed, and blocking
+  sign-ups on an outage of someone else's service would be worse than a
+  rare unverified number. Skipped in tests for the reason given above.
+*/
+export async function assertAbnIsActive(abn: string): Promise<void> {
+  if (process.env.NODE_ENV === "test") return;
+  try {
+    await lookupAbn(abn);
+  } catch (err) {
+    if (err instanceof AbrCancelledError) {
+      throw new Error("That ABN has been cancelled. Enter an active ABN.", { cause: err });
+    }
+    if (err instanceof AbrNotFoundError) {
+      throw new Error("We couldn't find that ABN on the Australian Business Register.", {
+        cause: err,
+      });
+    }
+  }
+}

@@ -160,15 +160,12 @@ vouchRouter.post(
       // Only fields on this list may be written — never trust the request body's
       // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
       // would reassign this profile document to someone else's account.
-      const WRITABLE_FIELDS = [
-        "firstName",
-        "lastName",
-        "abn",
-        "idType",
-        "idNumber",
-        "idExpiry",
-        "idState",
-      ] as const;
+      //
+      // Name and ABN are not on it: they are copied from the account below. The
+      // ABN is what received vouches are keyed by, so taking it from the body
+      // let anyone put another business's ABN on their own profile. Changing an
+      // ABN goes through PATCH /auth/profile, which checks ownership.
+      const WRITABLE_FIELDS = ["idNumber", "idExpiry", "idState"] as const;
 
       if (
         typeof body.idExpiry === "string" &&
@@ -179,12 +176,23 @@ vouchRouter.post(
         return;
       }
 
-      const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
+      const setFields: Record<string, unknown> = {
+        userId,
+        submittedAt: new Date(),
+        firstName: fromFirstName,
+        lastName: fromLastName,
+        // Trade licence is the only ID accepted; the client value is not trusted.
+        idType: "trade-licence",
+      };
+      if (fromAbn) setFields.abn = fromAbn;
       for (const key of WRITABLE_FIELDS) {
         const value = body[key];
-        if (value !== "" && value !== undefined && value !== null) {
-          setFields[key] = value;
+        if (value === "" || value === undefined || value === null) continue;
+        if (typeof value !== "string") {
+          res.status(400).json({ error: "Invalid licence details" });
+          return;
         }
+        setFields[key] = value.trim();
       }
       if (Array.isArray(body.references) && body.references.length > 0) {
         setFields.references = body.references;
@@ -298,22 +306,6 @@ vouchRouter.post(
             ref.project
           ).catch(() => {});
         }
-      }
-
-      // Keep UserModel in sync so Give a Vouch notifications work — only when
-      // there's an ABN to sync, and only when it isn't already someone else's
-      // (received-vouches are looked up purely by ABN, so writing an unvalidated
-      // one would let a caller display another business's reputation as their own).
-      if (body.abn) {
-        const existingAbnOwner = await UserModel.findOne({ abn: body.abn }).select("_id").lean();
-        if (existingAbnOwner && existingAbnOwner._id.toString() !== userId) {
-          res.status(400).json({
-            error:
-              "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
-          });
-          return;
-        }
-        await UserModel.findByIdAndUpdate(userId, { abn: body.abn });
       }
 
       // Trade has exactly one home: User.businessTrade. It is collected on the
