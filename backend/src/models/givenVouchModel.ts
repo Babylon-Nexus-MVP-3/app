@@ -38,6 +38,11 @@ const givenVouchSchema = new Schema<GivenVouch>(
 
 givenVouchSchema.index({ toAbn: 1 });
 givenVouchSchema.index({ fromUserId: 1 });
+// One vouch per giver per ABN. /vouch/give checks first, but two concurrent
+// requests (a double tap, a retry on a slow network) can both pass that check;
+// only the index closes the race. Run scripts/findVouchDuplicates.ts against a
+// database before deploying this, or the index build fails on existing pairs.
+givenVouchSchema.index({ fromUserId: 1, toAbn: 1 }, { unique: true });
 
 givenVouchSchema.virtual("recipientName").get(function (this: {
   recipientFirstName?: string;

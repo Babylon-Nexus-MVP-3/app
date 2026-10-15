@@ -4,6 +4,7 @@ import { app } from "../../app";
 import { requestDelete, getToken } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { GivenVouchModel } from "../../models/givenVouchModel";
+import { VouchRequestModel } from "../../models/vouchRequestModel";
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
@@ -72,5 +73,44 @@ describe("POST /vouch/give validation", () => {
 
     expect(res.status).toBe(400);
     expect(await GivenVouchModel.countDocuments({})).toBe(0);
+  });
+});
+
+/*
+  The exists() checks in the routes can't stop two concurrent requests — both
+  pass before either writes. These pin the indexes that do.
+*/
+describe("vouch uniqueness indexes", () => {
+  beforeAll(async () => {
+    await Promise.all([GivenVouchModel.init(), VouchRequestModel.init()]);
+  });
+
+  afterEach(async () => {
+    await Promise.all([GivenVouchModel.deleteMany({}), VouchRequestModel.deleteMany({})]);
+  });
+
+  it("refuses a second vouch from the same giver to the same ABN", async () => {
+    const fromUserId = new mongoose.Types.ObjectId();
+    const vouch = { fromUserId, toAbn: "51824753556", attributes: ["Honest", "Reliable"] };
+    await GivenVouchModel.create(vouch);
+
+    await expect(GivenVouchModel.create(vouch)).rejects.toMatchObject({ code: 11000 });
+  });
+
+  it("allows one pending request per address, but a new one after an ignore", async () => {
+    const request = {
+      fromUserId: new mongoose.Types.ObjectId(),
+      fromFirstName: "Gina",
+      fromCompany: "Giver Co",
+      fromAbn: "51824753556",
+      toEmail: "ref@example.com",
+      relationship: "Client",
+    };
+    const first = await VouchRequestModel.create(request);
+
+    await expect(VouchRequestModel.create(request)).rejects.toMatchObject({ code: 11000 });
+
+    await VouchRequestModel.updateOne({ _id: first._id }, { status: "ignored" });
+    await expect(VouchRequestModel.create(request)).resolves.toBeDefined();
   });
 });

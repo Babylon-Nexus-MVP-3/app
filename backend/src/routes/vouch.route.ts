@@ -41,6 +41,11 @@ function isValidExpiryDate(expiry: string): boolean {
   );
 }
 
+/** Mongo's E11000 — a write rejected by a unique index. */
+function isDuplicateKeyError(err: unknown): boolean {
+  return (err as { code?: number } | null)?.code === 11000;
+}
+
 /** A reference as the request-a-vouch screen submits it. */
 type IncomingReference = {
   firstName: string;
@@ -276,17 +281,25 @@ vouchRouter.post(
 
         const toEmail = ref.email.trim().toLowerCase();
 
-        const request = await VouchRequestModel.create({
-          fromUserId: userId,
-          fromFirstName,
-          fromLastName,
-          fromCompany,
-          fromAbn,
-          toEmail,
-          relationship: ref.relationship,
-          projectName: ref.project,
-          status: "pending",
-        });
+        let request;
+        try {
+          request = await VouchRequestModel.create({
+            fromUserId: userId,
+            fromFirstName,
+            fromLastName,
+            fromCompany,
+            fromAbn,
+            toEmail,
+            relationship: ref.relationship,
+            projectName: ref.project,
+            status: "pending",
+          });
+        } catch (err) {
+          // A concurrent save already created this pending request — skip just
+          // this reference rather than failing the whole submission.
+          if (isDuplicateKeyError(err)) continue;
+          throw err;
+        }
 
         const refUser = await UserModel.findOne({ $or: accountConditionsFor(ref) })
           .select("_id pushToken")
@@ -821,18 +834,29 @@ vouchRouter.post(
       const giverName = fullName(giver?.firstName, giver?.lastName) || "Someone";
       const giverCompany = giver?.businessName ?? "";
 
-      const vouch = await GivenVouchModel.create({
-        fromUserId: userId,
-        toAbn,
-        toBusinessName,
-        attributes,
-        note: typeof note === "string" && note.trim() ? note.trim() : undefined,
-        requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
-        recipientFirstName: recipientFirstName ?? undefined,
-        recipientLastName: recipientLastName ?? undefined,
-        recipientEmail: recipientEmail ?? undefined,
-        recipientMobile: recipientMobile ?? undefined,
-      });
+      let vouch;
+      try {
+        vouch = await GivenVouchModel.create({
+          fromUserId: userId,
+          toAbn,
+          toBusinessName,
+          attributes,
+          note: typeof note === "string" && note.trim() ? note.trim() : undefined,
+          requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
+          recipientFirstName: recipientFirstName ?? undefined,
+          recipientLastName: recipientLastName ?? undefined,
+          recipientEmail: recipientEmail ?? undefined,
+          recipientMobile: recipientMobile ?? undefined,
+        });
+      } catch (err) {
+        // Lost a race with a concurrent request for the same vouch — the
+        // unique index on {fromUserId, toAbn} is what caught it.
+        if (isDuplicateKeyError(err)) {
+          res.status(409).json({ error: "You have already vouched for this business." });
+          return;
+        }
+        throw err;
+      }
 
       let vouchRequest: {
         _id: mongoose.Types.ObjectId;

@@ -53,6 +53,14 @@ const vouchRequestSchema = new Schema<VouchRequest>(
 vouchRequestSchema.index({ fromUserId: 1 });
 vouchRequestSchema.index({ toEmail: 1, status: 1 });
 vouchRequestSchema.index({ toMobile: 1, status: 1 });
+// At most one pending request from a sender to an address. Partial on
+// "pending" because an ignored request may be re-sent, and answered ones are
+// history. Keyed on toEmail, not toMobile: new requests store toMobile as "",
+// so a mobile key would make every sender's second request collide.
+vouchRequestSchema.index(
+  { fromUserId: 1, toEmail: 1 },
+  { unique: true, partialFilterExpression: { status: "pending" } }
+);
 
 vouchRequestSchema.virtual("fromName").get(function (this: {
   fromFirstName?: string;
