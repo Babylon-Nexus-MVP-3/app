@@ -113,4 +113,23 @@ describe("vouch uniqueness indexes", () => {
     await VouchRequestModel.updateOne({ _id: first._id }, { status: "ignored" });
     await expect(VouchRequestModel.create(request)).resolves.toBeDefined();
   });
+
+  it("ignores legacy mobile-only requests, which have no email", async () => {
+    // Pre-email requests carry toEmail "" and were addressed by mobile, so two
+    // pending ones from one sender are two different references.
+    const legacy = {
+      fromUserId: new mongoose.Types.ObjectId(),
+      fromFirstName: "Gina",
+      fromCompany: "Giver Co",
+      fromAbn: "51824753556",
+      relationship: "Other",
+    };
+    // Inserted raw: the schema now requires toEmail, but legacy rows predate that.
+    await VouchRequestModel.collection.insertMany([
+      { ...legacy, toEmail: "", toMobile: "+61400000001", status: "pending" },
+      { ...legacy, toEmail: "", toMobile: "+61400000002", status: "pending" },
+    ]);
+
+    expect(await VouchRequestModel.countDocuments({ fromUserId: legacy.fromUserId })).toBe(2);
+  });
 });

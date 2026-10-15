@@ -57,9 +57,14 @@ vouchRequestSchema.index({ toMobile: 1, status: 1 });
 // "pending" because an ignored request may be re-sent, and answered ones are
 // history. Keyed on toEmail, not toMobile: new requests store toMobile as "",
 // so a mobile key would make every sender's second request collide.
+//
+// Only rows with an email count. Requests from before the switch to email
+// were addressed by mobile and carry toEmail "" — production has a sender
+// with two such pending requests to different references, made in one save,
+// which an index over empty emails would wrongly treat as duplicates.
 vouchRequestSchema.index(
   { fromUserId: 1, toEmail: 1 },
-  { unique: true, partialFilterExpression: { status: "pending" } }
+  { unique: true, partialFilterExpression: { status: "pending", toEmail: { $gt: "" } } }
 );
 
 vouchRequestSchema.virtual("fromName").get(function (this: {
