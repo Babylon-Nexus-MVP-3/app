@@ -1,5 +1,5 @@
 // Business Logic for Endpoints Involving Authentication
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../config";
@@ -15,6 +15,7 @@ import {
   generateCode,
   hashCode,
   hashPassword,
+  verifyPassword,
 } from "../utils/authHelper";
 import { fullName } from "../utils/name";
 import { sendMobileVerification, checkMobileVerification } from "./sms.service";
@@ -33,6 +34,10 @@ import { assertAbnIsActive, businessNameForAbn } from "./abr.service";
 
 export class AuthError extends Error {
   statusCode: number;
+  /** Machine-readable reason the app branches on, e.g. "ACCOUNT_DEACTIVATED". */
+  code?: string;
+  /** Set with ACCOUNT_DEACTIVATED: days left before the account is purged. */
+  daysRemaining?: number;
 
   constructor(message: string, statusCode = 400) {
     super(message);
@@ -302,7 +307,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     );
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await verifyPassword(password, user.password);
 
   if (!passwordMatches) {
     const attempts = (user.loginAttempts ?? 0) + 1;
@@ -324,7 +329,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     const daysRemaining = Math.ceil(
       (user.deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)
     );
-    const err = new AuthError("Account is deactivated", 403) as any;
+    const err = new AuthError("Account is deactivated", 403);
     err.code = "ACCOUNT_DEACTIVATED";
     err.daysRemaining = Math.max(daysRemaining, 0);
     throw err;
@@ -504,7 +509,7 @@ export async function resetPassword(email: string, resetCode: string, newPasswor
   const user = await consumeResetCode(normalisedEmail, resetCode);
 
   // Check if new password is same as current
-  if (await bcrypt.compare(newPassword, user.password)) {
+  if (await verifyPassword(newPassword, user.password)) {
     throw new AuthError("New password must be different from your current password");
   }
 
@@ -665,13 +670,13 @@ export async function userChangePassword(
   }
 
   // Verify current password is valid
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+  const isCurrentPasswordValid = await verifyPassword(currentPassword, user.password);
   if (!isCurrentPasswordValid) {
     throw new AuthError("Current password is incorrect");
   }
 
   // Check if new password is same as current
-  if (await bcrypt.compare(newPassword, user.password)) {
+  if (await verifyPassword(newPassword, user.password)) {
     throw new AuthError("New password must be different from your current password");
   }
 
@@ -744,7 +749,7 @@ export async function reactivateAccount(email: string, password: string) {
     throw new AuthError("Invalid credentials", 400);
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await verifyPassword(password, user.password);
   if (!passwordMatches) {
     throw new AuthError("Invalid credentials", 400);
   }

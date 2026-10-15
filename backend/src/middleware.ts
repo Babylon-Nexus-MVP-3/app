@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import rateLimit, { ipKeyGenerator, Options, RateLimitRequestHandler } from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { config } from "./config";
@@ -27,110 +27,111 @@ declare global {
   }
 }
 
+/*
+  Builds a rate limiter with the settings every limiter here shares: standard
+  RateLimit headers, no legacy X-RateLimit headers, and a ceiling high enough
+  that the test suite never trips it. `message` becomes the JSON { error } body.
+*/
+const IS_TEST = process.env.NODE_ENV === "test";
+
+function makeLimiter(
+  windowMs: number,
+  max: number,
+  message?: string,
+  options: Partial<Options> = {}
+): RateLimitRequestHandler {
+  return rateLimit({
+    windowMs,
+    max: IS_TEST ? 1000 : max,
+    ...(message ? { message: { error: message } } : {}),
+    standardHeaders: true,
+    legacyHeaders: false,
+    ...options,
+  });
+}
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const ONE_HOUR = 60 * 60 * 1000;
+
 // Limits registration attempts to 5 per IP every 15 minutes to prevent abuse.
-// Skipped in test environments.
-export const registrationLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  message: { error: "Too many registration attempts. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const registrationLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  5,
+  "Too many registration attempts. Please try again later."
+);
 
-export const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  message: { error: "Too many login attempts, please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-});
+export const loginLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  5,
+  "Too many login attempts, please try again later.",
+  { skipSuccessfulRequests: true }
+);
 
-export const resendVerifLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 3,
+// No custom message: this one has always answered with the library's default
+// plain-text body rather than JSON. Left as-is so the app's handling doesn't change.
+export const resendVerifLimiter = makeLimiter(FIFTEEN_MINUTES, 3, undefined, {
   skipFailedRequests: false,
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
-export const verifyEmailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "test" ? 1000 : 10,
-  message: { error: "Too many verification attempts. Please request a new code." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const verifyEmailLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  10,
+  "Too many verification attempts. Please request a new code."
+);
 
-export const refreshLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 10,
-  message: { error: "Too many refresh attempts. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const refreshLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  10,
+  "Too many refresh attempts. Please try again later."
+);
 
-export const forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  message: { error: "Too many password reset attempts. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const forgotPasswordLimiter = makeLimiter(
+  ONE_HOUR,
+  5,
+  "Too many password reset attempts. Please try again later."
+);
 
-export const resetCodeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  message: { error: "Too many attempts. Please request a new reset code." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const resetCodeLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  5,
+  "Too many attempts. Please request a new reset code."
+);
 
-export const otpRequestLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
-  message: { error: "Too many OTP requests. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const otpRequestLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  5,
+  "Too many OTP requests. Please try again later."
+);
 
-export const otpVerifyLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 10,
-  message: { error: "Too many verification attempts. Please request a new code." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const otpVerifyLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  10,
+  "Too many verification attempts. Please request a new code."
+);
 
 // Keyed by user, not IP — the wizard saves on every step and whole worksites
 // share one IP, so an IP-keyed limit locks out unrelated users mid-signup.
 // Must run after requireAuth so req.user is populated.
-export const vouchProfileLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 60,
-  message: { error: "Too many profile submissions. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => req.user?.sub ?? ipKeyGenerator(req.ip ?? ""),
-});
+export const vouchProfileLimiter = makeLimiter(
+  ONE_HOUR,
+  60,
+  "Too many profile submissions. Please try again later.",
+  { keyGenerator: (req: Request) => req.user?.sub ?? ipKeyGenerator(req.ip ?? "") }
+);
 
 // ABR lookup/search are unauthenticated (the signup form needs them before an
 // account exists), so cap them per IP to stop bulk scraping through our key.
-export const abrLookupLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 60,
-  message: { error: "Too many ABN lookups. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const abrLookupLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  60,
+  "Too many ABN lookups. Please try again later."
+);
 
-export const vouchGiveLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 20,
-  message: { error: "Too many vouch attempts. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const vouchGiveLimiter = makeLimiter(
+  FIFTEEN_MINUTES,
+  20,
+  "Too many vouch attempts. Please try again later."
+);
 
 /**
  * Verifies JWT from Authorization: Bearer <token> and attaches decoded payload to req.user.

@@ -57,8 +57,8 @@ if (process.env.NODE_ENV !== "production") {
     try {
       const result = await clear();
       res.status(200).json(result);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 }

@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { UserModel, UserRole } from "../models/userModel";
-import { ProjectModel } from "../models/projectModel";
+import { Project, ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { InvoiceModel } from "../models/invoiceModel";
+import { Invoice, InvoiceModel } from "../models/invoiceModel";
 import { ProjectError } from "./project.service";
 import { notifyProjectDeleted, notifyProjectParticipantRemoved } from "./notification.service";
 import { fullName } from "../utils/name";
@@ -24,7 +24,18 @@ async function notifyAdminSafely(run: () => Promise<void>): Promise<void> {
   }
 }
 
-export async function listActiveProjects(): Promise<any[]> {
+/** A project row in the admin console lists. */
+export interface AdminProjectSummary {
+  _id: string;
+  name: string;
+  location: string;
+  council: string;
+  daNumber?: string;
+  status: Project["status"];
+  createdAt: Date;
+}
+
+export async function listActiveProjects(): Promise<AdminProjectSummary[]> {
   const projects = await ProjectModel.find({ status: "Active" }).sort({ createdAt: -1 }).lean();
   return projects.map((p) => ({
     _id: p._id.toString(),
@@ -37,7 +48,7 @@ export async function listActiveProjects(): Promise<any[]> {
   }));
 }
 
-export async function listInactiveProjects(): Promise<any[]> {
+export async function listInactiveProjects(): Promise<AdminProjectSummary[]> {
   const projects = await ProjectModel.find({ status: "Inactive" })
     .setOptions({ bypassSoftDelete: true })
     .sort({ createdAt: -1 })
@@ -194,7 +205,9 @@ export async function deleteProject(projectId: string) {
   return { success: true };
 }
 
-function computeHealthScore(invoices: any[]): number {
+function computeHealthScore(
+  invoices: Pick<Invoice, "status" | "datePaid" | "dateReceived" | "dateDue">[]
+): number {
   const paid = invoices.filter((i) => i.status === "Paid" || i.status === "Received");
   if (paid.length === 0) return 100;
   const onTime = paid.filter((i) => {
@@ -230,7 +243,7 @@ export async function getAdminProjectDetail(projectId: string) {
   const now = new Date();
   const invoicesRaw = await InvoiceModel.find({ projectId }).sort({ dateSubmitted: -1 }).lean();
 
-  const invoices = invoicesRaw.map((i: any) => {
+  const invoices = invoicesRaw.map((i) => {
     const due = new Date(i.dateDue);
     const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;
     const overdueBase = paidDate ?? now;
@@ -255,7 +268,7 @@ export async function getAdminProjectDetail(projectId: string) {
     };
   });
 
-  const overdueInvoiceCount = invoicesRaw.filter((i: any) => {
+  const overdueInvoiceCount = invoicesRaw.filter((i) => {
     if (i.status === "Paid" || i.status === "Received") return false;
     return new Date(i.dateDue).getTime() < now.getTime();
   }).length;
@@ -266,11 +279,11 @@ export async function getAdminProjectDetail(projectId: string) {
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const currentMonthInvoices = invoicesRaw.filter((i: any) => {
+  const currentMonthInvoices = invoicesRaw.filter((i) => {
     const due = new Date(i.dateDue);
     return due >= currentMonthStart && due < nextMonthStart;
   });
-  const prevMonthInvoices = invoicesRaw.filter((i: any) => {
+  const prevMonthInvoices = invoicesRaw.filter((i) => {
     const due = new Date(i.dateDue);
     return due >= prevMonthStart && due < currentMonthStart;
   });
@@ -278,7 +291,7 @@ export async function getAdminProjectDetail(projectId: string) {
   const prevMonthHealth = computeHealthScore(prevMonthInvoices);
   const currentMonthHealth = computeHealthScore(currentMonthInvoices);
   const prevMonthHadPaid = prevMonthInvoices.some(
-    (i: any) => i.status === "Paid" || i.status === "Received"
+    (i) => i.status === "Paid" || i.status === "Received"
   );
   const monthOnMonthHealthChangePct =
     !prevMonthHadPaid || prevMonthHealth === 0

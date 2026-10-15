@@ -89,6 +89,40 @@ export async function lookupAbn(abn: string): Promise<AbrDetails> {
   };
 }
 
+export interface AbrSearchResult {
+  abn: string;
+  entityName: string;
+  state: string;
+}
+
+/*
+  Searches the ABR by business name and returns up to ten matches.
+
+  Throws AbrUnavailableError for anything that stops an answer — no key, the ABR
+  down or slow, or a response that can't be read — so the caller has one case
+  to handle.
+*/
+export async function searchAbnByName(name: string): Promise<AbrSearchResult[]> {
+  const guid = process.env.ABR_GUID;
+  if (!guid) throw new AbrUnavailableError("ABN search not configured");
+
+  try {
+    const url = `https://abr.business.gov.au/json/MatchingNames.aspx?name=${encodeURIComponent(name)}&guid=${guid}`;
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(ABR_TIMEOUT_MS) });
+    if (!upstream.ok) throw new Error("ABR upstream error");
+    const raw = parseJsonp(await upstream.text());
+
+    const names = (raw.Names ?? []) as Array<{ Abn: string; Name: string; State: string }>;
+    return names.slice(0, 10).map((entry) => ({
+      abn: entry.Abn,
+      entityName: entry.Name,
+      state: entry.State,
+    }));
+  } catch {
+    throw new AbrUnavailableError("ABR search temporarily unavailable");
+  }
+}
+
 /*
   The name to store on a user for a given ABN.
 

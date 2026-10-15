@@ -2,9 +2,10 @@ import express, { Request, Response } from "express";
 import { abrLookupLimiter } from "../middleware";
 import {
   lookupAbn,
+  searchAbnByName,
   AbrCancelledError,
   AbrNotFoundError,
-  ABR_TIMEOUT_MS,
+  type AbrSearchResult,
 } from "../service/abr.service";
 
 export const abrRouter = express.Router();
@@ -52,36 +53,13 @@ abrRouter.get("/search", abrLookupLimiter, async (req: Request, res: Response) =
   }
 
   try {
-    const encodedName = encodeURIComponent(name);
-    const url = `https://abr.business.gov.au/json/MatchingNames.aspx?name=${encodedName}&guid=${guid}`;
-    const upstream = await fetch(url, { signal: AbortSignal.timeout(ABR_TIMEOUT_MS) });
-    if (!upstream.ok) throw new Error("ABR upstream error");
-
-    const text = await upstream.text();
-    const jsonStr = text.replace(/^[^(]+\(/, "").replace(/\)\s*$/, "");
-    const raw = JSON.parse(jsonStr);
-
-    const names: Array<{
-      Abn: string;
-      Name: string;
-      State: string;
-      Postcode: string;
-      Score: number;
-    }> = raw.Names ?? [];
-
-    const results = names.slice(0, 10).map((entry) => ({
-      abn: entry.Abn,
-      entityName: entry.Name,
-      state: entry.State,
-    }));
-
-    res.status(200).json({ results });
+    res.status(200).json({ results: await searchAbnByName(name) });
   } catch {
     res.status(503).json({ error: "ABR search temporarily unavailable" });
   }
 });
 
-function buildSearchMock(name: string): Array<{ abn: string; entityName: string; state: string }> {
+function buildSearchMock(name: string): AbrSearchResult[] {
   return [
     { abn: "12345678901", entityName: `${name} Pty Ltd`, state: "NSW" },
     { abn: "98765432101", entityName: `${name} Group Pty Ltd`, state: "VIC" },

@@ -139,6 +139,21 @@ export async function hashPassword(info: string): Promise<string> {
   return hash;
 }
 
+/*
+  Checks a plaintext password against a stored hash.
+
+  `password` is optional on User — accounts made through the old SMS sign-up
+  have none — and bcrypt throws on a missing hash, which surfaced as a 500.
+  No hash simply means no password can match.
+*/
+export async function verifyPassword(
+  plain: string,
+  hash: string | null | undefined
+): Promise<boolean> {
+  if (!hash) return false;
+  return bcrypt.compare(plain, hash);
+}
+
 /**
  * Hash any 6 digit code
  */
