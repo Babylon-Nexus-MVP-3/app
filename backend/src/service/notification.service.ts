@@ -1,11 +1,9 @@
-import Expo from "expo-server-sdk";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { NotificationModel, NotificationType } from "../models/notificationModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
-
-const expo = new Expo();
+import { sendPush } from "./push.service";
 
 export class NotificationError extends Error {
   statusCode: number;
@@ -37,23 +35,17 @@ export async function createNotification(input: CreateNotificationInput): Promis
   // Best-effort push — never throws, DB notification is source of truth
   try {
     const user = await UserModel.findById(input.recipientUserId).select("pushToken").lean();
-    const token = user?.pushToken;
-    if (token && Expo.isExpoPushToken(token)) {
-      await expo.sendPushNotificationsAsync([
-        {
-          to: token,
-          title: "VouchPay",
-          body: input.message,
-          data: {
-            type: input.type,
-            projectId: input.projectId,
-            ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
-          },
-        },
-      ]);
-    }
+    await sendPush(user?.pushToken, {
+      title: "VouchPay",
+      body: input.message,
+      data: {
+        type: input.type,
+        projectId: input.projectId,
+        ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+      },
+    });
   } catch {
-    // Push failure is non-fatal
+    // The token lookup failing is non-fatal too
   }
 }
 
