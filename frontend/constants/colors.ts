@@ -57,6 +57,16 @@ export const Colors = {
   // Scrims — the Android stand-in where a real blur cannot be drawn (AppBlur)
   scrimDark: "rgba(0,0,0,0.72)",
   scrimLight: "rgba(255,255,255,0.72)",
+
+  // Shareable VouchPay card on the Me tab
+  cardFaceEnd: "#F2F5F3", // lower-right stop of the card's lit face (starts at white)
+  cardShadow: "#0B2B1B", // green-black cast shadow under the card
+
+  // Initials avatars in Give a Vouch search results, cycled by position
+  avatarIndigo: "#5C6BC0",
+  avatarTeal: "#00897B",
+  avatarBrown: "#6D4C41",
+  avatarSlate: "#546E7A",
 } as const;
 
 export type ColorKey = keyof typeof Colors;

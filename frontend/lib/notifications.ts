@@ -15,10 +15,10 @@ export async function registerForPushNotifications(
   // Android requires an explicit notification channel
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
-      name: "Babylon Nexus",
+      name: "VouchPay",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: Colors.gold,
+      lightColor: Colors.vouchGreen,
       sound: "default",
     });
   }
