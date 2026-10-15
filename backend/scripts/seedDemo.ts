@@ -25,7 +25,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { UserModel } from "../src/models/userModel";
 import { VouchProfileModel } from "../src/models/vouchProfileModel";
 import { VouchRequestModel } from "../src/models/vouchRequestModel";

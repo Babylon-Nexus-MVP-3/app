@@ -26,7 +26,7 @@ function isPaidStatus(status: InvoiceStatus): boolean {
 
 function canViewInvoiceAmount(
   role: string,
-  invoice: { approverRole: string; submittedByUserId: string },
+  invoice: { approverRole: string; submittedByUserId: { toString(): string } },
   userId: string
 ): boolean {
   if (role === UserRole.Observer) return false;
@@ -162,7 +162,7 @@ export async function getProjectDetails(
     userRole
   );
 
-  const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i: any) => {
+  const invoices: ProjectInvoiceListItem[] = invoicesRaw.map((i) => {
     const due = new Date(i.dateDue);
     const paidDate: Date | undefined = i.datePaid ?? i.dateReceived;
 
@@ -188,7 +188,7 @@ export async function getProjectDetails(
     };
   });
 
-  const overdueInvoiceCount = invoicesRaw.filter((i: any) => {
+  const overdueInvoiceCount = invoicesRaw.filter((i) => {
     if (isPaidStatus(i.status) || i.status === "Rejected") return false;
     return new Date(i.dateDue).getTime() < now.getTime();
   }).length;
@@ -199,11 +199,11 @@ export async function getProjectDetails(
   const nextMonthStart = addMonths(currentMonthStart, 1);
   const prevMonthStart = addMonths(currentMonthStart, -1);
 
-  const currentMonthInvoices = invoicesRaw.filter((i: any) => {
+  const currentMonthInvoices = invoicesRaw.filter((i) => {
     const due = new Date(i.dateDue);
     return due >= currentMonthStart && due < nextMonthStart;
   });
-  const prevMonthInvoices = invoicesRaw.filter((i: any) => {
+  const prevMonthInvoices = invoicesRaw.filter((i) => {
     const due = new Date(i.dateDue);
     return due >= prevMonthStart && due < currentMonthStart;
   });
@@ -211,7 +211,7 @@ export async function getProjectDetails(
   const currentMonthHealth = computeHealthScoreByDueDate(currentMonthInvoices, now);
   const prevMonthHealth = computeHealthScoreByDueDate(prevMonthInvoices, now);
 
-  const prevMonthHadPaid = prevMonthInvoices.some((i: any) => isPaidStatus(i.status));
+  const prevMonthHadPaid = prevMonthInvoices.some((i) => isPaidStatus(i.status));
   // Avoid NaN when prev month had paid invoices but 0% on-time health (divide by 0).
   const monthOnMonthHealthChangePct =
     !prevMonthHadPaid || prevMonthHealth === 0

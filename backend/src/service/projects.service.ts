@@ -1,17 +1,20 @@
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
-import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+import { Invoice, InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
+
+/** The invoice fields the health and overdue checks read. */
+type InvoiceTiming = Pick<Invoice, "status" | "datePaid" | "dateReceived" | "dateDue">;
 
 function isPaidStatus(status: InvoiceStatus): boolean {
   return status === "Paid" || status === "Received";
 }
 
-function isOverdue(invoice: any, now: Date): boolean {
+function isOverdue(invoice: InvoiceTiming, now: Date): boolean {
   if (isPaidStatus(invoice.status) || invoice.status === "Rejected") return false;
   return new Date(invoice.dateDue).getTime() < now.getTime();
 }
 
-function computeHealthScore(invoices: any[], now: Date): number {
+function computeHealthScore(invoices: InvoiceTiming[], now: Date): number {
   const paid = invoices.filter((i) => isPaidStatus(i.status));
   if (paid.length === 0) return 100;
   const onTime = paid.filter((i) => {
@@ -22,12 +25,7 @@ function computeHealthScore(invoices: any[], now: Date): number {
   return Math.round((onTime.length / paid.length) * 100);
 }
 
-export interface ListProjectsResult {
-  projects: any[];
-  total: number;
-}
-
-export async function listAssociatedProjects(userId: string): Promise<ListProjectsResult> {
+export async function listAssociatedProjects(userId: string) {
   const normalizedUserId = userId?.trim();
   if (!normalizedUserId) {
     return { projects: [], total: 0 };
@@ -62,12 +60,12 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
     .sort({ createdAt: -1 })
     .lean();
 
-  const projectIds = projects.map((p: any) => p._id.toString());
+  const projectIds = projects.map((p) => p._id.toString());
 
   const allInvoices =
     projectIds.length > 0 ? await InvoiceModel.find({ projectId: { $in: projectIds } }).lean() : [];
 
-  const invoicesByProject = new Map<string, any[]>();
+  const invoicesByProject = new Map<string, InvoiceTiming[]>();
   for (const inv of allInvoices) {
     const pid = inv.projectId.toString();
     if (!invoicesByProject.has(pid)) invoicesByProject.set(pid, []);
@@ -76,7 +74,7 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
 
   const now = new Date();
 
-  const projectsWithRole = projects.map((p: any) => {
+  const projectsWithRole = projects.map((p) => {
     const projectId = p._id.toString();
     const participantRole = roleByProjectId.get(projectId);
 
@@ -99,6 +97,9 @@ export async function listAssociatedProjects(userId: string): Promise<ListProjec
 
   return { projects: projectsWithRole, total: projectsWithRole.length };
 }
+
+/** What GET /projects returns: each lean project plus the viewer's role and health. */
+export type ListProjectsResult = Awaited<ReturnType<typeof listAssociatedProjects>>;
 
 export interface ProjectHistoryEntry {
   id: string;
@@ -150,7 +151,7 @@ export async function listProjectHistory(userId: string): Promise<ProjectHistory
     .sort({ createdAt: -1 })
     .lean();
 
-  return projects.map((p: any) => {
+  return projects.map((p) => {
     const projectId = p._id.toString();
     const role =
       roleByProjectId.get(projectId) ??

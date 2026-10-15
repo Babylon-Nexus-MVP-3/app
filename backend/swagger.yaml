@@ -1,12 +1,16 @@
 openapi: 3.0.0
 
 info:
-  title: Babylon Nexus API
+  title: VouchPay API
   version: 1.0.0
   description: |
     ## Overview
-    The Babylon Nexus API manages construction project workflows including authentication,
-    project management, invoice lifecycle, and participant coordination.
+    The VouchPay API (formerly Babylon Nexus) covers authentication, projects, the invoice
+    lifecycle, participant coordination, vouching (Get Vouched, Give a Vouch), ABN lookups,
+    notifications and admin project management.
+
+    Served at `/api-docs` when `NODE_ENV` is not `production` — run the backend locally
+    with `npm run dev` and open `http://localhost:3229/api-docs`.
 
     ## Invoice Lifecycle
     Invoices follow this sequential workflow:
@@ -25,6 +29,9 @@ info:
     Access tokens expire in **10 minutes**. Use `/auth/refresh` to obtain a new one.
 
 
+servers:
+  - url: http://localhost:3229
+    description: Local development
 
 tags:
   - name: Authentication
@@ -37,6 +44,16 @@ tags:
   #   description: Routes accessible to users with the Builder role
   - name: Multiple Roles
     description: Routes accessible to two or more roles
+  - name: Account
+    description: The signed-in user's own account — profile, mobile and email verification, push token
+  - name: Vouch
+    description: Vouch profile (Get Vouched), vouch requests, giving and receiving vouches
+  - name: ABN Lookup
+    description: Australian Business Register lookups (mocked when `ABR_GUID` is unset)
+  - name: Notifications
+    description: In-app notifications
+  - name: Admin
+    description: Admin-only project management. Requires the `Admin` role.
 
 security:
   - BearerAuth: []
@@ -58,36 +75,44 @@ components:
 
     User:
       type: object
-      description: Represents a registered user (maps to USER table)
+      description: A registered user (`users` collection). Secrets and codes are never returned.
       properties:
         id:
           type: string
-          example: "user_123e4567-e89b-12d3-a456-426614174000"
+          example: "665f1c2e8b3a4d0012345678"
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
         name:
           type: string
+          description: Derived from firstName + lastName
           example: "John Doe"
         email:
           type: string
           format: email
           example: "john.doe@example.com"
-        phoneNumber:
+        mobile:
           type: string
-          example: "+61412345678"
+          example: "0412345678"
+        mobileVerified:
+          type: boolean
+          example: false
+        abn:
+          type: string
+          example: "83914571673"
+        businessName:
+          type: string
+          example: "Mitchell Construction"
+        businessTrade:
+          type: string
+          example: "Carpentry"
         role:
           type: string
-          enum: [PM, Subbie, Owner, Builder, Consultant]
-          example: "PM"
-        verticalGroup:
-          type: string
-          example: "Residential"
-        horizontalAttribute:
-          type: string
-          example: "Senior"
-        licenceNumber:
-          type: string
-          nullable: true
-          description: Professional licence number (if applicable)
-          example: "123456"
+          enum: [Admin, Owner, Builder, PM, Subbie, Consultant, Financier, VIP, Observer]
+          example: "Subbie"
         status:
           type: string
           description: "`Active` for verified users, `Pending` for unverified accounts"
@@ -322,13 +347,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [firstName, lastName, email, password]
+              required: [firstName, email, password]
               properties:
                 firstName:
                   type: string
                   example: "John"
                 lastName:
                   type: string
+                  description: Optional — some people go by a single name
                   example: "Doe"
                 email:
                   type: string
@@ -337,8 +363,21 @@ paths:
                 password:
                   type: string
                   format: password
-                  minLength: 8
+                  minLength: 12
+                  maxLength: 50
+                  description: 12–50 characters, at least 3 of upper, lower, number, special
                   example: "SecurePass123!"
+                mobile:
+                  type: string
+                  description: Optional. Verified later via `/auth/request-mobile-otp`.
+                  example: "0412345678"
+                abn:
+                  type: string
+                  description: Optional 11-digit ABN. Must be active on the ABR and not already registered.
+                  example: "83914571673"
+                businessName:
+                  type: string
+                  example: "Mitchell Construction"
       responses:
         '201':
           description: User created — verification email sent
@@ -811,14 +850,15 @@ paths:
       description: |
         Creates a new project. **Any authenticated user can create a project** — there is no role restriction.
         The creator is automatically added as a participant with the specified `creatorRole`.
-        The project starts with `status: "Pending"` and must be approved by Admin before it becomes `Active`.
+        The project is `Active` from creation — there is no admin approval step. The app only
+        offers project creation once the user's profile is 100% complete.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [name, council, creatorRole]
+              required: [location, council]
               properties:
                 name:
                   type: string
@@ -830,11 +870,39 @@ paths:
                 council:
                   type: string
                   example: "Strathfield"
+                daNumber:
+                  type: string
+                  description: Optional development application number
+                  example: "DA-2025-0142"
                 creatorRole:
                   type: string
                   description: The role the creator will hold on this project
                   enum: [PM, Subbie, Owner, Builder, Consultant, Financier, VIP, Observer]
                   example: "PM"
+                creatorHasInsurance:
+                  type: boolean
+                creatorHasLicence:
+                  type: boolean
+                hasInsurance:
+                  type: boolean
+                hasLicence:
+                  type: boolean
+                invitees:
+                  type: array
+                  description: People to invite on creation (each gets an invite email)
+                  items:
+                    type: object
+                    required: [email, role]
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        type: string
+                        example: "Subbie"
+                      trade:
+                        type: string
+                        example: "Carpentry"
       responses:
         '200':
           description: Project created successfully
@@ -1200,3 +1268,1019 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: "Invoice not found"
+
+  /project/{project_id}/audit-log:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get a project's invoice audit log
+      description: |
+        Every invoice on the project with its event history (submitted, approved, rejected,
+        paid, received) and who did each step. Caller must be a participant on the project.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Audit log, grouped by invoice
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /projects/history:
+    get:
+      tags:
+        - Multiple Roles
+      summary: Get the user's project history
+      description: Projects the user has worked on, for the Me screen's project history.
+      responses:
+        '200':
+          description: Project history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  projects:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Account
+  # ─────────────────────────────────────────────
+
+  /auth/reactivate:
+    post:
+      tags:
+        - Account
+      summary: Reactivate a deactivated account
+      description: |
+        A deleted account is kept for a grace period. Logging in during it returns
+        `403` with `code: ACCOUNT_DEACTIVATED` and `daysRemaining`; calling this with the
+        same credentials restores the account and signs the user in.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Account restored and signed in
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TokenPair'
+                  - type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/me:
+    get:
+      tags:
+        - Account
+      summary: Get the signed-in user
+      responses:
+        '200':
+          description: The current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/profile:
+    patch:
+      tags:
+        - Account
+      summary: Update business details
+      description: |
+        Sets the user's ABN and business name. The ABN must be active on the ABR and not
+        registered to another account — this is the only way to change an ABN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abn:
+                  type: string
+                  example: "83914571673"
+                businessName:
+                  type: string
+                  example: "Mitchell Construction"
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/push-token:
+    patch:
+      tags:
+        - Account
+      summary: Register the device's Expo push token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pushToken]
+              properties:
+                pushToken:
+                  type: string
+                  example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+      responses:
+        '200':
+          description: Saved
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/delete-account:
+    delete:
+      tags:
+        - Account
+      summary: Delete (deactivate) the signed-in account
+      description: Soft delete. The account is deactivated and purged after 30 days; `/auth/reactivate` restores it before then.
+      responses:
+        '200':
+          description: Account deactivated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/request-mobile-otp:
+    post:
+      tags:
+        - Account
+      summary: Send a mobile verification code
+      description: Sends an SMS code via Twilio Verify. Required before requesting vouches.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile]
+              properties:
+                mobile:
+                  type: string
+                  example: "0412345678"
+      responses:
+        '200':
+          description: Code sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many requests
+
+  /auth/verify-mobile-otp:
+    post:
+      tags:
+        - Account
+      summary: Verify a mobile number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, code]
+              properties:
+                mobile:
+                  type: string
+                  example: "0412345678"
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Mobile verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many attempts
+
+  /auth/request-email-change:
+    post:
+      tags:
+        - Account
+      summary: Start an email change
+      description: Sends a 6-digit code to the new address. The email doesn't change until it's verified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newEmail]
+              properties:
+                newEmail:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/verify-email-change:
+    post:
+      tags:
+        - Account
+      summary: Confirm an email change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Email changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Vouch
+  # ─────────────────────────────────────────────
+
+  /vouch/profile:
+    post:
+      tags:
+        - Vouch
+      summary: Save the Get Vouched profile and send vouch requests
+      description: |
+        Partial save — each wizard step sends only the fields it owns, and empty values are
+        ignored. Only `idNumber`, `idExpiry` and `idState` are written from the body; name and
+        ABN are copied from the account (change the ABN via `PATCH /auth/profile`). The ID type
+        is always `trade-licence`.
+
+        Each new reference in `references` gets a vouch request by email. Sending references
+        requires a verified mobile and a business name + ABN on the account. Duplicate
+        references (same email, or an existing request) are skipped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                businessTrade:
+                  type: string
+                  description: One of the trade list in `utils/vouchRules.ts`
+                  example: "Carpentry"
+                idNumber:
+                  type: string
+                  example: "LIC123456"
+                idExpiry:
+                  type: string
+                  description: DD/MM/YYYY, must not be expired
+                  example: "01/01/2030"
+                idState:
+                  type: string
+                  example: "NSW"
+                references:
+                  type: array
+                  items:
+                    type: object
+                    required: [firstName, email]
+                    properties:
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      company:
+                        type: string
+                      relationship:
+                        type: string
+                        example: "Head Contractor"
+                      project:
+                        type: string
+      responses:
+        '201':
+          description: The saved profile
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Mobile not verified (when sending references)
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          description: Too many requests
+
+  /vouch/profile/me:
+    get:
+      tags:
+        - Vouch
+      summary: Get the signed-in user's vouch profile and completion
+      description: |
+        The saved profile (if any) plus `businessTrade` from the account, and the profile
+        completion. 100% (`isComplete`) is what unlocks giving a vouch and creating a project.
+      responses:
+        '200':
+          description: Profile and completion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  businessTrade:
+                    type: string
+                  profileStrength:
+                    type: integer
+                    example: 100
+                  stepsDone:
+                    type: array
+                    items:
+                      type: boolean
+                  stepsLeft:
+                    type: integer
+                    example: 0
+                  isComplete:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/requests/sent:
+    get:
+      tags:
+        - Vouch
+      summary: List vouch requests the user has sent
+      responses:
+        '200':
+          description: Sent requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/requests/{requestId}/nudge:
+    post:
+      tags:
+        - Vouch
+      summary: Re-send a vouch request to a reference who hasn't answered
+      description: Allowed once every 24 hours per request, and only while it's unanswered.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Nudge sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  lastSentAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid id, already answered, or nudged too recently
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Request not found
+
+  /vouch/requests/{requestId}:
+    delete:
+      tags:
+        - Vouch
+      summary: Withdraw an unanswered vouch request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid id or already answered
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Request not found
+
+  /vouch/pending-requests:
+    get:
+      tags:
+        - Vouch
+      summary: List vouch requests waiting on the signed-in user
+      description: Requests addressed to the user that they haven't answered or ignored.
+      responses:
+        '200':
+          description: Pending requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/requests/{id}/ignore:
+    patch:
+      tags:
+        - Vouch
+      summary: Ignore a vouch request addressed to the user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ignored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Request isn't addressed to this user
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Request not found
+
+  /vouch/give:
+    post:
+      tags:
+        - Vouch
+      summary: Give a vouch to a business
+      description: |
+        One vouch per giver per ABN (`409` on a repeat). The giver can't vouch for their own
+        ABN. `attributes` must be at least 2 of the 16 in `utils/vouchRules.ts`. Pass
+        `requestId` when answering a vouch request — it must be addressed to the giver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toAbn, attributes]
+              properties:
+                toAbn:
+                  type: string
+                  example: "47100074445"
+                toBusinessName:
+                  type: string
+                  example: "Vouched Test Co"
+                attributes:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                  example: ["Reliable", "Quality work"]
+                note:
+                  type: string
+                  example: "Always delivers."
+                requestId:
+                  type: string
+                recipientFirstName:
+                  type: string
+                recipientLastName:
+                  type: string
+                recipientEmail:
+                  type: string
+                  format: email
+                recipientMobile:
+                  type: string
+      responses:
+        '201':
+          description: Vouch created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vouch:
+                    type: object
+                  vouchCount:
+                    type: integer
+                    example: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The request isn't addressed to this user
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Vouch request not found
+        '409':
+          description: Already vouched for this business
+
+  /vouch/given:
+    get:
+      tags:
+        - Vouch
+      summary: List vouches the user has given
+      responses:
+        '200':
+          description: Given vouches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vouches:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/received:
+    get:
+      tags:
+        - Vouch
+      summary: List vouches received by the user's ABN
+      description: Each vouch includes the giver's details and whether the user has already vouched back.
+      responses:
+        '200':
+          description: Received vouches (empty if the user has no ABN)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vouches:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/business/{abn}:
+    get:
+      tags:
+        - Vouch
+      summary: Vouch summary for a business
+      description: |
+        `isOnVouch` is true when the business has a Get Vouched profile. When it does, the
+        response also has the attribute tally and the top three as `attributeSummary`.
+      parameters:
+        - name: abn
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "47100074445"
+      responses:
+        '200':
+          description: Business summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isOnVouch:
+                    type: boolean
+                  vouchCount:
+                    type: integer
+                  alreadyVouched:
+                    type: boolean
+                  attributeSummary:
+                    type: string
+                    example: "Reliable · Quality work · Honest"
+                  attributes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        attr:
+                          type: string
+                        count:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/notifications:
+    get:
+      tags:
+        - Vouch
+      summary: List vouch notifications
+      responses:
+        '200':
+          description: Vouch notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/notifications/read-all:
+    patch:
+      tags:
+        - Vouch
+      summary: Mark all vouch notifications read
+      responses:
+        '200':
+          description: Done
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vouch/notifications/{id}/read:
+    patch:
+      tags:
+        - Vouch
+      summary: Mark one vouch notification read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Done
+        '400':
+          description: Invalid notification id
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # ABN Lookup
+  # ─────────────────────────────────────────────
+
+  /abr/lookup:
+    get:
+      tags:
+        - ABN Lookup
+      summary: Look up an ABN
+      description: Calls the ABR (5s timeout). Returns a mock when `ABR_GUID` is unset.
+      security: []
+      parameters:
+        - name: abn
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "83914571673"
+      responses:
+        '200':
+          description: ABN details
+        '400':
+          description: ABN must be 11 digits
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: ABN not found
+        '410':
+          description: ABN cancelled
+        '503':
+          description: ABR unavailable or timed out
+
+  /abr/search:
+    get:
+      tags:
+        - ABN Lookup
+      summary: Search businesses by name
+      description: Up to 10 matches from the ABR. Returns mocks when `ABR_GUID` is unset.
+      security: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+          example: "Mitchell Construction"
+      responses:
+        '200':
+          description: Matches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        abn:
+                          type: string
+                        entityName:
+                          type: string
+                        state:
+                          type: string
+        '400':
+          description: Name must be at least 3 characters
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          description: ABR unavailable or timed out
+
+  # ─────────────────────────────────────────────
+  # Notifications
+  # ─────────────────────────────────────────────
+
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: List the user's project notifications
+      responses:
+        '200':
+          description: Notifications, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        projectId:
+                          type: string
+                        projectName:
+                          type: string
+                        invoiceId:
+                          type: string
+                          nullable: true
+                        type:
+                          type: string
+                        message:
+                          type: string
+                        read:
+                          type: boolean
+                        createdAt:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/read-all:
+    patch:
+      tags:
+        - Notifications
+      summary: Mark all project notifications read
+      responses:
+        '200':
+          description: Done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  updatedCount:
+                    type: integer
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # Admin
+  # ─────────────────────────────────────────────
+
+  /admin/projects/active:
+    get:
+      tags:
+        - Admin
+      summary: List active projects
+      responses:
+        '200':
+          description: Active projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  projects:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/projects/inactive:
+    get:
+      tags:
+        - Admin
+      summary: List inactive (removed) projects
+      responses:
+        '200':
+          description: Inactive projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  projects:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/projects/{project_id}:
+    get:
+      tags:
+        - Admin
+      summary: Get a project's full detail
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project detail with participants and invoices
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Project not found
+    delete:
+      tags:
+        - Admin
+      summary: Remove a project
+      description: Soft delete — the project becomes `Inactive`.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Project not found
+
+  /admin/projects/{project_id}/participants/remove:
+    delete:
+      tags:
+        - Admin
+      summary: Remove a participant from a project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  example: "Subbie"
+      responses:
+        '200':
+          description: Participant removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  removedCount:
+                    type: integer
+                    example: 1
+                  message:
+                    type: string
+                    example: "Participant removed"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

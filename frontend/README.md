@@ -1,41 +1,77 @@
-# Welcome to your Expo app 👋
+# VouchPay app
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native app built with Expo SDK 54 and expo-router v6. The New Architecture and the React
+Compiler are both on. It ships to iOS and Android as **VouchPay**. The bundle ID and package are
+`com.babylonnexus`, matching the store listings.
 
-## Get started
+## Setup
 
-1. Install dependencies
+```bash
+npm install
+cp .env.example .env.local
+npx expo start
+```
 
-   ```bash
-   npm install
-   ```
+`EXPO_PUBLIC_API_URL` is the only variable. It defaults to `http://localhost:3229`, which works
+for the iOS simulator and web. A physical phone needs your computer's LAN IP, e.g.
+`http://192.168.1.20:3229`. Start the backend first (see [../backend/README.md](../backend/README.md)).
 
-2. Start the app
+The app uses native modules that Expo Go doesn't include, such as notifications and updates.
+Use a development build: `eas build --profile development`, then install it on the device or
+simulator.
 
-   ```bash
-   npx expo start
-   ```
+Log in with any `seed:dev` account, e.g. `builder@ladder.dev` / `Password123!`.
 
-In the output, you'll find options to open the app in a
+## Scripts
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Command | What it does |
+|---|---|
+| `npx expo start` | Dev server |
+| `npm run web` | Run in the browser |
+| `npm run lint` | `expo lint` |
+| `npx tsc --noEmit` | Type-check (CI runs this) |
+| `npx expo export --platform web` | Bundle check. Catches Metro errors that `tsc` misses. |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Layout
 
+```
+app/                    # expo-router: every file here is a route
+├── (auth)/             # sign-in, sign-up, verify email, forgot/reset password
+├── (app)/              # signed-in screens
+│   ├── (tabs)/         # bottom tabs: home, vouches, projects, me
+│   ├── get-vouched/    # profile wizard (2 steps) + request a vouch
+│   ├── give-vouch/     # find a business by ABN → pick attributes → confirm
+│   └── project/        # project detail and audit log
+└── (admin)/            # admin console: projects, archives
+components/             # shared UI. Pieces split out of screens go here, not in app/
+constants/              # colors, fonts, spacing, shared styles, API URL, trade list
+context/AuthContext.tsx # session, token refresh, current user
+lib/                    # hooks and helpers (ABR lookup, vouch profile, validation, push)
+```
 
-## Learn more
+Files under `app/` become routes. Put helper components in `components/`, otherwise
+they turn into stray screens.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Conventions
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Colors:** always use `Colors.*` from `constants/colors.ts`. Never hardcode hex values,
+  and never rename tokens.
+- **Text:** use `AppText` with `Fonts.*`. Reuse the shared style files in `constants/`
+  (`appStyles`, `authStyles`) and `components/project/styles.ts`.
+- **API calls:** go through `API_BASE_URL` from `constants/api.ts`.
+- **Gates:** profile completion from `GET /vouch/profile/me` (`isComplete`) decides whether
+  Give a Vouch and Vouch my Project are unlocked. Don't recompute it on the client.
 
-## Join the community
+## Builds and releases
 
-Join our community of developers creating universal apps.
+Builds use EAS. Every profile in [`eas.json`](eas.json) points at the production API.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+eas build --platform ios --profile production
+eas build --platform android --profile production
+eas submit --platform ios      # or android
+```
+
+JS-only changes can ship over the air with EAS Update (`eas update --channel production`).
+The runtime version follows the app version, so an update reaches only builds with the same
+`version` in `app.config.js`. Native changes need a new build and a version bump.

@@ -1,64 +1,71 @@
-# VouchPay v3 — Full Specification
+# VouchPay v3 — Original Specification (historical)
 
-This document is the source of truth for all v3 changes.
-Agents working on v3 features should read this in full before starting.
-UI layout and screen designs are provided as screenshots — not described here.
-
-**Golden rule: never break working v2 features.** The invoice/project tracking core
-must remain functional throughout the migration.
+> **This is the original v3 plan, kept for context.** For the current API, use
+> Swagger (`backend/swagger.yaml`, served at `/api-docs` locally); for setup, see the
+> READMEs.
+>
+> Where the shipped app differs from this plan:
+>
+> - **Sign-in is email + password** rather than SMS OTP (§3). Mobile is optional at
+>   sign-up and verified with Twilio Verify (`/auth/request-mobile-otp`, `/auth/verify-mobile-otp`);
+>   a verified mobile is required before requesting vouches. Forgot/reset password and
+>   change password were kept.
+> - **Get Vouched is two steps, not three** (§6): your details (name + ABN, from sign-up)
+>   and a trade licence. Each is 50% of profile strength. References are requested from a
+>   separate screen and don't count towards it.
+> - **There is no profile `status`.** Gates use profile completion instead: at 100%
+>   (`isComplete` from `GET /vouch/profile/me`) the user can give a vouch and create a
+>   project ("Vouch my Project"). See `backend/src/service/vouchProfile.service.ts`.
+> - **Projects need no admin approval.** They are `Active` from creation.
+> - **Vouches are `GivenVouch` records** keyed by the recipient's ABN, one per giver per ABN.
+>   Attributes are the fixed list of 16 in `backend/src/utils/vouchRules.ts`.
+> - **Requests aren't accepted or declined.** A reference answers by giving a vouch with the
+>   request's `requestId`, or ignores it (`PATCH /vouch/requests/:id/ignore`). The sender can
+>   nudge or withdraw an unanswered request.
+> - **The bundle ID and package are `com.babylonnexus`**, matching the store listings; the
+>   display name is VouchPay.
 
 ---
 
-## Status tracker
-
-Use this to mark work done. Update as you complete each item.
+## Status tracker (as shipped)
 
 ### Backend
 - [x] Add `mobile`, `abn`, `businessName`, `businessTrade`, `businessState` to `userModel`
-- [x] Create `otpModel` for SMS OTP storage
-- [removed] `POST /auth/request-otp` — built, never adopted, deleted (public upsert-by-mobile was unsafe)
-- [removed] `POST /auth/verify-otp` — built, never adopted, deleted (passwordless login bypassed lockout and deactivation)
-- [ ] `GET /abr/lookup?abn=...` — proxy ABR lookup (keep `ABR_GUID` server-side)
-- [ ] Create `vouchProfileModel`
-- [ ] Create `vouchModel`
-- [ ] Create `vouchRequestModel`
-- [ ] `POST /vouch/profile` — create/update Vouch profile
-- [ ] `GET /vouch/profile/me` — own profile + status
-- [ ] `POST /vouch/give` — give a vouch to an ABN
-- [ ] `GET /vouch/received` — vouches received by current user's ABN
-- [ ] `GET /vouch/pending-requests` — pending vouch requests inbox
-- [ ] `POST /vouch/request/:id/accept`
-- [ ] `POST /vouch/request/:id/decline`
-- [ ] `GET /vouch/business/:abn` — public profile (vouch count + attributes only)
-- [x] `GET /vouch/requests/sent` — requests the current user has sent, with status
-- [x] `POST /vouch/requests/:requestId/nudge` — nudge a reference who hasn't responded (24h cooldown)
-- [x] `DELETE /vouch/requests/:requestId` — withdraw a pending request
+- [changed] SMS OTP sign-in (`otpModel`, `/auth/request-otp`, `/auth/verify-otp`) — replaced by email + password sign-in
+- [x] `GET /abr/lookup?abn=...` — ABR proxy, `ABR_GUID` kept server-side (also `GET /abr/search?name=...`)
+- [x] `vouchProfileModel`, `givenVouchModel` (planned as `vouchModel`), `vouchRequestModel`
+- [x] `POST /vouch/profile` — create/update the vouch profile, send requests to references
+- [x] `GET /vouch/profile/me` — own profile + completion
+- [x] `POST /vouch/give` — give a vouch to an ABN
+- [x] `GET /vouch/received` — vouches received by the current user's ABN
+- [x] `GET /vouch/pending-requests` — pending vouch requests inbox
+- [changed] `POST /vouch/request/:id/accept` / `decline` — replaced by answering via `POST /vouch/give` with `requestId`, or `PATCH /vouch/requests/:id/ignore`
+- [x] `GET /vouch/business/:abn` — vouch count + attributes for a business
+- [x] `GET /vouch/requests/sent`, `POST /vouch/requests/:requestId/nudge`, `DELETE /vouch/requests/:requestId`
 - [x] `GET /projects/history` — every project the user is or has been part of
-- [ ] Modify `POST /auth/register` — add mobile/ABN fields, remove password requirement (v2 flow kept, v3 uses request-otp)
-- [ ] Modify `POST /auth/login` — change to OTP-based flow (v2 flow kept, v3 uses request-otp)
+- [changed] `POST /auth/register` — mobile/ABN/business name added as optional fields; password kept
+- [changed] `POST /auth/login` — stayed email + password
 
 ### Frontend
-- [ ] Update `constants/colors.ts` to v3 design tokens
-- [ ] Replace `BabylonLogo.tsx` and `BabylonIcon.tsx` SVG content
-- [ ] Update all "BABYLON NEXUS" / "Babylon" brand strings
-- [ ] Update `app.config.js` (app name, slug, bundle IDs)
-- [ ] Rewrite `(auth)/sign-up.tsx`
-- [ ] Rewrite `(auth)/sign-in.tsx`
-- [ ] Rewrite `(auth)/verify-email.tsx` → OTP verify screen
-- [ ] Delete `(auth)/forgot-password.tsx`
-- [ ] Delete `(auth)/reset-password.tsx`
-- [ ] Delete `(app)/change-password.tsx`
-- [ ] Restructure `(app)/_layout.tsx` to bottom tab navigator (Home, Vouches, Project, Me)
-- [ ] Create `(app)/home.tsx`
-- [ ] Create `(app)/vouches/` screens
-- [ ] Create `(app)/get-vouched/` 3-step wizard screens
-- [ ] Create `(app)/give-vouch/` screens
-- [ ] Create `(app)/me.tsx`
-- [ ] Gate "Vouch my Project" tab behind `vouchProfile.status === "Active"`
+- [x] v3 design tokens in `constants/colors.ts`
+- [x] Brand strings and logos updated to VouchPay
+- [x] `app.config.js` name is VouchPay (slug and bundle IDs match the store listings)
+- [x] Sign-up and sign-in rewritten (email + password)
+- [changed] `verify-email.tsx` kept as email verification; forgot/reset/change password kept
+- [x] Bottom tabs: Home, Vouches, Projects, Me (`app/(app)/(tabs)/`)
+- [x] `(app)/get-vouched/` wizard (two steps + request a vouch)
+- [x] `(app)/give-vouch/` screens
+- [x] `(app)/(tabs)/me.tsx`
+- [changed] "Vouch my Project" gated on profile completion = 100%, not a profile status
 
 ---
 
-## 1. Rebrand
+
+## Original plan
+
+Everything below is the plan as first written.
+
+### 1. Rebrand
 
 | Item | v2 | v3 |
 |---|---|---|
@@ -70,7 +77,7 @@ Use this to mark work done. Update as you complete each item.
 
 ---
 
-## 2. Design system
+### 2. Design system
 
 Update `constants/colors.ts` to exactly this:
 
@@ -115,9 +122,9 @@ UI patterns (apply consistently across all v3 screens):
 
 ---
 
-## 3. Authentication overhaul
+### 3. Authentication overhaul
 
-### Sign-up flow
+#### Sign-up flow
 1. User enters: mobile number, ABN, full name, email
 2. As ABN is typed, call `GET /abr/lookup?abn=...` in real time
 3. Show confirmed ABR result card: company name, trade, state, years active
@@ -125,13 +132,13 @@ UI patterns (apply consistently across all v3 screens):
 5. OTP verify screen: 6 individual digit inputs, resend countdown timer
 6. On verify → account created, JWT issued
 
-### Sign-in flow
+#### Sign-in flow
 1. Enter mobile number
 2. `POST /auth/request-otp` → SMS sent
 3. OTP verify screen (same component as sign-up)
 4. On verify → JWT issued
 
-### Backend — user model additions
+#### Backend — user model additions
 ```typescript
 // Add to userModel:
 mobile: string        // E.164 format: "+61412345678", required
@@ -143,7 +150,7 @@ email?: string        // now optional
 password?: string     // keep in schema, no longer required
 ```
 
-### Backend — OTP model
+#### Backend — OTP model
 ```typescript
 OTP {
   mobile: string
@@ -153,7 +160,7 @@ OTP {
 }
 ```
 
-### ABR lookup proxy
+#### ABR lookup proxy
 - Route: `GET /abr/lookup?abn=XXXXXXXXXXX`
 - Proxies to ABR API using server-side `ABR_GUID` env var
 - Never expose `ABR_GUID` to the client
@@ -162,7 +169,7 @@ OTP {
 
 ---
 
-## 4. Navigation
+### 4. Navigation
 
 Replace header-based navigation with a bottom tab bar with four tabs:
 **Home, Vouches, Project, Me**
@@ -172,7 +179,7 @@ Existing project/invoice screens move into the Project tab.
 
 ---
 
-## 5. Home screen
+### 5. Home screen
 
 Three tappable action cards. Logic:
 - "Give a Vouch" card shows a badge with the count of pending vouch requests
@@ -180,9 +187,9 @@ Three tappable action cards. Logic:
 
 ---
 
-## 6. Get Vouched — 3-step wizard
+### 6. Get Vouched — 3-step wizard
 
-### Step 1 — Your details
+#### Step 1 — Your details
 Pre-filled from sign-up: name, ABN. User confirms; nothing here is editable.
 
 > **Shipped:** trade is *not* on this step. It is asked once, on the trade
@@ -190,20 +197,20 @@ Pre-filled from sign-up: name, ABN. User confirms; nothing here is editable.
 > document carries no copy. Business name is asked on sign-up, prefilled from
 > the ABR but editable. See the Trade and Business name rules in `CLAUDE.md`.
 
-### Step 2 — Your project
+#### Step 2 — Your project
 **Current project** (required): name, address, suburb, state, postcode, value (private)
 **Past project** (optional): name, suburb, postcode, year, approx value (private)
 Values are never shown publicly — used internally only.
 
-### Step 3 — Two references
+#### Step 3 — Two references
 Per reference: name, company, mobile, email (TBD), relationship to user, which project.
 Third reference optional.
 On submit → SMS vouch requests sent to all references.
 
-### After submission
+#### After submission
 Profile status becomes `"Pending"`. Unlocks to `"Active"` once 2 references respond.
 
-### Backend model
+#### Backend model
 ```typescript
 VouchProfile {
   userId: ObjectId
@@ -243,24 +250,24 @@ VouchProfile {
 
 ---
 
-## 7. Give a Vouch
+### 7. Give a Vouch
 
-### ABN lookup behaviour
+#### ABN lookup behaviour
 - If ABN is already on VouchPay: show existing vouch count, attributes summary, CTA to vouch
 - If ABN is not on VouchPay: show "not yet on Vouch" state, CTA to vouch and invite them
 - "Add manually" fallback if no ABN available
 
-### Attribute selection
+#### Attribute selection
 Multi-select chips, minimum 2 required:
 `Pays on time`, `Quality work`, `Professional`, `Reliable`, `Communication`, `Work with again`
 
 Optional free-text note. Only positive attributes are public — notes are private.
 
-### Pending vouch requests
+#### Pending vouch requests
 Incoming requests (from Get Vouched references) appear in the Vouches tab with name + timestamp.
 User can accept or decline.
 
-### Backend models
+#### Backend models
 ```typescript
 Vouch {
   fromUserId: ObjectId
@@ -288,7 +295,7 @@ VouchRequest {
 
 ---
 
-## 8. Vouch my Project (existing feature, gated)
+### 8. Vouch my Project (existing feature, gated)
 
 No backend changes. The existing project/invoice infrastructure is reused as-is.
 
@@ -298,14 +305,14 @@ Amounts always stay private — only payment timing is used for the health score
 
 ---
 
-## 9. Me / Profile screen
+### 9. Me / Profile screen
 
 Displays: name, ABN, business name, trade, Vouch profile status, vouch count received.
 Settings: notification preferences, sign out.
 
 ---
 
-## 10. Migration notes
+### 10. Migration notes
 
 - Existing v2 users re-authenticate via OTP on first v3 login
 - `mobile` stored as E.164: `+61412345678`

@@ -45,7 +45,10 @@ export interface CreateProjectInput {
  */
 function isDuplicateKeyError(error: unknown): error is { code: number } {
   return (
-    typeof error === "object" && error !== null && "code" in error && (error as any).code === 11000
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === 11000
   );
 }
 

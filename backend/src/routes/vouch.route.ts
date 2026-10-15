@@ -1,6 +1,5 @@
 import express, { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
-import Expo from "expo-server-sdk";
 import { requireAuth, vouchProfileLimiter, vouchGiveLimiter } from "../middleware";
 import { VouchProfileModel } from "../models/vouchProfileModel";
 import { VouchRequestModel } from "../models/vouchRequestModel";
@@ -9,6 +8,7 @@ import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { UserModel } from "../models/userModel";
 import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.service";
 import { getProfileCompletion } from "../service/vouchProfile.service";
+import { sendPush } from "../service/push.service";
 import { validateEmailFormat } from "../utils/authHelper";
 import { fullName } from "../utils/name";
 import {
@@ -23,7 +23,6 @@ import {
 } from "../utils/vouchRules";
 
 export const vouchRouter = express.Router();
-const expo = new Expo();
 
 // Mirrors the frontend's own check (step2.tsx) — enforced again here since the
 // frontend control is trivially bypassed by calling this endpoint directly.
@@ -315,20 +314,12 @@ vouchRouter.post(
             projectName: ref.project,
           });
 
-          // Push notification (best-effort)
-          const token = refUser.pushToken;
-          if (token && Expo.isExpoPushToken(token)) {
-            expo
-              .sendPushNotificationsAsync([
-                {
-                  to: token,
-                  title: "New vouch request",
-                  body: `${fromName} from ${fromCompany} has asked you to vouch for them.`,
-                  data: { type: "VouchRequest", requestId: request._id.toString() },
-                },
-              ])
-              .catch(() => {});
-          }
+          // Push notification (best-effort, not awaited)
+          void sendPush(refUser.pushToken, {
+            title: "New vouch request",
+            body: `${fromName} from ${fromCompany} has asked you to vouch for them.`,
+            data: { type: "VouchRequest", requestId: request._id.toString() },
+          });
         }
 
         // Email notification — sent regardless of whether reference is on VouchPay
@@ -458,19 +449,11 @@ vouchRouter.post(
           projectName: request.projectName,
         });
 
-        const token = refUser.pushToken;
-        if (token && Expo.isExpoPushToken(token)) {
-          expo
-            .sendPushNotificationsAsync([
-              {
-                to: token,
-                title: "Nudge: vouch request",
-                body: `${request.fromName} from ${request.fromCompany} is still waiting on your vouch.`,
-                data: { type: "VouchRequest", requestId: request._id.toString() },
-              },
-            ])
-            .catch(() => {});
-        }
+        void sendPush(refUser.pushToken, {
+          title: "Nudge: vouch request",
+          body: `${request.fromName} from ${request.fromCompany} is still waiting on your vouch.`,
+          data: { type: "VouchRequest", requestId: request._id.toString() },
+        });
       }
 
       if (request.toEmail) {
@@ -932,19 +915,11 @@ vouchRouter.post(
           read: false,
         });
 
-        const token = recipient.pushToken ?? "";
-        if (Expo.isExpoPushToken(token)) {
-          expo
-            .sendPushNotificationsAsync([
-              {
-                to: token,
-                title: "New vouch received",
-                body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
-                data: { type: "vouch_received" },
-              },
-            ])
-            .catch(() => {});
-        }
+        void sendPush(recipient.pushToken, {
+          title: "New vouch received",
+          body: `${giverName} just vouched for ${toBusinessName ?? "your business"}.`,
+          data: { type: "vouch_received" },
+        });
       }
 
       res.status(201).json({ vouch, vouchCount });

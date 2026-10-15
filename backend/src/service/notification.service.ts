@@ -1,11 +1,9 @@
-import Expo from "expo-server-sdk";
 import { InvoiceModel, InvoiceStatus } from "../models/invoiceModel";
 import { NotificationModel, NotificationType } from "../models/notificationModel";
 import { ProjectModel } from "../models/projectModel";
 import { ProjectParticipantModel } from "../models/projectParticipantModel";
 import { UserModel, UserRole } from "../models/userModel";
-
-const expo = new Expo();
+import { sendPush } from "./push.service";
 
 export class NotificationError extends Error {
   statusCode: number;
@@ -37,23 +35,17 @@ export async function createNotification(input: CreateNotificationInput): Promis
   // Best-effort push — never throws, DB notification is source of truth
   try {
     const user = await UserModel.findById(input.recipientUserId).select("pushToken").lean();
-    const token = user?.pushToken;
-    if (token && Expo.isExpoPushToken(token)) {
-      await expo.sendPushNotificationsAsync([
-        {
-          to: token,
-          title: "VouchPay",
-          body: input.message,
-          data: {
-            type: input.type,
-            projectId: input.projectId,
-            ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
-          },
-        },
-      ]);
-    }
+    await sendPush(user?.pushToken, {
+      title: "VouchPay",
+      body: input.message,
+      data: {
+        type: input.type,
+        projectId: input.projectId,
+        ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+      },
+    });
   } catch {
-    // Push failure is non-fatal
+    // The token lookup failing is non-fatal too
   }
 }
 
@@ -64,16 +56,16 @@ export async function getNotificationsForUser(userId: string) {
     .sort({ createdAt: -1 })
     .lean();
 
-  const projectIds = [...new Set(notifications.map((n: any) => n.projectId.toString()))];
+  const projectIds = [...new Set(notifications.map((n) => n.projectId.toString()))];
   const projects =
     projectIds.length > 0
       ? await ProjectModel.find({ _id: { $in: projectIds } })
           .select("name")
           .lean()
       : [];
-  const projectNameById = new Map(projects.map((p: any) => [p._id.toString(), p.name as string]));
+  const projectNameById = new Map(projects.map((p) => [p._id.toString(), p.name as string]));
 
-  return notifications.map((n: any) => ({
+  return notifications.map((n) => ({
     id: n._id.toString(),
     recipientUserId: n.recipientUserId.toString(),
     projectId: n.projectId.toString(),
@@ -110,7 +102,8 @@ async function getAcceptedProjectUserIdsByRole(
     .select("userId")
     .lean();
 
-  return participants.map((p: any) => p.userId.toString());
+  // The query excludes rows without a userId.
+  return participants.map((p) => p.userId!.toString());
 }
 
 async function getAcceptedProjectUserIds(projectId: string): Promise<string[]> {
@@ -122,7 +115,8 @@ async function getAcceptedProjectUserIds(projectId: string): Promise<string[]> {
     .select("userId")
     .lean();
 
-  return participants.map((p: any) => p.userId.toString());
+  // The query excludes rows without a userId.
+  return participants.map((p) => p.userId!.toString());
 }
 
 function unique(ids: string[]): string[] {
