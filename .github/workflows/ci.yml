@@ -28,21 +28,31 @@ jobs:
         with:
           node-version: '20'
 
+      # npm ci installs exactly what the lockfile pins, and fails if
+      # package.json and the lockfile disagree instead of quietly rewriting it.
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm install
+        run: npm ci
 
       - name: Run frontend lint
         working-directory: ./frontend
         run: npx expo lint
 
+      - name: Typecheck frontend
+        working-directory: ./frontend
+        run: npx tsc --noEmit
+
       - name: Install backend dependencies
         working-directory: ./backend
-        run: npm install
+        run: npm ci
 
       - name: Run backend lint
         working-directory: ./backend
         run: npx eslint .
+
+      - name: Typecheck backend
+        working-directory: ./backend
+        run: npx tsc --noEmit -p .
 
   test:
     runs-on: ubuntu-latest
@@ -57,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: npm install
+        run: npm ci
 
       - name: Run tests with server
         working-directory: ./backend
@@ -68,7 +78,6 @@ jobs:
           PORT: ${{ secrets.PORT }}
           URL: ${{ secrets.URL }}
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           ACCESS_TOKEN_TTL_MINUTES: ${{ secrets.ACCESS_TOKEN_TTL_MINUTES }}
           REFRESH_TOKEN_TTL_DAYS: ${{ secrets.REFRESH_TOKEN_TTL_DAYS }}
           ADMIN_SEED_EMAIL: ${{ secrets.ADMIN_SEED_EMAIL }}

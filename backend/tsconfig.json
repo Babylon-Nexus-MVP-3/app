@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "esModuleInterop": true,
-    "noImplicitAny": true,
+    "strict": true,
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",

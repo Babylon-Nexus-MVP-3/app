@@ -1,5 +1,13 @@
 import { API_BASE_URL } from "@/constants/api";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { saveItem, getItem, deleteItem } from "@/lib/storage";
 import { UserRole } from "@/types/roles";
 import { registerForPushNotifications } from "@/lib/notifications";
@@ -73,11 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // the keychain session but gets a new push token.
           registerForPushNotifications(fetchWithAuth, { prompt: false }).catch(() => {});
 
-          // Fetch fresh user data so fields like mobileVerified are never stale
+          // Fetch fresh user data so fields like mobileVerified are never stale.
+          // Through fetchWithAuth, not raw fetch: the stored access token is
+          // usually expired by the next cold start, and a raw 401 here left the
+          // cached user in place until something else happened to refresh.
           try {
-            const res = await fetch(`${API_BASE_URL}/auth/me`, {
-              headers: { Authorization: `Bearer ${storedToken}` },
-            });
+            const res = await fetchWithAuth(`${API_BASE_URL}/auth/me`);
             if (res.ok) {
               const data = await res.json();
               if (data.user) {
@@ -163,10 +172,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         await saveItem("accessToken", data.accessToken);
         await saveItem("refreshToken", data.refreshToken);
+        // Update the ref now rather than on the next render, so requests fired
+        // in the meantime don't go out with the token that just expired.
+        accessTokenRef.current = data.accessToken;
         setAccessToken(data.accessToken);
         if (data.user) {
-          setUser(data.user);
-          await saveItem("user", JSON.stringify(data.user));
+          const fresh = normaliseUser(data.user);
+          setUser(fresh);
+          await saveItem("user", JSON.stringify(fresh));
         }
         return data.accessToken;
       } catch {
@@ -201,13 +214,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res;
   }
 
-  return (
-    <AuthContext.Provider
-      value={{ user, accessToken, isLoading, login, logout, updateUser, fetchWithAuth }}
-    >
-      {children}
-    </AuthContext.Provider>
+  /*
+    The functions above are recreated every render. Screens list fetchWithAuth
+    in useCallback/useEffect dependencies, so handing those out directly made
+    every auth state change (a token refresh, a user patch) re-run every such
+    effect and refetch. Each is exposed through a ref-backed wrapper whose
+    identity never changes but which always calls the latest version.
+  */
+  const latest = useRef({ login, logout, updateUser, fetchWithAuth });
+  latest.current = { login, logout, updateUser, fetchWithAuth };
+
+  const stableLogin = useCallback<AuthState["login"]>((...a) => latest.current.login(...a), []);
+  const stableLogout = useCallback(() => latest.current.logout(), []);
+  const stableUpdateUser = useCallback<AuthState["updateUser"]>(
+    (patch) => latest.current.updateUser(patch),
+    []
   );
+  const stableFetchWithAuth = useCallback<AuthState["fetchWithAuth"]>(
+    (url, options) => latest.current.fetchWithAuth(url, options),
+    []
+  );
+
+  const value = useMemo<AuthState>(
+    () => ({
+      user,
+      accessToken,
+      isLoading,
+      login: stableLogin,
+      logout: stableLogout,
+      updateUser: stableUpdateUser,
+      fetchWithAuth: stableFetchWithAuth,
+    }),
+    [user, accessToken, isLoading, stableLogin, stableLogout, stableUpdateUser, stableFetchWithAuth]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {
