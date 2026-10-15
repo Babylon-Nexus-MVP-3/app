@@ -16,8 +16,8 @@ Use this to mark work done. Update as you complete each item.
 ### Backend
 - [x] Add `mobile`, `abn`, `businessName`, `businessTrade`, `businessState` to `userModel`
 - [x] Create `otpModel` for SMS OTP storage
-- [x] `POST /auth/request-otp` — send OTP to mobile via Twilio
-- [x] `POST /auth/verify-otp` — verify OTP, return JWT
+- [removed] `POST /auth/request-otp` — built, never adopted, deleted (public upsert-by-mobile was unsafe)
+- [removed] `POST /auth/verify-otp` — built, never adopted, deleted (passwordless login bypassed lockout and deactivation)
 - [ ] `GET /abr/lookup?abn=...` — proxy ABR lookup (keep `ABR_GUID` server-side)
 - [ ] Create `vouchProfileModel`
 - [ ] Create `vouchModel`

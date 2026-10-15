@@ -16,9 +16,8 @@ import {
   hashCode,
   hashPassword,
 } from "../utils/authHelper";
-import { OtpModel } from "../models/otpModel";
 import { fullName } from "../utils/name";
-import { sendOtpSms, sendMobileVerification, checkMobileVerification } from "./sms.service";
+import { sendMobileVerification, checkMobileVerification } from "./sms.service";
 import {
   sendForgotPasswordEmail,
   sendOnboardingEmail,
@@ -729,114 +728,6 @@ function toAuMobile(e164: string): string {
   return e164;
 }
 
-async function generateAndStoreOtp(e164: string): Promise<string> {
-  await OtpModel.updateMany({ mobile: e164, used: false }, { $set: { used: true } });
-  const code = crypto.randomInt(100000, 1000000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-  await OtpModel.create({ mobile: e164, code: hashCode(code), expiresAt, used: false });
-  return code;
-}
-
-export interface RequestOtpInput {
-  mobile: string;
-  flow: "signup" | "signin";
-  abn?: string;
-  businessName?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-export async function requestOtp(input: RequestOtpInput): Promise<{ code?: string }> {
-  const e164 = normalizeAuMobile(input.mobile);
-
-  if (input.flow === "signup") {
-    if (!input.firstName?.trim()) throw new AuthError("First name is required");
-    if (!input.abn) throw new AuthError("ABN is required");
-
-    const au04 = toAuMobile(e164);
-    const existing = await UserModel.findOne({ mobile: au04 });
-    if (existing && existing.status === "Active") {
-      throw new AuthError("An account with this mobile already exists. Please sign in.", 409);
-    }
-
-    // existingAbn.mobile !== au04 excludes the caller re-requesting an OTP for
-    // their own in-progress signup (e.g. resend) from being flagged as a duplicate.
-    const existingAbn = await UserModel.findOne({ abn: input.abn });
-    if (existingAbn && existingAbn.mobile !== au04) {
-      throw new AuthError(
-        "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
-        409
-      );
-    }
-
-    // Same rule as registerUser: the caller's own name wins, ABR fills a blank.
-    const otpBusinessName =
-      input.businessName?.trim() || (await businessNameForAbn(input.abn)) || "";
-
-    const updateData: Record<string, unknown> = {
-      firstName: input.firstName.trim(),
-      lastName: input.lastName?.trim() ?? "",
-      abn: input.abn,
-      status: "Pending",
-      loginAttempts: 0,
-      accountLocked: false,
-    };
-    if (otpBusinessName) updateData.businessName = otpBusinessName;
-    if (input.email) updateData.email = input.email.toLowerCase().trim();
-
-    await UserModel.findOneAndUpdate({ mobile: au04 }, { $set: updateData }, { upsert: true });
-  } else {
-    const user = await UserModel.findOne({ mobile: toAuMobile(e164) });
-    if (!user) throw new AuthError("No account found for this number", 404);
-  }
-
-  const code = await generateAndStoreOtp(e164);
-
-  if (process.env.NODE_ENV !== "test") {
-    await sendOtpSms(e164, code).catch((err: unknown) => {
-      console.error(`Failed to send OTP SMS to ${e164}:`, err);
-    });
-  }
-
-  return process.env.NODE_ENV === "test" ? { code } : {};
-}
-
-export async function verifyOtp(
-  mobile: string,
-  code: string,
-  flow: "signup" | "signin"
-): Promise<LoginResult> {
-  const e164 = normalizeAuMobile(mobile);
-
-  const otp = await OtpModel.findOne({ mobile: e164, used: false, expiresAt: { $gt: new Date() } });
-  if (!otp) throw new AuthError("Invalid or expired code", 400);
-  if (otp.code !== hashCode(code)) throw new AuthError("Incorrect code. Please try again.", 400);
-
-  otp.used = true;
-  await otp.save();
-
-  const user = await UserModel.findOneAndUpdate(
-    { mobile: toAuMobile(e164) },
-    { $set: { status: "Active", emailVerified: true, accountExpiresAt: null } },
-    { new: true }
-  );
-  if (!user) throw new AuthError("Account not found", 404);
-
-  await EventModel.create({
-    type: flow === "signup" ? "UserRegistered" : "UserLoggedIn",
-    aggregateType: "User",
-    aggregateId: user.id,
-    userId: user._id.toString(),
-    payload: { mobile: e164 },
-  });
-
-  const accessToken = createAccessToken(user);
-  const refreshToken = await createRefreshToken(user);
-
-  return { accessToken, refreshToken, user: toSafeUser(user) };
-}
-
 export async function requestMobileOtp(
   _userId: string,
   mobile: string
@@ -872,23 +763,6 @@ export async function verifyMobileOtp(userId: string, mobile: string, code: stri
   await UserModel.findByIdAndUpdate(userId, {
     $set: { mobile: au04, mobileVerified: true },
   });
-}
-
-export async function resendOtp(mobile: string): Promise<{ code?: string }> {
-  const e164 = normalizeAuMobile(mobile);
-
-  const user = await UserModel.findOne({ mobile: toAuMobile(e164) });
-  if (!user) throw new AuthError("No account found for this number", 404);
-
-  const code = await generateAndStoreOtp(e164);
-
-  if (process.env.NODE_ENV !== "test") {
-    await sendOtpSms(e164, code).catch((err: unknown) => {
-      console.error(`Failed to send OTP SMS to ${e164}:`, err);
-    });
-  }
-
-  return process.env.NODE_ENV === "test" ? { code } : {};
 }
 
 export async function requestEmailChange(userId: string, newEmail: string): Promise<void> {

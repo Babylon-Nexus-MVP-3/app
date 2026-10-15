@@ -9,8 +9,6 @@ import {
   reactivateAccount,
   registerUser,
   requestMobileOtp,
-  requestOtp,
-  resendOtp,
   resendResetCodeService,
   resendVerificationCode,
   resetPassword,
@@ -20,7 +18,6 @@ import {
   userLogout,
   userVerifyEmail,
   verifyMobileOtp,
-  verifyOtp,
   verifyResetCodeService,
   requestEmailChange,
   verifyEmailChange,
@@ -252,48 +249,6 @@ export const deleteUserAccount = async (req: Request, res: Response, next: NextF
   }
 };
 
-export const requestOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const { mobile, flow, abn, businessName, email, firstName, lastName } = req.body;
-  if (!isNonEmptyString(mobile)) {
-    return res.status(400).json({ error: "Mobile number is required" });
-  }
-  if (flow !== "signup" && flow !== "signin") {
-    return res.status(400).json({ error: "flow must be signup or signin" });
-  }
-
-  try {
-    const result = await requestOtp({
-      mobile,
-      flow,
-      abn,
-      businessName,
-      email,
-      firstName,
-      lastName,
-    });
-    res.status(200).json(result);
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const verifyOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const { mobile, code, flow } = req.body;
-  if (!isNonEmptyString(mobile) || !isNonEmptyString(code)) {
-    return res.status(400).json({ error: "Mobile and code are required" });
-  }
-  if (flow !== "signup" && flow !== "signin") {
-    return res.status(400).json({ error: "flow must be signup or signin" });
-  }
-
-  try {
-    const result = await verifyOtp(mobile, code, flow);
-    res.status(200).json(result);
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const requestMobileOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user!.sub;
   const { mobile } = req.body;
@@ -317,20 +272,6 @@ export const verifyMobileOtpHandler = async (req: Request, res: Response, next: 
   try {
     await verifyMobileOtp(userId, mobile, code);
     res.status(200).json({ success: true });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const resendOtpHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const { mobile } = req.body;
-  if (!isNonEmptyString(mobile)) {
-    return res.status(400).json({ error: "Mobile number is required" });
-  }
-
-  try {
-    const result = await resendOtp(mobile);
-    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
