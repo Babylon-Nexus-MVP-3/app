@@ -56,16 +56,16 @@ export async function getNotificationsForUser(userId: string) {
     .sort({ createdAt: -1 })
     .lean();
 
-  const projectIds = [...new Set(notifications.map((n: any) => n.projectId.toString()))];
+  const projectIds = [...new Set(notifications.map((n) => n.projectId.toString()))];
   const projects =
     projectIds.length > 0
       ? await ProjectModel.find({ _id: { $in: projectIds } })
           .select("name")
           .lean()
       : [];
-  const projectNameById = new Map(projects.map((p: any) => [p._id.toString(), p.name as string]));
+  const projectNameById = new Map(projects.map((p) => [p._id.toString(), p.name as string]));
 
-  return notifications.map((n: any) => ({
+  return notifications.map((n) => ({
     id: n._id.toString(),
     recipientUserId: n.recipientUserId.toString(),
     projectId: n.projectId.toString(),
@@ -102,7 +102,8 @@ async function getAcceptedProjectUserIdsByRole(
     .select("userId")
     .lean();
 
-  return participants.map((p: any) => p.userId.toString());
+  // The query excludes rows without a userId.
+  return participants.map((p) => p.userId!.toString());
 }
 
 async function getAcceptedProjectUserIds(projectId: string): Promise<string[]> {
@@ -114,7 +115,8 @@ async function getAcceptedProjectUserIds(projectId: string): Promise<string[]> {
     .select("userId")
     .lean();
 
-  return participants.map((p: any) => p.userId.toString());
+  // The query excludes rows without a userId.
+  return participants.map((p) => p.userId!.toString());
 }
 
 function unique(ids: string[]): string[] {

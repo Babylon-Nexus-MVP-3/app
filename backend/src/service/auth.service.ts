@@ -34,6 +34,10 @@ import { assertAbnIsActive, businessNameForAbn } from "./abr.service";
 
 export class AuthError extends Error {
   statusCode: number;
+  /** Machine-readable reason the app branches on, e.g. "ACCOUNT_DEACTIVATED". */
+  code?: string;
+  /** Set with ACCOUNT_DEACTIVATED: days left before the account is purged. */
+  daysRemaining?: number;
 
   constructor(message: string, statusCode = 400) {
     super(message);
@@ -325,7 +329,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     const daysRemaining = Math.ceil(
       (user.deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)
     );
-    const err = new AuthError("Account is deactivated", 403) as any;
+    const err = new AuthError("Account is deactivated", 403);
     err.code = "ACCOUNT_DEACTIVATED";
     err.daysRemaining = Math.max(daysRemaining, 0);
     throw err;

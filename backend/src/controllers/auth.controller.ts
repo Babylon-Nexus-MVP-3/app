@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import {
+  AuthError,
   authRefresh,
   deleteAccount,
   forgotPassword,
@@ -71,8 +72,8 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       refreshToken: result.refreshToken,
       user: result.user,
     });
-  } catch (err: any) {
-    if (err?.code === "ACCOUNT_DEACTIVATED") {
+  } catch (err: unknown) {
+    if (err instanceof AuthError && err.code === "ACCOUNT_DEACTIVATED") {
       res.status(403).json({
         error: err.message,
         code: "ACCOUNT_DEACTIVATED",
