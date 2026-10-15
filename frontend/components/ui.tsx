@@ -264,8 +264,8 @@ const styles = StyleSheet.create({
 /*
   Licence / insurance badges for a project participant.
 
-  The admin approval screen and the admin project detail screen rendered this
-  same block, with their own identical copies of the four badge styles. Null
+  The admin screens rendered this same block, with their own identical copies
+  of the four badge styles. Null
   means "not answered" and renders nothing — only an explicit yes/no shows.
 */
 export function ComplianceBadges({

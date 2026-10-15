@@ -50,19 +50,6 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="approvals"
-        options={{
-          title: "Approvals",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "checkmark-circle" : "checkmark-circle-outline"}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="archives"
         options={{
           title: "Archives",
@@ -72,10 +59,6 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen name="project/[id]" options={{ href: null, tabBarStyle: { display: "none" } }} />
-      <Tabs.Screen
-        name="approval/[id]"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
     </Tabs>
   );
 }

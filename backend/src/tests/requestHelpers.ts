@@ -1,7 +1,10 @@
 import request from "supertest";
 import { app } from "../app";
 import { clear } from "../clear";
+import jwt from "jsonwebtoken";
+import { randomInt } from "crypto";
 import { UserModel, UserRole } from "../models/userModel";
+import { VouchProfileModel } from "../models/vouchProfileModel";
 
 // Clear
 export const requestDelete = async () => {
@@ -190,7 +193,34 @@ export const validProjectBody = {
   creatorHasLicence: true,
 };
 
+/*
+  Takes the signed-in user to 100% profile strength — an ABN on the account and
+  a saved trade licence — which creating a project requires.
+*/
+export async function completeProfile(token: string): Promise<void> {
+  const userId = (jwt.decode(token) as { sub: string }).sub;
+  // Random so several users in one test don't share an ABN.
+  const abn = String(randomInt(10_000_000_000, 100_000_000_000));
+  const user = await UserModel.findByIdAndUpdate(userId, { abn }, { returnDocument: "after" });
+  await VouchProfileModel.updateOne(
+    { userId },
+    {
+      $set: {
+        userId,
+        firstName: user?.firstName ?? "Test",
+        abn,
+        idType: "trade-licence",
+        idNumber: "LIC123456",
+        idExpiry: "01/01/2035",
+        submittedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+}
+
 export async function getProjectId(token: string, creatorRole: UserRole): Promise<string> {
+  await completeProfile(token);
   const body = { ...validProjectBody, creatorRole };
 
   const projectRes = await request(app)

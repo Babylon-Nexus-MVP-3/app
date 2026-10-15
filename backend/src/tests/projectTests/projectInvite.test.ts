@@ -85,12 +85,12 @@ describe("POST /project/:projectId/invite", () => {
     expect(inviteRes.body.error).toBeDefined();
   });
 
-  it("returns 403 when project is not approved (status not Active)", async () => {
-    await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Pending" } });
+  it("returns 403 when the project is no longer active", async () => {
+    await ProjectModel.updateOne({ _id: projectId }, { $set: { status: "Inactive" } });
 
     const inviteRes = await requestInvite(projectId, token, SUBBIE_EMAIL, "Subbie", "Electrician");
 
     expect(inviteRes.status).toBe(403);
-    expect(inviteRes.body.error).toMatch(/approved|admin/i);
+    expect(inviteRes.body.error).toMatch(/no longer active/i);
   });
 });

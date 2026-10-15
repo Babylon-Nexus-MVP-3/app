@@ -26,10 +26,13 @@ const projectSchema = new Schema<Project>(
     ownerId: { type: String },
     builderId: { type: String },
     pmId: { type: String },
+    // Projects are Active from creation — there is no admin approval. Pending
+    // and Rejected remain in the enum only so projects from before that change
+    // still load.
     status: {
       type: String,
       enum: ["Pending", "Active", "Rejected", "Inactive"],
-      default: "Pending",
+      default: "Active",
     },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },

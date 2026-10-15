@@ -1,6 +1,9 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export const NotificationType = {
+  // Projects have no admin approval any more. PendingApproval and Rejected are
+  // no longer sent but stay listed so existing rows still validate and render;
+  // ProjectApproved is what "your project is live" is sent as.
   ProjectPendingApproval: "ProjectPendingApproval",
   ProjectApproved: "ProjectApproved",
   ProjectRejected: "ProjectRejected",
