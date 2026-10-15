@@ -11,16 +11,19 @@ import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.ser
 import { getProfileCompletion } from "../service/vouchProfile.service";
 import { validateEmailFormat } from "../utils/authHelper";
 import { fullName } from "../utils/name";
+import {
+  MAX_REFERENCES,
+  MIN_VOUCH_ATTRIBUTES,
+  TEXT_LIMITS,
+  isAbn,
+  isOptionalText,
+  isTradeType,
+  normaliseVouchAttributes,
+  referenceProblem,
+} from "../utils/vouchRules";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
-
-// Values that end up inside a query filter must be plain strings — an object
-// such as {"$ne": null} arriving in the body would otherwise be interpreted as
-// a Mongo operator and match records it shouldn't.
-function isQuerySafeString(value: unknown): value is string {
-  return typeof value === "string";
-}
 
 // Mirrors the frontend's own check (step2.tsx) — enforced again here since the
 // frontend control is trivially bypassed by calling this endpoint directly.
@@ -36,6 +39,11 @@ function isValidExpiryDate(expiry: string): boolean {
   return (
     new Date(year, month - 1, day) >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
   );
+}
+
+/** Mongo's E11000 — a write rejected by a unique index. */
+function isDuplicateKeyError(err: unknown): boolean {
+  return (err as { code?: number } | null)?.code === 11000;
 }
 
 /** A reference as the request-a-vouch screen submits it. */
@@ -87,18 +95,17 @@ vouchRouter.post(
         ? req.body.references
         : [];
 
+      if (references.length > MAX_REFERENCES) {
+        res.status(400).json({ error: `You can have up to ${MAX_REFERENCES} references.` });
+        return;
+      }
+
+      // Also guarantees every field is a plain string, so none of them can be
+      // read as a Mongo operator in the duplicate lookups below.
       for (const ref of references) {
-        const fields = [
-          ref.firstName,
-          ref.lastName,
-          ref.company,
-          ref.mobile,
-          ref.email,
-          ref.relationship,
-          ref.project,
-        ];
-        if (fields.some((v) => v !== undefined && v !== null && !isQuerySafeString(v))) {
-          res.status(400).json({ error: "Invalid reference details" });
+        const problem = referenceProblem(ref);
+        if (problem) {
+          res.status(400).json({ error: problem });
           return;
         }
 
@@ -160,15 +167,22 @@ vouchRouter.post(
       // Only fields on this list may be written — never trust the request body's
       // key names wholesale. Without an allow-list, a body like {"userId": "<victim>"}
       // would reassign this profile document to someone else's account.
-      const WRITABLE_FIELDS = [
-        "firstName",
-        "lastName",
-        "abn",
-        "idType",
-        "idNumber",
-        "idExpiry",
-        "idState",
-      ] as const;
+      //
+      // Name and ABN are not on it: they are copied from the account below. The
+      // ABN is what received vouches are keyed by, so taking it from the body
+      // let anyone put another business's ABN on their own profile. Changing an
+      // ABN goes through PATCH /auth/profile, which checks ownership.
+      const WRITABLE_FIELDS = ["idNumber", "idExpiry", "idState"] as const;
+
+      // One field, picked from a fixed list — see utils/vouchRules.ts.
+      if (
+        body.businessTrade != null &&
+        body.businessTrade !== "" &&
+        !isTradeType(body.businessTrade)
+      ) {
+        res.status(400).json({ error: "Pick your trade from the list." });
+        return;
+      }
 
       if (
         typeof body.idExpiry === "string" &&
@@ -179,15 +193,36 @@ vouchRouter.post(
         return;
       }
 
-      const setFields: Record<string, unknown> = { userId, submittedAt: new Date() };
+      const setFields: Record<string, unknown> = {
+        userId,
+        submittedAt: new Date(),
+        firstName: fromFirstName,
+        lastName: fromLastName,
+        // Trade licence is the only ID accepted; the client value is not trusted.
+        idType: "trade-licence",
+      };
+      if (fromAbn) setFields.abn = fromAbn;
       for (const key of WRITABLE_FIELDS) {
         const value = body[key];
-        if (value !== "" && value !== undefined && value !== null) {
-          setFields[key] = value;
+        if (value === "" || value === undefined || value === null) continue;
+        if (typeof value !== "string") {
+          res.status(400).json({ error: "Invalid licence details" });
+          return;
         }
+        setFields[key] = value.trim();
       }
-      if (Array.isArray(body.references) && body.references.length > 0) {
-        setFields.references = body.references;
+      if (references.length > 0) {
+        // Rebuilt field by field rather than stored as sent, so unknown keys in
+        // the body never reach the document.
+        setFields.references = references.map((ref) => ({
+          firstName: ref.firstName,
+          lastName: ref.lastName ?? "",
+          company: ref.company,
+          mobile: ref.mobile ?? "",
+          email: ref.email,
+          relationship: ref.relationship,
+          project: ref.project ?? "",
+        }));
       }
       setFields.userId = userId; // reassert — cannot be overridden by anything above
 
@@ -246,17 +281,25 @@ vouchRouter.post(
 
         const toEmail = ref.email.trim().toLowerCase();
 
-        const request = await VouchRequestModel.create({
-          fromUserId: userId,
-          fromFirstName,
-          fromLastName,
-          fromCompany,
-          fromAbn,
-          toEmail,
-          relationship: ref.relationship,
-          projectName: ref.project,
-          status: "pending",
-        });
+        let request;
+        try {
+          request = await VouchRequestModel.create({
+            fromUserId: userId,
+            fromFirstName,
+            fromLastName,
+            fromCompany,
+            fromAbn,
+            toEmail,
+            relationship: ref.relationship,
+            projectName: ref.project,
+            status: "pending",
+          });
+        } catch (err) {
+          // A concurrent save already created this pending request — skip just
+          // this reference rather than failing the whole submission.
+          if (isDuplicateKeyError(err)) continue;
+          throw err;
+        }
 
         const refUser = await UserModel.findOne({ $or: accountConditionsFor(ref) })
           .select("_id pushToken")
@@ -298,22 +341,6 @@ vouchRouter.post(
             ref.project
           ).catch(() => {});
         }
-      }
-
-      // Keep UserModel in sync so Give a Vouch notifications work — only when
-      // there's an ABN to sync, and only when it isn't already someone else's
-      // (received-vouches are looked up purely by ABN, so writing an unvalidated
-      // one would let a caller display another business's reputation as their own).
-      if (body.abn) {
-        const existingAbnOwner = await UserModel.findOne({ abn: body.abn }).select("_id").lean();
-        if (existingAbnOwner && existingAbnOwner._id.toString() !== userId) {
-          res.status(400).json({
-            error:
-              "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
-          });
-          return;
-        }
-        await UserModel.findByIdAndUpdate(userId, { abn: body.abn });
       }
 
       // Trade has exactly one home: User.businessTrade. It is collected on the
@@ -716,7 +743,6 @@ vouchRouter.post(
       const {
         toAbn,
         toBusinessName,
-        attributes,
         note,
         requestId,
         recipientFirstName,
@@ -725,8 +751,35 @@ vouchRouter.post(
         recipientMobile,
       } = req.body;
 
-      if (!isQuerySafeString(toAbn)) {
-        res.status(400).json({ error: "Invalid ABN" });
+      if (!isAbn(toAbn)) {
+        res.status(400).json({ error: "Enter a valid 11-digit ABN" });
+        return;
+      }
+
+      // Mirrors the "at least 2" rule in attributes.tsx, plus the fixed list —
+      // the product promises every attribute is one of 16 positive options.
+      const attributes = normaliseVouchAttributes(req.body.attributes);
+      if (!attributes) {
+        res.status(400).json({
+          error: `Pick at least ${MIN_VOUCH_ATTRIBUTES} attributes from the list.`,
+        });
+        return;
+      }
+
+      if (!isOptionalText(note, TEXT_LIMITS.note)) {
+        res.status(400).json({ error: `Keep your note under ${TEXT_LIMITS.note} characters.` });
+        return;
+      }
+
+      const optionalStrings = [
+        toBusinessName,
+        recipientFirstName,
+        recipientLastName,
+        recipientEmail,
+        recipientMobile,
+      ];
+      if (optionalStrings.some((v) => v != null && typeof v !== "string")) {
+        res.status(400).json({ error: "Invalid vouch details" });
         return;
       }
 
@@ -781,18 +834,29 @@ vouchRouter.post(
       const giverName = fullName(giver?.firstName, giver?.lastName) || "Someone";
       const giverCompany = giver?.businessName ?? "";
 
-      const vouch = await GivenVouchModel.create({
-        fromUserId: userId,
-        toAbn,
-        toBusinessName,
-        attributes,
-        note: note ?? undefined,
-        requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
-        recipientFirstName: recipientFirstName ?? undefined,
-        recipientLastName: recipientLastName ?? undefined,
-        recipientEmail: recipientEmail ?? undefined,
-        recipientMobile: recipientMobile ?? undefined,
-      });
+      let vouch;
+      try {
+        vouch = await GivenVouchModel.create({
+          fromUserId: userId,
+          toAbn,
+          toBusinessName,
+          attributes,
+          note: typeof note === "string" && note.trim() ? note.trim() : undefined,
+          requestId: requestId ? new mongoose.Types.ObjectId(requestId) : undefined,
+          recipientFirstName: recipientFirstName ?? undefined,
+          recipientLastName: recipientLastName ?? undefined,
+          recipientEmail: recipientEmail ?? undefined,
+          recipientMobile: recipientMobile ?? undefined,
+        });
+      } catch (err) {
+        // Lost a race with a concurrent request for the same vouch — the
+        // unique index on {fromUserId, toAbn} is what caught it.
+        if (isDuplicateKeyError(err)) {
+          res.status(409).json({ error: "You have already vouched for this business." });
+          return;
+        }
+        throw err;
+      }
 
       let vouchRequest: {
         _id: mongoose.Types.ObjectId;
@@ -850,7 +914,7 @@ vouchRouter.post(
             fullName(recipientFirstName, recipientLastName) || "there",
             giverName,
             giverCompany,
-            attributes ?? [],
+            attributes,
             note
           ).catch(() => {});
         } catch {

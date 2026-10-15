@@ -29,7 +29,7 @@ import { JwtPayload } from "../middleware";
 import { VouchRequestModel } from "../models/vouchRequestModel";
 import { VouchProfileModel } from "../models/vouchProfileModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
-import { businessNameForAbn } from "./abr.service";
+import { assertAbnIsActive, businessNameForAbn } from "./abr.service";
 
 export class AuthError extends Error {
   statusCode: number;
@@ -75,6 +75,11 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
   const sanitizedFirstName = input.firstName.trim();
   const sanitizedLastName = input.lastName.trim();
   const normalisedEmail = input.email.toLowerCase().trim();
+  // The sign-up screen sends bare digits; anything else is rejected rather than
+  // stored as given, since received vouches are looked up by exact ABN.
+  if (input.abn != null && (typeof input.abn !== "string" || !/^\d{11}$/.test(input.abn))) {
+    throw new AuthError("Enter a valid 11-digit ABN");
+  }
 
   // Validate name, email uniqueness, and password strength before proceeding
   try {
@@ -83,7 +88,10 @@ export async function registerUser(input: RegisterInput): Promise<RegisterRespon
     checkName(sanitizedFirstName, "First name");
     if (sanitizedLastName) checkName(sanitizedLastName, "Last name");
     await checkEmail(normalisedEmail);
-    if (input.abn) await checkAbn(input.abn);
+    if (input.abn) {
+      await checkAbn(input.abn);
+      await assertAbnIsActive(input.abn);
+    }
     checkPassword(input.password);
   } catch (err) {
     throw new AuthError(
@@ -204,6 +212,11 @@ export async function updateProfile(
         "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
         409
       );
+    }
+    try {
+      await assertAbnIsActive(abn);
+    } catch (err) {
+      throw new AuthError(err instanceof Error ? err.message : "Enter a valid 11-digit ABN");
     }
     update.abn = abn;
   }
