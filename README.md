@@ -66,9 +66,6 @@ Expo app ──HTTPS──▶ Nginx ──▶ Express API (PM2, one process) ─
 - backend: `eslint .`, `tsc --noEmit`, then the Jest suite against a test database
   (`MONGODB_TEST_URI` secret)
 
-All CI runs share one concurrency queue. A run that shows "cancelled" was usually
-superseded by a newer one, not failed.
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md): conventional commits (`type(scope): description`),

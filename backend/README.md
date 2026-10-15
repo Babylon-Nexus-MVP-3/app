@@ -23,7 +23,7 @@ Every variable is described in [`.env.example`](.env.example). For local work yo
 | `JWT_ACCESS_SECRET` | A fixed dev secret is used. **Outside development/test the server refuses to start.** |
 | `ABR_GUID` | `/abr/lookup` and `/abr/search` return mock businesses |
 | `TWILIO_*` | No SMS is sent and any OTP code is accepted |
-| AWS credentials / `EMAIL_USER` | Emails fail to send. Auth flows log the error and carry on, but verification codes never arrive. Use the seeded accounts (already verified) or set up SES. |
+| AWS credentials / `EMAIL_USER` | Emails aren't sent. Use the seeded accounts, which are already verified, or configure SES. |
 
 ## Scripts
 
@@ -75,8 +75,7 @@ scripts/             # seeds, migrations and one-off reports (run with ts-node, 
 swagger.yaml         # API reference served at /api-docs
 ```
 
-Routes → controllers → services. The vouch and ABR routes are the exception: their logic
-lives in the route files themselves.
+Requests flow routes → controllers → services.
 
 ## Key rules
 

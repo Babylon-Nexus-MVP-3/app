@@ -1762,7 +1762,7 @@ paths:
       tags:
         - Vouch
       summary: List vouch requests waiting on the signed-in user
-      description: Requests addressed to the user's email (or legacy mobile) that they haven't answered or ignored.
+      description: Requests addressed to the user that they haven't answered or ignored.
       responses:
         '200':
           description: Pending requests

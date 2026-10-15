@@ -1,15 +1,13 @@
 # VouchPay v3 — Original Specification (historical)
 
-> **This is the original v3 plan, kept for context. It is not the current behaviour.**
-> The app moved away from it in several places. For what the API actually does, use
+> **This is the original v3 plan, kept for context.** For the current API, use
 > Swagger (`backend/swagger.yaml`, served at `/api-docs` locally); for setup, see the
 > READMEs.
 >
 > Where the shipped app differs from this plan:
 >
-> - **Sign-in stayed email + password.** The SMS OTP sign-up/sign-in (§3) was built,
->   never adopted, and removed along with `otpModel`. Mobile is optional at sign-up and
->   verified later with Twilio Verify (`/auth/request-mobile-otp`, `/auth/verify-mobile-otp`);
+> - **Sign-in is email + password** rather than SMS OTP (§3). Mobile is optional at
+>   sign-up and verified with Twilio Verify (`/auth/request-mobile-otp`, `/auth/verify-mobile-otp`);
 >   a verified mobile is required before requesting vouches. Forgot/reset password and
 >   change password were kept.
 > - **Get Vouched is two steps, not three** (§6): your details (name + ABN, from sign-up)
@@ -24,8 +22,8 @@
 > - **Requests aren't accepted or declined.** A reference answers by giving a vouch with the
 >   request's `requestId`, or ignores it (`PATCH /vouch/requests/:id/ignore`). The sender can
 >   nudge or withdraw an unanswered request.
-> - **The bundle ID and package are still `com.babylonnexus`** (the store listings depend on
->   them); the display name is VouchPay.
+> - **The bundle ID and package are `com.babylonnexus`**, matching the store listings; the
+>   display name is VouchPay.
 
 ---
 
@@ -33,7 +31,7 @@
 
 ### Backend
 - [x] Add `mobile`, `abn`, `businessName`, `businessTrade`, `businessState` to `userModel`
-- [removed] `otpModel`, `POST /auth/request-otp`, `POST /auth/verify-otp` — built, never adopted, deleted
+- [changed] SMS OTP sign-in (`otpModel`, `/auth/request-otp`, `/auth/verify-otp`) — replaced by email + password sign-in
 - [x] `GET /abr/lookup?abn=...` — ABR proxy, `ABR_GUID` kept server-side (also `GET /abr/search?name=...`)
 - [x] `vouchProfileModel`, `givenVouchModel` (planned as `vouchModel`), `vouchRequestModel`
 - [x] `POST /vouch/profile` — create/update the vouch profile, send requests to references
@@ -41,7 +39,7 @@
 - [x] `POST /vouch/give` — give a vouch to an ABN
 - [x] `GET /vouch/received` — vouches received by the current user's ABN
 - [x] `GET /vouch/pending-requests` — pending vouch requests inbox
-- [changed] `POST /vouch/request/:id/accept` / `decline` — not built; answer via `POST /vouch/give` with `requestId`, or `PATCH /vouch/requests/:id/ignore`
+- [changed] `POST /vouch/request/:id/accept` / `decline` — replaced by answering via `POST /vouch/give` with `requestId`, or `PATCH /vouch/requests/:id/ignore`
 - [x] `GET /vouch/business/:abn` — vouch count + attributes for a business
 - [x] `GET /vouch/requests/sent`, `POST /vouch/requests/:requestId/nudge`, `DELETE /vouch/requests/:requestId`
 - [x] `GET /projects/history` — every project the user is or has been part of
@@ -51,7 +49,7 @@
 ### Frontend
 - [x] v3 design tokens in `constants/colors.ts`
 - [x] Brand strings and logos updated to VouchPay
-- [x] `app.config.js` name is VouchPay (slug and bundle IDs unchanged on purpose)
+- [x] `app.config.js` name is VouchPay (slug and bundle IDs match the store listings)
 - [x] Sign-up and sign-in rewritten (email + password)
 - [changed] `verify-email.tsx` kept as email verification; forgot/reset/change password kept
 - [x] Bottom tabs: Home, Vouches, Projects, Me (`app/(app)/(tabs)/`)

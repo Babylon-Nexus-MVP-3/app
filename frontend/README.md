@@ -2,7 +2,7 @@
 
 React Native app built with Expo SDK 54 and expo-router v6. The New Architecture and the React
 Compiler are both on. It ships to iOS and Android as **VouchPay**. The bundle ID and package are
-still `com.babylonnexus` because the store listings depend on them.
+`com.babylonnexus`, matching the store listings.
 
 ## Setup
 
@@ -64,8 +64,7 @@ they turn into stray screens.
 
 ## Builds and releases
 
-Builds use EAS. Local native builds aren't set up (they don't work on Windows). Every profile
-in [`eas.json`](eas.json) points at the production API.
+Builds use EAS. Every profile in [`eas.json`](eas.json) points at the production API.
 
 ```bash
 eas build --platform ios --profile production
