@@ -6,8 +6,17 @@ import { Colors } from "@/constants/colors";
 
 const EAS_PROJECT_ID = "9d4647b6-8dc0-4bd4-82fb-256190ef2cd8";
 
+/*
+  Gets this device's Expo push token and saves it against the signed-in user.
+
+  `prompt: false` registers only if permission was already granted — used when a
+  saved session is restored on launch, so a reinstall (whose keychain session
+  survives but whose push token is new) re-registers without nagging anyone
+  who said no.
+*/
 export async function registerForPushNotifications(
-  fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>
+  fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>,
+  { prompt = true }: { prompt?: boolean } = {}
 ): Promise<void> {
   // Push notifications require a physical device
   if (!Device.isDevice) return;
@@ -26,7 +35,7 @@ export async function registerForPushNotifications(
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
-  if (existingStatus !== "granted") {
+  if (existingStatus !== "granted" && prompt) {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }

@@ -69,6 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAccessToken(storedToken);
           setUser(normaliseUser(JSON.parse(storedUser)));
 
+          // Registration otherwise only runs on login, and a reinstall keeps
+          // the keychain session but gets a new push token.
+          registerForPushNotifications(fetchWithAuth, { prompt: false }).catch(() => {});
+
           // Fetch fresh user data so fields like mobileVerified are never stale
           try {
             const res = await fetch(`${API_BASE_URL}/auth/me`, {
