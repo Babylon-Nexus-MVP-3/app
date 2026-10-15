@@ -40,7 +40,9 @@ async function findDuplicates() {
   ]);
 
   const requests = await VouchRequestModel.aggregate<DuplicateGroup>([
-    { $match: { status: "pending" } },
+    // Mirrors the index's partial filter: legacy mobile-only requests have
+    // toEmail "" and are outside it.
+    { $match: { status: "pending", toEmail: { $gt: "" } } },
     {
       $group: {
         _id: { fromUserId: "$fromUserId", toEmail: "$toEmail" },
