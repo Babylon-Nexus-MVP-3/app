@@ -11,6 +11,7 @@ import { sendVouchRequestEmail, sendVouchedForEmail } from "../service/email.ser
 import { getProfileCompletion } from "../service/vouchProfile.service";
 import { validateEmailFormat } from "../utils/authHelper";
 import { fullName } from "../utils/name";
+import { MIN_VOUCH_ATTRIBUTES, isAbn, normaliseVouchAttributes } from "../utils/vouchRules";
 
 export const vouchRouter = express.Router();
 const expo = new Expo();
@@ -708,7 +709,6 @@ vouchRouter.post(
       const {
         toAbn,
         toBusinessName,
-        attributes,
         note,
         requestId,
         recipientFirstName,
@@ -717,8 +717,30 @@ vouchRouter.post(
         recipientMobile,
       } = req.body;
 
-      if (!isQuerySafeString(toAbn)) {
-        res.status(400).json({ error: "Invalid ABN" });
+      if (!isAbn(toAbn)) {
+        res.status(400).json({ error: "Enter a valid 11-digit ABN" });
+        return;
+      }
+
+      // Mirrors the "at least 2" rule in attributes.tsx, plus the fixed list —
+      // the product promises every attribute is one of 16 positive options.
+      const attributes = normaliseVouchAttributes(req.body.attributes);
+      if (!attributes) {
+        res.status(400).json({
+          error: `Pick at least ${MIN_VOUCH_ATTRIBUTES} attributes from the list.`,
+        });
+        return;
+      }
+
+      const optionalStrings = [
+        toBusinessName,
+        recipientFirstName,
+        recipientLastName,
+        recipientEmail,
+        recipientMobile,
+      ];
+      if (optionalStrings.some((v) => v != null && typeof v !== "string")) {
+        res.status(400).json({ error: "Invalid vouch details" });
         return;
       }
 
@@ -842,7 +864,7 @@ vouchRouter.post(
             fullName(recipientFirstName, recipientLastName) || "there",
             giverName,
             giverCompany,
-            attributes ?? [],
+            attributes,
             note
           ).catch(() => {});
         } catch {
