@@ -43,6 +43,8 @@ export interface User extends Document {
   emailChangeCodeExpiry?: Date | null;
   resetCode?: string | null;
   resetCodeExpiry?: Date | null;
+  /** Wrong guesses against the current reset code; reset when a new code is sent. */
+  resetCodeAttempts?: number;
   emailVerified: boolean;
   accountExpiresAt?: Date | null;
   pushToken?: string | null;
@@ -91,6 +93,7 @@ const userSchema = new Schema<User>(
     emailChangeCodeExpiry: { type: Date, default: null },
     resetCode: { type: String },
     resetCodeExpiry: { type: Date },
+    resetCodeAttempts: { type: Number, default: 0 },
     emailVerified: { type: Boolean, default: false },
     accountExpiresAt: { type: Date, index: { expireAfterSeconds: 0 } },
     pushToken: { type: String, default: null },

@@ -392,6 +392,53 @@ export async function authRefresh(token: string) {
   return { accessToken, refreshToken: newRefreshToken, user: toSafeUser(user) };
 }
 
+// Wrong guesses allowed per reset code. A 6-digit code has a million values;
+// five tries per emailed code keeps guessing hopeless even with the IP-based
+// rate limiter bypassed from many addresses.
+const MAX_RESET_CODE_ATTEMPTS = 5;
+const INVALID_RESET_CODE = "Invalid or expired reset code";
+
+/*
+  Checks a reset code against the account, spending one attempt per check.
+
+  The attempt is reserved atomically *before* comparing, so parallel guesses
+  can't all slip in under the limit; a correct code refunds it (the app checks
+  the code once on the verify screen and again on reset). Once the limit is
+  reached the code is burned and a new one must be requested. Every failure —
+  unknown email, no code, expired, wrong, burned — reads the same, so this
+  can't be used to tell which emails are registered.
+*/
+async function consumeResetCode(email: string, resetCode: string) {
+  const user = await UserModel.findOneAndUpdate(
+    {
+      email,
+      resetCode: { $type: "string" },
+      resetCodeExpiry: { $gt: new Date() },
+      resetCodeAttempts: { $not: { $gte: MAX_RESET_CODE_ATTEMPTS } },
+    },
+    { $inc: { resetCodeAttempts: 1 } },
+    { returnDocument: "after" }
+  );
+  if (!user || !user.resetCode) throw new AuthError(INVALID_RESET_CODE);
+
+  const expected = Buffer.from(user.resetCode);
+  const given = Buffer.from(hashCode(resetCode));
+  const matches = expected.length === given.length && crypto.timingSafeEqual(expected, given);
+
+  if (!matches) {
+    if ((user.resetCodeAttempts ?? 0) >= MAX_RESET_CODE_ATTEMPTS) {
+      await UserModel.updateOne(
+        { _id: user._id, resetCode: user.resetCode },
+        { $unset: { resetCode: 1, resetCodeExpiry: 1 } }
+      );
+    }
+    throw new AuthError(INVALID_RESET_CODE);
+  }
+
+  await UserModel.updateOne({ _id: user._id }, { $inc: { resetCodeAttempts: -1 } });
+  return user;
+}
+
 export async function forgotPassword(email: string) {
   const normalisedEmail = validateEmailFormat(email);
   const { code, expiry } = generateCode();
@@ -405,6 +452,7 @@ export async function forgotPassword(email: string) {
 
   user.resetCode = hashedCode;
   user.resetCodeExpiry = expiry;
+  user.resetCodeAttempts = 0;
   await user.save();
 
   if (process.env.NODE_ENV !== "test") {
@@ -418,17 +466,7 @@ export async function forgotPassword(email: string) {
 
 export async function verifyResetCodeService(email: string, resetCode: string) {
   const normalisedEmail = validateEmailFormat(email);
-  const hashedCode = hashCode(resetCode);
-  const user = await UserModel.findOne({
-    email: normalisedEmail,
-    resetCode: hashedCode,
-    resetCodeExpiry: { $gt: new Date() }, // Check expiry in one query
-  });
-
-  if (!user) {
-    throw new AuthError("Invalid or expired reset code");
-  }
-
+  await consumeResetCode(normalisedEmail, resetCode);
   return { success: true };
 }
 
@@ -445,7 +483,7 @@ export async function resendResetCodeService(email: string) {
 
   await UserModel.findOneAndUpdate(
     { _id: user._id },
-    { $set: { resetCode: hashedCode, resetCodeExpiry: expiry } }
+    { $set: { resetCode: hashedCode, resetCodeExpiry: expiry, resetCodeAttempts: 0 } }
   );
 
   if (process.env.NODE_ENV !== "test") {
@@ -463,16 +501,7 @@ export async function resetPassword(email: string, resetCode: string, newPasswor
   }
 
   const normalisedEmail = validateEmailFormat(email);
-  const hashedCode = hashCode(resetCode);
-  const user = await UserModel.findOne({
-    email: normalisedEmail,
-    resetCode: hashedCode,
-    resetCodeExpiry: { $gt: new Date() },
-  });
-
-  if (!user) {
-    throw new AuthError("Invalid or expired reset code");
-  }
+  const user = await consumeResetCode(normalisedEmail, resetCode);
 
   // Check if new password is same as current
   if (await bcrypt.compare(newPassword, user.password)) {
@@ -489,6 +518,7 @@ export async function resetPassword(email: string, resetCode: string, newPasswor
   user.password = hashedPassword;
   user.resetCode = undefined;
   user.resetCodeExpiry = undefined;
+  user.resetCodeAttempts = 0;
   user.updatedAt = new Date();
 
   await user.save();
