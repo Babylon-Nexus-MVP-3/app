@@ -27,6 +27,7 @@ import {
 } from "./email.service";
 import { JwtPayload } from "../middleware";
 import { VouchRequestModel } from "../models/vouchRequestModel";
+import { VouchProfileModel } from "../models/vouchProfileModel";
 import { VouchNotificationModel } from "../models/vouchNotificationModel";
 import { businessNameForAbn } from "./abr.service";
 
@@ -187,21 +188,40 @@ export async function getMe(userId: string): Promise<SafeUser> {
 */
 export async function updateProfile(
   userId: string,
-  patch: { abn?: string; businessName?: string }
+  patch: { abn?: unknown; businessName?: string }
 ): Promise<void> {
   const update: Record<string, string> = {};
-  if (patch.abn) update.abn = patch.abn;
+  if (patch.abn) {
+    if (typeof patch.abn !== "string") throw new AuthError("Enter a valid 11-digit ABN");
+    const abn = patch.abn.replace(/\D/g, "");
+    if (abn.length !== 11) throw new AuthError("Enter a valid 11-digit ABN");
+    // Re-saving your own ABN is fine; only another account holding it blocks.
+    const owner = await UserModel.findOne({ abn, _id: { $ne: userId } })
+      .select("_id")
+      .lean();
+    if (owner) {
+      throw new AuthError(
+        "This ABN is already registered to another account. If you believe this is a mistake, contact support@vouchpay.app.",
+        409
+      );
+    }
+    update.abn = abn;
+  }
 
-  const supplied = patch.businessName?.trim();
+  const supplied = typeof patch.businessName === "string" ? patch.businessName.trim() : "";
   if (supplied) {
     update.businessName = supplied;
-  } else if (patch.abn) {
-    const derived = await businessNameForAbn(patch.abn);
+  } else if (update.abn) {
+    const derived = await businessNameForAbn(update.abn);
     if (derived) update.businessName = derived;
   }
 
   if (!Object.keys(update).length) return;
   await UserModel.findByIdAndUpdate(userId, { $set: update });
+  // Keep the vouch profile's copy in step, if the user has one.
+  if (update.abn) {
+    await VouchProfileModel.updateOne({ userId }, { $set: { abn: update.abn } });
+  }
 }
 
 interface LoginResult {
