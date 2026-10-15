@@ -7,7 +7,9 @@ import { startNotificationScheduler } from "./service/notificationScheduler.serv
 import { Server } from "http";
 
 const PORT: number = parseInt(process.env.PORT || "3229");
-const HOST: string = process.env.host || "0.0.0.0";
+// HOST is the documented name. The lowercase `host` is what this used to read,
+// so it's still honoured in case an existing .env sets it.
+const HOST: string = process.env.HOST || process.env.host || "0.0.0.0";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined");
