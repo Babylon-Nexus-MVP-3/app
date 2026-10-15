@@ -1,6 +1,11 @@
 import express, { Request, Response } from "express";
 import { abrLookupLimiter } from "../middleware";
-import { lookupAbn, AbrCancelledError, AbrNotFoundError } from "../service/abr.service";
+import {
+  lookupAbn,
+  AbrCancelledError,
+  AbrNotFoundError,
+  ABR_TIMEOUT_MS,
+} from "../service/abr.service";
 
 export const abrRouter = express.Router();
 
@@ -49,7 +54,7 @@ abrRouter.get("/search", abrLookupLimiter, async (req: Request, res: Response) =
   try {
     const encodedName = encodeURIComponent(name);
     const url = `https://abr.business.gov.au/json/MatchingNames.aspx?name=${encodedName}&guid=${guid}`;
-    const upstream = await fetch(url);
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(ABR_TIMEOUT_MS) });
     if (!upstream.ok) throw new Error("ABR upstream error");
 
     const text = await upstream.text();

@@ -20,6 +20,13 @@ export interface AbrDetails {
   isActive: true;
 }
 
+/*
+  How long to wait on the ABR before treating it as unavailable. Without a
+  limit, a slow or stalled ABR leaves fetch waiting for minutes — and sign-up
+  and ABN saves call it twice in a row, so the user just sees a spinner.
+*/
+export const ABR_TIMEOUT_MS = 5000;
+
 export class AbrUnavailableError extends Error {}
 export class AbrNotFoundError extends Error {}
 export class AbrCancelledError extends Error {}
@@ -47,7 +54,7 @@ export async function lookupAbn(abn: string): Promise<AbrDetails> {
   let raw: Record<string, unknown>;
   try {
     const url = `https://abn.business.gov.au/json/AbnDetails.aspx?abn=${digits}&guid=${guid}`;
-    const upstream = await fetch(url);
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(ABR_TIMEOUT_MS) });
     if (!upstream.ok) throw new Error("ABR upstream error");
     raw = parseJsonp(await upstream.text());
   } catch {
