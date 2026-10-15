@@ -86,7 +86,12 @@ const userSchema = new Schema<User>(
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     accountLocked: { type: Boolean, default: false },
-    verificationCode: { type: String, unique: true, sparse: true },
+    // Not unique: codes are hashed 6-digit numbers, so two people waiting to
+    // verify can be given the same one, and a unique index then failed that
+    // sign-up with E11000. Every lookup also matches on email, which is unique.
+    // Removing the option doesn't drop the index from an existing database —
+    // run db.users.dropIndex("verificationCode_1") once after deploying.
+    verificationCode: { type: String },
     verificationCodeExpiry: { type: Date },
     pendingEmail: { type: String, default: null },
     emailChangeCode: { type: String, default: null },
