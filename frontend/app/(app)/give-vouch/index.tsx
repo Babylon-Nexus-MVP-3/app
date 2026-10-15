@@ -80,7 +80,13 @@ function nameInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-const AVATAR_COLORS = [Colors.vouchGreen, "#5C6BC0", "#00897B", "#6D4C41", "#546E7A"];
+const AVATAR_COLORS = [
+  Colors.vouchGreen,
+  Colors.avatarIndigo,
+  Colors.avatarTeal,
+  Colors.avatarBrown,
+  Colors.avatarSlate,
+];
 
 function Avatar({ name, index }: { name: string; index: number }) {
   const bg = AVATAR_COLORS[index % AVATAR_COLORS.length];

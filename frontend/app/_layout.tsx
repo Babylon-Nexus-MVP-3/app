@@ -68,8 +68,9 @@ export default function RootLayout() {
       const data = response.notification.request.content.data as Record<string, string>;
 
       const vouchTypes = ["VouchRequest", "vouch_received"];
+      // Vouch and project notifications share one inbox.
       if (data.type && vouchTypes.includes(data.type)) {
-        router.push("/(app)/vouch-notifications" as any);
+        router.push("/(app)/notifications");
         return;
       }
 

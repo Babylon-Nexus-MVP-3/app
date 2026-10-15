@@ -6,6 +6,10 @@ import { RefreshTokenModel } from "./models/refreshTokenModel";
 import { EventModel } from "./models/eventModel";
 import { InvoiceModel } from "./models/invoiceModel";
 import { CounterModel } from "./models/counterModel";
+import { VouchProfileModel } from "./models/vouchProfileModel";
+import { VouchRequestModel } from "./models/vouchRequestModel";
+import { GivenVouchModel } from "./models/givenVouchModel";
+import { VouchNotificationModel } from "./models/vouchNotificationModel";
 
 /*
   Clears all collections. Used exclusively in test environments to reset state between tests.
@@ -27,6 +31,10 @@ export async function clear(): Promise<Record<string, never>> {
     EventModel.deleteMany({}),
     InvoiceModel.deleteMany({}),
     CounterModel.deleteMany({}),
+    VouchProfileModel.deleteMany({}),
+    VouchRequestModel.deleteMany({}),
+    GivenVouchModel.deleteMany({}),
+    VouchNotificationModel.deleteMany({}),
   ]);
 
   return {};

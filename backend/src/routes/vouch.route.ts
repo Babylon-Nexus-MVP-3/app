@@ -412,10 +412,15 @@ vouchRouter.post(
         return;
       }
 
-      // Re-notify through every channel the original request used.
-      const orConditions: object[] = [{ mobile: request.toMobile }];
+      // Re-notify through every channel the original request used. New requests
+      // store toMobile as "" — matching on that would pick any user with an
+      // empty mobile, so only legacy requests that carry one match by mobile.
+      const orConditions: object[] = [];
       if (request.toEmail) orConditions.push({ email: request.toEmail });
-      const refUser = await UserModel.findOne({ $or: orConditions }).select("_id pushToken").lean();
+      if (request.toMobile) orConditions.push({ mobile: request.toMobile });
+      const refUser = orConditions.length
+        ? await UserModel.findOne({ $or: orConditions }).select("_id pushToken").lean()
+        : null;
 
       if (refUser) {
         await VouchNotificationModel.create({

@@ -4,6 +4,7 @@ import { app } from "../../app";
 import { requestDelete, getToken } from "../requestHelpers";
 import { UserModel } from "../../models/userModel";
 import { VouchRequestModel } from "../../models/vouchRequestModel";
+import { VouchNotificationModel } from "../../models/vouchNotificationModel";
 
 const MONGO_OPTIONS = { serverSelectionTimeoutMS: 8000 };
 
@@ -133,6 +134,33 @@ describe("POST /vouch/requests/:requestId/nudge", () => {
       .set("Authorization", `Bearer ${otherToken}`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /vouch/requests/:requestId/nudge — recipient matching", () => {
+  it("does not notify an unrelated user who has an empty mobile", async () => {
+    const token = await getToken("Owner", "Test", OWNER_EMAIL, PASSWORD);
+    const ownerId = (await UserModel.findOne({ email: OWNER_EMAIL }).lean())!._id.toString();
+
+    // A bystander with mobile "" used to match { mobile: request.toMobile }
+    // because email-only requests store toMobile as "".
+    await getToken("Other", "Test", OTHER_EMAIL, PASSWORD);
+    await UserModel.updateOne({ email: OTHER_EMAIL }, { $set: { mobile: "" } });
+    const otherId = (await UserModel.findOne({ email: OTHER_EMAIL }).lean())!._id;
+
+    const vouchRequest = await createRequest(ownerId, {
+      toMobile: "",
+      lastSentAt: new Date(Date.now() - 2 * DAY_MS),
+    });
+
+    const res = await request(app)
+      .post(`/vouch/requests/${vouchRequest._id}/nudge`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(
+      await VouchNotificationModel.exists({ recipientUserId: otherId, requestId: vouchRequest._id })
+    ).toBeNull();
   });
 });
 

@@ -37,11 +37,6 @@ authRouter.patch("/push-token", requireAuth, AuthController.updatePushToken);
 authRouter.patch("/profile", requireAuth, AuthController.updateProfileHandler);
 authRouter.get("/me", requireAuth, AuthController.meHandler);
 
-// OTP-based auth (v3)
-authRouter.post("/request-otp", otpRequestLimiter, AuthController.requestOtpHandler);
-authRouter.post("/verify-otp", otpVerifyLimiter, AuthController.verifyOtpHandler);
-authRouter.post("/resend-otp", otpRequestLimiter, AuthController.resendOtpHandler);
-
 // Mobile verification (authenticated)
 authRouter.post(
   "/request-mobile-otp",

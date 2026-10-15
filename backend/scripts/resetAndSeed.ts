@@ -2,7 +2,10 @@
  * Reset & Seed — wipes ALL collections and creates fresh test users
  * covering every vouch flow state.
  *
- * Run from EC2:
+ * LOCAL DATABASES ONLY. Refuses to run unless MONGODB_URI points at
+ * localhost / 127.0.0.1 and NODE_ENV is not "production" — on the EC2 box
+ * MONGODB_URI is the production Atlas cluster, and this deletes everything.
+ *
  *   npm run seed:reset
  *
  * Seeded accounts (password: Password123!)
@@ -35,7 +38,25 @@ dotenv.config({ path: path.join(__dirname, "../.env") });
 const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://localhost:27017/babylon-nexus";
 const PASSWORD = "Password123!";
 
+/*
+  Wiping is irreversible, so the guard is an allow-list (local hosts only)
+  rather than a block-list of known production URIs that could go stale.
+*/
+function assertLocalDatabase(uri: string): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("seed:reset refuses to run with NODE_ENV=production.");
+  }
+  const authority = uri.replace(/^mongodb(\+srv)?:\/\//, "").split("/")[0];
+  const host = authority.slice(authority.lastIndexOf("@") + 1).split(/[:,?]/)[0];
+  if (!["localhost", "127.0.0.1", "::1"].includes(host)) {
+    throw new Error(
+      `seed:reset only runs against a local MongoDB, not "${host}". It deletes every collection.`
+    );
+  }
+}
+
 async function resetAndSeed() {
+  assertLocalDatabase(MONGODB_URI);
   await mongoose.connect(MONGODB_URI);
   console.log("Connected to MongoDB");
 
@@ -146,22 +167,10 @@ async function resetAndSeed() {
     firstName: "Alice",
     lastName: "Cooper",
     abn: "51824753556",
-    trade: "Alice Cooper Electrical",
-    idType: "licence",
+    idType: "trade-licence",
     idNumber: "NSW12345678",
-    idExpiry: "2028-06-30",
-    currentProjectName: "Strathfield Residential",
-    address: "2 Mintaro Ave",
-    suburb: "Strathfield",
-    state: "NSW",
-    postcode: "2135",
-    value: "$500,000 – $1M",
-    pastProjectName: "Bondi Renovation",
-    pastSuburb: "Bondi Beach",
-    pastState: "NSW",
-    pastPostcode: "2026",
-    pastMonthYear: "2023-09",
-    pastValue: "$250,000 – $500K",
+    idExpiry: "30/06/2028",
+    idState: "NSW",
     references: [
       {
         firstName: "Diana",        lastName: "Prince",
@@ -188,7 +197,7 @@ async function resetAndSeed() {
     fromUserId: diana._id,
     toAbn: "51824753556",
     toBusinessName: "Alice Cooper Electrical",
-    attributes: ["Reliable", "Quality Work", "On Time"],
+    attributes: ["Reliable", "Quality work", "Turns up on time"],
     note: "Worked with Alice on two projects. Always delivers.",
   });
 
@@ -196,7 +205,7 @@ async function resetAndSeed() {
     fromUserId: evan._id,
     toAbn: "51824753556",
     toBusinessName: "Alice Cooper Electrical",
-    attributes: ["Professional", "Safe on Site"],
+    attributes: ["Professional", "Safety first"],
   });
 
   console.log("Alice: verified (2 vouches received)");
@@ -207,22 +216,10 @@ async function resetAndSeed() {
     firstName: "Bob",
     lastName: "Smith",
     abn: "83914571673",
-    trade: "Smith Construction",
-    idType: "passport",
+    idType: "trade-licence",
     idNumber: "PA1234567",
-    idExpiry: "2030-03-15",
-    currentProjectName: "Parramatta Tower",
-    address: "1 Darcy St",
-    suburb: "Parramatta",
-    state: "NSW",
-    postcode: "2150",
-    value: "$1M – $5M",
-    pastProjectName: "",
-    pastSuburb: "",
-    pastState: "",
-    pastPostcode: "",
-    pastMonthYear: "",
-    pastValue: "",
+    idExpiry: "15/03/2030",
+    idState: "NSW",
     references: [
       {
         firstName: "Diana",        lastName: "Prince",

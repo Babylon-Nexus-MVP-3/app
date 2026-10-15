@@ -15,7 +15,7 @@ import { styles } from "./styles";
 import { MyInvoiceCard, ApprovalCard } from "./InvoiceCards";
 import { ConfirmModal } from "./ConfirmModal";
 
-/* â”€â”€â”€ Invoice uploader view (Subcontractor / Consultant) â”€â”€â”€ */
+/* ─── Invoice uploader view (Subcontractor / Consultant) ─── */
 export function InvoiceUploaderView({
   invoices,
   userId,
@@ -189,7 +189,7 @@ export function InvoiceUploaderView({
   );
 }
 
-/* â”€â”€â”€ Shared dual-role view (Builder / PM): My Invoices + To Action + All Invoices â”€â”€â”€ */
+/* ─── Shared dual-role view (Builder / PM): My Invoices + To Action + All Invoices ─── */
 export function DualRoleMySpace({
   invoices,
   userId,
@@ -248,7 +248,7 @@ export function DualRoleMySpace({
 
   // PM sees all amounts; Builder sees amounts on own + approved invoices
   const canSeeAllAmounts = approverRole === "PM";
-  // For "To Action" tab: Builder IS the approver for all those invoices â†’ show dollar total
+  // For "To Action" tab: Builder IS the approver for all those invoices → show dollar total
   const canSeeToActionAmounts = true;
 
   const filteredMyInvoices = applyFilter(myInvoices, myFilter);
@@ -433,7 +433,7 @@ export function DualRoleMySpace({
   );
 }
 
-/* â”€â”€â”€ Builder â”€â”€â”€ */
+/* ─── Builder ─── */
 export function BuilderMySpace({
   invoices,
   userId,
@@ -460,7 +460,7 @@ export function BuilderMySpace({
   );
 }
 
-/* â”€â”€â”€ Project Manager â”€â”€â”€ */
+/* ─── Project Manager ─── */
 export function PMMySpace({
   invoices,
   userId,
@@ -487,7 +487,7 @@ export function PMMySpace({
   );
 }
 
-/* â”€â”€â”€ Owner â”€â”€â”€ */
+/* ─── Owner ─── */
 export function OwnerMySpace({
   invoices,
   userId: _userId,
@@ -676,7 +676,7 @@ export function OwnerMySpace({
   );
 }
 
-/* â”€â”€â”€ Financier / VIP â€” read-only, full amounts â”€â”€â”€ */
+/* ─── Financier / VIP — read-only, full amounts ─── */
 export function FinancierMySpace({
   invoices,
   onTapInvoice,
@@ -745,7 +745,7 @@ export function FinancierMySpace({
   );
 }
 
-/* â”€â”€â”€ Observer â€” read-only, no amounts â”€â”€â”€ */
+/* ─── Observer — read-only, no amounts ─── */
 export function ObserverMySpace({
   invoices,
   onTapInvoice,
@@ -825,7 +825,7 @@ export function ObserverMySpace({
   );
 }
 
-/* â”€â”€â”€ Shared filter chips â”€â”€â”€ */
+/* ─── Shared filter chips ─── */
 type FilterStatus = "All" | "Overdue" | "Pending" | "Approved" | "Paid" | "Received" | "Rejected";
 const FILTER_STATUSES: FilterStatus[] = [
   "All",
@@ -881,7 +881,7 @@ function FilterChips({
   );
 }
 
-/* â”€â”€â”€ Shared 3-box stats row for All Invoices views â”€â”€â”€ */
+/* ─── Shared 3-box stats row for All Invoices views ─── */
 function AllInvoicesStats({
   allActive,
   allPending,

@@ -305,9 +305,9 @@ export default function VerifyScreen() {
 
                   <View style={styles.divider} />
                   <View style={styles.noteRow}>
-                    <Ionicons name="time-outline" size={14} color={Colors.amber} />
+                    <Ionicons name="information-circle-outline" size={14} color={Colors.amber} />
                     <AppText style={styles.pendingNote}>
-                      Your vouch stays pending until they accept the invite.
+                      Your vouch is saved to their ABN now and shows up when they join.
                     </AppText>
                   </View>
                 </View>

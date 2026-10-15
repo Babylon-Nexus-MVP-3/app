@@ -207,7 +207,7 @@ export default function MeScreen() {
                 object rather than a panel. */}
             <View style={styles.cardShadow}>
               <LinearGradient
-                colors={["#FFFFFF", "#F2F5F3"]}
+                colors={[Colors.white, Colors.cardFaceEnd]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.card}
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   // Shadow lives on the outer view: the gradient face clips its own overflow,
   // and a real card casts light downward and slightly out.
   cardShadow: {
-    shadowColor: "#0B2B1B",
+    shadowColor: Colors.cardShadow,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.22,
     shadowRadius: 24,

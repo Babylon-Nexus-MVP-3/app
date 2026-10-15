@@ -95,6 +95,10 @@ export async function createProject(input: CreateProjectInput): Promise<string> 
     throw new ProjectError("Required fields missing: location, council");
   }
 
+  // email is optional on User, but every participant row is keyed by one.
+  if (!user.email) {
+    throw new ProjectError("Add an email address to your account before creating a project");
+  }
   const creatorEmail = user.email.toLowerCase();
   const participantRole = creatorRole ?? user.role;
 
@@ -324,7 +328,7 @@ export async function acceptInviteParticipant(
     throw new ProjectError("Invite is no longer valid");
   }
 
-  if (participant.email.toLowerCase() !== user.email.toLowerCase()) {
+  if (!user.email || participant.email.toLowerCase() !== user.email.toLowerCase()) {
     throw new ProjectError("This invite code was not issued to your account", 403);
   }
 
