@@ -93,3 +93,13 @@ export function splitLegacyName(name?: string | null): { firstName: string; last
 export function initials(firstName?: string | null, lastName?: string | null): string {
   return [firstName?.trim()[0], lastName?.trim()[0]].filter(Boolean).join("").toUpperCase();
 }
+
+/** Escapes text for interpolation into an HTML string (e.g. a PDF built with expo-print). */
+export function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

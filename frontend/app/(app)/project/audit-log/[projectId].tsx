@@ -18,6 +18,7 @@ import { Fonts } from "@/constants/fonts";
 import { HEADER_HIT_SLOP } from "@/constants/touch";
 import { useAuth } from "@/context/AuthContext";
 import { AppText } from "@/components/AppText";
+import { escapeHtml } from "@/lib/format";
 
 /* ─── API types ─── */
 type AuditEventType =
@@ -116,11 +117,11 @@ function buildHtml(data: AuditLogData): string {
       entry.events.map(
         (ev, i) => `
         <tr>
-          ${i === 0 ? `<td rowspan="${entry.events.length}" class="inv-cell">${entry.description}<br/><small>${entry.submittingParty} · ${formatCurrency(entry.amount)}</small></td>` : ""}
+          ${i === 0 ? `<td rowspan="${entry.events.length}" class="inv-cell">${escapeHtml(entry.description)}<br/><small>${escapeHtml(entry.submittingParty)} · ${formatCurrency(entry.amount)}</small></td>` : ""}
           <td>${EVENT_LABEL[ev.type]}</td>
-          <td>${ev.actorName}<br/><small>${ev.actorRole}</small></td>
+          <td>${escapeHtml(ev.actorName)}<br/><small>${escapeHtml(ev.actorRole)}</small></td>
           <td>${formatDateTime(ev.timestamp)}</td>
-          <td>${ev.rejectionReason ?? "—"}</td>
+          <td>${ev.rejectionReason ? escapeHtml(ev.rejectionReason) : "—"}</td>
         </tr>`
       )
     )
@@ -156,9 +157,9 @@ function buildHtml(data: AuditLogData): string {
 <body>
   <h1>Payment Audit Log</h1>
   <div class="meta">
-    ${data.projectName} &nbsp;|&nbsp;
+    ${escapeHtml(data.projectName)} &nbsp;|&nbsp;
     Generated: ${formatDateTime(data.generatedAt)} &nbsp;|&nbsp;
-    Viewed by: ${data.viewerName} (${data.viewerRole})
+    Viewed by: ${escapeHtml(data.viewerName)} (${escapeHtml(data.viewerRole)})
   </div>
   <div class="summary">
     <div class="stat"><div class="stat-label">Invoices</div><div class="stat-value">${data.summary.totalInvoices}</div></div>
