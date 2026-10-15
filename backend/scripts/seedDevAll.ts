@@ -1,16 +1,28 @@
 /**
- * Seeds realistic dev/test data: users, a project, participants, and invoices
- * with full event history so the Audit Log screen has something to show.
+ * Seeds everything a developer needs to walk through the app locally:
  *
- * Safe to run multiple times — skips if the seed project already exists.
+ *   1. Dev accounts — one per project role, plus vouched@ladder.dev.
+ *   2. Projects and invoices — five projects covering every invoice state, with
+ *      the event history the Audit Log screen reads.
+ *   3. A vouched account — three vouches received with their answered
+ *      requests, and a complete profile, so Give a Vouch is unlocked.
+ *   4. A vouch-back — vouched@ladder.dev has vouched for the builder, so in its
+ *      Received tab the builder shows "Vouched" and the PM and subbie show
+ *      "Vouch back".
  *
- * Seeded accounts (all passwords: Password123!)
+ * Safe to run more than once: each step checks before it writes, so a re-run
+ * only fills in what is missing.
+ *
+ * Run: npm run seed:dev
+ *
+ * Accounts (all passwords: Password123!)
  *   owner@ladder.dev    — Owner
- *   builder@ladder.dev  — Builder
- *   pm@ladder.dev       — PM
- *   subbie@ladder.dev   — Subbie
+ *   builder@ladder.dev  — Builder     (ABN 83914571673)
+ *   pm@ladder.dev       — PM          (ABN 28611070749)
+ *   subbie@ladder.dev   — Subbie      (ABN 46253070000)
  *   consult@ladder.dev  — Consultant
  *   finance@ladder.dev  — Financier
+ *   vouched@ladder.dev  — Subbie      (ABN 47100074445, 3 vouches received)
  */
 
 import dotenv from "dotenv";
@@ -23,6 +35,9 @@ import { ProjectParticipantModel } from "../src/models/projectParticipantModel";
 import { InvoiceModel, InvoiceStatus } from "../src/models/invoiceModel";
 import { EventModel } from "../src/models/eventModel";
 import { getNextSequence } from "../src/models/counterModel";
+import { GivenVouchModel } from "../src/models/givenVouchModel";
+import { VouchRequestModel } from "../src/models/vouchRequestModel";
+import { VouchProfileModel } from "../src/models/vouchProfileModel";
 import { splitLegacyName } from "../src/utils/name";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -31,36 +46,42 @@ const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://localhost:27017/babylo
 const PASSWORD = "Password123!";
 const SEED_MARKER = "SEED_DEV_PROJECT";
 
+type SeededUser = InstanceType<typeof UserModel>;
+
 /* ─── Helpers ─── */
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 86_400_000);
 }
 
-async function seedDev() {
-  await mongoose.connect(MONGODB_URI);
-  console.log("Connected to MongoDB");
+/* ─── 1. Dev accounts ─── */
 
-  // Idempotency check
-  const existing = await ProjectModel.findOne({ council: SEED_MARKER });
-  if (existing) {
-    console.log("Seed data already exists. Skipping.");
-    return;
-  }
+// Received vouches are keyed by ABN, so the builder, PM and subbie need one for
+// the vouched account's Received tab to show them.
+const DEV_USERS = [
+  { name: "Alex Carter",   email: "owner@ladder.dev",   role: "Owner"      },
+  { name: "Sam Mitchell",  email: "builder@ladder.dev", role: "Builder",    abn: "83914571673", businessName: "Mitchell Construction"  },
+  { name: "Jordan Lee",    email: "pm@ladder.dev",      role: "PM",         abn: "28611070749", businessName: "Lee Project Management" },
+  { name: "Taylor Brooks", email: "subbie@ladder.dev",  role: "Subbie",     abn: "46253070000", businessName: "Brooks Framing Co"      },
+  { name: "Morgan Hayes",  email: "consult@ladder.dev", role: "Consultant" },
+  { name: "Riley Chen",    email: "finance@ladder.dev", role: "Financier"  },
+] as const;
 
-  const hashed = await bcrypt.hash(PASSWORD, 10);
+const BUILDER = DEV_USERS[1];
 
-  /* ── 1. Users ── */
-  const userData = [
-    { name: "Alex Carter",   email: "owner@ladder.dev",   role: "Owner"      },
-    { name: "Sam Mitchell",  email: "builder@ladder.dev", role: "Builder"    },
-    { name: "Jordan Lee",    email: "pm@ladder.dev",      role: "PM"         },
-    { name: "Taylor Brooks", email: "subbie@ladder.dev",  role: "Subbie"     },
-    { name: "Morgan Hayes",  email: "consult@ladder.dev", role: "Consultant" },
-    { name: "Riley Chen",    email: "finance@ladder.dev", role: "Financier"  },
-  ];
+const VOUCHED = {
+  email: "vouched@ladder.dev",
+  firstName: "Casey",
+  lastName: "Vouched",
+  mobile: "0412999999",
+  abn: "47100074445",
+  businessName: "Vouched Test Co",
+};
 
-  const users: Record<string, InstanceType<typeof UserModel>> = {};
-  for (const u of userData) {
+async function seedUsers(hashed: string): Promise<Record<string, SeededUser>> {
+  const users: Record<string, SeededUser> = {};
+
+  for (const u of DEV_USERS) {
+    const business = "abn" in u ? { abn: u.abn, businessName: u.businessName } : {};
     let user = await UserModel.findOne({ email: u.email });
     if (!user) {
       user = await UserModel.create({
@@ -72,15 +93,52 @@ async function seedDev() {
         emailVerified: true,
         loginAttempts: 0,
         accountLocked: false,
+        ...business,
       });
       console.log(`Created user: ${u.email} (${u.role})`);
+    } else if ("abn" in u && !user.abn) {
+      // Accounts made before ABNs were part of the seed.
+      user = await UserModel.findByIdAndUpdate(user._id, { $set: business }, { new: true });
+      console.log(`User exists: ${u.email} — added ABN`);
     } else {
       console.log(`User exists: ${u.email} — skipping`);
     }
-    users[u.role] = user;
+    users[u.role] = user!;
   }
 
-  /* ── 2. Project ── */
+  let vouched = await UserModel.findOne({ email: VOUCHED.email });
+  if (!vouched) {
+    vouched = await UserModel.create({
+      firstName: VOUCHED.firstName,
+      lastName: VOUCHED.lastName,
+      email: VOUCHED.email,
+      password: hashed,
+      role: "Subbie",
+      status: "Active",
+      emailVerified: true,
+      mobile: VOUCHED.mobile,
+      mobileVerified: true,
+      abn: VOUCHED.abn,
+      businessName: VOUCHED.businessName,
+    });
+    console.log(`Created user: ${VOUCHED.email} (Subbie)`);
+  } else {
+    console.log(`User exists: ${VOUCHED.email} — skipping`);
+  }
+  users["Vouched"] = vouched;
+
+  return users;
+}
+
+/* ─── 2. Projects and invoices ─── */
+
+async function seedProjects(users: Record<string, SeededUser>): Promise<void> {
+  if (await ProjectModel.exists({ council: SEED_MARKER })) {
+    console.log("Projects already seeded — skipping");
+    return;
+  }
+
+  /* ── Project 1 ── */
   const project = await ProjectModel.create({
     name: "Strathfield Residential Development",
     location: "2-4 Mintaro Ave, Strathfield NSW 2135",
@@ -101,7 +159,7 @@ async function seedDev() {
     { role: "Subbie",     user: users["Subbie"]     },
     { role: "Consultant", user: users["Consultant"] },
     { role: "Financier",  user: users["Financier"]  },
-  ];
+  ] as const;
 
   for (const p of participantData) {
     await ProjectParticipantModel.create({
@@ -393,7 +451,7 @@ async function seedDev() {
 
   /* ══════════════════════════════════════════════════════════
      PROJECT 4 — Chatswood Mixed Use Development
-     Pending — awaiting admin approval
+     Pending (legacy status — projects are Active from creation now)
   ══════════════════════════════════════════════════════════ */
   const project4 = await ProjectModel.create({
     name: "Chatswood Mixed Use Development",
@@ -405,7 +463,7 @@ async function seedDev() {
     status: "Pending",
   });
   const p4Id = project4._id.toString();
-  console.log(`Created project: ${project4.name} (${p4Id}) — Pending approval`);
+  console.log(`Created project: ${project4.name} (${p4Id}) — Pending`);
 
   for (const p of participantData) {
     await ProjectParticipantModel.create({
@@ -453,6 +511,120 @@ async function seedDev() {
     { type: "InvoiceReceived",  aggregateType: "Invoice", aggregateId: p5inv1._id.toString(), userId: users["Builder"]._id.toString(), payload: { projectId: p5Id }, createdAt: daysAgo(63) },
   ]);
   console.log("Created invoice for North Sydney Office Fitout (Inactive)");
+}
+
+/* ─── 3. The vouched account ─── */
+
+// Attributes must come from the list in src/utils/vouchRules.ts — the app only
+// offers those.
+const VOUCHES_RECEIVED = [
+  {
+    role: "Builder",
+    relationship: "Head Contractor",
+    projectName: "Strathfield Residential",
+    attributes: ["Reliable", "Quality work", "Turns up on time"],
+    note: "Worked together for two years — always delivers.",
+  },
+  {
+    role: "PM",
+    relationship: "Project Manager",
+    projectName: "Bondi Beach Renovation",
+    attributes: ["Professional", "Safety first"],
+  },
+  {
+    role: "Subbie",
+    relationship: "Subcontractor",
+    projectName: "Parramatta Tower",
+    attributes: ["Good communication", "Honest", "Fair pricing"],
+    note: "Would work with again without hesitation.",
+  },
+];
+
+async function seedVouchedAccount(users: Record<string, SeededUser>): Promise<void> {
+  const vouched = users["Vouched"];
+
+  // A licence on file takes the profile to 100%, which unlocks giving a vouch
+  // and creating a project.
+  if (!(await VouchProfileModel.exists({ userId: vouched._id }))) {
+    await VouchProfileModel.create({
+      userId: vouched._id,
+      firstName: VOUCHED.firstName,
+      lastName: VOUCHED.lastName,
+      abn: VOUCHED.abn,
+      idType: "trade-licence",
+      idNumber: "LIC4471000",
+      idExpiry: "01/01/2030",
+      idState: "NSW",
+      references: [],
+    });
+    console.log(`Created vouch profile: ${VOUCHED.email}`);
+  }
+
+  for (const v of VOUCHES_RECEIVED) {
+    const voucher = users[v.role];
+
+    let request = await VouchRequestModel.findOne({ fromUserId: vouched._id, toEmail: voucher.email });
+    if (!request) {
+      request = await VouchRequestModel.create({
+        fromUserId: vouched._id,
+        fromFirstName: VOUCHED.firstName,
+        fromLastName: VOUCHED.lastName,
+        fromCompany: VOUCHED.businessName,
+        fromAbn: VOUCHED.abn,
+        toEmail: voucher.email,
+        relationship: v.relationship,
+        projectName: v.projectName,
+        status: "responded",
+        respondedAt: new Date(),
+      });
+    }
+
+    if (!(await GivenVouchModel.exists({ fromUserId: voucher._id, toAbn: VOUCHED.abn }))) {
+      await GivenVouchModel.create({
+        fromUserId: voucher._id,
+        toAbn: VOUCHED.abn,
+        toBusinessName: VOUCHED.businessName,
+        attributes: v.attributes,
+        note: v.note,
+        requestId: request._id,
+        recipientFirstName: VOUCHED.firstName,
+        recipientLastName: VOUCHED.lastName,
+        recipientEmail: VOUCHED.email,
+      });
+      console.log(`Created vouch: ${voucher.email} → ${VOUCHED.email}`);
+    }
+  }
+}
+
+/* ─── 4. Vouch-back ─── */
+
+async function seedVouchBack(users: Record<string, SeededUser>): Promise<void> {
+  const vouched = users["Vouched"];
+  const builder = users["Builder"];
+
+  if (!(await GivenVouchModel.exists({ fromUserId: vouched._id, toAbn: BUILDER.abn }))) {
+    await GivenVouchModel.create({
+      fromUserId: vouched._id,
+      toAbn: BUILDER.abn,
+      toBusinessName: BUILDER.businessName,
+      attributes: ["Reliable", "Quality work"],
+      recipientFirstName: builder.firstName,
+      recipientLastName: builder.lastName,
+      recipientEmail: builder.email,
+    });
+    console.log(`Created vouch: ${VOUCHED.email} → ${builder.email}`);
+  }
+}
+
+async function seedDevAll() {
+  await mongoose.connect(MONGODB_URI);
+  console.log("Connected to MongoDB");
+
+  const hashed = await bcrypt.hash(PASSWORD, 10);
+  const users = await seedUsers(hashed);
+  await seedProjects(users);
+  await seedVouchedAccount(users);
+  await seedVouchBack(users);
 
   console.log("\n✓ Seed complete");
   console.log("─────────────────────────────────────────");
@@ -464,17 +636,21 @@ async function seedDev() {
   console.log("  subbie@ladder.dev   → Subbie");
   console.log("  consult@ladder.dev  → Consultant");
   console.log("  finance@ladder.dev  → Financier");
+  console.log("  vouched@ladder.dev  → Subbie | 3 vouches received, Give a Vouch unlocked");
   console.log("");
   console.log("Projects:");
   console.log("  Strathfield Residential Development  → Active  | Good health");
   console.log("  Parramatta Commercial Tower          → Active  | Poor health (overdue)");
   console.log("  Bondi Beach Apartment Renovation     → Active  | All invoice statuses");
-  console.log("  Chatswood Mixed Use Development      → Pending | Awaiting admin approval");
+  console.log("  Chatswood Mixed Use Development      → Pending | No invoices yet");
   console.log("  North Sydney Office Fitout           → Inactive| Archived");
+  console.log("");
+  console.log("Vouches (vouched@ladder.dev → Vouches → Received):");
+  console.log("  builder → Vouched   pm → Vouch back   subbie → Vouch back");
   console.log("─────────────────────────────────────────");
 }
 
-seedDev()
+seedDevAll()
   .catch((err) => {
     console.error("Seed failed:", err);
     process.exitCode = 1;
