@@ -91,16 +91,25 @@ Requests flow routes → controllers → services.
 
 ## Deployment
 
-Production runs on AWS EC2 (Sydney) behind Nginx, managed by PM2 with
-[`ecosystem.config.js`](ecosystem.config.js) (one fork-mode process, `NODE_ENV=production`).
-The database is MongoDB Atlas (Sydney). To deploy on the server:
+Production runs on AWS EC2 (Sydney) behind Nginx, managed by PM2 as the process
+`bnexus-v2` defined in [`ecosystem.config.js`](ecosystem.config.js) (one fork-mode process,
+`NODE_ENV=production`). The database is MongoDB Atlas (Sydney). The code lives at
+`/opt/bnexus-v2/app/backend`, owned by `ubuntu`; open a shell with
+`aws ssm start-session --target i-06ab6b4e1f82ec111 --region ap-southeast-2`, then
+`sudo su - ubuntu`. To deploy:
 
 ```bash
-git pull origin main
-npm ci
+cd /opt/bnexus-v2/app/backend
+cp -a dist "dist.rollback-$(date -u +%Y%m%d-%H%M%S)"   # rollback copy of the running build
+git pull --ff-only origin main
+npm ci                  # only when package-lock.json changed
 npm run build
-pm2 restart ecosystem.config.js
+pm2 restart bnexus-v2
+pm2 logs bnexus-v2 --lines 20 --nostream   # expect "DB Connection Successful"
 ```
+
+Restart by process name. To roll back, copy a `dist.rollback-*` folder over `dist` and run
+`pm2 restart bnexus-v2` again.
 
 Production must set at least `MONGODB_URI`, `JWT_ACCESS_SECRET`, `CORS_ORIGINS` (if any browser
 clients), `EMAIL_USER`, `ABR_GUID` and the `TWILIO_*` variables. SES uses the instance's IAM role.

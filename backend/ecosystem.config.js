@@ -1,7 +1,10 @@
 module.exports = {
   apps: [
     {
-      name: "bnexus-backend",
+      // Must match the process running in production. `pm2 restart <file>`
+      // starts a second process when the names differ, and the copy can't
+      // bind port 3229.
+      name: "bnexus-v2",
       script: "dist/server.js",
       // One process on purpose. The overdue-invoice scheduler runs in-process
       // and the rate limiters keep in-memory counts, so cluster mode fired the
