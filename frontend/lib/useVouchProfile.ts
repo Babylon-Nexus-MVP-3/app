@@ -1,11 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  clearVouchProfileCache,
   getCachedVouchProfile,
-  setCachedVouchProfile,
+  loadVouchProfile,
+  subscribeVouchProfile,
   type CachedProfile,
   type VouchProfileData,
 } from "@/lib/vouchProfileCache";
@@ -49,8 +49,9 @@ type FetchWithAuth = (url: string, options?: RequestInit) => Promise<Response>;
   mobile, 429 rate limit, 500) looked exactly like a successful one and the
   wizard navigated on regardless.
 
-  On success it clears the shared cache so the next screen refetches rather
-  than rendering the pre-save state it still has in memory.
+  On success it reloads the shared cache before returning, so the screen the
+  wizard navigates to renders the post-save state straight away. Clearing it
+  instead made that screen start from nothing and flash 0% before the refetch.
 */
 export async function saveVouchProfileStep(
   fetchWithAuth: FetchWithAuth,
@@ -74,7 +75,7 @@ export async function saveVouchProfileStep(
     return data.error ?? "We couldn't save your details. Please try again.";
   }
 
-  clearVouchProfileCache();
+  await loadVouchProfile(fetchWithAuth, { fresh: true });
   return null;
 }
 
@@ -83,26 +84,14 @@ export function useVouchProfile(): VouchProfileState {
   const [data, setData] = useState<CachedProfile | null>(getCachedVouchProfile());
   const [loading, setLoading] = useState(getCachedVouchProfile() === null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/vouch/profile/me`);
-      if (!res.ok) return;
-      const body = await res.json();
-      if (body?.profileStrength === undefined) return;
+  // A load started anywhere — the launch gate, sign-in, another screen —
+  // lands here too, so every mounted screen shows the same state.
+  useEffect(() => {
+    setData(getCachedVouchProfile());
+    return subscribeVouchProfile(setData);
+  }, []);
 
-      const next: CachedProfile = {
-        profile: body,
-        profileStrength: body.profileStrength,
-        stepsDone: body.stepsDone ?? [],
-        stepsLeft: body.stepsLeft ?? 0,
-        isComplete: body.isComplete ?? body.profileStrength === 100,
-      };
-      setCachedVouchProfile(next);
-      setData(next);
-    } catch {
-      // Keep whatever was cached — a failed refresh shouldn't blank the screen.
-    }
-  }, [fetchWithAuth]);
+  const load = useCallback(() => loadVouchProfile(fetchWithAuth), [fetchWithAuth]);
 
   useFocusEffect(
     useCallback(() => {

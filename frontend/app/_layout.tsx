@@ -11,9 +11,14 @@ import {
   DMSans_700Bold,
   DMSans_800ExtraBold,
 } from "@expo-google-fonts/dm-sans";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { Colors } from "@/constants/colors";
+import { useRouteStatusBar } from "@/lib/statusBar";
 
 SplashScreen.preventAutoHideAsync();
+// Fade rather than cut, so the hand-off from the native splash to the first
+// screen reads as one motion.
+SplashScreen.setOptions({ fade: true, duration: 300 });
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -35,6 +40,8 @@ export default function RootLayout() {
   const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
   const fontsReady = fontsLoaded || !!fontError || fontLoadTimedOut;
 
+  useRouteStatusBar();
+
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
@@ -52,10 +59,6 @@ export default function RootLayout() {
     }, 5000);
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
-
-  useEffect(() => {
-    if (fontsReady) SplashScreen.hideAsync();
-  }, [fontsReady]);
 
   useEffect(() => {
     Notifications.setBadgeCountAsync(0);
@@ -101,18 +104,42 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!fontsReady) return null;
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.splash }}>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="(admin)" options={{ gestureEnabled: false }} />
-        </Stack>
+        {/* Auth restores while the fonts load rather than after them. */}
+        <SplashGate fontsReady={fontsReady} />
+        {fontsReady && (
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="(admin)" options={{ gestureEnabled: false }} />
+          </Stack>
+        )}
       </AuthProvider>
     </GestureHandlerRootView>
   );
+}
+
+/*
+  Holds the native splash until the first screen can draw its real state. The
+  stack renders underneath meanwhile, so the redirect to home (or the welcome
+  screen) has already happened by the time the splash fades — nothing blank or
+  half-loaded is ever on screen. AuthProvider bounds how long isLoading can
+  stay true, so a dead connection can't strand anyone here.
+*/
+function SplashGate({ fontsReady }: { fontsReady: boolean }) {
+  const { isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading || !fontsReady) return;
+    // One frame for the screen behind it to lay out before the fade starts.
+    const frame = requestAnimationFrame(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isLoading, fontsReady]);
+
+  return null;
 }

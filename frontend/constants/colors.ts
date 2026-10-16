@@ -21,6 +21,10 @@ export const Colors = {
   vouchGreenLight: "#E8F5EE",
   vouchGreenDeep: "#0C3220", // darkest stop in the welcome screen gradient
   vouchGreenAccent: "#7BE0A8", // headline accent + icon glyphs on dark green
+  // The native splash background. app.config.js can't import this file, so the
+  // same hex is written there too — change both together or the launch shows a
+  // seam where the splash hands over to the app.
+  splash: "#0D3D2B",
   beige: "#F5EFE6",
   black: "#1A1A1A",
   grey100: "#F3F3F3",

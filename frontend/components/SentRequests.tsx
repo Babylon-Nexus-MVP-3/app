@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
+import { daysAgo } from "@/lib/format";
 import { AppText } from "@/components/AppText";
 import { Pill } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
@@ -29,17 +30,6 @@ type SentRequest = {
   respondedAt?: string;
   lastSentAt?: string;
 };
-
-function timeAgo(dateStr?: string): string {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  return `${months} month${months === 1 ? "" : "s"} ago`;
-}
 
 /** Matches the backend cooldown on POST /vouch/requests/:id/nudge. */
 const NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -165,7 +155,7 @@ export function SentRequests() {
         </View>
 
         <View style={styles.cardFoot}>
-          <AppText style={styles.timing}>Sent {timeAgo(r.lastSentAt ?? r.createdAt)}</AppText>
+          <AppText style={styles.timing}>Sent {daysAgo(r.lastSentAt ?? r.createdAt)}</AppText>
 
           <View style={styles.actions}>
             <TouchableOpacity

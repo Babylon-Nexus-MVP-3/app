@@ -120,6 +120,9 @@ export default function Notifications() {
   const { fetchWithAuth } = useAuth();
   const [notifications, setNotifications] = useState<UnifiedNotif[]>([]);
   const [loading, setLoading] = useState(true);
+  // Both feeds failing is "couldn't load", not "no notifications" — the empty
+  // copy would otherwise tell someone offline that nothing has happened.
+  const [failed, setFailed] = useState(false);
   const hasLoadedRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -188,6 +191,12 @@ export default function Notifications() {
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null),
     ]);
+    if (!projectRes && !vouchRes) {
+      // Keep what is already on screen; only a first load shows the error.
+      if (!hasLoadedRef.current) setFailed(true);
+      return;
+    }
+    setFailed(false);
     setNotifications(buildUnified(projectRes, vouchRes));
   }, [fetchWithAuth]);
 
@@ -317,10 +326,19 @@ export default function Notifications() {
             <NotificationCard item={item} onPress={() => handlePress(item)} />
           )}
           ListEmptyComponent={
-            <View style={appStyles.centered}>
-              <Ionicons name="notifications-off-outline" size={48} color={Colors.grey300} />
-              <AppText style={appStyles.emptyText}>No notifications yet</AppText>
-            </View>
+            failed ? (
+              <View style={appStyles.centered}>
+                <Ionicons name="cloud-offline-outline" size={48} color={Colors.grey300} />
+                <AppText style={appStyles.emptyText}>
+                  Couldn&apos;t load notifications. Pull down to try again.
+                </AppText>
+              </View>
+            ) : (
+              <View style={appStyles.centered}>
+                <Ionicons name="notifications-off-outline" size={48} color={Colors.grey300} />
+                <AppText style={appStyles.emptyText}>No notifications yet</AppText>
+              </View>
+            )
           }
         />
       )}

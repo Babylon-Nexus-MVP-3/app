@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { Fonts } from "@/constants/fonts";
+import { daysAgo } from "@/lib/format";
 import { AppText } from "@/components/AppText";
 import { ScreenHeader, sheetStyle } from "@/components/ScreenHeader";
 import { EmptyState, Pill, Segmented } from "@/components/ui";
@@ -44,18 +45,6 @@ type ReceivedVouch = {
   note?: string;
   createdAt: string;
 };
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
-  const years = Math.floor(days / 365);
-  return `${years} year${years !== 1 ? "s" : ""} ago`;
-}
 
 function AttributeChips({ attributes }: { attributes: string[] }) {
   return (
@@ -104,7 +93,46 @@ export default function VouchesScreen() {
   const profileVerified = isComplete === true;
   const [incomingCount, setIncomingCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  // A failed first load must not fall through to the empty state — offline,
+  // "No vouches received yet" is a false statement about the user's record.
+  const [failed, setFailed] = useState(false);
   const hasLoaded = useRef(false);
+
+  const load = useCallback(
+    (isCancelled: () => boolean = () => false) => {
+      if (!hasLoaded.current) setLoading(true);
+      return Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
+        fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
+        // Requests other people have sent asking *this* user to vouch for
+        // them — the actionable list itself still lives in Give a Vouch, but
+        // it should be discoverable from here too rather than hidden away.
+        fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`).then((r) =>
+          r.ok ? r.json() : null
+        ),
+      ])
+        .then(([givenData, receivedData, pendingData]) => {
+          if (isCancelled()) return;
+          if (!givenData || !receivedData) {
+            // Keep what is already on screen; only a first load shows the error.
+            if (!hasLoaded.current) setFailed(true);
+            return;
+          }
+          setGiven(givenData.vouches ?? []);
+          setReceived(receivedData.vouches ?? []);
+          setIncomingCount(pendingData?.requests?.length ?? 0);
+          setFailed(false);
+          hasLoaded.current = true;
+        })
+        .catch(() => {
+          if (!isCancelled() && !hasLoaded.current) setFailed(true);
+        })
+        .finally(() => {
+          if (!isCancelled()) setLoading(false);
+        });
+    },
+    [fetchWithAuth]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -117,32 +145,11 @@ export default function VouchesScreen() {
         );
       }
       let cancelled = false;
-      if (!hasLoaded.current) setLoading(true);
-      Promise.all([
-        fetchWithAuth(`${API_BASE_URL}/vouch/given`).then((r) => (r.ok ? r.json() : null)),
-        fetchWithAuth(`${API_BASE_URL}/vouch/received`).then((r) => (r.ok ? r.json() : null)),
-        // Requests other people have sent asking *this* user to vouch for
-        // them — the actionable list itself still lives in Give a Vouch, but
-        // it should be discoverable from here too rather than hidden away.
-        fetchWithAuth(`${API_BASE_URL}/vouch/pending-requests`).then((r) =>
-          r.ok ? r.json() : null
-        ),
-      ])
-        .then(([givenData, receivedData, pendingData]) => {
-          if (cancelled) return;
-          setGiven(givenData?.vouches ?? []);
-          setReceived(receivedData?.vouches ?? []);
-          setIncomingCount(pendingData?.requests?.length ?? 0);
-          hasLoaded.current = true;
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
+      load(() => cancelled);
       return () => {
         cancelled = true;
       };
-    }, [fetchWithAuth, tabParam, width])
+    }, [load, tabParam, width])
   );
 
   return (
@@ -217,6 +224,14 @@ export default function VouchesScreen() {
             <View style={styles.centered}>
               <ActivityIndicator size="large" color={Colors.vouchGreen} />
             </View>
+          ) : failed ? (
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load your vouches"
+              subtitle="Check your connection and try again."
+              actionLabel="Try again"
+              onAction={() => load()}
+            />
           ) : received.length === 0 ? (
             <EmptyState
               icon="shield-outline"
@@ -280,7 +295,7 @@ export default function VouchesScreen() {
                             >{`  ·  ${v.fromBusinessName}`}</AppText>
                           ) : null}
                         </AppText>
-                        <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                        <AppText style={styles.cardMeta}>{daysAgo(v.createdAt)}</AppText>
                       </View>
                       {v.fromAbn ? (
                         v.alreadyVouchedBack ? (
@@ -312,6 +327,14 @@ export default function VouchesScreen() {
             <View style={styles.centered}>
               <ActivityIndicator size="large" color={Colors.vouchGreen} />
             </View>
+          ) : failed ? (
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load your vouches"
+              subtitle="Check your connection and try again."
+              actionLabel="Try again"
+              onAction={() => load()}
+            />
           ) : given.length === 0 ? (
             <EmptyState
               icon="shield-outline"
@@ -352,7 +375,7 @@ export default function VouchesScreen() {
                       <AppText style={styles.businessName}>
                         {v.toBusinessName || "Business"}
                       </AppText>
-                      <AppText style={styles.cardMeta}>{timeAgo(v.createdAt)}</AppText>
+                      <AppText style={styles.cardMeta}>{daysAgo(v.createdAt)}</AppText>
                     </View>
                   </View>
                   <AttributeChips attributes={v.attributes} />
