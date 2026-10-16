@@ -53,7 +53,11 @@ module.exports = {
       [
         "expo-splash-screen",
         {
-          image: "./assets/appIcon.png",
+          // The bare white mark on a transparent ground, not the app icon: the
+          // icon carries its own square of green, which never exactly matched
+          // the splash background and showed as a box around the logo. Keep
+          // backgroundColor in step with Colors.splash in constants/colors.ts.
+          image: "./assets/appIconMono.png",
           imageWidth: 300,
           resizeMode: "contain",
           backgroundColor: "#0D3D2B",

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Image,
@@ -47,7 +48,9 @@ export default function MeScreen() {
   const [vouchCount, setVouchCount] = useState<number | null>(null);
   const [vouchesSent, setVouchesSent] = useState<number | null>(null);
   const [topAttributes, setTopAttributes] = useState<{ attr: string; count: number }[]>([]);
-  const [projectHistory, setProjectHistory] = useState<ProjectHistoryEntry[]>([]);
+  // Null until the first response: an empty list and "not loaded yet" must not
+  // look the same, or the empty-state copy flashes before the real history.
+  const [projectHistory, setProjectHistory] = useState<ProjectHistoryEntry[] | null>(null);
   const { isComplete, profile } = useVouchProfile();
   const [cardModalVisible, setCardModalVisible] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -224,11 +227,13 @@ export default function MeScreen() {
 
                 <View style={styles.cardTop}>
                   <AppText style={styles.cardWordmark}>VouchPay</AppText>
-                  {profileVerified ? (
+                  {/* Nothing until the server has answered — an "Unverified"
+                      pill that turns green a moment later reads as a demotion. */}
+                  {isComplete === true ? (
                     <Pill label="Verified" tone="green" icon="shield-checkmark" />
-                  ) : (
+                  ) : isComplete === false ? (
                     <Pill label="Unverified" tone="amber" />
-                  )}
+                  ) : null}
                 </View>
 
                 <View style={styles.cardNumberBlock}>
@@ -259,17 +264,17 @@ export default function MeScreen() {
               analytics, and this keeps the card at true card proportions. */}
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <AppText style={styles.statValue}>{vouchCount ?? 0}</AppText>
+              <AppText style={styles.statValue}>{vouchCount ?? "–"}</AppText>
               <AppText style={styles.statLabel}>RECEIVED</AppText>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <AppText style={styles.statValue}>{vouchesSent ?? 0}</AppText>
+              <AppText style={styles.statValue}>{vouchesSent ?? "–"}</AppText>
               <AppText style={styles.statLabel}>GIVEN</AppText>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <AppText style={styles.statValue}>{projectHistory.length}</AppText>
+              <AppText style={styles.statValue}>{projectHistory?.length ?? "–"}</AppText>
               <AppText style={styles.statLabel}>PROJECTS</AppText>
             </View>
           </View>
@@ -339,12 +344,12 @@ export default function MeScreen() {
                 <View style={styles.expBody}>
                   <View style={styles.expStats}>
                     <View style={styles.expStat}>
-                      <AppText style={styles.expStatValue}>{vouchCount ?? 0}</AppText>
+                      <AppText style={styles.expStatValue}>{vouchCount ?? "–"}</AppText>
                       <AppText style={styles.expStatLabel}>VOUCHES RECEIVED</AppText>
                     </View>
                     <View style={styles.expStatDivider} />
                     <View style={styles.expStat}>
-                      <AppText style={styles.expStatValue}>{vouchesSent ?? 0}</AppText>
+                      <AppText style={styles.expStatValue}>{vouchesSent ?? "–"}</AppText>
                       <AppText style={styles.expStatLabel}>VOUCHES GIVEN</AppText>
                     </View>
                   </View>
@@ -413,7 +418,15 @@ export default function MeScreen() {
             the full record grows without bound and would bury everything below
             it, so the rest sits behind its own screen. */}
           <SectionLabel>Project history</SectionLabel>
-          {projectHistory.length === 0 ? (
+          {projectHistory === null ? (
+            <View
+              style={styles.historyEmpty}
+              accessible
+              accessibilityLabel="Loading project history"
+            >
+              <ActivityIndicator size="small" color={Colors.grey500} />
+            </View>
+          ) : projectHistory.length === 0 ? (
             <View style={styles.historyEmpty}>
               <Ionicons name="briefcase-outline" size={18} color={Colors.grey500} />
               <AppText style={styles.historyEmptyText}>

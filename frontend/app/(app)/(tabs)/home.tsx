@@ -201,7 +201,21 @@ export default function HomeScreen() {
         <HeaderBand>
           <AppText style={styles.greeting}>{`G'day, ${firstName}.`}</AppText>
 
-          {strength === 100 ? (
+          {/* Launch and sign-in wait for the profile before this screen shows,
+              so this placeholder only appears on a connection too slow for
+              that wait. It never claims a number: a 0% meter that then turns
+              into "fully verified" reads as the app changing its mind. */}
+          {!strengthKnown ? (
+            <View
+              style={styles.strengthBlock}
+              accessible
+              accessibilityLabel="Loading profile strength"
+            >
+              <View style={[styles.skeletonLine, { width: "45%" }]} />
+              <View style={styles.strengthTrack} />
+              <View style={[styles.skeletonLine, { width: "80%", marginBottom: 0 }]} />
+            </View>
+          ) : strength === 100 ? (
             <View style={styles.verifiedPill}>
               <Ionicons name="shield-checkmark" size={15} color={Colors.white} />
               <AppText style={styles.verifiedPillText}>Profile fully verified</AppText>
@@ -409,6 +423,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   strengthFill: { height: 6, borderRadius: 3, backgroundColor: Colors.white },
+  skeletonLine: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.whiteGloss,
+    marginBottom: 10,
+  },
   strengthHint: { fontSize: 12, fontFamily: Fonts.regular, color: Colors.white, opacity: 0.85 },
   sheet: {
     flex: 1,

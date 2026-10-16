@@ -55,8 +55,8 @@ export default function Index() {
   const brandEntrance = useEntrance(0, reduceMotion);
   const headlineEntrance = useEntrance(STAGGER, reduceMotion);
   const proofEntrance = useEntrance(STAGGER * 3, reduceMotion);
-  const ctaEntrance = useEntrance(STAGGER * 4, reduceMotion);
-  const trustEntrance = useEntrance(STAGGER * 5, reduceMotion);
+  const trustEntrance = useEntrance(STAGGER * 4, reduceMotion);
+  const ctaEntrance = useEntrance(STAGGER * 5, reduceMotion);
   const primaryPress = usePressScale(reduceMotion, 0.97);
 
   useEffect(() => {
@@ -123,6 +123,16 @@ export default function Index() {
             ))}
           </Animated.View>
 
+          <Animated.View style={[styles.trustRow, trustEntrance]}>
+            <View style={styles.nswLogoBox}>
+              <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
+            </View>
+            <View style={styles.trustCopy}>
+              <AppText style={styles.trustTitle}>Backed by NSW Government</AppText>
+              <AppText style={styles.trustDesc}>MVP Innovation Grant</AppText>
+            </View>
+          </Animated.View>
+
           <View style={styles.spacer} />
 
           <Animated.View style={[styles.footer, ctaEntrance]}>
@@ -149,16 +159,6 @@ export default function Index() {
             >
               <AppText style={styles.secondaryBtnText}>Sign in</AppText>
             </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={[styles.trustRow, trustEntrance]}>
-            <View style={styles.nswLogoBox}>
-              <Image source={require("../assets/nsw-government-logo.png")} style={styles.nswLogo} />
-            </View>
-            <View style={styles.trustCopy}>
-              <AppText style={styles.trustTitle}>Backed by NSW Government</AppText>
-              <AppText style={styles.trustDesc}>MVP Innovation Grant</AppText>
-            </View>
           </Animated.View>
         </View>
       </SafeAreaView>

@@ -103,3 +103,29 @@ export function escapeHtml(value: string | number | null | undefined): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+/**
+ * "today", "yesterday", "3 days ago", "2 months ago" — by calendar day in the
+ * phone's timezone, not by 24-hour blocks, so something sent last night reads
+ * "yesterday" this morning.
+ *
+ * Clamped at today: the timestamp comes from the server, and a phone clock a
+ * few seconds behind it put a request sent just now in the future — which
+ * floored to "-1 days ago".
+ */
+export function daysAgo(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const then = new Date(dateStr);
+  if (Number.isNaN(then.getTime())) return "";
+  const now = new Date();
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  // Round, not floor: a daylight-saving change makes a calendar day 23 or 25 hours.
+  const days = Math.max(0, Math.round((startOf(now) - startOf(then)) / 86400000));
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
