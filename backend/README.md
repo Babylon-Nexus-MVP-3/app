@@ -21,7 +21,7 @@ Every variable is described in [`.env.example`](.env.example). For local work yo
 | Missing | What happens in development |
 |---|---|
 | `JWT_ACCESS_SECRET` | A fixed dev secret is used. **Outside development/test the server refuses to start.** |
-| `ABR_GUID` | `/abr/lookup` and `/abr/search` return mock businesses |
+| `ABR_GUID` | `/abr/lookup` returns 503; `/abr/search` returns sample businesses |
 | `TWILIO_*` | No SMS is sent and any OTP code is accepted |
 | AWS credentials / `EMAIL_USER` | Emails aren't sent. Use the seeded accounts, which are already verified, or configure SES. |
 

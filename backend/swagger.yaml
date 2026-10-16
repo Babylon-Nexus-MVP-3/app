@@ -49,7 +49,7 @@ tags:
   - name: Vouch
     description: Vouch profile (Get Vouched), vouch requests, giving and receiving vouches
   - name: ABN Lookup
-    description: Australian Business Register lookups (mocked when `ABR_GUID` is unset)
+    description: Australian Business Register lookups (without `ABR_GUID`, lookup returns 503 and search returns sample businesses)
   - name: Notifications
     description: In-app notifications
   - name: Admin
@@ -2023,7 +2023,7 @@ paths:
       tags:
         - ABN Lookup
       summary: Look up an ABN
-      description: Calls the ABR (5s timeout). Returns a mock when `ABR_GUID` is unset.
+      description: Calls the ABR (5s timeout). Returns 503 when `ABR_GUID` is unset.
       security: []
       parameters:
         - name: abn
@@ -2050,7 +2050,7 @@ paths:
       tags:
         - ABN Lookup
       summary: Search businesses by name
-      description: Up to 10 matches from the ABR. Returns mocks when `ABR_GUID` is unset.
+      description: Up to 10 matches from the ABR. Returns sample businesses when `ABR_GUID` is unset.
       security: []
       parameters:
         - name: name
